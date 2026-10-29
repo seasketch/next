@@ -1,0 +1,54 @@
+{
+  "type": "FeatureCollection",
+  "name": "samoa-test-areas",
+  "features": [
+    {
+      "type": "Feature",
+      "properties": { "name": "North Upolu", "kind": "reef", "score": 3 },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [-171.95, -13.75],
+            [-171.75, -13.75],
+            [-171.75, -13.70],
+            [-171.95, -13.70],
+            [-171.95, -13.75]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": { "name": "South Upolu", "kind": "lagoon", "score": 2 },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [-171.90, -14.10],
+            [-171.60, -14.10],
+            [-171.60, -14.03],
+            [-171.90, -14.03],
+            [-171.90, -14.10]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": { "name": "Savai'i Channel", "kind": "channel", "score": 1 },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [-172.30, -13.95],
+            [-172.05, -13.95],
+            [-172.05, -13.80],
+            [-172.30, -13.80],
+            [-172.30, -13.95]
+          ]
+        ]
+      }
+    }
+  ]
+}
