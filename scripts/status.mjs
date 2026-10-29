@@ -5,7 +5,8 @@ import http from "node:http";
 import net from "node:net";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { servicesInProfile } from "./dev.config.mjs";
+import { defaultProfile, servicesInProfile } from "./dev.config.mjs";
+import { servicesStoppedForProduction } from "./dev.data.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 
@@ -48,8 +49,13 @@ function readyPort(ready) {
   return new URL(ready.replace(/^http-get:\/\//, "http://")).port;
 }
 
-const services = servicesInProfile("core");
+const services = servicesInProfile(defaultProfile);
+const stopped = servicesStoppedForProduction();
 for (const service of services) {
+  if (stopped.has(service.name)) {
+    console.log(`${service.name}: not started (packages/api/.env points at production)`);
+    continue;
+  }
   if (!service.ready) {
     console.log(`${service.name}: no probe`);
     continue;

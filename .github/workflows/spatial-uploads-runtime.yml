@@ -1,0 +1,80 @@
+name: Spatial uploads runtime image
+
+# Publishes packages/spatial-uploads-handler/Dockerfile.runtime (GDAL,
+# tippecanoe, go-pmtiles, rclone, and the Python raster libraries on the
+# Lambda Node base) to ghcr.io/seasketch/spatial-uploads-runtime:<tag>.
+# The tag is the content hash of that file, so a tag is published once and
+# never overwritten. The application Dockerfile pins the tag it needs.
+#
+# Runs when the runtime Dockerfile changes, and by hand. The build takes a
+# long time; most pull requests never trigger it.
+
+on:
+  push:
+    branches: [master]
+    paths:
+      - packages/spatial-uploads-handler/Dockerfile.runtime
+      - .github/workflows/spatial-uploads-runtime.yml
+  pull_request:
+    paths:
+      - packages/spatial-uploads-handler/Dockerfile.runtime
+      - .github/workflows/spatial-uploads-runtime.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  publish:
+    name: Build and push
+    runs-on: ubuntu-latest
+    timeout-minutes: 240
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Check the Dockerfile pin matches the runtime file
+        run: node packages/spatial-uploads-handler/scripts/runtime-image.mjs --check
+
+      - name: Resolve the image reference
+        id: image
+        run: echo "ref=$(node packages/spatial-uploads-handler/scripts/runtime-image.mjs)" >> "$GITHUB_OUTPUT"
+
+      - name: Log in to the GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Skip when this tag is already published
+        id: exists
+        run: |
+          if docker manifest inspect "${{ steps.image.outputs.ref }}" > /dev/null 2>&1; then
+            echo "published=true" >> "$GITHUB_OUTPUT"
+            echo "${{ steps.image.outputs.ref }} is already published."
+          else
+            echo "published=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Free disk space for the build
+        if: steps.exists.outputs.published == 'false'
+        run: |
+          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /opt/hostedtoolcache/CodeQL
+          docker system prune -af > /dev/null
+          df -h /
+
+      - uses: docker/setup-buildx-action@v3
+        if: steps.exists.outputs.published == 'false'
+
+      - name: Build and push
+        if: steps.exists.outputs.published == 'false'
+        uses: docker/build-push-action@v6
+        with:
+          context: packages/spatial-uploads-handler
+          file: packages/spatial-uploads-handler/Dockerfile.runtime
+          platforms: linux/amd64
+          push: true
+          # Lambda rejects manifests with provenance attestations.
+          provenance: false
+          tags: ${{ steps.image.outputs.ref }}
