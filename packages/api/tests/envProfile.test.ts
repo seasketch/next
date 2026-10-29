@@ -3,6 +3,7 @@ const {
   readManifest,
   productionProfileRefusals,
   assertNonProductionProfile,
+  isCi,
 } = require("../envProfile.js");
 
 const enforced = {
@@ -68,9 +69,52 @@ describe("env manifest", () => {
       equals: "https://seasketch.auth0.com/",
       enforce: true,
     });
-    expect(forbidden.every((entry: { enforce: boolean }) => entry.enforce)).toBe(
-      true,
-    );
+    const recorded = forbidden
+      .filter((entry: { enforce: boolean }) => !entry.enforce)
+      .map((entry: { name: string }) => entry.name)
+      .sort();
+    // The data-path production values are recorded, not enforced: a developer
+    // may point storage at production. CI refuses them (strict mode below).
+    expect(recorded).toEqual([
+      "R2_TILES_BUCKET",
+      "SPATIAL_UPLOADS_BUCKET",
+      "TILES_BASE_URL",
+      "TILES_REMOTE",
+      "UPLOADS_BASE_URL",
+    ]);
+  });
+
+  test("strict mode refuses recorded values as well", () => {
+    expect(
+      productionProfileRefusals(
+        { JWT_ISS: "https://seasketch.auth0.com" },
+        enforced,
+        { strict: true },
+      ),
+    ).toEqual(["JWT_ISS is the seasketch.org production value https://seasketch.auth0.com/"]);
+    expect(
+      productionProfileRefusals(
+        { UPLOADS_BASE_URL: "https://uploads.seasketch.org/" },
+        readManifest(),
+        { strict: true },
+      ),
+    ).toEqual([
+      "UPLOADS_BASE_URL is the seasketch.org production value https://uploads.seasketch.org",
+    ]);
+    expect(
+      productionProfileRefusals(
+        { UPLOADS_BASE_URL: "https://uploads.seasketch.org/" },
+        readManifest(),
+      ),
+    ).toEqual([]);
+  });
+
+  test("isCi reads the CI variable the way GitHub Actions sets it", () => {
+    expect(isCi({ CI: "true" })).toBe(true);
+    expect(isCi({ CI: "1" })).toBe(true);
+    expect(isCi({ CI: "false" })).toBe(false);
+    expect(isCi({ CI: "" })).toBe(false);
+    expect(isCi({})).toBe(false);
   });
 
   test("refuses an enforced production value and ignores one that is not enforced yet", () => {

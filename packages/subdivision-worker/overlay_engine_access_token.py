@@ -1,4 +1,9 @@
-"""Fetch/cache the overlay-engine JWT from Secrets Manager for uploads downloads."""
+"""Fetch/cache the overlay-engine JWT from Secrets Manager for uploads downloads.
+
+CDK sets OVERLAY_ENGINE_ACCESS_TOKEN_SECRET_ARN on the deployed function. When
+it is unset the worker is running locally against a pmtiles-server with access
+control off, and downloads are made without a token.
+"""
 
 from __future__ import annotations
 
@@ -9,10 +14,10 @@ from typing import Any, Dict, Optional
 
 import boto3
 
-DEFAULT_SECRET_NAME = "seasketch/overlay-engine/access-token"
 REFRESH_WHEN_REMAINING_S = 24 * 60 * 60
 
 _cache: Optional[Dict[str, Any]] = None
+_logged_no_secret = False
 
 
 class OverlayEngineAccessTokenError(RuntimeError):
@@ -20,11 +25,9 @@ class OverlayEngineAccessTokenError(RuntimeError):
         super().__init__(f"overlay_engine_access_token_unavailable: {reason}")
 
 
-def _secret_id() -> str:
+def _secret_id() -> Optional[str]:
     arn = os.getenv("OVERLAY_ENGINE_ACCESS_TOKEN_SECRET_ARN", "").strip()
-    if arn:
-        return arn
-    return DEFAULT_SECRET_NAME
+    return arn or None
 
 
 def _parse_secret(raw: str) -> Dict[str, Any]:
@@ -54,9 +57,21 @@ def bust_overlay_engine_access_token_cache() -> None:
     _cache = None
 
 
-def get_overlay_engine_access_token() -> str:
-    """Return a non-expired overlay-engine JWT from Secrets Manager (cached)."""
-    global _cache
+def get_overlay_engine_access_token() -> Optional[str]:
+    """Return a non-expired overlay-engine JWT from Secrets Manager (cached).
+
+    Returns None, and logs once, when no secret ARN is configured.
+    """
+    global _cache, _logged_no_secret
+    secret_id = _secret_id()
+    if secret_id is None:
+        if not _logged_no_secret:
+            print(
+                "OVERLAY_ENGINE_ACCESS_TOKEN_SECRET_ARN is not set; "
+                "downloading hosted data without an access token"
+            )
+            _logged_no_secret = True
+        return None
     if _cache and not _is_expired(_cache) and not _needs_refresh(_cache):
         return _cache["token"]
 
@@ -67,7 +82,7 @@ def get_overlay_engine_access_token() -> str:
     )
     client = boto3.client("secretsmanager", region_name=region)
     try:
-        response = client.get_secret_value(SecretId=_secret_id())
+        response = client.get_secret_value(SecretId=secret_id)
     except Exception as e:
         raise OverlayEngineAccessTokenError(f"missing:{e}") from e
 

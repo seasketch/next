@@ -32,8 +32,113 @@
       "name": "DATA_TABLES_LAMBDA_DEV_HANDLER",
       "class": "public-config",
       "packages": ["api"],
-      "requiredBy": ["core"],
-      "description": "Local data-tables handler URL. npm run dev listens on port 3006."
+      "requiredBy": [],
+      "description": "Local data-tables handler URL. npm run dev injects http://localhost:3006 while it runs that handler. Not needed in .env."
+    },
+    {
+      "name": "SPATIAL_UPLOADS_LAMBDA_DEV_HANDLER",
+      "class": "public-config",
+      "packages": ["api"],
+      "requiredBy": [],
+      "description": "Spatial uploads handler invoke URL. npm run dev injects the Lambda emulator on port 9001. Set it to http://localhost:3005 in .env for the host-mode handler."
+    },
+    {
+      "name": "SUBDIVISION_WORKER_DEV_HANDLER",
+      "class": "public-config",
+      "packages": ["api"],
+      "requiredBy": [],
+      "description": "Subdivision worker invoke URL. npm run dev injects the Lambda emulator on port 9000."
+    },
+    {
+      "name": "R2_ENDPOINT",
+      "class": "public-config",
+      "packages": ["api"],
+      "requiredBy": [],
+      "description": "S3 API endpoint for the data-path buckets. npm run dev injects the local wrangler endpoint on port 8333. A production endpoint here switches storage to production and stops the local storage services."
+    },
+    {
+      "name": "R2_ACCESS_KEY_ID",
+      "class": "production-secret",
+      "packages": ["api"],
+      "requiredBy": [],
+      "description": "Key for R2_ENDPOINT. The local value is the fixed one in packages/local-r2/wrangler.jsonc. Real keys are production secrets."
+    },
+    {
+      "name": "R2_SECRET_ACCESS_KEY",
+      "class": "production-secret",
+      "packages": ["api"],
+      "requiredBy": [],
+      "description": "Secret for R2_ENDPOINT. The local value is the fixed one in packages/local-r2/wrangler.jsonc. Real keys are production secrets."
+    },
+    {
+      "name": "R2_TILES_BUCKET",
+      "class": "public-config",
+      "packages": ["api"],
+      "requiredBy": [],
+      "description": "Bucket the handlers write tiles and derived files to. Locally ssn-tiles-local; production ssn-tiles."
+    },
+    {
+      "name": "SPATIAL_UPLOADS_BUCKET",
+      "class": "public-config",
+      "packages": ["api"],
+      "requiredBy": [],
+      "description": "Staging bucket for raw uploads. Locally ssn-spatial-uploads-tmp-local; production ssn-spatial-uploads-tmp."
+    },
+    {
+      "name": "TILES_REMOTE",
+      "class": "public-config",
+      "packages": ["api"],
+      "requiredBy": [],
+      "description": "r2:// remote of the tiles bucket, as written into data_upload_outputs.remote. Locally r2://ssn-tiles-local."
+    },
+    {
+      "name": "UPLOADS_BASE_URL",
+      "class": "public-config",
+      "packages": ["api"],
+      "requiredBy": [],
+      "description": "Public origin of the uploads host. Locally the pmtiles-server uploads session on port 8788; production https://uploads.seasketch.org."
+    },
+    {
+      "name": "TILES_BASE_URL",
+      "class": "public-config",
+      "packages": ["api"],
+      "requiredBy": [],
+      "description": "Public origin of the tiles host. Locally the pmtiles-server tiles session on port 8787; production https://tiles.seasketch.org."
+    },
+    {
+      "name": "SPATIAL_UPLOADS_LAMBDA_ARN",
+      "class": "production-secret",
+      "packages": ["api"],
+      "requiredBy": [],
+      "description": "Deployed spatial uploads function. Setting it in .env routes uploads to the deployed handler and leaves the local container stopped. Needs AWS credentials and production storage settings."
+    },
+    {
+      "name": "SUBDIVISION_WORKER_LAMBDA_ARN",
+      "class": "production-secret",
+      "packages": ["api"],
+      "requiredBy": [],
+      "description": "Deployed subdivision function. Setting it in .env leaves the local subdivision container stopped."
+    },
+    {
+      "name": "DATA_TABLES_HANDLER_LAMBDA_ARN",
+      "class": "production-secret",
+      "packages": ["api"],
+      "requiredBy": [],
+      "description": "Deployed data tables function. Setting it in .env leaves the local data-tables handler stopped."
+    },
+    {
+      "name": "OVERLAY_ENGINE_WORKER_SQS_QUEUE_URL",
+      "class": "per-environment-name",
+      "packages": ["api"],
+      "requiredBy": [],
+      "description": "Results queue the API consumes. npm run dev injects the ElasticMQ queue on port 9324. An AWS queue URL here leaves the local queue stopped."
+    },
+    {
+      "name": "SQS_ENDPOINT",
+      "class": "public-config",
+      "packages": ["api"],
+      "requiredBy": [],
+      "description": "Where SQS requests are sent. npm run dev injects http://localhost:9324 for ElasticMQ. Unset on AWS."
     },
     {
       "name": "CLIENT_DOMAIN",
@@ -171,8 +276,33 @@
   ],
   "profiles": {
     "seasketch.org": {
-      "description": "Production identifiers for the seasketch.org install. Outside production, an enforced value refuses startup.",
+      "description": "Production identifiers for the seasketch.org install. Outside production, an enforced value refuses startup. A recorded value (enforce false) is allowed on a developer machine, where pointing one data service at production is supported, and refused when CI is set.",
       "forbidden": [
+        {
+          "name": "UPLOADS_BASE_URL",
+          "equals": "https://uploads.seasketch.org",
+          "enforce": false
+        },
+        {
+          "name": "TILES_BASE_URL",
+          "equals": "https://tiles.seasketch.org",
+          "enforce": false
+        },
+        {
+          "name": "R2_TILES_BUCKET",
+          "equals": "ssn-tiles",
+          "enforce": false
+        },
+        {
+          "name": "SPATIAL_UPLOADS_BUCKET",
+          "equals": "ssn-spatial-uploads-tmp",
+          "enforce": false
+        },
+        {
+          "name": "TILES_REMOTE",
+          "equals": "r2://ssn-tiles",
+          "enforce": false
+        },
         {
           "name": "TILES_ACL_NAMESPACE",
           "equals": "prod",

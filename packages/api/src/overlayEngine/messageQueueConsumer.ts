@@ -1,17 +1,11 @@
-import {
-  SQSClient,
-  ReceiveMessageCommand,
-  DeleteMessageCommand,
-} from "@aws-sdk/client-sqs";
+import { ReceiveMessageCommand, DeleteMessageCommand } from "@aws-sdk/client-sqs";
 import { Pool } from "pg";
 import { OverlayEngineWorkerMessage } from "overlay-worker";
 import colors from "yoctocolors-cjs";
 import { JobStatusUpdater, MessageWithReceipt } from "./JobStatusUpdater";
+import { createSqsClient } from "./sqsClient";
 
-// Initialize SQS client
-const sqsClient = new SQSClient({
-  region: process.env.S3_REGION || "us-east-1",
-});
+const sqsClient = createSqsClient();
 
 let jobStatusUpdater: JobStatusUpdater | null = null;
 
