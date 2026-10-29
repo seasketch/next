@@ -1,7 +1,7 @@
 {
   "name": "local-r2",
   "version": "1.0.0",
-  "description": "Local stand-in for the SeaSketch R2 buckets. Config for wrangler's built-in local S3 API; no application code.",
+  "description": "Local stand-in for the SeaSketch R2 buckets. Starts Miniflare's built-in local S3 API; no application code.",
   "license": "BSD-3-Clause",
   "private": true,
   "type": "module",

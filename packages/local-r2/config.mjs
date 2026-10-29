@@ -12,11 +12,21 @@ export const repoRoot = path.resolve(packageDir, "..", "..");
 
 // npm hoists wrangler to the root node_modules unless versions conflict, so
 // resolve it rather than assuming a path. Run with process.execPath.
+const wranglerPackageJson = createRequire(import.meta.url).resolve(
+  "wrangler/package.json"
+);
 export const wranglerBin = path.join(
-  path.dirname(createRequire(import.meta.url).resolve("wrangler/package.json")),
+  path.dirname(wranglerPackageJson),
   "bin",
   "wrangler.js"
 );
+
+// The Miniflare that wrangler itself runs. The repository has an older
+// miniflare at the root (a dependency of @cloudflare/vitest-pool-workers)
+// which has no S3 API and writes a different on-disk layout, so resolve the
+// copy nested under wrangler. That is the one the pmtiles-server sessions
+// run through `wrangler dev`, so both read and write the same files.
+export const miniflare = createRequire(wranglerPackageJson)("miniflare");
 
 export const defaultPort = 8333;
 export const defaultPersistDir = path.join(repoRoot, ".data", "wrangler");
@@ -34,6 +44,8 @@ function readWranglerConfig() {
 }
 
 const config = readWranglerConfig();
+
+export const compatibilityDate = config.compatibility_date;
 
 export const buckets = config.r2_buckets.map((bucket) => ({
   binding: bucket.binding,
