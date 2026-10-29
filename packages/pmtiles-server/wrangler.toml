@@ -64,7 +64,7 @@ service = "overlay-data-tables"
 [[r2_buckets]]
 binding = 'TILES_BUCKET'
 bucket_name = 'ssn-tiles'
-preview_bucket_name = 'ssn-tiles'
+preview_bucket_name = 'ssn-tiles-local'
 
 # Run `echo <VALUE> | wrangler secret put <NAME>` for each of these
 # Optional: SLACK_WEBHOOK_URL — Incoming Webhook for ACL-deny rollout alerts
