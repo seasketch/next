@@ -50,19 +50,25 @@ function readyPort(ready) {
 }
 
 const services = servicesInProfile(defaultProfile);
+// Services .env would keep stopped. `npm run dev -- --local-data` starts them
+// anyway, so probe first and only explain a service that is not listening.
 const stopped = servicesStoppedForProduction();
 for (const service of services) {
-  if (stopped.has(service.name)) {
-    console.log(`${service.name}: not started (packages/api/.env points at production)`);
-    continue;
-  }
   if (!service.ready) {
     console.log(`${service.name}: no probe`);
     continue;
   }
   const up = await probe(service.ready);
   const port = readyPort(service.ready);
-  console.log(up ? `${service.name}: listening (${port})` : `${service.name}: not responding`);
+  if (up) {
+    console.log(`${service.name}: listening (${port})`);
+  } else if (stopped.has(service.name)) {
+    console.log(
+      `${service.name}: not started (packages/api/.env points at production; npm run dev -- --local-data starts it)`
+    );
+  } else {
+    console.log(`${service.name}: not responding`);
+  }
 }
 
 const compose = spawn("docker", ["compose", "ps"], { cwd: root, stdio: "inherit" });

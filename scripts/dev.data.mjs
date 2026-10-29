@@ -141,6 +141,20 @@ export function servicesStoppedForProduction(apiEnv = readApiDotenv()) {
   return new Set(productionIntegrations(apiEnv).flatMap((item) => item.services));
 }
 
+// `npm run dev -- --local-data`: a .env full of production values, read as
+// if it had none. Returns the environment without the production variables,
+// and the names that were dropped. The supervisor passes those names to the
+// API as empty strings, so dotenv leaves them empty and the code paths that
+// look for a Lambda ARN or an AWS queue find nothing.
+export function withoutProductionValues(apiEnv = readApiDotenv()) {
+  const ignored = productionIntegrations(apiEnv).map((item) => item.productionVariable);
+  const env = { ...apiEnv };
+  for (const name of ignored) {
+    delete env[name];
+  }
+  return { env, ignored };
+}
+
 function isLocal(production, id) {
   return !production.some((integration) => integration.id === id);
 }
