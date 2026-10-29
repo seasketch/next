@@ -6,6 +6,7 @@ JWKS_URL=http://127.0.0.1:3857/.well-known/jwks.json
 AUTH_ACL_ENABLED=false
 AUTH_SUBDIVIDED_ACL_ENABLED=false
 AUTH_MISSING_ACL_PUBLIC=true
-PUBLIC_HOSTNAME=localhost:8787
+# PUBLIC_HOSTNAME is unset locally: TileJSON points back at the session's own
+# origin. bin/dev.mjs passes it explicitly, along with JWKS_URL and UPLOADS_HOST.
 # Required only for browser preview pages.
 MAPBOX_ACCESS_TOKEN=

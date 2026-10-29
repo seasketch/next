@@ -106,6 +106,26 @@ function isMrtTileJson(json: TileJSON, metadata: Record<string, unknown>): boole
 }
 
 /**
+ * Origin written into TileJSON tile URLs. PUBLIC_HOSTNAME may be a bare host
+ * (`tiles.seasketch.org`, served over https) or a full origin
+ * (`http://localhost:8787`). Unset, the request's own origin is used, which
+ * keeps the scheme and port a local session is reached on.
+ */
+export function publicBaseUrl(
+  env: { PUBLIC_HOSTNAME?: string },
+  url: URL,
+): string {
+  const configured = env.PUBLIC_HOSTNAME?.trim();
+  if (!configured) {
+    return url.origin;
+  }
+  if (/^https?:\/\//i.test(configured)) {
+    return configured.replace(/\/+$/, "");
+  }
+  return `https://${configured}`;
+}
+
+/**
  * Build TileJSON for `{name}.pmtiles`. Nothing is read from a stored `.json`
  * object — `getTileJson` fills bounds / zooms / name from the archive header
  * and JSON metadata, then we rewrite `tiles` and layer lists for this host.
@@ -195,7 +215,7 @@ async function handle(
     return respond(new Response(null, { status: 404 }));
   }
 
-  const publicBase = `https://${env.PUBLIC_HOSTNAME || url.hostname}`;
+  const publicBase = publicBaseUrl(env, url);
 
   try {
     const tileMatch = url.pathname.match(TILE_ROUTE);
