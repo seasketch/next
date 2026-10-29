@@ -2,13 +2,15 @@
 //
 // Every SeaSketch writer's real storage calls, made with the settings of the
 // shared client factories (packages/api/src/storage/client.ts and the handler
-// remotes.ts files), against a wrangler dev session this test starts itself.
+// remotes.ts files), against a bin/dev.mjs session this test starts itself.
 // It is the tripwire for a wrangler upgrade that renames the experimental
-// config key, changes the S3 path, or alters request-body handling.
+// config key, changes the S3 path, changes the Miniflare options the launcher
+// passes, or alters request-body handling.
 import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
 import { createWriteStream, mkdtempSync, rmSync, createReadStream } from "node:fs";
 import { randomBytes } from "node:crypto";
+import http from "node:http";
 import net from "node:net";
 import os from "node:os";
 import path from "node:path";
@@ -35,8 +37,9 @@ import {
   packageDir,
   spatialUploadsBucket,
   tilesBucket,
-  wranglerBin,
 } from "../config.mjs";
+
+const launcher = path.join(packageDir, "bin", "dev.mjs");
 
 const MB = 1024 * 1024;
 
@@ -51,27 +54,18 @@ function freePort() {
   });
 }
 
-function startWrangler(port, persistTo) {
-  const child = spawn(
-    process.execPath,
-    [
-      wranglerBin,
-      "dev",
-      "--ip",
-      "127.0.0.1",
-      "--port",
-      String(port),
-      "--persist-to",
-      persistTo,
-      "--no-show-interactive-dev-session",
-    ],
-    {
-      cwd: packageDir,
-      detached: true,
-      stdio: ["ignore", "pipe", "pipe"],
-      env: { ...process.env, WRANGLER_SEND_METRICS: "false" },
-    }
-  );
+function startLauncher(port, persistTo) {
+  const child = spawn(process.execPath, [launcher], {
+    cwd: packageDir,
+    detached: true,
+    stdio: ["ignore", "pipe", "pipe"],
+    env: {
+      ...process.env,
+      LOCAL_R2_IP: "127.0.0.1",
+      LOCAL_R2_PORT: String(port),
+      LOCAL_R2_PERSIST_TO: persistTo,
+    },
+  });
   let logs = "";
   const keep = (chunk) => {
     logs = (logs + chunk.toString()).slice(-8000);
@@ -105,6 +99,21 @@ async function waitForWorker(port, logs) {
     await new Promise((resolve) => setTimeout(resolve, 500));
   }
   throw new Error(`local-r2 did not become ready (${last})\n${logs()}`);
+}
+
+function statusWithHost(port, requestPath, host) {
+  return new Promise((resolve, reject) => {
+    const request = http.get(
+      { host: "127.0.0.1", port, path: requestPath, headers: { Host: host } },
+      (response) => {
+        let body = "";
+        response.setEncoding("utf8");
+        response.on("data", (chunk) => (body += chunk));
+        response.on("end", () => resolve({ status: response.statusCode, body }));
+      }
+    );
+    request.on("error", reject);
+  });
 }
 
 async function writeRandomFile(dir, name, size) {
@@ -162,7 +171,7 @@ describe("Miniflare local S3 API", () => {
   before(async () => {
     port = await freePort();
     tmp = mkdtempSync(path.join(os.tmpdir(), "local-r2-test-"));
-    worker = startWrangler(port, path.join(tmp, "persist"));
+    worker = startLauncher(port, path.join(tmp, "persist"));
     await waitForWorker(port, worker.logs);
     s3 = clientV3(port);
   });
@@ -179,6 +188,19 @@ describe("Miniflare local S3 API", () => {
       s3.send(new HeadBucketCommand({ Bucket: "ssn-does-not-exist" })),
       (error) => error.$metadata?.httpStatusCode === 404
     );
+  });
+
+  test("the S3 API answers to host.docker.internal and refuses other hosts", async () => {
+    // Containers reach the launcher as host.docker.internal. Miniflare only
+    // serves /cdn-cgi/ paths to Host values it knows, so the launcher declares
+    // that name as a route. 400 here means the request got as far as the S3
+    // API, which then asked for a signature.
+    // fetch() silently drops a Host header, so this uses node:http.
+    const s3Path = `/cdn-cgi/local/r2/s3/${tilesBucket}/`;
+    const asDocker = await statusWithHost(port, s3Path, `host.docker.internal:${port}`);
+    assert.equal(asDocker.status, 400, asDocker.body);
+    const asStranger = await statusWithHost(port, s3Path, `storage.example.org:${port}`);
+    assert.equal(asStranger.status, 403, asStranger.body);
   });
 
   test("signatures are verified", async () => {
