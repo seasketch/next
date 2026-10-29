@@ -23,6 +23,48 @@
       }
     },
     {
+      "label": "Dev: local data",
+      "type": "shell",
+      "command": "npm run dev -- --local-data",
+      "isBackground": true,
+      "problemMatcher": {
+        "owner": "seasketch",
+        "pattern": {
+          "regexp": "^$"
+        },
+        "background": {
+          "activeOnStart": true,
+          "beginsPattern": "Container",
+          "endsPattern": "Healthy"
+        }
+      },
+      "presentation": {
+        "panel": "dedicated",
+        "reveal": "always"
+      }
+    },
+    {
+      "label": "Dev: core only",
+      "type": "shell",
+      "command": "npm run dev -- --profile core",
+      "isBackground": true,
+      "problemMatcher": {
+        "owner": "seasketch",
+        "pattern": {
+          "regexp": "^$"
+        },
+        "background": {
+          "activeOnStart": true,
+          "beginsPattern": "Container",
+          "endsPattern": "Healthy"
+        }
+      },
+      "presentation": {
+        "panel": "dedicated",
+        "reveal": "always"
+      }
+    },
+    {
       "label": "Dev: client log",
       "type": "shell",
       "command": "npm run logs -- client",

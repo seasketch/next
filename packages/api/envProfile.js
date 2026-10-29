@@ -5,7 +5,10 @@
  * production deploy. API startup calls assertNonProductionProfile and skips
  * the file when NODE_ENV is production.
  *
- * Forbidden entries with enforce:false are recorded and do not refuse startup.
+ * Forbidden entries with enforce:false are recorded and do not refuse startup
+ * on a developer machine, where pointing one data service at production is a
+ * supported configuration. In CI (the CI variable is set) every recorded
+ * value is refused too, so no checked-in configuration carries one.
  * The seasketch.org profile enforces its tile namespace and Auth0 identifiers.
  */
 const fs = require("fs");
@@ -88,10 +91,10 @@ function comparable(value) {
   return value.trim().replace(/\/+$/, "").toLowerCase();
 }
 
-function productionProfileRefusals(env, manifest) {
+function productionProfileRefusals(env, manifest, { strict = false } = {}) {
   const refusals = [];
   for (const entry of manifest.profiles["seasketch.org"].forbidden) {
-    if (!entry.enforce) {
+    if (!entry.enforce && !strict) {
       continue;
     }
     const actual = env[entry.name];
@@ -119,6 +122,11 @@ function assertNonProductionProfile(env = process.env) {
   }
 }
 
+function isCi(env) {
+  const value = env.CI;
+  return typeof value === "string" && value !== "" && value.toLowerCase() !== "false";
+}
+
 function readDotenvFile(file) {
   if (!fs.existsSync(file)) {
     return null;
@@ -132,15 +140,16 @@ function assertSetupEnvironment() {
     path.join(__dirname, ".env"),
     path.join(__dirname, "..", "client", ".env"),
   ];
+  const options = { strict: isCi(process.env) };
   const refusals = [];
   for (const file of files) {
     const parsed = readDotenvFile(file);
     if (!parsed) {
       continue;
     }
-    refusals.push(...productionProfileRefusals(parsed, manifest));
+    refusals.push(...productionProfileRefusals(parsed, manifest, options));
   }
-  refusals.push(...productionProfileRefusals(process.env, manifest));
+  refusals.push(...productionProfileRefusals(process.env, manifest, options));
   const unique = [...new Set(refusals)];
   if (unique.length > 0) {
     console.error(`Refusing production configuration: ${unique.join("; ")}`);
@@ -157,4 +166,5 @@ module.exports = {
   readManifest,
   productionProfileRefusals,
   assertNonProductionProfile,
+  isCi,
 };

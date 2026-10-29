@@ -1,5 +1,15 @@
 name: seasketch
 
+# One bridge network for every project that loads this file. The e2e profile
+# runs as project seasketch-e2e beside a developer's containers, and its
+# handler containers reach Postgres and Redis through host.docker.internal
+# and the published ports. On Linux that route works only from the same
+# bridge network as the target; traffic between two bridge networks is
+# dropped by Docker's isolation rules.
+networks:
+  default:
+    name: seasketch
+
 services:
   db:
     container_name: "seasketch_db"
@@ -45,16 +55,122 @@ services:
       interval: 2s
       timeout: 3s
       retries: 30
-  # Not part of the default project. `npm run dev` starts it and restarts the
-  # container when the Python sources change. `--ci` starts it once and waits
-  # for this healthcheck; it does not watch.
+
+  # Data-path containers. `npm run dev` starts them (profile `data`, the
+  # default) and restarts each one when its sources change. `--ci` starts them
+  # once and waits for the healthchecks. `--profile core` leaves them out.
+  #
+  # The values below are the local defaults from packages/local-r2 and
+  # scripts/dev.config.mjs. The ${VAR:-default} forms are what the e2e profile
+  # overrides so its containers run beside a developer's own.
+  # See design-docs/dev-environment/local-data-services.md.
+
+  # SQS stand-in for the overlay engine results queue. Queues are declared in
+  # elasticmq.conf. Messages do not survive a restart; Postgres is the state of
+  # record for the jobs they describe.
+  elasticmq:
+    profiles: ["data"]
+    image: softwaremill/elasticmq-native:1.6.12
+    ports:
+      - "${ELASTICMQ_PORT:-9324}:9324"
+    volumes:
+      - ./elasticmq.conf:/opt/elasticmq.conf:ro
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O /dev/null 'http://127.0.0.1:9324/?Action=ListQueues' || exit 1"]
+      interval: 2s
+      timeout: 3s
+      retries: 30
+
+  # The spatial uploads handler, as the production image under the Lambda
+  # runtime emulator. The API posts the same event Lambda would receive to
+  # http://localhost:9001/2015-03-31/functions/function/invocations.
+  # `develop.watch` copies a rebuilt dist/ in and restarts the container; the
+  # host `spatial-uploads-tsc` entry in scripts/dev.config.mjs does the rebuild.
+  spatial-uploads:
+    profiles: ["data"]
+    build:
+      context: .
+      dockerfile: packages/spatial-uploads-handler/Dockerfile
+    image: seasketch-spatial-uploads:dev
+    platform: linux/amd64
+    ports:
+      - "${SPATIAL_UPLOADS_PORT:-9001}:8080"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    environment:
+      NODE_ENV: development
+      # Object storage: the local S3 API served by packages/local-r2.
+      R2_ENDPOINT: http://host.docker.internal:${LOCAL_R2_PORT:-8333}/cdn-cgi/local/r2/s3
+      R2_ACCESS_KEY_ID: local
+      R2_SECRET_ACCESS_KEY: local-r2-secret
+      BUCKET: ssn-spatial-uploads-tmp-local
+      SPATIAL_UPLOADS_BUCKET: ssn-spatial-uploads-tmp-local
+      R2_TILES_BUCKET: ssn-tiles-local
+      RESOURCES_REMOTE: r2://ssn-tiles-local
+      TILES_REMOTE: r2://ssn-tiles-local
+      # Public origins written into the rows this handler creates. These are
+      # the two pmtiles-server sessions, as the browser reaches them.
+      UPLOADS_BASE_URL: http://localhost:${PMTILES_UPLOADS_PORT:-8788}
+      TILES_BASE_URL: http://localhost:${PMTILES_TILES_PORT:-8787}
+      # Progress updates go straight to Postgres. A localhost-style host
+      # selects password auth instead of the RDS IAM signer.
+      PGHOST: host.docker.internal
+      PGPORT: "54321"
+      PGUSER: postgres
+      PGPASSWORD: password
+      PGDATABASE: ${SEASKETCH_DB_NAME:-seasketch}
+      PGREGION: us-west-2
+      AWS_REGION: us-west-2
+      # Production Lambda gets these from CDK. Host mode loads them from the
+      # package .env; this container only sees what is passed in. `npm run dev`
+      # fills them from packages/spatial-uploads-handler/.env (then the API
+      # .env). Empty when neither file has them: uploads with the AI analyst
+      # off still succeed, and an enabled profile fails with a clear error.
+      CF_AIG_TOKEN: ${CF_AIG_TOKEN:-}
+      CF_AIG_URL: ${CF_AIG_URL:-}
+    healthcheck:
+      # Any HTTP answer means the emulator is up. Do not POST to the invoke
+      # path here; that would run the handler with an empty event.
+      test: ["CMD-SHELL", "curl -s -o /dev/null http://127.0.0.1:8080/ || exit 1"]
+      interval: 5s
+      timeout: 5s
+      retries: 36
+      start_period: 20s
+    develop:
+      watch:
+        - action: sync+restart
+          path: ./packages/spatial-uploads-handler/dist
+          target: /var/task/packages/spatial-uploads-handler/dist
+
+  # Subdivision worker, the production image under the Lambda emulator.
   subdivision:
-    profiles: ["workers"]
+    profiles: ["data"]
     build:
       context: ./packages/subdivision-worker
     image: seasketch-subdivision:dev
     ports:
-      - "9000:8080"
+      - "${SUBDIVISION_PORT:-9000}:8080"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    environment:
+      R2_ENDPOINT: http://host.docker.internal:${LOCAL_R2_PORT:-8333}/cdn-cgi/local/r2/s3
+      R2_ACCESS_KEY_ID: local
+      R2_SECRET_ACCESS_KEY: local-r2-secret
+      R2_BUCKET: ssn-tiles-local
+      UPLOADS_BASE_URL: http://localhost:${PMTILES_UPLOADS_PORT:-8788}
+      # Progress messages go to elasticmq. The queue URL in each event names
+      # the queue; this says where to send the request. Through the host
+      # gateway, like storage, so every hop out of a container looks the same.
+      SQS_ENDPOINT: http://host.docker.internal:${ELASTICMQ_PORT:-9324}
+      AWS_REGION: us-west-2
+      AWS_ACCESS_KEY_ID: local
+      AWS_SECRET_ACCESS_KEY: local
+      # Source URLs name the host's localhost. Inside the container that is
+      # host.docker.internal. Pairs of public=reachable origins.
+      STORAGE_ORIGIN_MAP: http://localhost:${PMTILES_UPLOADS_PORT:-8788}=http://host.docker.internal:${PMTILES_UPLOADS_PORT:-8788},http://localhost:${PMTILES_TILES_PORT:-8787}=http://host.docker.internal:${PMTILES_TILES_PORT:-8787}
+      # Unset: the local pmtiles-server runs with access control off, so the
+      # worker sends no Authorization header. Production sets the ARN.
+      OVERLAY_ENGINE_ACCESS_TOKEN_SECRET_ARN: ""
     healthcheck:
       test:
         - CMD-SHELL

@@ -1,5 +1,8 @@
 **/node_modules
 .logs/
+# Local object storage written by wrangler dev (packages/local-r2).
+# `npm run setup -- --reset` clears it with the database.
+.data/
 **/.DS_Store
 # Compiler output. Reviewed generated source stays tracked.
 **/dist/

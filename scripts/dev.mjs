@@ -1,7 +1,10 @@
 #!/usr/bin/env node
-// Foreground supervisor for the core (and later data) profile.
+// Foreground supervisor for the data (default), core, and e2e profiles.
 // Containers: docker compose up -d --wait. Host processes: concurrently.
 // Does not set E2E_TEST_MODE or E2E_TEST_PASSPHRASE. Playwright passes those.
+//
+// Which data services start, and which variables point the API at them, is
+// decided in scripts/dev.data.mjs from packages/api/.env.
 import { spawn } from "node:child_process";
 import net from "node:net";
 import { existsSync, readFileSync, writeSync } from "node:fs";
@@ -12,6 +15,7 @@ import { fileURLToPath } from "node:url";
 import concurrently from "concurrently";
 import { createStream } from "rotating-file-stream";
 import {
+  defaultProfile,
   e2eStack,
   profileNames,
   readyUrl,
@@ -19,27 +23,43 @@ import {
   services,
   servicesInProfile,
 } from "./dev.config.mjs";
+import {
+  dataEnvFor,
+  dataNotices,
+  readApiDotenv,
+  servicesStoppedForProduction,
+  withoutProductionValues,
+} from "./dev.data.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 let logsDir = path.join(root, ".logs");
 const waitOnBin = path.join(root, "node_modules", ".bin", "wait-on");
+// Production variables --local-data drops from the API's environment.
+let ignoredProductionVariables = [];
 
 function usage() {
   console.error(
-    `Usage: npm run dev -- [--profile ${profileNames.join("|")}] [--ci] [--only <service>]`
+    `Usage: npm run dev -- [--profile ${profileNames.join("|")}] [--local-data] [--ci] [--only <service>]`
   );
   console.error(`Services: ${services.map((service) => service.name).join(", ")}`);
+  console.error(`The default profile is ${defaultProfile}.`);
+  console.error(
+    "--local-data starts every data service and ignores the production values in packages/api/.env."
+  );
   process.exit(1);
 }
 
 function parseArgs(argv) {
-  let profile = "core";
+  let profile = defaultProfile;
   let ci = false;
   let only = null;
+  let localData = false;
   for (let i = 0; i < argv.length; i++) {
     const arg = argv[i];
     if (arg === "--ci") {
       ci = true;
+    } else if (arg === "--local-data") {
+      localData = true;
     } else if (arg === "--profile") {
       profile = argv[++i];
       if (!profile || profile.startsWith("--")) {
@@ -61,19 +81,45 @@ function parseArgs(argv) {
     console.error(`Unknown profile: ${profile}`);
     usage();
   }
-  return { profile, ci, only };
+  if (localData && profile === "core") {
+    console.error("--local-data starts the data services; it does not combine with --profile core");
+    usage();
+  }
+  return { profile, ci, only, localData };
 }
 
 function serviceByName(name) {
   return services.find((service) => service.name === name);
 }
 
-function envFor(service, profile, localScreenshotter) {
+// The services the profile starts, less those packages/api/.env points at
+// production. Computed once; `--only` and the dependency gates use the same set.
+function selectServices(profile, apiEnv) {
+  const stopped = servicesStoppedForProduction(apiEnv);
+  return servicesInProfile(profile).filter((service) => !stopped.has(service.name));
+}
+
+function envFor(service, profile, localScreenshotter, started, apiEnv) {
+  // Local data services the supervisor starts win over .env and the shell.
+  // Setting the production variable in .env is how to opt out per service,
+  // unless --local-data is on.
+  const injected = dataEnvFor(service.name, profile, started, apiEnv);
   const env = {
     ...process.env,
     ...service.env,
     ...(profile === "e2e" && service.e2eEnv ? service.e2eEnv : {}),
+    ...injected,
   };
+  if (service.name === "api") {
+    // A production variable with no local replacement (a Lambda ARN) is
+    // handed over empty. dotenv keeps a variable that is already present,
+    // even when empty, so the API never reads the value from .env.
+    for (const name of ignoredProductionVariables) {
+      if (!(name in injected)) {
+        env[name] = "";
+      }
+    }
+  }
   if (localScreenshotter && service.name === "api") {
     env.SCREENSHOTTER_URL =
       profile === "e2e"
@@ -87,14 +133,24 @@ function envFor(service, profile, localScreenshotter) {
   return env;
 }
 
-function commandFor(service, ci, profile) {
+function resolveCommand(service, ci, started) {
   const command = ci ? service.ciCommand : service.command;
-  if (!command || !ci || !service.dependsOn?.length) {
+  return typeof command === "function" ? command(started) : command;
+}
+
+function commandFor(service, ci, profile, started) {
+  const command = resolveCommand(service, ci, started);
+  if (!command) {
     return command;
   }
-  const selected = new Set(servicesInProfile(profile).map((item) => item.name));
+  // startAfter gates every mode; dependsOn only --ci.
+  const gates = [...(service.startAfter ?? []), ...(ci ? service.dependsOn ?? [] : [])];
+  if (gates.length === 0) {
+    return command;
+  }
+  const selected = started;
   const urls = [];
-  for (const name of service.dependsOn) {
+  for (const name of gates) {
     if (!selected.has(name)) {
       continue;
     }
@@ -111,10 +167,15 @@ function commandFor(service, ci, profile) {
   return `"${waitOnBin}" ${urls.join(" ")} && ${command}`;
 }
 
-function runOne(service) {
-  const child = spawn(service.command, {
+function runOne(service, started, apiEnv) {
+  const command = resolveCommand(service, false, started);
+  if (!command) {
+    report(`${service.name} has nothing to start with the current selection`);
+    process.exit(1);
+  }
+  const child = spawn(command, {
     cwd: path.join(root, service.cwd),
-    env: envFor(service, profile, false),
+    env: envFor(service, profile, false, started, apiEnv),
     stdio: "inherit",
     shell: true,
   });
@@ -143,16 +204,34 @@ function portOpen(port) {
   });
 }
 
-async function startCompose(profile) {
-  if ((await portOpen(54321)) && (await portOpen(6379))) {
+function composeContainerRunning(name) {
+  return new Promise((resolve) => {
+    const child = spawn("docker", ["ps", "-q", "--filter", `name=^${name}$`], {
+      stdio: ["ignore", "pipe", "ignore"],
+    });
+    let out = "";
+    child.stdout.on("data", (chunk) => (out += chunk));
+    child.on("error", () => resolve(false));
+    child.on("exit", () => resolve(out.trim().length > 0));
+  });
+}
+
+// Postgres and Redis. The data containers are each started by their own
+// entry in dev.config.mjs so they get the profile's ports and project name.
+// A Postgres on 54321 that compose.yaml did not start is left alone. The
+// compose-managed one goes through `up` every time, which is a no-op when
+// nothing changed and recreates the container when compose.yaml did (the
+// database lives in a volume that survives that).
+async function startCompose() {
+  if (
+    (await portOpen(54321)) &&
+    (await portOpen(6379)) &&
+    !(await composeContainerRunning("seasketch_db"))
+  ) {
     report("Postgres and Redis are already listening. Leaving those containers in place.");
     return;
   }
-  const args = ["compose"];
-  if (profile === "data") {
-    args.push("--profile", "data");
-  }
-  args.push("up", "-d", "--wait");
+  const args = ["compose", "up", "-d", "--wait", "db", "redis"];
   return new Promise((resolve, reject) => {
     const child = spawn("docker", args, { cwd: root, stdio: "inherit" });
     child.on("error", reject);
@@ -229,7 +308,7 @@ function unbuiltPackages() {
   return missing;
 }
 
-const { profile, ci, only } = parseArgs(process.argv.slice(2));
+const { profile, ci, only, localData } = parseArgs(process.argv.slice(2));
 if (profile === "e2e") {
   logsDir = path.join(root, ".logs", "e2e");
 }
@@ -243,20 +322,35 @@ if (unbuilt.length > 0) {
   process.exit(1);
 }
 
+let apiEnv = readApiDotenv();
+if (localData) {
+  const forced = withoutProductionValues(apiEnv);
+  apiEnv = forced.env;
+  ignoredProductionVariables = forced.ignored;
+}
+const selectedServices = selectServices(profile, apiEnv);
+const started = new Set(selectedServices.map((service) => service.name));
+
 if (only) {
   const service = serviceByName(only);
   if (!service) {
     console.error(`Unknown service: ${only}`);
     usage();
   }
-  if (!servicesInProfile(profile).includes(service)) {
+  const optIn = service.profiles.length === 0;
+  if (!optIn && !servicesInProfile(profile).includes(service)) {
     console.error(`${only} is not in the ${profile} profile`);
     process.exit(1);
   }
-  runOne(service);
+  if (servicesStoppedForProduction(apiEnv).has(service.name)) {
+    report(
+      `${only} is pointed at production by packages/api/.env. Starting it anyway; the API will not use it.`
+    );
+  }
+  runOne(service, started, apiEnv);
 } else {
-  const selected = servicesInProfile(profile).flatMap((service) => {
-    const command = commandFor(service, ci, profile);
+  const selected = selectedServices.flatMap((service) => {
+    const command = commandFor(service, ci, profile, started);
     if (!command) {
       return [];
     }
@@ -267,7 +361,7 @@ if (only) {
     command: item.command,
     name: item.service.name,
     cwd: path.join(root, item.service.cwd),
-    env: envFor(item.service, profile, localScreenshotter),
+    env: envFor(item.service, profile, localScreenshotter, started, apiEnv),
   }));
 
   if (selected.length === 0) {
@@ -278,12 +372,22 @@ if (only) {
   try {
     await rm(logsDir, { recursive: true, force: true });
     await mkdir(logsDir, { recursive: true });
-    await startCompose(profile);
+    await startCompose();
   } catch (error) {
     report(error instanceof Error ? error.message : String(error));
     process.exit(1);
   }
 
+  if (localData) {
+    report(
+      ignoredProductionVariables.length > 0
+        ? `--local-data: ${ignoredProductionVariables.join(", ")} in packages/api/.env ignored; the local data services run instead.`
+        : "--local-data: packages/api/.env has no production values; nothing to ignore."
+    );
+  }
+  for (const line of dataNotices(profile, started, apiEnv)) {
+    report(line);
+  }
   if (profile === "e2e") {
     report(`Service logs: ${logsDir}`);
   } else {

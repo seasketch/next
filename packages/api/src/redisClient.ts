@@ -11,7 +11,12 @@ export function redisClientOptions(): ClientOpts {
     }
   }
   return {
-    connect_timeout: 5000,
+    // node-redis 3 arms this as a socket timer before the connect event. The
+    // API's module graph blocks the event loop while it loads, and with the
+    // rest of the dev stack compiling alongside, that can take longer than a
+    // few seconds; a short timeout then fires first and the process exits
+    // with "connection timeout exceeded" against a healthy Redis.
+    connect_timeout: 60000,
     host: process.env.REDIS_HOST || "127.0.0.1",
     password: process.env.REDIS_PASSWORD,
     ...(db > 0 ? { db } : {}),

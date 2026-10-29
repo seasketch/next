@@ -7,7 +7,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "wrangler dev --ip 127.0.0.1 --port ${SCREENSHOTTER_DEV_PORT:-8791} --var SCREENSHOTTER_TOKEN:${SCREENSHOTTER_DEV_TOKEN:-local-dev-screenshotter} --var SCREENSHOTTER_ALLOW_LOCALHOST:true --no-show-interactive-dev-session",
+    "dev": "wrangler dev --ip 127.0.0.1 --port ${SCREENSHOTTER_DEV_PORT:-8791} --var SCREENSHOTTER_TOKEN:${SCREENSHOTTER_DEV_TOKEN:-local-dev-screenshotter} --var SCREENSHOTTER_ALLOW_LOCALHOST:true --inspector-port 0 --no-show-interactive-dev-session",
     "deploy": "wrangler deploy",
     "test": "node --test src/validate.test.js",
     "test:integration": "node --test --test-timeout 180000 src/dev.integration.test.js"
