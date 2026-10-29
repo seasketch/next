@@ -19,11 +19,15 @@
     "url": "git+https://github.com/seasketch/next.git"
   },
   "scripts": {
-    "start": "docker run -p 9000:8080 --env-file .env spatial-uploads-handler:latest",
+    "start": "cd ../.. && docker compose --profile data up spatial-uploads",
     "dev": "tsx watch server.ts",
     "build": "tsc -b",
     "watch": "tsc -b --watch",
     "build:container": "node ../../scripts/build-images.mjs spatial-uploads-handler",
+    "runtime-image": "node scripts/runtime-image.mjs",
+    "runtime-image:pin": "node scripts/runtime-image.mjs --pin",
+    "runtime-image:check": "node scripts/runtime-image.mjs --check",
+    "runtime-image:build": "docker build --platform linux/amd64 -f Dockerfile.runtime -t \"$(node scripts/runtime-image.mjs)\" .",
     "test": "jest",
     "deploy:pre": "npm run build",
     "geostats": "tsx bin/geostats.ts"

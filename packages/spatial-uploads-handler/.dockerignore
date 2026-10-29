@@ -1,0 +1,7 @@
+# Context for Dockerfile.runtime, which copies nothing from this directory.
+# The application Dockerfile uses the repo root as its context instead.
+node_modules
+dist
+.tsbuildinfo
+__tests__
+.env
