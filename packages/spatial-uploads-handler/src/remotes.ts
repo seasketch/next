@@ -11,6 +11,7 @@ import { writeFileSync, createReadStream, createWriteStream } from "fs";
 import { ReadStream, statSync } from "node:fs";
 import { Readable } from "node:stream";
 import { Upload } from "@aws-sdk/lib-storage";
+import { describeStorageError, toError } from "./storageErrors";
 
 const r2Client = new S3Client({
   region: "auto",
@@ -47,7 +48,13 @@ function ownsRemote(remote: string): boolean {
 
 function assertOwned(remote: string) {
   if (!ownsRemote(remote)) {
-    throw new Error(`Refusing to access foreign remote ${remote}`);
+    const owned = ownedBucketNames();
+    throw new Error(
+      `Refusing to access ${remote}: its bucket is not one this handler is ` +
+        `configured for (${
+          owned.length ? owned.join(", ") : "no buckets configured"
+        }). Check the BUCKET, TILES_REMOTE and RESOURCES_REMOTE settings.`
+    );
   }
 }
 
@@ -85,12 +92,19 @@ export async function putObject(
     Body: fileStream,
   };
   let logmsg = `putObject ${filepath} (${bytes(fileSizeBytes)}) to ${remote}.`;
-  // if file size is larger than 500MB, use multipart upload
-  if (fileSizeBytes > 500 * 1024 * 1024) {
-    logmsg += " Using multipart upload.";
-    await putLargeObject(Bucket, Key, client, fileStream, fileSizeBytes);
-  } else {
-    await client.send(new PutObjectCommand(uploadParams));
+  try {
+    // if file size is larger than 500MB, use multipart upload
+    if (fileSizeBytes > 500 * 1024 * 1024) {
+      logmsg += " Using multipart upload.";
+      await putLargeObject(Bucket, Key, client, fileStream, fileSizeBytes);
+    } else {
+      await client.send(new PutObjectCommand(uploadParams));
+    }
+  } catch (e) {
+    console.error(`putObject ${remote} failed`, e);
+    const message = describeStorageError("upload", remote, e);
+    logger.output += `${logmsg} FAILED: ${message}\n`;
+    throw new Error(message);
   }
   logger.output += logmsg + "\n";
   if (increment) {
@@ -112,48 +126,61 @@ export async function getObject(
   const client = r2Client;
   const Bucket = parts[0];
   const Key = parts.slice(1).join("/");
-  const headResponse = await client.send(
-    new HeadObjectCommand({
-      Bucket,
-      Key,
-    })
-  );
-  const fileSizeBytes = headResponse.ContentLength;
   logger.output += `getObject ${remote} to ${filepath}\n`;
-  const response = await client.send(
-    new GetObjectCommand({
-      Bucket,
-      Key,
-    })
-  );
-  const initialProgress = parseFloat(logger.currentProgress.toString());
-  const finishedProgressIncrement =
-    initialProgress <= 0
-      ? finishedProgressValue
-      : initialProgress - finishedProgressValue;
+  let fileSizeBytes: number | undefined;
+  let body: unknown;
+  try {
+    const headResponse = await client.send(
+      new HeadObjectCommand({
+        Bucket,
+        Key,
+      })
+    );
+    fileSizeBytes = headResponse.ContentLength;
+    const response = await client.send(
+      new GetObjectCommand({
+        Bucket,
+        Key,
+      })
+    );
+    body = response.Body;
+  } catch (e) {
+    console.error(`getObject ${remote} failed`, e);
+    const message = describeStorageError("fetch", remote, e);
+    logger.output += `FAILED: ${message}\n`;
+    throw new Error(message);
+  }
+  if (!(body instanceof Readable)) {
+    throw new Error(
+      `Failed to fetch ${remote}: storage returned ${
+        body ? "a non-stream body" : "an empty body"
+      }.`
+    );
+  }
+  const stream = body;
   let downloadedBytes = 0;
-  if (response.Body) {
-    return new Promise((resolve, reject) => {
-      if (response.Body instanceof Readable) {
-        response.Body.on("data", (chunk) => {
-          downloadedBytes += chunk.length;
-          if (fileSizeBytes) {
-            const progressFraction = downloadedBytes / fileSizeBytes;
-            const chunkIncrement = chunk.length / fileSizeBytes;
-            logger.updateProgress(chunkIncrement * finishedProgressValue);
-          }
-        });
-        response.Body.pipe(createWriteStream(filepath))
-          .on("error", (err) => reject(err))
-          .on("close", () => {
-            logger.updateProgress(finishedProgressValue);
-            return resolve(filepath);
-          });
+  return new Promise((resolve, reject) => {
+    const fail = (err: unknown) => {
+      const message = describeStorageError("fetch", remote, err);
+      logger.output += `FAILED: ${message}\n`;
+      reject(new Error(message));
+    };
+    stream.on("data", (chunk) => {
+      downloadedBytes += chunk.length;
+      if (fileSizeBytes) {
+        const chunkIncrement = chunk.length / fileSizeBytes;
+        logger.updateProgress(chunkIncrement * finishedProgressValue);
       }
     });
-  } else {
-    throw new Error("Invalid response from storage");
-  }
+    stream.on("error", fail);
+    stream
+      .pipe(createWriteStream(filepath))
+      .on("error", fail)
+      .on("close", () => {
+        logger.updateProgress(finishedProgressValue);
+        return resolve(filepath);
+      });
+  });
 }
 
 async function putLargeObject(
@@ -172,25 +199,27 @@ async function putLargeObject(
     partSize = minPartSize; // Ensure parts are at least 5MB
   }
 
+  const upload = new Upload({
+    client,
+    params: {
+      Bucket,
+      Key,
+      Body,
+    },
+    partSize, // Enforce part size constraint
+    queueSize: 5, // Number of parallel uploads
+  });
+
+  upload.on("httpUploadProgress", (progress) => {
+    console.log(`Uploaded ${progress.loaded} of ${progress.total}`);
+  });
+
+  // Let failures propagate. Swallowing them here would report a successful
+  // upload for an object that was never written.
   try {
-    const upload = new Upload({
-      client,
-      params: {
-        Bucket,
-        Key,
-        Body,
-      },
-      partSize, // Enforce part size constraint
-      queueSize: 5, // Number of parallel uploads
-    });
-
-    upload.on("httpUploadProgress", (progress) => {
-      console.log(`Uploaded ${progress.loaded} of ${progress.total}`);
-    });
-
     await upload.done();
-    console.log("Upload completed successfully!");
   } catch (error) {
-    console.error("Upload failed:", error);
+    throw toError(error);
   }
+  console.log("Upload completed successfully!");
 }

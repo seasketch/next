@@ -26,3 +26,5 @@ docker run -p 9000:8080 --env-file .env spatial-uploads-handler:latest
 ## Creating a new deployment
 
 If updates are needed to the handler code or container environment, test using the dev setup and then run `npx cdk deploy -e SpatialUploadHandler`
+
+The handler fetches staged uploads from `BUCKET`, which CDK sets from `SPATIAL_UPLOADS_BUCKET` in `packages/infra/.env`. The API (deployed by CI) presigns uploads into the same variable. Before synthesizing, the CDK app compares your `SPATIAL_UPLOADS_BUCKET` with the values currently deployed on `SeaSketchGraphQLServer` and `SpatialUploadHandler` and refuses to continue on a mismatch, since a mismatch leaves every upload stuck at "fetching". Set `SKIP_SPATIAL_UPLOADS_BUCKET_CHECK=1` only when intentionally moving both stacks to a new bucket.

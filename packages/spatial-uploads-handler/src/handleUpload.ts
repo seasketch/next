@@ -24,6 +24,7 @@ import {
   type ResponseOutput,
 } from "./uploadPipelineShared";
 import type { DelimitedUploadProcessingOptions } from "./spatialUploadsHandlerTypes";
+import { toError } from "./storageErrors";
 
 export type {
   SpatialUploadsHandlerRequest,
@@ -43,6 +44,29 @@ export type {
 } from "./uploadPipelineShared";
 
 const DEBUG = process.env.DEBUG === "true";
+
+/**
+ * Mark a background job as failed with the given message, unless it has
+ * already reached a terminal state. Never throws: a database problem here is
+ * logged so that it cannot mask the error being reported.
+ */
+async function failJobIfActive(
+  jobId: string,
+  errorMessage: string,
+): Promise<void> {
+  try {
+    const pgClient = await getClient();
+    await pgClient.query(
+      `update project_background_jobs set state = 'failed', error_message = $1, progress_message = 'failed' where id = $2 and state in ('queued', 'running')`,
+      [errorMessage, jobId],
+    );
+  } catch (dbError) {
+    console.error(
+      `Could not mark job ${jobId} as failed. The job may be left in a running state until it times out.`,
+      dbError,
+    );
+  }
+}
 
 export default async function handleUpload(
   /** project_background_jobs uuid */
@@ -64,7 +88,9 @@ export default async function handleUpload(
   if (DEBUG) {
     console.log("DEBUG MODE ENABLED");
   }
-  const pgClient = await getClient();
+  // getClient() is memoized, so the closures below share one connection. It is
+  // called lazily (inside the try) so that a connection failure is reported
+  // through the same catch as every other error.
   const outputs: (ResponseOutput & { local: string })[] = [];
   const baseKey = `projects/${slug}/public`;
 
@@ -81,6 +107,7 @@ export default async function handleUpload(
     if (skipLoggingProgress) {
       return;
     }
+    const pgClient = await getClient();
     if (progress !== undefined) {
       await pgClient.query(
         `update project_background_jobs set state = $1, progress = least($2, 1), progress_message = $3 where id = $4 returning progress`,
@@ -108,16 +135,17 @@ export default async function handleUpload(
     if (skipLoggingProgress) {
       return;
     }
-    const { rows } = await pgClient.query(
+    const pgClient = await getClient();
+    await pgClient.query(
       `update project_background_jobs set progress = least($1, 1.0) where id = $2 returning progress`,
       [progress, jobId],
     );
   });
 
   const dist = path.join(tmpobj.name, "dist");
-  await logger.exec(["mkdir", [dist]], "Failed to create directory", 0);
 
   const logRemote = `r2://${process.env.BUCKET}/${jobId}.log.txt`;
+  const stagedRemote = `r2://${process.env.BUCKET}/${objectKey}`;
   let { name, ext, base } = path.parse(objectKey);
 
   name = sanitize(name);
@@ -125,31 +153,32 @@ export default async function handleUpload(
   name = `${jobId}`;
   const isTif = ext === ".tif" || ext === ".tiff";
 
-  // Step 1) Fetch the uploaded file from S3
   const keyParts = objectKey.split("/");
   let workingFilePath = `${path.join(
     tmpobj.name,
     keyParts[keyParts.length - 1],
   )}`;
-  await updateProgress("running", "fetching", 0.0);
-  if (DEBUG) {
-    console.log("Fetching", objectKey, "to", workingFilePath);
-  }
-  await getObject(
-    workingFilePath,
-    `r2://${process.env.BUCKET}/${objectKey}`,
-    logger,
-    2 / 30,
-  );
 
   let stats: GeostatsLayer[] | RasterInfo;
   let aiDataAnalystNotesPromise: Promise<AiDataAnalystNotes | undefined>;
 
   const uploadFilename = originalName + ext;
 
-  // After the environment is set up, we can start processing the file depending
-  // on its type
+  // Everything that can fail lives inside this try, so the catch below is the
+  // one place that records the failure on the job and alerts Slack. The Lambda
+  // is invoked asynchronously, so an error that escapes this function is never
+  // reported anywhere else.
   try {
+    await logger.exec(["mkdir", [dist]], "Failed to create directory", 0);
+
+    // Step 1) Fetch the uploaded file from storage
+    await updateProgress("running", "fetching", 0.0);
+    if (DEBUG) {
+      console.log("Fetching", stagedRemote, "to", workingFilePath);
+    }
+    await getObject(workingFilePath, stagedRemote, logger, 2 / 30);
+
+    // Step 2) Process the file depending on its type
     if (isTif || ext === ".nc") {
       const rasterResult = await processRasterUpload({
         logger,
@@ -267,6 +296,7 @@ export default async function handleUpload(
       logfile: logRemote,
     };
     // Trigger the task to process the outputs
+    const pgClient = await getClient();
     await pgClient.query(
       `SELECT graphile_worker.add_job('processDataUploadOutputs', $1::json)`,
       [
@@ -278,40 +308,57 @@ export default async function handleUpload(
     );
     return response;
   } catch (e) {
-    console.error(e);
-    const error = e as Error;
+    const error = toError(e);
+    console.error(
+      `Upload job ${jobId} failed while processing ${stagedRemote}:`,
+      error,
+    );
+    logger.output += `\nERROR: ${error.message}\n`;
     if (!skipLoggingProgress) {
-      const q = await pgClient.query(
-        `update project_background_jobs set state = 'failed', error_message = $1, progress_message = 'failed' where id = $2 returning *`,
-        [error.message || error.name, jobId],
-      );
+      await failJobIfActive(jobId, error.message);
     }
     if (
       process.env.SLACK_TOKEN &&
       process.env.SLACK_CHANNEL &&
       process.env.NODE_ENV === "production"
     ) {
-      const presignedDownloadUrl = await presignStagedGet(
-        process.env.BUCKET!,
-        objectKey,
-        172800,
-      );
-
-      await notifySlackChannel(
-        originalName + ext,
-        presignedDownloadUrl,
-        logger.output,
-        process.env.BUCKET!,
-        objectKey,
-        requestingUser,
-        error.message || error.name,
+      // A Slack outage must not hide the original error.
+      try {
+        const presignedDownloadUrl = await presignStagedGet(
+          process.env.BUCKET!,
+          objectKey,
+          172800,
+        );
+        await notifySlackChannel(
+          originalName + ext,
+          presignedDownloadUrl,
+          logger.output,
+          process.env.BUCKET!,
+          objectKey,
+          requestingUser,
+          error.message,
+        );
+      } catch (slackError) {
+        console.error(
+          `Could not send Slack notification for failed job ${jobId}`,
+          slackError,
+        );
+      }
+    }
+    throw error;
+  } finally {
+    // Persisting the log is best-effort. If storage is the thing that is
+    // broken, a failure here would otherwise replace the real error.
+    try {
+      const logPath = path.join(tmpobj.name, "log.txt");
+      writeFileSync(logPath, logger.output);
+      await putObject(logPath, logRemote, logger);
+    } catch (logError) {
+      console.error(
+        `Could not write processing log for job ${jobId} to ${logRemote}`,
+        logError,
       );
     }
-    throw e;
-  } finally {
-    const logPath = path.join(tmpobj.name, "log.txt");
-    writeFileSync(logPath, logger.output);
-    await putObject(logPath, logRemote, logger);
     if (DEBUG) {
       console.log("Debugging enabled, not cleaning up tmp directory");
     } else {

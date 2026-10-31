@@ -78,18 +78,17 @@ export default async function processDataUpload(
         processingOptions,
       });
     } catch (e) {
-      console.error("error!!", e);
-      if (process.env.SPATIAL_UPLOADS_LAMBDA_DEV_HANDLER) {
-        await client.query(
-          `update project_background_jobs set state = 'failed', error_message = $2, progress_message = 'failed' where id = $1`,
-          [jobId, (e as Error).message],
-        );
-      } else {
-        await client.query(
-          `update project_background_tasks set state = 'failed', progress_message = 'failed', error_message = 'Lambda invocation failure' where id = $1`,
-          [jobId],
-        );
-      }
+      console.error(`Failed to start upload handler for job ${jobId}`, e);
+      const detail = e instanceof Error ? e.message : String(e);
+      await client.query(
+        `update project_background_jobs set state = 'failed', error_message = $2, progress_message = 'failed' where id = $1`,
+        [
+          jobId,
+          process.env.SPATIAL_UPLOADS_LAMBDA_DEV_HANDLER
+            ? detail
+            : `Could not start the upload handler (Lambda invocation failed): ${detail}`,
+        ],
+      );
     }
   });
 }

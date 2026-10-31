@@ -23,6 +23,7 @@ import { SubdivideWorkerLambdaStack } from "../lib/SubdivideWorkerLambdaStack";
 import { FragmentWorkerLambdaStack } from "../lib/FragmentWorkerLambdaStack";
 import { GeostatsPiiClassifierLambdaStack } from "../lib/GeostatsPiiClassifierLambdaStack";
 import { EcrImageRetentionStack } from "../lib/EcrImageRetentionStack";
+import { assertSpatialUploadsBucketParity } from "../lib/spatialUploadsBucketParity";
 let env = require("./env.production");
 
 const DOMAIN_NAME = "seasketch.org";
@@ -262,4 +263,14 @@ new MailerLambdaStack(app, "SeaSketchMailers", {
   host: HOST,
   topic: EMAIL_STATUS_NOTIFICATION_TOPIC,
   emailSource: SES_EMAIL_SOURCE,
+});
+
+// SeaSketchGraphQLServer is deployed by CI and SpatialUploadHandler by hand,
+// both reading SPATIAL_UPLOADS_BUCKET from their own environment. Refuse to
+// synth when the value here disagrees with what either stack has deployed,
+// otherwise uploads land in one bucket and the handler looks in another.
+// The CDK app synthesizes on process exit, after this promise settles.
+assertSpatialUploadsBucketParity({
+  expected: process.env.SPATIAL_UPLOADS_BUCKET,
+  region: env.region,
 });

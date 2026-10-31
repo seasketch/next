@@ -389,17 +389,16 @@ export default async function beginFeatureLayerConversion(
         });
       } catch (e) {
         console.error("Error calling runLambda", e);
-        if (process.env.SPATIAL_UPLOADS_LAMBDA_DEV_HANDLER) {
-          await client.query(
-            `update project_background_jobs set state = 'failed', error_message = $2, progress_message = 'failed' where id = $1`,
-            [jobId, (e as Error).message]
-          );
-        } else {
-          await client.query(
-            `update project_background_tasks set state = 'failed', progress_message = 'failed', error_message = 'Lambda invocation failure' where id = $1`,
-            [jobId]
-          );
-        }
+        const detail = e instanceof Error ? e.message : String(e);
+        await client.query(
+          `update project_background_jobs set state = 'failed', error_message = $2, progress_message = 'failed' where id = $1`,
+          [
+            jobId,
+            process.env.SPATIAL_UPLOADS_LAMBDA_DEV_HANDLER
+              ? detail
+              : `Could not start the upload handler (Lambda invocation failed): ${detail}`,
+          ]
+        );
       }
     } catch (e: any) {
       return handleError(e.message || "Unknown error");
