@@ -185,6 +185,13 @@ export const services = [
     e2eReady: `tcp:127.0.0.1:${e2e.ports.tiles}`,
     // Reads the API's JWKS.
     dependsOn: ["api"],
+    // local-r2 and the two pmtiles-server sessions are three workerd
+    // processes opening the same SQLite files under .data/wrangler. Started
+    // together they can collide on open (SQLITE_BUSY, often while one of
+    // them is recovering a write-ahead log left by the last shutdown) and
+    // the loser exits. One at a time, each has finished opening before the
+    // next begins.
+    startAfter: ["local-r2"],
     profiles: ["data"],
   },
   {
@@ -196,6 +203,7 @@ export const services = [
     ready: `tcp:127.0.0.1:${dev.ports.uploads}`,
     e2eReady: `tcp:127.0.0.1:${e2e.ports.uploads}`,
     dependsOn: ["api"],
+    startAfter: ["pmtiles-tiles"],
     profiles: ["data"],
   },
   {
