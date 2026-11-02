@@ -16,11 +16,13 @@ Users create an upload record in the DB which gives them access to a presignedUp
 
 Edit the TypeScript and the `spatial-uploads-tsc` watcher rebuilds `dist/`; Compose Watch copies it into the container and restarts it. A change to `package.json` or the Dockerfile needs an image rebuild, which `npm run dev` does on its next start.
 
-### The two images
+### The image and its cache
 
-`Dockerfile.runtime` is the slow part: GDAL and its libraries, tippecanoe, go-pmtiles, rclone, unrar, and the Python raster libraries on the Lambda Node base. It is published to `ghcr.io/seasketch/spatial-uploads-runtime:<tag>` by the *Spatial uploads runtime image* workflow when that file changes on `master` or by hand (`workflow_dispatch`). The tag is the content hash of the file (`npm run runtime-image` prints it), so a tag is published once and never changes. `Dockerfile` pins the tag it needs; `npm run runtime-image:pin` rewrites the pin after a runtime change and CI fails on a stale pin.
+`Dockerfile` has two parts. The `tools`, `gdal`, and `runtime` stages are the slow part: GDAL and its libraries, tippecanoe, go-pmtiles, rclone, unrar, and the Python raster libraries on the Lambda Node base, tens of minutes to compile. The `builder` stage and the final stage are the application: the workspace compiled on the Lambda base and copied onto `runtime`, seconds. Compose builds this file locally, `scripts/build-images.mjs` builds it, and CDK deploys it.
 
-`Dockerfile` builds the workspace on the Lambda base and copies it onto the runtime image. It is what Compose builds locally, what `scripts/build-images.mjs` builds, and what CDK deploys. To build the runtime image yourself instead of pulling it, `npm run runtime-image:build` (tens of minutes).
+Nobody should have to compile GDAL on their own machine to use it. The *Spatial uploads runtime cache* workflow builds the slow stages on Actions and exports every layer as a BuildKit registry cache, `ghcr.io/seasketch/spatial-uploads-runtime:cache` from `master` and `:cache-<branch>` from a branch, when the Dockerfile changes or by hand. Every builder passes the master ref as `--cache-from` (`cache_from` in `compose.yaml`, `cacheFrom` in `UploadHandlerLambdaStack`, the flag in `build-images.mjs`), so the usual build pulls about 1.8 GB of finished layers once and reuses them from then on. The cache is a hint, not a dependency: a checkout that changes one of the slow stages builds what changed and reuses the rest, and a registry that cannot be reached means a slow build, not a failed one. That keeps the hot-patch path simple: edit, build, deploy, from any branch, pushed or not.
+
+Two things keep the cache stable. The base image is pinned by digest, because BuildKit keys a stage on the base it resolved and a floating tag would silently invalidate everything the day AWS republished it; bump the digest deliberately. And the slow stages come first in the file, before anything that copies source, so an application change cannot disturb them. Registry cache import needs BuildKit, which Docker Desktop has; on Linux install `docker-buildx`.
 
 ### Against the deployed handler
 
