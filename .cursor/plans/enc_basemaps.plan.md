@@ -24,7 +24,7 @@ todos:
     content: "Phase 1 step 6: current.sql for ENC basemap type and enc_basemaps, upload mutation, processing_options.kind s57, processDataUploadOutputs branch, attestation"
     status: pending
   - id: p1-acl
-    content: "Phase 1 step 7: ACL document includes ENC basemaps, rewritten on create, delete, and ACL change; hostedTileUuidsRequiringAuth includes protected ENC basemaps; tests"
+    content: "Phase 1 step 7: ENC basemaps are public. List ENC tile UUIDs under public in the project ACL document and rewrite it on create; block non-public ACLs for ENC basemaps in API and UI; tests. Restricted ENC basemaps are a later phase"
     status: pending
   - id: p1-client
     content: "Phase 1 step 8: MapContextManager ENC branch, basemap picker, admin ENC editor with catalogue and settings and live preview"
@@ -109,23 +109,29 @@ Follow `AGENTS.md`: all schema work in `packages/api/migrations/current.sql`, ne
 
 - `alter type basemap_type add value 'ENC'`, committed on its own if the migration runner requires it. `create table enc_basemaps` as described in the record, with policies matching `basemaps`. Superuser and project-admin access only for writes.
 - Upload entry point: a mutation that returns a presigned upload URL and creates the `project_background_jobs` and `data_upload_tasks` rows the way the existing upload mutation does (`packages/api/src/spatialUploads/index.ts` and the upload plugin), with `processing_options.kind = 's57'`, the basemap name, and the attestation. Add `ProcessedEncBasemap` to `spatial-uploads-handler/src/spatialUploadsHandlerTypes.ts`.
-- `processDataUploadOutputs.ts` branches on the response kind and calls a new `createEncBasemapRecords` in `packages/api/src/spatialUploads/`. It creates the `basemaps` row (type `ENC`, `url` is the hosted tile base), the `enc_basemaps` row, the default public ACL via the existing trigger, and then writes the ACL document.
+- `processDataUploadOutputs.ts` branches on the response kind and calls a new `createEncBasemapRecords` in `packages/api/src/spatialUploads/`. It creates the `basemaps` row (type `ENC`, `url` is the hosted tile base), the `enc_basemaps` row, the default public ACL via the existing trigger, and then rewrites the project ACL document (step 7).
+- The ACL update path for basemaps must refuse any non-public type for an ENC basemap. Find where basemap ACL type is set (`access_control_lists` rows with `basemap_id`) and add the check there, in API code rather than a trigger.
 - Settings update mutation validates the settings object server-side with the same `validateEncSettings`.
 - Client operations go in `.graphql` files under `packages/client/src/queries/`. Run `npm run graphql:codegen` for generated types. Do not edit `src/generated/`.
 - If the schema drifts, use `.agents/skills/db-drift/SKILL.md`.
 
-### 7. Access control
+### 7. Access control (public only)
 
-- `buildProjectAclDoc` in `packages/api/src/tilesAcl/writeProjectAclDoc.ts` selects only published table of contents items. Add ENC basemaps as a second source of rows into `buildProjectAclDocFromRows`, using the basemap's own ACL as its single placement. The placement merge rules stay as they are.
-- Write the ACL document on ENC basemap create, delete, and ACL change. Today it is written by `publishTilesAclPlugin.ts` on publish and by `GeographyPlugin.ts`. Find the basemap ACL mutation and add the call there and in the new create and delete paths.
-- `getHostedTileUuidsRequiringAuth` (`packages/api/src/tilesAcl/hostedTileUuidsRequiringAuth.ts`) must include the protected ENC UUIDs so `MapContextManager.hostedUuidNeedsMapAccessToken` sends the token.
-- `packages/api/tests/tilesAcl.test.ts` is the pattern. Add cases: public ENC basemap, admins-only, group-restricted, the same UUID shared between a layer and a basemap (most permissive wins), and deletion.
-- `packages/pmtiles-server`: no change expected. Confirm with its router tests and with `presentationRoutes.spec.ts` that a basemap UUID is served and gated identically. `packages/pmtiles-server/src/auth/authorize.ts` already handles public, admin, superuser, group, and project mismatch.
+ENC basemaps are public in phase 1; restriction is a later phase described in the record. The one required change exists because pmtiles-server treats `projects/{slug}/public/{uuid}` as a published layer: with `AUTH_ACL_ENABLED` on and a project ACL document present, a UUID missing from the document's `public` array is admins-only (`classifyUuid` in `packages/pmtiles-server/src/auth/acl.ts`; `authorizeResource` in `resourceAuth.ts`).
+
+- `buildProjectAclDoc` in `packages/api/src/tilesAcl/writeProjectAclDoc.ts` selects only published table of contents items. Add a second query for the project's `ENC` basemaps and append their tile UUIDs (extracted with `extractHostedTilesUuid`) to `public`. No per-basemap ACL logic and no change to the placement merge rules.
+- Rewrite the document when an ENC basemap is created, using `writeProjectAclDocToR2` from `createEncBasemapRecords`. It is also rebuilt on every publish, so a deleted basemap's entry disappears then; a stale public entry is harmless. A re-bake that changes the tile UUID must rewrite the document too.
+- No change to `hostedTileUuidsRequiringAuth` (ENC UUIDs are public, so the client sends no token), and none expected in `packages/pmtiles-server`.
+- Hide the basemap access control UI for ENC basemaps (step 8) and refuse non-public ACLs in the API (step 6).
+- Test in `packages/api/tests/tilesAcl.test.ts`: an ENC basemap UUID appears in `public`, a project with no ENC basemaps is unchanged, and a UUID shared with a protected layer still follows the existing merge rule.
+- Zero-code alternative if this is unwanted: host ENC tiles under a key that classifies as `public` in `classifyResource` (no `projects/` prefix). It avoids the ACL document entirely but means re-keying when restriction arrives.
+- Later phase (not in this spike): read each ENC basemap's own ACL into `buildProjectAclDocFromRows`, write the document on ACL change (currently written by `publishTilesAclPlugin.ts` on publish and `GeographyPlugin.ts`), add protected UUIDs to `getHostedTileUuidsRequiringAuth` so `MapContextManager.hostedUuidNeedsMapAccessToken` sends the token, and lift the UI and API restrictions.
 
 ### 8. Client
 
 - `packages/client/src/dataLayers/MapContextManager.ts` builds the base style around line 2420: `RasterUrlTemplate` builds an inline raster style, everything else calls `fetchGlStyle(url)`. Add an `ENC` branch that calls `buildEncStyle`, sets `sprite` and `glyphs` to the hosted asset URLs, and points the vector source `tiles` at the basemap's hosted URL. Requests flow through `requestTransformer` and `authorizeHostedUrl`, which already attach the access token to hosted tile URLs.
 - Set `labelsLayerId` from the generator's marker layer id so overlay layers insert under chart labels and symbols.
+- Tell the admin in the upload flow that the chart will be publicly readable, and hide the basemap access control for ENC basemaps.
 - Basemap admin: `packages/client/src/admin/data/CreateBasemapModal.tsx` has URL, upload, and Mapbox account tabs. Add an ENC tab, or a separate "Nautical chart" entry from the basemap list; the second is likely cleaner since the flow differs (upload, wait for processing, then configure). `BasemapEditor.tsx`, `BasemapEditorPanel.tsx`, and `EditBasemapPage.tsx` get an ENC variant with the catalogue panel and settings panel. Live preview reuses the editor map.
 - All visible strings go through `Trans` or `t()`. Do not edit `src/lang/*.json`. Use existing components (Modal, Button, Spinner) and Radix UI.
 - Verify with the **Dev: client log** terminal or `npm run logs -- client`, and run `npm run lint` in `packages/client`.
@@ -144,13 +150,13 @@ Every place that reads a basemap's URL or style must handle `ENC`. Known consume
 
 - Handler: unit tests for normalize and detection; an integration test that runs the container locally on the fixture zip and checks the PMTiles layers and properties against the schema contract.
 - Style builder: vitest as above.
-- API: ACL tests (step 7), upload round trip with a stub handler, settings validation.
-- E2E: a Playwright journey in `packages/e2e/tests/basemaps.spec.ts` style that selects an ENC basemap in the local project and asserts the installed style has the ENC source and the tiles request carries an access token when the basemap is restricted. `packages/e2e/JOURNEYS.md` lists existing journeys.
+- API: ACL document tests (step 7), a test that a non-public ACL is refused for an ENC basemap, upload round trip with a stub handler, settings validation.
+- E2E: a Playwright journey in `packages/e2e/tests/basemaps.spec.ts` style that selects an ENC basemap in the local project and asserts the installed style has the ENC source and that tile requests succeed with no access token. `packages/e2e/JOURNEYS.md` lists existing journeys.
 - Local fixture: a tiny ENC basemap for local development. Because the golden snapshot is rebuilt rarely, add this in Phase 2 with the shared basemap, unless an earlier step needs it. `current.sql` is not part of the snapshot.
 
 ## Phase 2: NOAA ENC as a shared basemap
 
-- Shared basemap on the `superuser` project (no `project_id`, attached through `projects_shared_basemaps`). `create_basemap_acl` skips these, so confirm they are served as public: the superuser ACL document must list the UUID in `public`, or pmtiles-server will treat the missing UUID as admins-only.
+- Shared basemap on the `superuser` project (no `project_id`, attached through `projects_shared_basemaps`). `create_basemap_acl` skips these. Keys under the `superuser` slug classify as `data_library` in pmtiles-server and are always public, so no ACL document entry is needed.
 - Scheduled job: model on `packages/api/tasks/updateCRWTemplate.ts`. Download the NOAA all-ENC zip (about 782 MB), process per cell with fan-out, merge, and replace tiles. See `replacePMTilesPlugin.ts` for the replace pattern.
 - Fan-out: processing each cell on its own is already how the step 3 code is shaped; add the orchestration (Step Functions or Fargate) in `packages/infra` as a new stack. Decide in the spike which fits the existing CDK app.
 - Data library entry: `packages/client/src/admin/data/DataLibraryModal.tsx` is built around table of contents templates. Add a separate "Nautical charts" entry that attaches the shared basemap, or place it in the basemap settings page. Pick the second if the first needs invasive changes.
@@ -161,7 +167,7 @@ Every place that reads a basemap's URL or style must handle `ENC`. Known consume
 
 - Where static ENC assets live (sprite, glyphs). Candidate: R2 behind the tiles host, versioned by `ENC_SETTINGS_VERSION`.
 - Whether the source zip is kept in the private uploads bucket indefinitely, and who can download it.
-- Default visibility for a newly created ENC basemap. The basemap ACL trigger makes it public; the create flow should ask.
+- Wording of the public-visibility notice and attestation in the upload flow.
 - Whether `enc_basemaps.settings` is edited with a live save per control or a single save, given other basemap editors.
 - Whether to support more than one ENC basemap per project, and whether two can be combined.
 
@@ -170,6 +176,6 @@ Every place that reads a basemap's URL or style must handle `ENC`. Known consume
 Before proposing the first merge:
 
 - The fixture zip uploads through the local stack and produces a basemap that draws on the map.
-- A restricted ENC basemap returns 401 or 403 to an anonymous request for a tile and 200 with a valid token, checked against local pmtiles-server.
+- With `AUTH_ACL_ENABLED=true` locally and the project ACL document written, an anonymous request for an ENC basemap tile returns 200, and the same request returns 401 or 403 if the UUID is removed from the document's `public` list (proving the step 7 change is what makes it work).
 - The harness report shows the NOAA cells at representative zooms next to the NOAA and tile57 references, with the diff scores recorded in the PR.
 - `npm run lint` passes in `packages/client`, workspace builds pass with `npm run build`, and `npm run db:drift` is clean.

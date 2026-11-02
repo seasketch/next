@@ -4,7 +4,7 @@
 
 ## Intent
 
-Let a SeaSketch project admin upload IHO S-57 electronic navigational chart (ENC) data and get a nautical chart basemap: a good-looking, electronic-chart-system style map that draws from vector tiles hosted by SeaSketch, with a small set of adjustments (palette, units, depth shading, label density, which themes show). Countries and agencies that use SeaSketch bring their own S-57 data. Some of it is licensed to them, so the tiles must be access controlled like any other hosted tile set.
+Let a SeaSketch project admin upload IHO S-57 electronic navigational chart (ENC) data and get a nautical chart basemap: a good-looking, electronic-chart-system style map that draws from vector tiles hosted by SeaSketch, with a small set of adjustments (palette, units, depth shading, label density, which themes show). Countries and agencies that use SeaSketch bring their own S-57 data. In phase 1 every ENC basemap is public. Restricting tiles to project members or groups, which licensed data will eventually need, is a later phase (see Access control).
 
 Charts are basemaps, not overlay layers. A basemap is a whole Mapbox GL style with its own sprite, glyphs, and sources, so a tile package with many source layers is fine.
 
@@ -16,7 +16,7 @@ These were settled in discussion and are the contract for the spike.
 
 - **A new basemap type, `ENC`.** Not a hosted style URL. The basemap row holds the hosted tile URL and a small settings object. The map client generates the style from those settings and a generator version, so adjustments never re-tile and users get live preview.
 - **Roll our own pipeline.** GDAL reads S-57. tippecanoe and `pmtiles` build the tiles. A new TypeScript package builds the style. Third-party output is used to ground-truth ours, not to produce ours.
-- **Tile access control reuses pmtiles-server.** ENC tiles are hosted under the same `projects/{slug}/public/{uuid}` path and gated by the project ACL document in R2. The basemap's existing ACL row supplies the rule.
+- **ENC basemaps are public in phase 1.** No per-basemap access control is built. Later, restriction reuses pmtiles-server and the project ACL document in R2, as overlay tiles do. To keep that door open at low cost, ENC tiles are hosted under the same `projects/{slug}/public/{uuid}` path as other hosted tiles, so a later ACL phase does not re-key or re-bake anything.
 - **S-63 is out of scope.** Only unencrypted S-57 is accepted. Encrypted cells are detected and rejected with a clear message.
 - **"Good-looking ECS-style" is the quality bar.** S-52 inspired, not conformant. Complex line styles and some conditional symbology are approximated.
 - **Phase 1:** upload, tile, store, style, and adjust a project-owned ENC basemap. **Phase 2:** NOAA ENC as a shared basemap kept current by a scheduled job, offered through the data library. **Later:** one basemap built from every open, authoritative S-57 source we can find.
@@ -26,6 +26,7 @@ These were settled in discussion and are the contract for the spike.
 - S-101 and other S-100 products. The pipeline should detect them and say they are unsupported. Design the normalized schema so S-101 could feed it later.
 - Encrypted data (S-63), and any attempt to hold permits, hardware IDs, or keys.
 - Offline use of ENC basemaps. They are excluded from offline tile settings until someone designs it.
+- Restricted access to ENC basemaps in phase 1 (see Access control).
 - ENC features as overlay layers, spatial analysis on ENC data, or reports against it.
 - Mariner-specific ECDIS behaviour: alarms, own-ship, route monitoring, safety contour as a navigational control.
 
@@ -51,10 +52,10 @@ Admin browser
               spatial-uploads-handler (Lambda container: GDAL, tippecanoe, pmtiles)
                 S-57 zip ─► cells + updates ─► normalized features ─► tippecanoe ─► PMTiles
                           │
-                          ▼ R2 (tiles host)                 ▲ ACL doc
+                          ▼ R2 (tiles host)                 ▲ public ACL entry
 Map client ◄── basemap row ── settings + tile URL ──────────┤
   buildEncStyle(settings, catalog) ─► Mapbox GL style       │
-  tiles, sprite, glyphs ◄── pmtiles-server (authorizes by project ACL document)
+  tiles, sprite, glyphs ◄── pmtiles-server (public in phase 1)
 ```
 
 ### Data model
@@ -69,7 +70,7 @@ Map client ◄── basemap row ── settings + tile URL ──────�
   - `source_url`, the retained original S-57 upload in the private uploads bucket, so a pipeline improvement can re-bake without asking the admin to upload again.
   - `pipeline_version`, the handler version that produced the tiles.
 - Uploads reuse `project_background_jobs` and `data_upload_tasks`, with `processing_options.kind = "s57"` and the basemap name carried in options. No new job type is needed unless the spike shows otherwise. The basemap row is created when processing succeeds.
-- Basemap ACLs already exist (`access_control_lists.basemap_id`, public by default). ENC basemaps use them as they are.
+- Basemap ACL rows already exist (`access_control_lists.basemap_id`, public by default). For ENC basemaps they stay `public`, and the API and admin UI do not allow changing them until the ACL phase.
 
 ### Processing pipeline
 
@@ -134,25 +135,27 @@ The style is generated from a declarative rule table (S-52 colour token, display
 
 ### Client integration
 
-- `MapContextManager` builds the base style for `ENC` basemaps from `buildEncStyle` instead of fetching a style URL. Tile requests go through `authorizeHostedUrl`, so the map access token attaches exactly as it does for protected overlay tiles.
+- `MapContextManager` builds the base style for `ENC` basemaps from `buildEncStyle` instead of fetching a style URL. Tile requests go through the existing request transformer, which attaches a map access token only for UUIDs the project lists as requiring one. ENC UUIDs are never in that list in phase 1.
 - The basemap picker lists ENC basemaps, with the "not for navigation" note.
 - The admin gets an ENC basemap editor: upload, a chart catalogue panel, and the settings panel with live map preview. It extends the existing basemap admin pages in `packages/client/src/admin/data`.
 - Touchpoints that read `basemaps.url` and assume a style URL or raster template must handle `ENC`: survey map questions, map bookmarks and the screenshotter, the offline settings pages, the optional layer editor, and the cartography comparison map. The plan lists each as an explicit check.
 
 ### Access control
 
-- Hosted ENC tiles are protected the same way as overlay tiles. pmtiles-server finds the UUID in the path, looks it up in `acl/{ns}/projects/{slug}.json`, and checks the map access token's role and groups.
-- `buildProjectAclDoc` today reads only published table of contents items. It must also read ENC basemaps: for each basemap with a hosted tile URL, add the UUID to `public` or `protected` according to the basemap's own ACL.
-- The ACL document is written when a table of contents is published. Basemaps have no draft state, so writes also happen when an ENC basemap is created, deleted, or has its ACL changed. This is the main server-side change; pmtiles-server itself should need none.
-- `Project.hostedTileUuidsRequiringAuth` must include protected ENC basemap UUIDs, or the client will not send the token.
-- Uploading requires an attestation that the admin has the right to use and host the data, recorded with the job.
+Phase 1 ships public ENC basemaps only. The admin UI hides the basemap access control for ENC basemaps, and the ACL update path refuses non-public settings for them, so the UI never promises protection the tiles do not have. The upload flow tells the admin plainly that the chart will be publicly readable, and the attestation covers the right to publish.
+
+One small server-side change is still required even for public tiles. pmtiles-server classifies keys under `projects/{slug}/public/{uuid}` as published layers. When ACL enforcement is on (`AUTH_ACL_ENABLED`) and the project has an ACL document, a UUID that is not listed in the document's `public` array resolves to admins-only and non-admins get a 401 or 403. So `buildProjectAclDoc` (`packages/api/src/tilesAcl/writeProjectAclDoc.ts`) also lists every ENC basemap's tile UUID under `public`, and the document is rewritten when an ENC basemap is created. A stale `public` entry for a deleted basemap is harmless. Nothing else changes: no per-basemap ACL logic, no `hostedTileUuidsRequiringAuth` change, no pmtiles-server change.
+
+If even that is unwanted, the zero-code alternative is to store ENC tiles under a key that classifies as `public` (no `projects/` prefix), at the cost of re-keying when the ACL phase arrives.
+
+**Later: restricted ENC basemaps.** Extend `buildProjectAclDoc` to read each ENC basemap's own ACL, write the document on create, delete, and ACL change (it is written only on table of contents publish today, and basemaps have no draft state), include protected UUIDs in `Project.hostedTileUuidsRequiringAuth` so the client sends the token, and lift the UI restriction. pmtiles-server already supports public, admin, superuser, and group rules. Until this lands, licensed data that must not be public should not be uploaded.
 
 ## Phase 2: NOAA ENC as a shared basemap
 
 Shared basemaps already exist: a basemap with no `project_id`, attachable to any project through `projects_shared_basemaps`, created only by superusers. NOAA ENC becomes one of those, owned by the `superuser` project.
 
 - A scheduled job modelled on `updateCRWTemplate.ts` downloads the NOAA all-ENC zip, runs the phase 1 processor, and swaps the tiles. NOAA updates weekly and the all-ENC zip is about 782 MB, so this phase is where fan-out per cell becomes mandatory.
-- The tiles live under the `superuser` slug and are public. The `superuser` ACL document must list them in `public` explicitly, because an absent UUID resolves to admins-only.
+- The tiles live under the `superuser` slug. pmtiles-server classifies that slug as `data_library`, which is always public, so no ACL document entry is needed.
 - The data library gets a card (or a basemap section in the project's basemap settings) that adds the shared basemap to a project. The template id rules in [`packages/api/src/DataLibrary/README.md`](../../packages/api/src/DataLibrary/README.md) apply if it also stamps a template id.
 - The golden snapshot gets a tiny fixture ENC basemap, built from a few small NOAA cells, so local development and end-to-end tests have one. Follow `.agents/skills/golden-snapshot/SKILL.md`.
 - NOAA data is public domain. Attribute NOAA and state the update date in the basemap attribution.
@@ -167,7 +170,7 @@ A merged basemap of every open, authoritative S-57 source: a source registry per
 - **Overlap resolution.** Band-to-zoom ranges alone will look wrong where scales overlap at the same zoom. Clipping by higher-band coverage fixes most of it and is the riskiest part of the pipeline.
 - **Lambda limits.** See Scale above. The spike measures a regional bundle.
 - **Mapbox GL expressiveness.** Pattern fills, repeated line symbols, and sector arcs are approximated. The generator should record each approximation in a doc, not hide it.
-- **Legal.** IHO copyright on S-52 and S-101 artefacts, and the licences of hydrographic offices, need review. Uploaders attest to rights; SeaSketch does not verify them. Public-by-default ACLs on a licensed dataset are a hazard, so the create flow should ask about visibility.
+- **Legal.** IHO copyright on S-52 and S-101 artefacts, and the licences of hydrographic offices, need review. Uploaders attest to rights; SeaSketch does not verify them. Because phase 1 ENC basemaps are always public, the create flow must say so and the attestation must cover publishing. Uploading licensed data that may not be republished is a hazard until the ACL phase lands.
 - **Postgres enum change.** Adding a value to `basemap_type` cannot be used in the same transaction that adds it. The migration adds the value alone and the rest of the schema follows in a separate step if graphile-migrate needs that.
 - **Fonts and glyphs.** The default base style still uses Mapbox fonts, with a TODO to replace them. ENC glyphs come from an open-licensed font we host.
 - **Where static assets live.** The generated sprite and glyph files need a stable public path. The spike picks one (R2 public bucket behind the tiles host is the candidate) and records it.
