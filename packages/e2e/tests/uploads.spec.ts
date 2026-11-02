@@ -25,6 +25,12 @@ const smallFixture = path.resolve(__dirname, "../fixtures/samoa-test-areas.geojs
  * that.
  */
 const bioregionsFixture = path.resolve(__dirname, "../fixtures/deepwater-bioregions.geojson");
+/**
+ * Another real export: 32 Special, Unique Marine Area MultiPolygons around
+ * Samoa (26 inshore, 6 offshore), detailed enough that the normalized
+ * FlatGeobuf crosses the tiling threshold.
+ */
+const sumaFixture = path.resolve(__dirname, "../fixtures/eco-suma.geojson");
 const tilesOrigin = process.env.E2E_TILES_URL || "http://localhost:18787";
 const uploadsOrigin = process.env.E2E_UPLOADS_URL || "http://localhost:18788";
 
@@ -383,6 +389,64 @@ test.describe("hosted data upload on the local data services", () => {
     expect((await request.get(original.url)).status()).toBe(200);
 
     await expectMapDrawsLayer(page, seen, name, (url) => url.startsWith(source.url!));
+  });
+
+  test("the Eco-SUMA GeoJSON is tiled and the map draws it from the tiles host", async ({
+    page,
+    request,
+  }) => {
+    test.setTimeout(300_000);
+    const name = uniqueName("eco-suma");
+    const { job, seen } = await uploadAndWait(page, request, stageFixture(dir, name, sumaFixture));
+    const source = job.dataUploadTask!.dataSource!;
+    const outputs = source.outputs;
+
+    expect(outputs.map((output) => output.type)).toEqual(
+      expect.arrayContaining(["FLAT_GEOBUF", "PMTILES"])
+    );
+    expectLocalUrls(job);
+    const pmtiles = outputs.find((output) => output.type === "PMTILES")!;
+    expect(source.url).toBe(pmtiles.url.replace(/\.pmtiles$/, ""));
+    expect(source.url!.startsWith(`${tilesOrigin}/`), source.url!).toBe(true);
+
+    // A tiled source leaves `bounds` to the TileJSON; the row stores null.
+    expect(source.bounds).toBeNull();
+    const layer = findGeostatsLayer(source.geostats);
+    expect(layer, `geostats ${JSON.stringify(source.geostats)}`).toBeDefined();
+    expect(layer!.count).toBe(32);
+    expect(layer!.geometry).toBe("MultiPolygon");
+    expect(layer!.attributes.map((attribute) => attribute.attribute)).toEqual(
+      expect.arrayContaining(["Name", "Code", "Insh_Offsh", "layer"])
+    );
+
+    // The tiles host describes the archive from its header, bounds included,
+    // and serves tiles from it. Tile 6/1/34 covers 174.4°W to 168.75°W,
+    // 16.6°S to 11.2°S, nearly the whole dataset, so it has to come back
+    // with content.
+    const tileJsonResponse = await request.get(`${source.url}.json`);
+    expect(tileJsonResponse.status(), await tileJsonResponse.text()).toBe(200);
+    const tileJson = (await tileJsonResponse.json()) as {
+      tiles: string[];
+      bounds?: number[];
+    };
+    expect(tileJson.tiles[0].startsWith(`${tilesOrigin}/`), tileJson.tiles[0]).toBe(true);
+    expect(tileJson.bounds, JSON.stringify(tileJson)).toHaveLength(4);
+    const [west, south, east, north] = tileJson.bounds!;
+    expect(west).toBeCloseTo(-174.46, 1);
+    expect(south).toBeCloseTo(-15.86, 1);
+    expect(east).toBeCloseTo(-170.96, 1);
+    expect(north).toBeCloseTo(-10.99, 1);
+    const tileUrl = tileJson.tiles[0].replace("{z}", "6").replace("{x}", "1").replace("{y}", "34");
+    const tile = await request.get(tileUrl);
+    expect(tile.status(), `tile ${tileUrl}`).toBe(200);
+    expect((await tile.body()).length).toBeGreaterThan(0);
+
+    await expectMapDrawsLayer(
+      page,
+      seen,
+      name,
+      (url) => url.startsWith(`${source.url}/`) && /\.(pbf|mvt)(\?|$)/.test(url)
+    );
   });
 });
 
