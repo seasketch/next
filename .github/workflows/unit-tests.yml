@@ -249,6 +249,13 @@ jobs:
         run: |
           slug="$(echo "${{ github.ref_name }}" | tr '[:upper:]' '[:lower:]' | sed -E 's/[^a-z0-9._-]+/-/g' | cut -c1-100)"
           echo "SPATIAL_UPLOADS_CACHE_TAG=cache-$slug" >> "$GITHUB_ENV"
+      # Build the handler image before Playwright starts its web server, so
+      # a cold cache (a push that changed the GDAL stages) spends its 30+
+      # minutes here, visibly, instead of inside the web server timeout. The
+      # image name is fixed, so the e2e project's own `up --build` is then a
+      # cache hit.
+      - name: Build the spatial uploads image
+        run: docker compose --profile data build spatial-uploads
       - name: Run smoke tests
         id: smoke
         run: npm run e2e
