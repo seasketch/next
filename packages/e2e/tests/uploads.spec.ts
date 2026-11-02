@@ -18,6 +18,13 @@ import { signIn } from "../src/project";
  * tiles host. One upload covers each path.
  */
 const smallFixture = path.resolve(__dirname, "../fixtures/samoa-test-areas.geojson");
+/**
+ * A real dataset: five deep-water bioregion MultiPolygons around Samoa,
+ * exported from a GIS with a `name` and `crs` member, long text attributes,
+ * and an apostrophe in a name. The generated fixtures do not have any of
+ * that.
+ */
+const bioregionsFixture = path.resolve(__dirname, "../fixtures/deepwater-bioregions.geojson");
 const tilesOrigin = process.env.E2E_TILES_URL || "http://localhost:18787";
 const uploadsOrigin = process.env.E2E_UPLOADS_URL || "http://localhost:18788";
 
@@ -34,6 +41,8 @@ type Job = {
       id: number;
       type: string;
       url: string | null;
+      bounds: (number | string)[] | null;
+      geostats: unknown;
       outputs: Output[];
     } | null;
   } | null;
@@ -70,6 +79,8 @@ const jobsQuery = `
             id
             type
             url
+            bounds
+            geostats
             outputs { type url remote isOriginal }
           }
         }
@@ -87,9 +98,9 @@ function uniqueName(base: string) {
   return `${base}-${Date.now().toString(36)}`;
 }
 
-function stageFixture(dir: string, name: string) {
+function stageFixture(dir: string, name: string, fixture = smallFixture) {
   const file = path.join(dir, `${name}.geojson`);
-  fs.copyFileSync(smallFixture, file);
+  fs.copyFileSync(fixture, file);
   return file;
 }
 
@@ -318,4 +329,106 @@ test.describe("hosted data upload on the local data services", () => {
       (url) => url.startsWith(`${source.url}/`) && /\.(pbf|mvt)(\?|$)/.test(url)
     );
   });
+
+  test("the deep-water bioregions GeoJSON is analyzed, stored locally, and drawn", async ({
+    page,
+    request,
+  }) => {
+    test.setTimeout(300_000);
+    const name = uniqueName("deepwater-bioregions");
+    const { job, seen } = await uploadAndWait(
+      page,
+      request,
+      stageFixture(dir, name, bioregionsFixture)
+    );
+    const source = job.dataUploadTask!.dataSource!;
+    const outputs = source.outputs;
+
+    // Its FlatGeobuf is about 45 KB, under the tiling threshold, so the map
+    // reads it as GeoJSON from the uploads host.
+    expect(outputs.map((output) => output.type)).toEqual(
+      expect.arrayContaining(["FLAT_GEOBUF", "GEO_JSON"])
+    );
+    expect(outputs.map((output) => output.type)).not.toContain("PMTILES");
+    expectLocalUrls(job);
+    expect(source.url!.startsWith(`${uploadsOrigin}/`), source.url!).toBe(true);
+
+    // The handler read the file's geometry and attributes. Bounds cover the
+    // bioregions (roughly 174.5°W to 170.5°W, 15.9°S to 11°S) and the
+    // geostats name the columns the GIS export carried.
+    const [west, south, east, north] = source.bounds!.map(Number);
+    expect(west).toBeCloseTo(-174.51, 1);
+    expect(south).toBeCloseTo(-15.88, 1);
+    expect(east).toBeCloseTo(-170.54, 1);
+    expect(north).toBeCloseTo(-10.96, 1);
+    const layer = findGeostatsLayer(source.geostats);
+    expect(layer, `geostats ${JSON.stringify(source.geostats)}`).toBeDefined();
+    expect(layer!.count).toBe(5);
+    expect(layer!.geometry).toBe("MultiPolygon");
+    expect(layer!.attributes.map((attribute) => attribute.attribute)).toEqual(
+      expect.arrayContaining(["Draft_name", "depthRange", "eez", "Descrptn"])
+    );
+
+    // What the uploads host serves back is the same five features with their
+    // attributes intact, including the apostrophe in "I'a manu".
+    const served = await fetchServedGeoJson(request, source);
+    expect(served.features).toHaveLength(5);
+    expect(served.features.map((feature) => feature.properties.Draft_name).sort()).toEqual(
+      ["Fafa-o-Mauga", "I'a manu", "La'i", "Loto-i-Toga", "Vasa-i-Saute"]
+    );
+    expect(served.features.every((feature) => feature.geometry.type === "MultiPolygon")).toBe(
+      true
+    );
+    const original = outputs.find((output) => output.isOriginal)!;
+    expect((await request.get(original.url)).status()).toBe(200);
+
+    await expectMapDrawsLayer(page, seen, name, (url) => url.startsWith(source.url!));
+  });
 });
+
+type GeostatsLayer = {
+  count: number;
+  geometry: string;
+  attributes: { attribute: string }[];
+};
+
+/**
+ * `geostats` is untrusted JSON. The handler stores `{ layers: [...] }` for a
+ * vector source; accept a bare layer as well.
+ */
+function findGeostatsLayer(value: unknown): GeostatsLayer | undefined {
+  if (value === null || typeof value !== "object") {
+    return undefined;
+  }
+  const candidates: unknown[] =
+    "layers" in value && Array.isArray((value as { layers: unknown }).layers)
+      ? (value as { layers: unknown[] }).layers
+      : [value];
+  for (const candidate of candidates) {
+    if (
+      candidate !== null &&
+      typeof candidate === "object" &&
+      "attributes" in candidate &&
+      Array.isArray((candidate as { attributes: unknown }).attributes) &&
+      "count" in candidate &&
+      "geometry" in candidate
+    ) {
+      return candidate as GeostatsLayer;
+    }
+  }
+  return undefined;
+}
+
+type ServedFeature = {
+  geometry: { type: string };
+  properties: Record<string, unknown>;
+};
+
+async function fetchServedGeoJson(
+  request: APIRequestContext,
+  source: { url: string | null }
+): Promise<{ features: ServedFeature[] }> {
+  const response = await request.get(source.url!);
+  expect(response.status(), await response.text()).toBe(200);
+  return (await response.json()) as { features: ServedFeature[] };
+}
