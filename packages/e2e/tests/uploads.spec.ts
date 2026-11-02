@@ -3,6 +3,7 @@ import os from "os";
 import path from "path";
 import { APIRequestContext, Page, expect, test } from "@playwright/test";
 import { personas } from "../src/config";
+import { resetAiCartographerChoice } from "../src/db";
 import { graphql } from "../src/graphql";
 import { signIn } from "../src/project";
 
@@ -16,6 +17,13 @@ import { signIn } from "../src/project";
  * Small datasets are served as GeoJSON from the uploads host; anything whose
  * normalized FlatGeobuf is over 100 KB is also tiled and served from the
  * tiles host. One upload covers each path.
+ *
+ * An account's first upload asks about the AI Cartographer. Every journey
+ * starts from that state and answers; most decline. The two AI journeys
+ * check the handler against the e2e profile's mock of the AI gateway and
+ * the PII classifier (packages/e2e/bin/ai-cartographer-mock.mjs): enabled,
+ * the upload is titled and styled from the mock's answers; declined, the
+ * mock is never asked.
  */
 const smallFixture = path.resolve(__dirname, "../fixtures/samoa-test-areas.geojson");
 /**
@@ -33,8 +41,20 @@ const bioregionsFixture = path.resolve(__dirname, "../fixtures/deepwater-bioregi
 const sumaFixture = path.resolve(__dirname, "../fixtures/eco-suma.geojson");
 const tilesOrigin = process.env.E2E_TILES_URL || "http://localhost:18787";
 const uploadsOrigin = process.env.E2E_UPLOADS_URL || "http://localhost:18788";
+const aiMockOrigin = process.env.E2E_AI_CARTOGRAPHER_MOCK_URL || "http://localhost:18790";
 
 type Output = { type: string; url: string; remote: string; isOriginal: boolean };
+type AiNote = {
+  bestLayerTitle: string | null;
+  attribution: string | null;
+  bestLabelColumn: string | null;
+  chosenPresentationType: string | null;
+  interactivityType: string;
+  showLabels: boolean;
+  customPalette: unknown;
+  notes: string;
+  errors: string | null;
+};
 type Job = {
   id: string;
   state: "QUEUED" | "RUNNING" | "COMPLETE" | "FAILED";
@@ -50,24 +70,12 @@ type Job = {
       bounds: (number | string)[] | null;
       geostats: unknown;
       outputs: Output[];
+      aiDataAnalystNote: AiNote | null;
     } | null;
+    layers: { mapboxGlStyles: unknown; tableOfContentsItem: { title: string } | null }[] | null;
   } | null;
 };
 type JobsQuery = { projectBySlug: { id: number; projectBackgroundJobs: Job[] } };
-
-type ProfileQuery = {
-  me: { profile: { wasPromptedToEnableAiDataAnalystAt: string | null } };
-};
-
-const profileQuery = `
-  query UploadJourneyProfile {
-    me {
-      profile {
-        wasPromptedToEnableAiDataAnalystAt
-      }
-    }
-  }
-`;
 
 const jobsQuery = `
   query UploadJobs($slug: String!) {
@@ -88,12 +96,55 @@ const jobsQuery = `
             bounds
             geostats
             outputs { type url remote isOriginal }
+            aiDataAnalystNote {
+              bestLayerTitle
+              attribution
+              bestLabelColumn
+              chosenPresentationType
+              interactivityType
+              showLabels
+              customPalette
+              notes
+              errors
+            }
+          }
+          layers {
+            mapboxGlStyles
+            tableOfContentsItem { title }
           }
         }
       }
     }
   }
 `;
+
+/** One request the AI Cartographer mock answered. */
+type MockRequest = {
+  at: string;
+  kind: "chat" | "pii";
+  prompt: "title" | "attribution" | "column_intelligence" | null;
+  model: string | null;
+  filename: string | null;
+  input: string;
+};
+
+async function mockRequests(request: APIRequestContext): Promise<MockRequest[]> {
+  const response = await request.get(`${aiMockOrigin}/requests`);
+  expect(response.status(), `the AI Cartographer mock at ${aiMockOrigin}`).toBe(200);
+  return (await response.json()) as MockRequest[];
+}
+
+/**
+ * The prompts the mock answered about this upload, by the filename each
+ * carried. PII classification runs whatever the account chose and its
+ * payload has no filename, so it is not in here.
+ */
+function promptsAbout(requests: MockRequest[], filename: string) {
+  return requests.filter(
+    (entry) =>
+      entry.kind === "chat" && (entry.filename === filename || entry.input.includes(filename))
+  );
+}
 
 /**
  * Uploads get a unique filename, which becomes the layer title. A database
@@ -158,11 +209,16 @@ type Seen = { url: string; status: number };
  * local data hosts. The client turns a finished upload on in the map by
  * itself, so the map's first fetch of the layer can happen before the test
  * gets to look at the job.
+ *
+ * The account has been reset to never having been asked about the AI
+ * Cartographer, so the first-upload prompt appears and `aiCartographer`
+ * answers it. Declining keeps the handler off the mock.
  */
 async function uploadAndWait(
   page: Page,
   request: APIRequestContext,
-  file: string
+  file: string,
+  aiCartographer: "enable" | "decline" = "decline"
 ): Promise<{ job: Job; seen: Seen[] }> {
   const seen: Seen[] = [];
   page.on("response", (response) => {
@@ -172,8 +228,6 @@ async function uploadAndWait(
     }
   });
   const issued = await signIn(page, request, personas.admin);
-  const { me } = await graphql<ProfileQuery>(request, issued.accessToken, profileQuery);
-  const prompted = me.profile.wasPromptedToEnableAiDataAnalystAt != null;
 
   await page.goto("/demo-samoa/admin/data");
   // The upload drop zone, and its hidden file input, belong to the Overlay
@@ -201,12 +255,17 @@ async function uploadAndWait(
 
   await fileInput.setInputFiles(file);
 
-  // An account's first upload asks about the AI Cartographer before
-  // processing starts. Either answer continues; declining keeps the test
-  // offline. An account that has already answered is not asked again.
-  if (!prompted) {
-    await page.getByRole("button", { name: "Disable for now" }).click({ timeout: 60_000 });
-  }
+  // The prompt holds the upload until it is answered; processing starts with
+  // the answer.
+  const prompt = page.getByRole("dialog").filter({ hasText: "AI Cartographer" });
+  await expect(prompt.getByRole("button", { name: "Enable for my account" })).toBeVisible({
+    timeout: 60_000,
+  });
+  await prompt
+    .getByRole("button", {
+      name: aiCartographer === "enable" ? "Enable for my account" : "Disable for now",
+    })
+    .click();
 
   let job: Job | undefined;
   await expect
@@ -268,8 +327,9 @@ async function expectMapDrawsLayer(
 
 test.describe("hosted data upload on the local data services", () => {
   let dir: string;
-  test.beforeEach(() => {
+  test.beforeEach(async () => {
     dir = fs.mkdtempSync(path.join(os.tmpdir(), "seasketch-e2e-upload-"));
+    await resetAiCartographerChoice(personas.admin.sub);
   });
   test.afterEach(() => {
     fs.rmSync(dir, { recursive: true, force: true });
@@ -447,6 +507,89 @@ test.describe("hosted data upload on the local data services", () => {
       name,
       (url) => url.startsWith(`${source.url}/`) && /\.(pbf|mvt)(\?|$)/.test(url)
     );
+  });
+
+  test("with the AI Cartographer enabled, the upload is titled and styled from the mocked AI service", async ({
+    page,
+    request,
+  }) => {
+    test.setTimeout(300_000);
+    const name = uniqueName("samoa-ai-on");
+    const filename = `${name}.geojson`;
+    const { job, seen } = await uploadAndWait(
+      page,
+      request,
+      stageFixture(dir, name),
+      "enable"
+    );
+    const task = job.dataUploadTask!;
+    const source = task.dataSource!;
+    expectLocalUrls(job);
+
+    // The handler asked the mock for a title and, after the mocked PII
+    // classification, for column intelligence, each about this file. No
+    // sidecar or embedded metadata, so no attribution prompt.
+    const requests = await mockRequests(request);
+    expect(promptsAbout(requests, filename).map((entry) => entry.prompt).sort()).toEqual([
+      "column_intelligence",
+      "title",
+    ]);
+    expect(requests.filter((entry) => entry.kind === "pii").length).toBeGreaterThan(0);
+
+    // The answers were stored as the source's notes...
+    const note = source.aiDataAnalystNote;
+    expect(note, "ai_data_analyst_notes row").not.toBeNull();
+    expect(note!.errors).toBeNull();
+    expect(note!.bestLayerTitle).toBe(`${name} (titled by the AI Cartographer mock)`);
+    expect(note!.chosenPresentationType).toBe("SIMPLE_POLYGON");
+    expect(note!.bestLabelColumn).toBe("name");
+    expect(note!.showLabels).toBe(true);
+    expect(note!.interactivityType).toBe("ALL_PROPERTIES_POPUP");
+    expect(note!.customPalette).toEqual({ default: "#1d4ed8" });
+    expect(note!.notes).toContain("AI Cartographer mock");
+    expect(note!.attribution).toBeNull();
+
+    // ...and applied: the layer takes the suggested title and a style built
+    // from the suggestion, with the mock's fill colour.
+    const [layer] = task.layers!;
+    expect(layer.tableOfContentsItem?.title).toBe(note!.bestLayerTitle);
+    const styles = layer.mapboxGlStyles as { type: string; paint?: Record<string, unknown> }[];
+    expect(styles.map((style) => style.type)).toEqual(
+      expect.arrayContaining(["fill", "line", "symbol"])
+    );
+    expect(styles.find((style) => style.type === "fill")!.paint!["fill-color"]).toBe("#1d4ed8");
+
+    // The geostats carry the classifier's verdict.
+    expect((source.geostats as { layers: { piiRiskWasAssessed?: boolean }[] }).layers[0]
+      .piiRiskWasAssessed).toBe(true);
+
+    await expectMapDrawsLayer(page, seen, note!.bestLayerTitle!, (url) =>
+      url.startsWith(source.url!)
+    );
+  });
+
+  test("with the AI Cartographer declined, the upload never reaches the AI service", async ({
+    page,
+    request,
+  }) => {
+    test.setTimeout(300_000);
+    const name = uniqueName("samoa-ai-off");
+    const filename = `${name}.geojson`;
+    const { job, seen } = await uploadAndWait(page, request, stageFixture(dir, name), "decline");
+    const task = job.dataUploadTask!;
+    const source = task.dataSource!;
+    expectLocalUrls(job);
+
+    // No prompt about this file went to the mock, there are no notes, and
+    // the layer keeps the filename as its title with the default style.
+    expect(promptsAbout(await mockRequests(request), filename)).toEqual([]);
+    expect(source.aiDataAnalystNote).toBeNull();
+    const [layer] = task.layers!;
+    expect(layer.tableOfContentsItem?.title).toBe(name);
+    const styles = layer.mapboxGlStyles as { type: string; paint?: Record<string, unknown> }[];
+    expect(styles.find((style) => style.type === "fill")!.paint!["fill-color"]).not.toBe("#1d4ed8");
+
+    await expectMapDrawsLayer(page, seen, name, (url) => url.startsWith(source.url!));
   });
 });
 

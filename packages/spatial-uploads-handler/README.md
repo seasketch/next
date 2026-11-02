@@ -24,6 +24,12 @@ Nobody should have to compile GDAL on their own machine to use it. The *Spatial 
 
 Two things keep the cache stable. The base image is pinned by digest, because BuildKit keys a stage on the base it resolved and a floating tag would silently invalidate everything the day AWS republished it; bump the digest deliberately. And the slow stages come first in the file, before anything that copies source, so an application change cannot disturb them. Registry cache import needs BuildKit, which Docker Desktop has; on Linux install `docker-buildx`.
 
+### The AI Cartographer locally
+
+With the AI Cartographer on, the handler asks the Cloudflare AI Gateway (`CF_AIG_URL`, `CF_AIG_TOKEN`) for a title, an attribution, and column intelligence, and before column intelligence it sends the geostats to the PII classifier Lambda (`GEOSTATS_PII_CLASSIFIER_ARN`). `npm run dev` hands the container the gateway values from this package's `.env` (then the API's). The classifier is a deployed Lambda; with the ARN unset the layer is stored unassessed and column intelligence is skipped, so an enabled profile gets a title and nothing else. `GEOSTATS_PII_CLASSIFIER_ENDPOINT` points the Lambda client somewhere else, a Lambda emulator running the classifier image for instance, with the ARN set to `function`.
+
+The e2e profile has no gateway token and no classifier. It points both variables at `packages/e2e/bin/ai-cartographer-mock.mjs`, a small HTTP server that answers the three prompts with fixed, schema-valid JSON and marks geostats as assessed, so `tests/uploads.spec.ts` can run one upload with the Cartographer enabled and one with it declined. Nothing from a Playwright run reaches the real gateway, whatever the developer's `.env` holds.
+
 ### Against the deployed handler
 
 Set `SPATIAL_UPLOADS_LAMBDA_ARN` in `packages/api/.env`, together with the production `R2_ENDPOINT`, bucket names, and keys, and `npm run dev` leaves the local container out. The staged upload has to be where the deployed handler can read it, which is why the storage values go with it. CI rejects those values.

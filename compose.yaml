@@ -136,6 +136,15 @@ services:
       # off still succeed, and an enabled profile fails with a clear error.
       CF_AIG_TOKEN: ${CF_AIG_TOKEN:-}
       CF_AIG_URL: ${CF_AIG_URL:-}
+      # The PII classifier Lambda. Unset, uploads are stored unassessed and
+      # the AI Cartographer skips column intelligence. The e2e profile sets
+      # both to its mock; ENDPOINT can also name a Lambda emulator running
+      # the real classifier image. The SDK signs every request, so the
+      # container needs some credentials even for an emulator.
+      GEOSTATS_PII_CLASSIFIER_ARN: ${GEOSTATS_PII_CLASSIFIER_ARN:-}
+      GEOSTATS_PII_CLASSIFIER_ENDPOINT: ${GEOSTATS_PII_CLASSIFIER_ENDPOINT:-}
+      AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID:-local}
+      AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY:-local}
     healthcheck:
       # Any HTTP answer means the emulator is up. Do not POST to the invoke
       # path here; that would run the handler with an empty event.

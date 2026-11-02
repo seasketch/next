@@ -39,6 +39,7 @@ const devPorts = {
   subdivision: 9000,
   elasticmq: 9324,
   dataTables: 3006,
+  aiCartographerMock: 8790,
 };
 
 const e2ePorts = {
@@ -51,7 +52,12 @@ const e2ePorts = {
   subdivision: 19000,
   elasticmq: 19324,
   dataTables: 13006,
+  aiCartographerMock: 18790,
 };
+
+// The bearer token the e2e profile's AI Cartographer mock expects, so the
+// handler's request is checked for one even though nothing is secret.
+export const aiCartographerMockToken = "e2e-ai-cartographer-mock";
 
 // One description of the local data stack per profile: ports, the wrangler
 // persistence directory, the Compose project the containers run under, and
@@ -159,6 +165,23 @@ export function aiGatewayEnv() {
   return {
     ...(token ? { CF_AIG_TOKEN: token } : {}),
     ...(url ? { CF_AIG_URL: url } : {}),
+  };
+}
+
+// The e2e profile points the handler at packages/e2e/bin/ai-cartographer-mock.mjs
+// for both the AI gateway and the PII classifier, in place of whatever
+// credentials the developer's .env files hold: a Playwright run must never
+// send an upload to the real gateway. The container reaches the host process
+// through the Docker host gateway, like storage.
+export function aiCartographerMockEnv(stack) {
+  const origin = `http://host.docker.internal:${stack.ports.aiCartographerMock}`;
+  return {
+    CF_AIG_URL: `${origin}/v1`,
+    CF_AIG_TOKEN: aiCartographerMockToken,
+    GEOSTATS_PII_CLASSIFIER_ENDPOINT: origin,
+    // The Lambda emulator path is /2015-03-31/functions/function/invocations,
+    // so the function the SDK is told to invoke must be named `function`.
+    GEOSTATS_PII_CLASSIFIER_ARN: "function",
   };
 }
 
@@ -293,7 +316,16 @@ export function dataEnvFor(serviceName, profile, started, apiEnv = readApiDotenv
       break;
     }
     case "spatial-uploads": {
-      Object.assign(env, composeEnv(profile), aiGatewayEnv());
+      Object.assign(
+        env,
+        composeEnv(profile),
+        profile === "e2e" ? aiCartographerMockEnv(stack) : aiGatewayEnv()
+      );
+      break;
+    }
+    case "ai-cartographer-mock": {
+      env.AI_CARTOGRAPHER_MOCK_PORT = String(ports.aiCartographerMock);
+      env.AI_CARTOGRAPHER_MOCK_TOKEN = aiCartographerMockToken;
       break;
     }
     case "subdivision":
@@ -330,7 +362,7 @@ export function dataNotices(profile, started, apiEnv = readApiDotenv()) {
       `${integration.productionVariable} is set in packages/api/.env: ${integration.id} uses production and ${integration.services.join(", ")} will not start.`
     );
   }
-  if (started.has("spatial-uploads")) {
+  if (started.has("spatial-uploads") && profile !== "e2e") {
     const gateway = aiGatewayEnv();
     if (!gateway.CF_AIG_TOKEN || !gateway.CF_AIG_URL) {
       lines.push(

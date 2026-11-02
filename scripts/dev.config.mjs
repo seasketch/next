@@ -11,7 +11,8 @@
 // data path (local storage, the two pmtiles-server sessions, the handler
 // containers, the results queue). `core` is the opt-out: Postgres, Redis, the
 // API, the client, and the watchers. `e2e` is the whole stack on its own
-// ports, database, and storage directory. An entry with no profiles is
+// ports, database, and storage directory, plus the entries tagged `e2e`
+// (test doubles the smoke suite needs). An entry with no profiles is
 // started only by `--only`.
 //
 // Which data services actually start also depends on packages/api/.env; see
@@ -277,6 +278,18 @@ export const services = [
     e2eReady: `http-get://127.0.0.1:${e2e.ports.dataTables}`,
     profiles: ["data"],
   },
+  {
+    name: "ai-cartographer-mock",
+    cwd: "packages/e2e",
+    // Answers the upload handler's AI gateway and PII classifier calls so the
+    // upload journeys can turn the AI Cartographer on. The e2e profile
+    // points the spatial-uploads container here (scripts/dev.data.mjs).
+    command: "node bin/ai-cartographer-mock.mjs",
+    ciCommand: "node bin/ai-cartographer-mock.mjs",
+    ready: `http-get://127.0.0.1:${dev.ports.aiCartographerMock}/health`,
+    e2eReady: `http-get://127.0.0.1:${e2e.ports.aiCartographerMock}/health`,
+    profiles: ["e2e"],
+  },
 ];
 
 export const profileNames = ["data", "core", "e2e"];
@@ -297,8 +310,13 @@ export function servicesInProfile(profile) {
     if (profile === "core") {
       return service.profiles.includes("core");
     }
-    if (profile === "data" || profile === "e2e") {
+    if (profile === "data") {
       return service.profiles.some((name) => name === "core" || name === "data");
+    }
+    if (profile === "e2e") {
+      return service.profiles.some(
+        (name) => name === "core" || name === "data" || name === "e2e"
+      );
     }
     return false;
   });

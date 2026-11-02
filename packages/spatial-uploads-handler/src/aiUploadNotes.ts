@@ -46,9 +46,15 @@ export function isPiiClassifierConfigured(): boolean {
 let _lambdaClient: InstanceType<typeof AWS.Lambda> | null = null;
 function getLambdaClient() {
   if (!_lambdaClient) {
+    // GEOSTATS_PII_CLASSIFIER_ENDPOINT is a local stand-in for the Lambda
+    // service: the emulator running the classifier image, or the e2e
+    // profile's mock. Both serve the Invoke path for a function named
+    // `function`, which is what GEOSTATS_PII_CLASSIFIER_ARN holds then.
+    const endpoint = process.env.GEOSTATS_PII_CLASSIFIER_ENDPOINT;
     _lambdaClient = new AWS.Lambda({
       region: process.env.AWS_REGION || "us-west-2",
       httpOptions: { timeout: 30_000 },
+      ...(endpoint ? { endpoint } : {}),
     });
   }
   return _lambdaClient;

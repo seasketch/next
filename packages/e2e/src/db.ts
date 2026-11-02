@@ -136,6 +136,29 @@ function assertDisposableE2ESub(sub: string) {
 }
 
 /**
+ * Put a user back to never having been asked about the AI Cartographer, so
+ * an upload journey always gets the first-upload prompt and decides for
+ * itself. The choice is per account and persists in the e2e database
+ * between journeys and reruns.
+ */
+export async function resetAiCartographerChoice(sub: string) {
+  const client = new Client({ connectionString: databaseURL });
+  await client.connect();
+  try {
+    await client.query(
+      `update user_profiles
+       set enable_ai_data_analyst = false,
+           ai_data_analyst_enabled_at = null,
+           was_prompted_to_enable_ai_data_analyst_at = null
+       where user_id = (select id from users where sub = $1)`,
+      [sub]
+    );
+  } finally {
+    await client.end();
+  }
+}
+
+/**
  * The forum journey expects e2e|member's full name to be empty. Access
  * journeys that submit the profile form put it back.
  */
