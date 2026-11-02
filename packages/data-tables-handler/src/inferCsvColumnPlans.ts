@@ -7,6 +7,11 @@ export type CsvColumnPlan = {
   name: string;
   duckDbType: string;
   nullifyNa: boolean;
+  /**
+   * Extra literals to store as NULL, besides "NA" when `nullifyNa` is set.
+   * "NM" is included only when it behaves like a missing-data marker.
+   */
+  nullTokens?: string[];
 };
 
 export function nullstrOption(nullStrings: string[]): string {
@@ -19,6 +24,52 @@ export function isNumericDuckDbType(type: string): boolean {
 
 function quoteColumn(name: string): string {
   return `"${name.replace(/"/g, '""')}"`;
+}
+
+/**
+ * True when `tokenCount` sits among the other values in the column, rather
+ * than towering over them the way a bulk missing-data marker does.
+ * `peerMax` / `peerMedian` are frequencies of the other distinct values.
+ */
+export function tokenLooksLikeCategoryCode(
+  tokenCount: number,
+  peerMax: number,
+  peerMedian: number,
+): boolean {
+  if (tokenCount <= 0) {
+    return false;
+  }
+  const peerFrequency = Math.max(peerMedian, 1);
+  // Roughly as often as a typical category value, not a bulk missing marker.
+  return tokenCount <= peerFrequency * 2 && tokenCount <= peerMax;
+}
+
+/**
+ * Blank "NM" only when it does not behave like a peer category (a taxon
+ * code, a methods code, and so on). Frequency is the signal: a code that
+ * shows up about as often as the others is kept, even if the rest of the
+ * column would otherwise be numeric.
+ */
+export function decideNmNullHandling(
+  nmLiteralCount: number,
+  nmLooksLikeValidCode: boolean,
+): boolean {
+  return nmLiteralCount > 0 && !nmLooksLikeValidCode;
+}
+
+/**
+ * Type to store once sentinel tokens are removed. Null when any real
+ * non-numeric value remains, or when nothing numeric is left.
+ */
+export function promotedNumericType(
+  nonNumeric: number,
+  nonInteger: number,
+  numericCount: number,
+): "BIGINT" | "DOUBLE" | null {
+  if (numericCount <= 0 || nonNumeric > 0) {
+    return null;
+  }
+  return nonInteger > 0 ? "DOUBLE" : "BIGINT";
 }
 
 /**
@@ -51,12 +102,29 @@ export function decideNaNullHandling(
   return { duckDbType: "VARCHAR", nullifyNa: true };
 }
 
-async function naLooksLikeValidCode(
+function sqlStringLiteral(value: string): string {
+  return `'${value.replace(/'/g, "''")}'`;
+}
+
+async function tokenLiteralCount(
   conn: DuckDBConnection,
   quotedColumn: string,
-  naLiteralCount: number,
+  token: string,
+): Promise<number> {
+  const rows = await all<{ count: number }>(
+    conn,
+    `SELECT COUNT(*)::INTEGER as count FROM _csv_probe_strict WHERE CAST(${quotedColumn} AS VARCHAR) = ${sqlStringLiteral(token)}`,
+  );
+  return rows[0]?.count ?? 0;
+}
+
+async function tokenLooksLikeValidCode(
+  conn: DuckDBConnection,
+  quotedColumn: string,
+  token: string,
+  tokenCount: number,
 ): Promise<boolean> {
-  if (naLiteralCount === 0) {
+  if (tokenCount === 0) {
     return false;
   }
 
@@ -68,17 +136,67 @@ async function naLooksLikeValidCode(
     FROM (
       SELECT COUNT(*)::INTEGER as c
       FROM _csv_probe_strict
-      WHERE CAST(${quotedColumn} AS VARCHAR) != 'NA'
+      WHERE CAST(${quotedColumn} AS VARCHAR) != ${sqlStringLiteral(token)}
         AND ${quotedColumn} IS NOT NULL
       GROUP BY CAST(${quotedColumn} AS VARCHAR)
     ) freq`,
   );
-  const maxC = freqRows[0]?.max_c ?? 0;
-  const medianC = freqRows[0]?.median_c ?? 0;
-  const peerFrequency = Math.max(medianC, 1);
+  return tokenLooksLikeCategoryCode(
+    tokenCount,
+    freqRows[0]?.max_c ?? 0,
+    freqRows[0]?.median_c ?? 0,
+  );
+}
 
-  // NA appears roughly as often as a typical category value, not a bulk missing marker.
-  return naLiteralCount <= peerFrequency * 2 && naLiteralCount <= maxC;
+/**
+ * BIGINT or DOUBLE when every remaining value is numeric after `tokens` are
+ * treated as null. Decimal points and exponents stay DOUBLE, matching
+ * read_csv. Returns null when the column should stay text.
+ */
+async function promotedTypeAfterNullTokens(
+  conn: DuckDBConnection,
+  quotedColumn: string,
+  tokens: string[],
+): Promise<"BIGINT" | "DOUBLE" | null> {
+  const list = tokens.map(sqlStringLiteral).join(", ");
+  const value = `CAST(${quotedColumn} AS VARCHAR)`;
+  const rows = await all<{
+    non_numeric: number;
+    non_integer: number;
+    numeric_count: number;
+  }>(
+    conn,
+    `SELECT
+      COUNT(*) FILTER (
+        WHERE ${quotedColumn} IS NOT NULL
+          AND ${value} NOT IN (${list})
+          AND TRY_CAST(${value} AS DOUBLE) IS NULL
+      )::INTEGER AS non_numeric,
+      COUNT(*) FILTER (
+        WHERE ${quotedColumn} IS NOT NULL
+          AND ${value} NOT IN (${list})
+          AND TRY_CAST(${value} AS DOUBLE) IS NOT NULL
+          AND (
+            regexp_matches(${value}, '[.eE]')
+            OR TRY_CAST(${value} AS BIGINT) IS DISTINCT FROM TRY_CAST(${value} AS DOUBLE)
+          )
+      )::INTEGER AS non_integer,
+      COUNT(*) FILTER (
+        WHERE ${quotedColumn} IS NOT NULL
+          AND ${value} NOT IN (${list})
+          AND TRY_CAST(${value} AS DOUBLE) IS NOT NULL
+      )::INTEGER AS numeric_count
+    FROM _csv_probe_strict`,
+  );
+  const row = rows[0];
+  if (!row) {
+    return null;
+  }
+  return promotedNumericType(
+    row.non_numeric,
+    row.non_integer,
+    row.numeric_count,
+  );
 }
 
 export async function inferCsvColumnPlans(
@@ -114,14 +232,11 @@ export async function inferCsvColumnPlans(
   const plans: CsvColumnPlan[] = [];
   for (const col of strictSchema) {
     const quoted = quoteColumn(col.column_name);
-    const naLiteralRows = await all<{ count: number }>(
-      conn,
-      `SELECT COUNT(*)::INTEGER as count FROM _csv_probe_strict WHERE CAST(${quoted} AS VARCHAR) = 'NA'`,
-    );
-    const naLiteralCount = naLiteralRows[0]?.count ?? 0;
-    const validNaCode = await naLooksLikeValidCode(
+    const naLiteralCount = await tokenLiteralCount(conn, quoted, "NA");
+    const validNaCode = await tokenLooksLikeValidCode(
       conn,
       quoted,
+      "NA",
       naLiteralCount,
     );
     const decision = decideNaNullHandling(
@@ -130,13 +245,43 @@ export async function inferCsvColumnPlans(
       naLiteralCount,
       validNaCode,
     );
+    const nmLiteralCount = await tokenLiteralCount(conn, quoted, "NM");
+    const validNmCode = await tokenLooksLikeValidCode(
+      conn,
+      quoted,
+      "NM",
+      nmLiteralCount,
+    );
+    const nullifyNm = decideNmNullHandling(nmLiteralCount, validNmCode);
+    const nullTokens = nullifyNm ? ["NM"] : [];
+    let duckDbType = decision.duckDbType;
+    if (nullifyNm && !isNumericDuckDbType(duckDbType)) {
+      const excluded = decision.nullifyNa ? ["NA", "NM"] : ["NM"];
+      const promoted = await promotedTypeAfterNullTokens(
+        conn,
+        quoted,
+        excluded,
+      );
+      if (promoted) {
+        duckDbType = promoted;
+      }
+    }
     plans.push({
       name: col.column_name,
-      ...decision,
+      duckDbType,
+      nullifyNa: decision.nullifyNa,
+      nullTokens,
     });
     if (!decision.nullifyNa && naLiteralCount > 0) {
       console.log(
         `[data-tables-handler] preserving literal "NA" in column ${col.column_name} (${naLiteralCount} row(s); looks like a category code)`,
+      );
+    }
+    if (nmLiteralCount > 0) {
+      console.log(
+        nullifyNm
+          ? `[data-tables-handler] treating "NM" as null in column ${col.column_name} (${nmLiteralCount} row(s); looks like a missing-data marker)`
+          : `[data-tables-handler] preserving literal "NM" in column ${col.column_name} (${nmLiteralCount} row(s); looks like a category code)`,
       );
     }
   }
@@ -155,21 +300,38 @@ function trimEdgeWhitespaceExpr(quotedColumn: string): string {
   return `regexp_replace(${quotedColumn}, '^[\\s\\p{Z}\\x85]+|[\\s\\p{Z}\\x85]+$', '', 'g')`;
 }
 
+function planNullTokens(plan: CsvColumnPlan): string[] {
+  const tokens: string[] = [];
+  if (plan.nullifyNa) {
+    tokens.push("NA");
+  }
+  for (const token of plan.nullTokens ?? []) {
+    if (!tokens.includes(token)) {
+      tokens.push(token);
+    }
+  }
+  return tokens;
+}
+
+function nullifyTokensExpr(expr: string, tokens: string[]): string {
+  if (tokens.length === 0) {
+    return expr;
+  }
+  const list = tokens.map(sqlStringLiteral).join(", ");
+  return `CASE WHEN ${expr} IN (${list}) THEN NULL ELSE ${expr} END`;
+}
+
 export function buildTypedSelectSql(plans: CsvColumnPlan[]): string {
   return plans
     .map((plan) => {
       const quoted = quoteColumn(plan.name);
+      const tokens = planNullTokens(plan);
       if (isNumericDuckDbType(plan.duckDbType)) {
-        const valueExpr = plan.nullifyNa
-          ? `NULLIF(${quoted}, 'NA')`
-          : quoted;
+        const valueExpr = nullifyTokensExpr(quoted, tokens);
         return `TRY_CAST(${valueExpr} AS ${plan.duckDbType}) AS ${quoted}`;
       }
       const trimmed = `NULLIF(${trimEdgeWhitespaceExpr(quoted)}, '')`;
-      if (plan.nullifyNa) {
-        return `NULLIF(${trimmed}, 'NA') AS ${quoted}`;
-      }
-      return `${trimmed} AS ${quoted}`;
+      return `${nullifyTokensExpr(trimmed, tokens)} AS ${quoted}`;
     })
     .join(", ");
 }
