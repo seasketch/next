@@ -5,7 +5,8 @@ permissions:
   contents: read
   checks: write
   actions: read
-  # The smoke tests pull ghcr.io/seasketch/spatial-uploads-runtime.
+  # The smoke tests import the BuildKit cache at
+  # ghcr.io/seasketch/spatial-uploads-runtime.
   packages: read
 
 jobs:
@@ -204,7 +205,10 @@ jobs:
   e2e-smoke:
     name: Smoke tests
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    # Normally about ten minutes. A push that changes the native-tool stages
+    # of the spatial uploads Dockerfile misses the registry cache and builds
+    # GDAL here, which is 30 minutes or more on its own.
+    timeout-minutes: 90
     env:
       DATABASE_URL: postgres://graphile:password@localhost:54321/seasketch_e2e
       ADMIN_DATABASE_URL: postgres://postgres:password@localhost:54321/seasketch_e2e
@@ -231,25 +235,20 @@ jobs:
         run: |
           cp packages/api/.env.template packages/api/.env
           cp packages/client/.env.template packages/client/.env
-      - name: Check the spatial uploads runtime image pin
-        run: node packages/spatial-uploads-handler/scripts/runtime-image.mjs --check
-      # The upload handler container starts from the published runtime image.
-      # Pull it first so a missing tag fails here, with its name, instead of
-      # inside the Playwright web server timeout. The "Spatial uploads runtime
-      # image" workflow publishes it.
+      # Compose builds the upload handler image with --cache-from the
+      # registry cache the "Spatial uploads runtime cache" workflow exports:
+      # the master ref, plus this branch's own ref when that workflow has run
+      # for it. compose.yaml reads SPATIAL_UPLOADS_CACHE_TAG for the second.
       - name: Log in to the GitHub Container Registry
         uses: docker/login-action@v3
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
-      - name: Pull the spatial uploads runtime image
+      - name: Name this branch's runtime cache
         run: |
-          ref="$(node packages/spatial-uploads-handler/scripts/runtime-image.mjs)"
-          if ! docker pull "$ref"; then
-            echo "::error::$ref is not published. Run the 'Spatial uploads runtime image' workflow (workflow_dispatch) and re-run this job."
-            exit 1
-          fi
+          slug="$(echo "${{ github.ref_name }}" | tr '[:upper:]' '[:lower:]' | sed -E 's/[^a-z0-9._-]+/-/g' | cut -c1-100)"
+          echo "SPATIAL_UPLOADS_CACHE_TAG=cache-$slug" >> "$GITHUB_ENV"
       - name: Run smoke tests
         id: smoke
         run: npm run e2e

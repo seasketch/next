@@ -91,6 +91,14 @@ services:
     build:
       context: .
       dockerfile: packages/spatial-uploads-handler/Dockerfile
+      # The GDAL stages come from the BuildKit cache the "Spatial uploads
+      # runtime cache" workflow exports, when they match; otherwise they are
+      # built here. The second entry lets CI add a branch's own cache; on a
+      # developer machine it repeats the first. Needs BuildKit (Docker
+      # Desktop, or docker-buildx on Linux).
+      cache_from:
+        - type=registry,ref=ghcr.io/seasketch/spatial-uploads-runtime:cache
+        - type=registry,ref=ghcr.io/seasketch/spatial-uploads-runtime:${SPATIAL_UPLOADS_CACHE_TAG:-cache}
     image: seasketch-spatial-uploads:dev
     platform: linux/amd64
     ports:
