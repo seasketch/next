@@ -60,15 +60,7 @@ function webServerEnv(): { [key: string]: string } {
 export default defineConfig({
   testDir: "./tests",
   timeout: 60_000,
-  // Spec files can run at once; the tests inside a file keep their order.
-  // A journey that fills in a profile or joins a project does that as an
-  // account of its own (disposableUser) or in a project of its own, so the
-  // files do not see each other's changes. Two workers cut the test phase
-  // by a third on a four-core VM. On the GitHub runner, where the stack and
-  // two software-rendered Chromiums share four hyperthreads, every test ran
-  // about twice as long and the suite took longer overall, so CI keeps one.
-  // `--workers N` overrides this.
-  workers: ci ? 1 : 2,
+  workers: 1,
   forbidOnly: ci,
   retries: ci ? 1 : 0,
   reporter: ci
