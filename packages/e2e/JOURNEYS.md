@@ -6,7 +6,7 @@ The three smoke journeys stay as they are: an anonymous visitor opens `demo-samo
 
 Reads use `demo-samoa`. A signed-in user starts these journeys as a non-participant. Joining the project happens in the test, on the join page, and only then can they post. Each run starts from a fresh snapshot, so a reply is left in place.
 
-Playwright runs two spec files at a time (`workers: 2` in `playwright.config.ts`); the tests inside a file keep their order. A journey that fills in a profile or joins a project does so as an account created for that journey (`disposableUser` in `src/db.ts`, removed again afterwards) or in a project it created, so no file sees another file's changes. `e2e|member` and `e2e|admin` are shared between files, and the access journeys that sign in as `e2e|member` do so in projects of their own.
+Playwright runs two spec files at a time locally (`workers: ci ? 1 : 2` in `playwright.config.ts`; the GitHub runner is slower with two, see the config comment); the tests inside a file keep their order. A journey that fills in a profile or joins a project does so as an account created for that journey (`disposableUser` in `src/db.ts`, removed again afterwards) or in a project it created, so no file sees another file's changes. `e2e|member` and `e2e|admin` are shared between files, and the access journeys that sign in as `e2e|member` do so in projects of their own.
 
 ## Fixture additions
 
