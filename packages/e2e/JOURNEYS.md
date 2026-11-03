@@ -6,6 +6,8 @@ The three smoke journeys stay as they are: an anonymous visitor opens `demo-samo
 
 Reads use `demo-samoa`. A signed-in user starts these journeys as a non-participant. Joining the project happens in the test, on the join page, and only then can they post. Each run starts from a fresh snapshot, so a reply is left in place.
 
+Playwright runs two spec files at a time (`workers: 2` in `playwright.config.ts`); the tests inside a file keep their order. A journey that fills in a profile or joins a project does so as an account created for that journey (`disposableUser` in `src/db.ts`, removed again afterwards) or in a project it created, so no file sees another file's changes. `e2e|member` and `e2e|admin` are shared between files, and the access journeys that sign in as `e2e|member` do so in projects of their own.
+
 ## Fixture additions
 
 One public forum and one topic on `demo-samoa`. Nothing else.
@@ -20,7 +22,7 @@ Geography layers, their metadata, the Marine Protected Area sketch class, the de
 ## Discussion Forums
 
 - An anonymous user can navigate from `/demo-samoa/app` to Discussion Forums, open the Public Forum, and view the existing topic. The thread shows "Sign in or register for an account to participate in the forum." There is no reply form.
-- A registered non-admin (`e2e|member`) opens the same thread. They have not joined `demo-samoa`, so there is no reply form. The thread asks them to join so they can use the discussion forums, and offers Join Project.
+- A registered non-admin (an account created for this journey) opens the same thread. They have not joined `demo-samoa`, so there is no reply form. The thread asks them to join so they can use the discussion forums, and offers Join Project.
 - They choose Join Project and land on the join page, which explains how their profile will be used and shows the profile form. Full Name is empty. Submitting in that state stays on the page, marks Full Name as Required, and does not join the project.
 - They enter a full name and submit again. They return to the same thread as a participant and see the reply form.
 - They type a reply, submit it, and see that reply in the thread.

@@ -1,6 +1,14 @@
 import { expect, test } from "@playwright/test";
-import { personas } from "../src/config";
+import { createE2EUser, deleteE2EUser, disposableUser } from "../src/db";
 import { signIn, visibleButton } from "../src/project";
+
+const createdUsers: string[] = [];
+
+test.afterEach(async () => {
+  for (const sub of createdUsers.splice(0)) {
+    await deleteE2EUser(sub);
+  }
+});
 
 test.describe("demo-samoa forums", () => {
   test("an anonymous visitor can read the public topic and is asked to sign in", async ({
@@ -20,7 +28,12 @@ test.describe("demo-samoa forums", () => {
 
   test("a member joins the project, then posts a reply", async ({ page, request }) => {
     test.setTimeout(90_000);
-    await signIn(page, request, personas.member);
+    // Joining fills in a profile and makes this account a participant. The
+    // shared e2e|member persona is signed in by other files at the same time.
+    const member = disposableUser("joiner");
+    createdUsers.push(member.sub);
+    await createE2EUser(member.sub, member.email);
+    await signIn(page, request, member);
     await page.goto("/demo-samoa/app");
     await visibleButton(page, "Discussion Forums").click();
     await page.getByRole("heading", { name: "Public Forum", level: 3 }).click();
