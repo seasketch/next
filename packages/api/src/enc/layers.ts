@@ -8,7 +8,12 @@ export const ENC_LAYER_BY_CLASS: Record<string, string> = {
   UNSARE: "depth_area",
   LNDARE: "land",
   BUAARE: "land",
-  LAKARE: "land",
+  // Lakes and rivers sit inside the land polygon. They are drawn after land
+  // so they read as water rather than as another tan fill.
+  LAKARE: "inland_water",
+  LOKBSN: "inland_water",
+  RIVERS: "inland_water",
+  CANALS: "inland_water",
   COALNE: "coast",
   SLCONS: "coast",
   DEPCNT: "depth_contour",

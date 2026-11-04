@@ -55,7 +55,6 @@ export function buildEncStyle(tileJsonUrl: string): Style {
         "source-layer": "depth_area",
         paint: {
           "fill-color": depthColor(),
-          "fill-opacity": 0.95,
         },
       },
       {
@@ -66,11 +65,24 @@ export function buildEncStyle(tileJsonUrl: string): Style {
         paint: { "fill-color": LAND },
       },
       {
-        id: "enc-regulated",
+        id: "enc-inland-water",
         type: "fill",
         source,
+        "source-layer": "inland_water",
+        paint: { "fill-color": "#9fd4ee" },
+      },
+      {
+        // Caution and restricted areas are limits, not part of the shoreline.
+        // A fill here paints a straight edge across the water.
+        id: "enc-regulated",
+        type: "line",
+        source,
         "source-layer": "regulated",
-        paint: { "fill-color": "#7b4ea2", "fill-opacity": 0.18 },
+        paint: {
+          "line-color": "#6b4c9a",
+          "line-width": 1.4,
+          "line-dasharray": [1.2, 1],
+        },
       },
       {
         id: "enc-coast-fill",
@@ -106,16 +118,22 @@ export function buildEncStyle(tileJsonUrl: string): Style {
       },
       {
         id: "enc-hazard-area",
-        type: "fill",
+        type: "line",
         source,
         "source-layer": "hazard",
-        paint: { "fill-color": "#c23b4a", "fill-opacity": 0.35 },
+        filter: ["!=", ["geometry-type"], "Point"],
+        paint: {
+          "line-color": "#c23b4a",
+          "line-width": 1.25,
+          "line-dasharray": [1.5, 1],
+        },
       },
       {
         id: "enc-hazard",
         type: "circle",
         source,
         "source-layer": "hazard",
+        filter: ["==", ["geometry-type"], "Point"],
         paint: {
           "circle-radius": 3.5,
           "circle-color": "#c23b4a",
@@ -128,6 +146,7 @@ export function buildEncStyle(tileJsonUrl: string): Style {
         type: "circle",
         source,
         "source-layer": "aid",
+        filter: ["==", ["geometry-type"], "Point"],
         paint: {
           "circle-radius": ["interpolate", ["linear"], ["zoom"], 8, 2, 14, 5],
           "circle-color": "#e6a817",
@@ -140,6 +159,7 @@ export function buildEncStyle(tileJsonUrl: string): Style {
         type: "circle",
         source,
         "source-layer": "sounding",
+        filter: ["==", ["geometry-type"], "Point"],
         paint: {
           "circle-radius": ["interpolate", ["linear"], ["zoom"], 10, 0.5, 14, 1.6],
           "circle-color": "#16324a",
