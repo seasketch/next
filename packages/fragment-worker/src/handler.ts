@@ -68,15 +68,19 @@ async function fetchUploadsRange(
 ): Promise<ArrayBuffer> {
   const token = await getOverlayEngineAccessToken();
   const target = resolveStorageUrl(url);
+  const headers: Record<string, string> = {
+    Range: `bytes=${range[0]}-${range[1] ? range[1] : ""}`,
+  };
+  if (token) {
+    headers.Authorization = `Bearer ${token}`;
+  }
   const response = await poolFor(target.origin).request({
     path: `${target.pathname}${target.search}`,
     method: "GET",
-    headers: {
-      Range: `bytes=${range[0]}-${range[1] ? range[1] : ""}`,
-      Authorization: `Bearer ${token}`,
-    },
+    headers,
   });
   if (
+    token &&
     (response.statusCode === 401 || response.statusCode === 403) &&
     !retriedAuth
   ) {

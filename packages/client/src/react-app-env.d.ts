@@ -18,5 +18,7 @@ declare namespace NodeJS {
     REACT_APP_TILES_ACL_NAMESPACE?: string;
     /** Local wrangler origin, e.g. http://127.0.0.1:8787 */
     REACT_APP_TILES_ORIGIN?: string;
+    /** Sketch clip and warm-cache origin. `npm run dev` injects the local Worker. */
+    REACT_APP_SKETCH_PREPROCESSING_URL?: string;
   }
 }

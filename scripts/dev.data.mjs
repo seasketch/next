@@ -39,6 +39,9 @@ const devPorts = {
   subdivision: 9000,
   elasticmq: 9324,
   dataTables: 3006,
+  overlayWorker: 3007,
+  fragmentWorker: 3008,
+  sketchPreprocessing: 8789,
   aiCartographerMock: 8790,
 };
 
@@ -52,6 +55,9 @@ const e2ePorts = {
   subdivision: 19000,
   elasticmq: 19324,
   dataTables: 13006,
+  overlayWorker: 13007,
+  fragmentWorker: 13008,
+  sketchPreprocessing: 18789,
   aiCartographerMock: 18790,
 };
 
@@ -102,6 +108,16 @@ export const integrations = [
     id: "data tables",
     productionVariable: "DATA_TABLES_HANDLER_LAMBDA_ARN",
     services: ["data-tables"],
+  },
+  {
+    id: "overlay analysis",
+    productionVariable: "OVERLAY_WORKER_LAMBDA_ARN",
+    services: ["overlay-worker"],
+  },
+  {
+    id: "fragment creation",
+    productionVariable: "FRAGMENT_WORKER_LAMBDA_ARN",
+    services: ["fragment-worker"],
   },
   {
     id: "results queue",
@@ -313,6 +329,12 @@ export function dataEnvFor(serviceName, profile, started, apiEnv = readApiDotenv
       if (isLocal(production, "data tables") && started.has("data-tables")) {
         env.DATA_TABLES_LAMBDA_DEV_HANDLER = `http://localhost:${ports.dataTables}`;
       }
+      if (isLocal(production, "overlay analysis") && started.has("overlay-worker")) {
+        env.OVERLAY_WORKER_DEV_HANDLER = `http://localhost:${ports.overlayWorker}`;
+      }
+      if (isLocal(production, "fragment creation") && started.has("fragment-worker")) {
+        env.FRAGMENT_WORKER_DEV_HANDLER = `http://localhost:${ports.fragmentWorker}`;
+      }
       if (isLocal(production, "results queue") && started.has("elasticmq")) {
         env.OVERLAY_ENGINE_WORKER_SQS_QUEUE_URL = queueUrl(stack);
         env.SQS_ENDPOINT = `http://localhost:${ports.elasticmq}`;
@@ -325,6 +347,35 @@ export function dataEnvFor(serviceName, profile, started, apiEnv = readApiDotenv
         Object.assign(env, handlerEnv(stack));
       }
       env.PORT = String(ports.dataTables);
+      env.NODE_ENV = "development";
+      break;
+    }
+    case "overlay-worker": {
+      env.PORT = String(ports.overlayWorker);
+      env.NODE_ENV = "development";
+      if (isLocal(production, "results queue") && started.has("elasticmq")) {
+        env.SQS_ENDPOINT = `http://localhost:${ports.elasticmq}`;
+        env.AWS_REGION = "us-west-2";
+        env.OVERLAY_ENGINE_WORKER_SQS_QUEUE_URL = queueUrl(stack);
+      }
+      break;
+    }
+    case "fragment-worker": {
+      env.PORT = String(ports.fragmentWorker);
+      env.NODE_ENV = "development";
+      break;
+    }
+    case "sketch-preprocessing": {
+      env.SKETCH_PREPROCESSING_PORT = String(ports.sketchPreprocessing);
+      env.LOCAL_R2_PERSIST_TO = stack.persistDir;
+      env.PMTILES_UPLOADS_PORT = String(ports.uploads);
+      env.UPLOADS_HOST = `localhost:${ports.uploads},127.0.0.1:${ports.uploads},host.docker.internal:${ports.uploads}`;
+      break;
+    }
+    case "client": {
+      if (started.has("sketch-preprocessing")) {
+        env.REACT_APP_SKETCH_PREPROCESSING_URL = `http://localhost:${ports.sketchPreprocessing}`;
+      }
       break;
     }
     case "spatial-uploads-host": {

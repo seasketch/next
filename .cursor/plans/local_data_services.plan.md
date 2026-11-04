@@ -9,11 +9,11 @@ todos:
     content: "Phase 0b: one S3 client factory per runtime, parquet_url, URLs not keys to workers, owned-bucket rule, hostnames out of data-path code. Merged and deployed."
     status: completed
   - id: phase-1
-    content: "Phase 1: local-r2 launcher, pmtiles-server sessions, spatial-uploads and subdivision containers, ElasticMQ, data profile default, upload journeys in CI. One pull request, in review."
-    status: in_progress
+    content: "Phase 1: local-r2 launcher, pmtiles-server sessions, spatial-uploads and subdivision containers, ElasticMQ, data profile default, upload journeys in CI. Merged."
+    status: completed
   - id: phase-2-processors
-    content: "Phase 2: overlay worker 3007, data tables on local storage, fragment server.ts, sketch-preprocessing under wrangler dev, journeys"
-    status: pending
+    content: "Phase 2: overlay worker 3007, data tables on local storage, fragment server.ts, sketch-preprocessing under wrangler dev, journeys. November 2026."
+    status: completed
 isProject: false
 ---
 
@@ -27,8 +27,8 @@ Each numbered item below is one pull request. Phase 0 is implemented and tested 
 
 1. Phase 0a: raw uploads to R2. Merged and deployed, October 2026.
 2. Phase 0b: the storage model. Merged and deployed, October 2026.
-3. Phase 1: everything needed to check out the branch, run `npm run dev`, upload a layer, and see it on the map from local storage. One pull request, in review.
-4. Phase 2: overlay worker, data tables, fragment worker, sketch preprocessing, journeys.
+3. Phase 1: everything needed to check out the branch, run `npm run dev`, upload a layer, and see it on the map from local storage. Merged.
+4. Phase 2: overlay worker, data tables, fragment worker, sketch preprocessing, journeys. Built November 2026.
 
 Phase 1 was first sketched as five pull requests (storage, `pmtiles-server`, the uploads container, ElasticMQ and subdivision, startup wiring). That split was dropped: none of the slices does anything reviewable alone, and the thing to review is a stack that boots and processes an upload. The record's *Phase 1 as built* section holds what implementation changed.
 
@@ -134,15 +134,16 @@ Still to do on a laptop: the 3 GB presigned PUT, ten consecutive uploads with co
 
 ## Phase 2
 
-- Overlay worker: `server.ts` port 3006 → 3007; `SQS_ENDPOINT`; per-origin pools; token rule (no `OVERLAY_ENGINE_ACCESS_TOKEN_SECRET_ARN` outside production means no header, one log line); clipping sources as URLs. `OVERLAY_WORKER_DEV_HANDLER` injected by `npm run dev`.
-- Data tables handler: its `.env` points at the local S3 API and `ssn-tiles-local`; confirm the tiles-host `pmtiles-server` serves the parquet through the `overlay-data-tables` service binding under `wrangler dev` (service bindings between two local sessions need `--persist-to` shared and the binding named in both configs; if that is awkward, run `overlay-data-tables` as a third session).
-- Fragment worker: `packages/fragment-worker/src/server.ts` on 3008 reading a JSON Lambda event; `FRAGMENT_WORKER_DEV_HANDLER` in the four `sketches.ts` invocations; URLs, pools, token rule.
-- Sketch preprocessing: `wrangler dev` on 8789 with `--persist-to .data/wrangler`; the client's two hardcoded URLs in `SketchEditorModal.tsx` and `GeographyAdmin.tsx` move to `REACT_APP_SKETCH_PREPROCESSING_URL` with the deployed URL as default; the Worker reads its own origin through the binding and others over HTTP; drop the `DEV` branch.
-- Journeys: data-table import, a report card with overlay metrics, and sketch clipping against a geography that mixes a production EEZ with a local layer.
-- Mark the phase 2 exit criterion, and the data-profile exit criterion in `local-services.md`.
+Landed November 2026 on `local-data-phase-2`. The record's [Phase 2 as built](../../design-docs/dev-environment/local-data-services.md) is the account of what changed. File pointers:
+
+- **Overlay worker.** `packages/overlay-worker/server.ts` listens on 3007. `src/messaging.ts` uses ElasticMQ when `SQS_ENDPOINT` is set. `src/overlayEngineAccessToken.ts` returns null when the secret ARN is unset outside production, and the worker omits the header. The clipping pool defaults to `packages/overlay-engine/dist/workers/clipBatch.standalone.js`.
+- **Fragment worker.** `packages/fragment-worker/src/server.ts` on 3008. `packages/api/src/sketches.ts` `invokeFragmentWorker` posts to `FRAGMENT_WORKER_DEV_HANDLER`, and falls through to the ARN only when that is unset. The same token rule as the overlay worker.
+- **Sketch preprocessing.** `packages/sketch-preprocessing-worker/bin/dev.mjs` runs `wrangler dev` on 8789 with the shared persistence directory and `UPLOADS_HOST`. `src/utils/fetch-utils.ts` reads those hosts from the `SSN_TILES` binding and fetches every other origin over HTTP. `packages/client/src/sketchPreprocessingUrl.ts` is what `SketchEditorModal.tsx` and `GeographyAdmin.tsx` call. The supervisor sets `REACT_APP_SKETCH_PREPROCESSING_URL`.
+- **Startup.** `scripts/dev.data.mjs` and `scripts/dev.config.mjs` add the three services to the data profile. `scripts/dev.mjs` applies `withoutProductionValues` for `--local-data` and for the e2e profile, so clipping and calculation follow the same override as storage.
+- **Journeys.** `packages/e2e/tests/local-reports.spec.ts`, with fixtures `samoa-seamounts.geojson`, `samoa-ebsas.geojson`, and `eez-observations.csv`. Preprocess one layer at a time: the Lambda emulator accepts a single invoke.
 
 ## Open items carried from the record
 
 - 0b: decided. Deploy order is in the record under *Phase 0b deploy order*. Workers and Lambdas first, then migrations, API, and client.
 - 1: `preview_bucket_name` decided; GDAL stages as a BuildKit registry cache rather than a pinned image, decided. Still open: the laptop portion of the spike (3 GB presigned PUT, ten consecutive uploads with concurrent reads, throughput); whether to file the `aws-chunked` issue against Miniflare.
-- 2: a local mode with tile access control on; containerizing the Node processors.
+- 2: decided. Tile access control stays off locally. The Node processors stay host processes.

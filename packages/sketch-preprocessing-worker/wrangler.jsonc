@@ -10,7 +10,8 @@
   "r2_buckets": [
     {
       "binding": "SSN_TILES",
-      "bucket_name": "ssn-tiles"
+      "bucket_name": "ssn-tiles",
+      "preview_bucket_name": "ssn-tiles-local"
     }
   ],
   "observability": {

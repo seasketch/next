@@ -7,7 +7,7 @@ import handler, {
 } from "./src/overlay-worker";
 dotenv.config({ quiet: true });
 
-const PORT = process.env.PORT || 3006;
+const PORT = process.env.PORT || 3007;
 
 const server = createServer(function (req, res) {
   const jobKey = Math.random().toString(36).substring(2, 15);

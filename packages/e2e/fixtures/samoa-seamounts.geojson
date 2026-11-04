@@ -1,0 +1,21 @@
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "properties": { "name": "Samoa Seamount" },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [-173.8, -14.8],
+            [-171.2, -14.8],
+            [-171.2, -12.2],
+            [-173.8, -12.2],
+            [-173.8, -14.8]
+          ]
+        ]
+      }
+    }
+  ]
+}

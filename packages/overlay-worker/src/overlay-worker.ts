@@ -19,6 +19,7 @@ import {
   OverlayWorkerPayload,
 } from "./types";
 import { FlatGeobufSource, SourceCache } from "fgb-source";
+import path from "node:path";
 import {
   sendBeginMessage,
   sendErrorMessage,
@@ -102,15 +103,19 @@ async function fetchUploadsRange(
 ): Promise<ArrayBuffer> {
   const token = await getOverlayEngineAccessToken();
   const target = resolveStorageUrl(url);
+  const headers: Record<string, string> = {
+    Range: `bytes=${range[0]}-${range[1] ? range[1] : ""}`,
+  };
+  if (token) {
+    headers.Authorization = `Bearer ${token}`;
+  }
   const response = await poolFor(target.origin).request({
     path: `${target.pathname}${target.search}`,
     method: "GET",
-    headers: {
-      Range: `bytes=${range[0]}-${range[1] ? range[1] : ""}`,
-      Authorization: `Bearer ${token}`,
-    },
+    headers,
   });
   if (
+    token &&
     (response.statusCode === 401 || response.statusCode === 403) &&
     !retriedAuth
   ) {
@@ -168,8 +173,15 @@ const sourceCache = new SourceCache("1GB", {
   maxCacheSize: "256MB",
 });
 
+// Lambda sets PISCINA_WORKER_PATH to the copied standalone file. Locally the
+// same build output sits in the overlay-engine package. A bare "worker.js"
+// is not a valid worker_threads path on Node 24.
+const defaultWorkerPath = path.resolve(
+  __dirname,
+  "../../overlay-engine/dist/workers/clipBatch.standalone.js",
+);
 const workerPool = createClippingWorkerPool(
-  process.env.PISCINA_WORKER_PATH || "worker.js",
+  process.env.PISCINA_WORKER_PATH || defaultWorkerPath,
 );
 
 export default async function handler(payload: OverlayWorkerPayload) {
@@ -458,10 +470,9 @@ export default async function handler(payload: OverlayWorkerPayload) {
         const projectedFeature = reproject(intersectionFeature, payload.epsg);
 
         const rasterToken = await getOverlayEngineAccessToken();
-        const authenticatedSourceUrl = withAccessTokenQueryParam(
-          payload.sourceUrl,
-          rasterToken,
-        );
+        const authenticatedSourceUrl = rasterToken
+          ? withAccessTokenQueryParam(payload.sourceUrl, rasterToken)
+          : payload.sourceUrl;
         const result = await calculateRasterStats(
           authenticatedSourceUrl,
           projectedFeature,
@@ -555,10 +566,9 @@ export default async function handler(payload: OverlayWorkerPayload) {
           collarWgs != null ? reproject(collarWgs, payload.epsg) : undefined;
 
         const rasterToken = await getOverlayEngineAccessToken();
-        const authenticatedSourceUrl = withAccessTokenQueryParam(
-          payload.sourceUrl,
-          rasterToken,
-        );
+        const authenticatedSourceUrl = rasterToken
+          ? withAccessTokenQueryParam(payload.sourceUrl, rasterToken)
+          : payload.sourceUrl;
 
         const result = await calculateRasterOverlayArea(
           authenticatedSourceUrl,

@@ -349,7 +349,10 @@ app.post(
         .status(400)
         .json({ error: "feature and sketchClassId are required" });
     }
-    if (!process.env.FRAGMENT_WORKER_LAMBDA_ARN) {
+    if (
+      !process.env.FRAGMENT_WORKER_LAMBDA_ARN &&
+      !process.env.FRAGMENT_WORKER_DEV_HANDLER
+    ) {
       if (process.env.NODE_ENV === "production") {
         return res.status(500).json({
           error:
