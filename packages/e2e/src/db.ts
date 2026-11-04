@@ -196,3 +196,68 @@ export async function resetAiCartographerChoice(sub: string) {
     await client.end();
   }
 }
+
+/**
+ * Closed change_log rows for a project, newest first. Rows come in groups of
+ * five that share a timestamp, so cursor paging has to break ties on id.
+ * `netZeroCount` extra rows have identical from/to values and must never be
+ * listed. Returns the number of visible rows.
+ */
+export async function seedProjectChangeLogs(
+  slug: string,
+  options: { count: number; netZeroCount?: number }
+) {
+  const client = new Client({ connectionString: databaseURL });
+  await client.connect();
+  try {
+    const project = await client.query(
+      `select id from projects where slug = $1`,
+      [slug]
+    );
+    const editor = await client.query(
+      `select id from users where sub = 'e2e|admin'`
+    );
+    const projectId = project.rows[0].id as number;
+    const editorId = editor.rows[0].id as number;
+    await client.query(`delete from change_logs where project_id = $1`, [
+      projectId,
+    ]);
+    await client.query(
+      `insert into change_logs (project_id, editor_id, started_at, last_at, status, from_summary, to_summary, entity_id, entity_type, field_group)
+       select $1, $2, ts, ts, 'closed',
+         case when n % 3 = 0 then '{}'::jsonb else jsonb_build_object('title', 'Before ' || n) end,
+         case when n % 3 = 0 then jsonb_build_object('layer_count', n) else jsonb_build_object('title', 'After ' || n) end,
+         case when n % 3 = 0 then $1 else 800000 + n end,
+         case when n % 3 = 0 then 'projects' else 'table_of_contents_items' end,
+         (case when n % 3 = 0 then 'layers:published' else 'layer:title' end)::change_log_field_group
+       from (
+         select n, now() - (n / 5) * interval '53 minutes' - interval '1 second' as ts
+         from generate_series(1, $3::int) n
+       ) rows`,
+      [projectId, editorId, options.count]
+    );
+    for (let i = 0; i < (options.netZeroCount ?? 0); i++) {
+      await client.query(
+        `insert into change_logs (project_id, editor_id, status, from_summary, to_summary, entity_id, entity_type, field_group)
+         values ($1, $2, 'closed', '{"title":"Same"}', '{"title":"Same"}', 800000, 'table_of_contents_items', 'layer:title')`,
+        [projectId, editorId]
+      );
+    }
+    return options.count;
+  } finally {
+    await client.end();
+  }
+}
+
+export async function clearProjectChangeLogs(slug: string) {
+  const client = new Client({ connectionString: databaseURL });
+  await client.connect();
+  try {
+    await client.query(
+      `delete from change_logs where project_id = (select id from projects where slug = $1)`,
+      [slug]
+    );
+  } finally {
+    await client.end();
+  }
+}

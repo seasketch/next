@@ -1,5 +1,6 @@
 import { ReactNode } from "react";
 import { ChangeLogDetailsFragment } from "../../generated/graphql";
+import { FieldGroupListItemProps } from "./fieldGroups/FieldGroupListItemBase";
 import {
   FIELD_GROUP_LIST_ITEM_COMPONENTS,
   GenericFieldGroupListItem,
@@ -11,11 +12,13 @@ export default function ChangeLogListItem({
   itemTitle,
   missingProfileLabel,
   dataTableActions,
+  scope,
 }: {
   changeLog: ChangeLogDetailsFragment;
   last?: boolean;
   itemTitle?: ReactNode;
   missingProfileLabel?: string;
+  scope?: FieldGroupListItemProps["scope"];
   dataTableActions?: {
     tableOfContentsItemId: number;
     activeTables: { id: number; version: number }[];
@@ -31,6 +34,7 @@ export default function ChangeLogListItem({
       itemTitle={itemTitle}
       missingProfileLabel={missingProfileLabel}
       dataTableActions={dataTableActions}
+      scope={scope}
     />
   );
 }

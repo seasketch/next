@@ -5251,6 +5251,28 @@ CREATE TABLE public.change_logs (
 
 
 --
+-- Name: change_logs_editor_canonical_email(public.change_logs); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.change_logs_editor_canonical_email(changelog public.change_logs) RETURNS text
+    LANGUAGE sql STABLE SECURITY DEFINER
+    AS $$
+  select public.users_canonical_email(users)
+  from public.users
+  where users.id = changelog.editor_id;
+$$;
+
+
+--
+-- Name: FUNCTION change_logs_editor_canonical_email(changelog public.change_logs); Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON FUNCTION public.change_logs_editor_canonical_email(changelog public.change_logs) IS '
+Account address for the editor. Returned only to admins of a project that person has joined, same as users_canonical_email. Not part of the profile.
+';
+
+
+--
 -- Name: user_profiles; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -5291,8 +5313,8 @@ means of listing out all profiles in bulk.
 CREATE FUNCTION public.change_logs_editor_profile(changelog public.change_logs) RETURNS public.user_profiles
     LANGUAGE sql STABLE SECURITY DEFINER
     AS $$
-    select * from user_profiles where user_id = changelog.editor_id;
-  $$;
+  select * from public.user_profiles where user_id = changelog.editor_id;
+$$;
 
 
 --
@@ -37453,6 +37475,14 @@ REVOKE ALL ON FUNCTION public.changelog_row_net_zero_changes(p_field_group publi
 --
 
 GRANT SELECT ON TABLE public.change_logs TO seasketch_user;
+
+
+--
+-- Name: FUNCTION change_logs_editor_canonical_email(changelog public.change_logs); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.change_logs_editor_canonical_email(changelog public.change_logs) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.change_logs_editor_canonical_email(changelog public.change_logs) TO seasketch_user;
 
 
 --

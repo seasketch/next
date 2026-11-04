@@ -3,7 +3,6 @@ import { useTranslation, Trans } from "react-i18next";
 import { useParams } from "react-router-dom";
 import * as Tabs from "@radix-ui/react-tabs";
 import * as RadixTooltip from "@radix-ui/react-tooltip";
-import { FolderIcon } from "@heroicons/react/outline";
 import Modal from "../../components/Modal";
 import Spinner from "../../components/Spinner";
 import {
@@ -16,14 +15,7 @@ import {
   usePublishTableOfContentsMutation,
 } from "../../generated/graphql";
 import ChangeLogListItem from "../changelogs/ChangeLogListItem";
-import {
-  summary,
-  valueText,
-} from "../changelogs/fieldGroups/FieldGroupListItemBase";
-import {
-  tableNameFromSummary,
-  tocItemIdFromMeta,
-} from "../changelogs/fieldGroups/dataTableSummary";
+import { titleForChangeLog } from "../changelogs/changeLogEntityTitle";
 import useProjectId from "../../useProjectId";
 import { CHANGE_LOG_INTRODUCTION_DATE } from "../changelogs/constants";
 import PublishSummarizedChangesPanel from "./PublishSummarizedChangesPanel";
@@ -782,71 +774,5 @@ function AllChangesPanel({
         ))}
       </ul>
     </div>
-  );
-}
-
-function titleForChangeLog(
-  changeLog: NonNullable<
-    NonNullable<
-      ChangeLogsSinceLastPublishQuery["projectBySlug"]
-    >["changeLogsSinceLastPublish"]
-  >[number],
-  itemTitleById: Map<number, { title: string; isFolder: boolean }>,
-  dataTableNameById: Map<number, string>,
-  fallback: (key: string) => string
-) {
-  if (changeLog.entityType === "overlay_data_table") {
-    const tocItemId = tocItemIdFromMeta(changeLog.meta);
-    const overlayTitle =
-      tocItemId != null
-        ? itemTitleById.get(tocItemId)?.title ?? fallback("Unknown layer")
-        : fallback("Unknown layer");
-    const tableName =
-      tableNameFromSummary(summary(changeLog.toSummary)) ||
-      tableNameFromSummary(summary(changeLog.fromSummary)) ||
-      dataTableNameById.get(changeLog.entityId) ||
-      "";
-    if (!tableName) {
-      return overlayTitle;
-    }
-    return (
-      <span className="inline-flex h-6 min-w-0 items-center gap-1.5 align-middle leading-6">
-        <span className="min-w-0 truncate">{overlayTitle}</span>
-        {/* eslint-disable-next-line i18next/no-literal-string */}
-        <span className="flex-none text-gray-400" aria-hidden>
-          ·
-        </span>
-        <span className="min-w-0 truncate">{tableName}</span>
-      </span>
-    );
-  }
-
-  if (changeLog.entityType !== "table_of_contents_items") {
-    return undefined;
-  }
-  const to = summary(changeLog.toSummary);
-  const from = summary(changeLog.fromSummary);
-  const currentItem = itemTitleById.get(changeLog.entityId);
-  const title =
-    currentItem?.title ||
-    valueText(to.title) ||
-    valueText(from.title) ||
-    valueText(to.filename) ||
-    fallback("Unknown layer");
-  const isFolder =
-    currentItem?.isFolder ||
-    to.is_folder === true ||
-    from.is_folder === true ||
-    changeLog.fieldGroup.startsWith("FOLDER");
-
-  if (!isFolder) {
-    return title;
-  }
-
-  return (
-    <span className="inline-flex h-6 min-w-0 items-center gap-1 align-middle leading-6">
-      <FolderIcon className="h-3.5 w-3.5 flex-none text-gray-400" aria-hidden />
-      <span className="min-w-0 truncate leading-6">{title}</span>
-    </span>
   );
 }

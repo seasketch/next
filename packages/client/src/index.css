@@ -16127,6 +16127,10 @@ input[type="checkbox"][indeterminate="true"]:checked {
   display:none
 }
 
+.data-\[disabled\]\:cursor-default[data-disabled]{
+  cursor:default
+}
+
 .data-\[disabled\]\:cursor-not-allowed[data-disabled]{
   cursor:not-allowed
 }
@@ -16280,6 +16284,11 @@ input[type="checkbox"][indeterminate="true"]:checked {
   .sm\:mx-0{
     margin-left:0px;
     margin-right:0px
+  }
+
+  .sm\:mx-6{
+    margin-left:1.5rem;
+    margin-right:1.5rem
   }
 
   .sm\:mx-auto{

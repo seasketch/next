@@ -54,6 +54,7 @@ Geography layers, their metadata, the Marine Protected Area sketch class, the de
 - Geography lists Exclusive Economic Zone, Territorial Seas, and Offshore.
 - Sketch Classes lists Marine Protected Area.
 - Reports lists Default report.
+- With a long history seeded, View then Changelog lists the newest 100 changes under date headings, omits changes that were reverted to their original value, and Load older changes appends the rest until the end-of-history note appears.
 
 ## Data uploads
 

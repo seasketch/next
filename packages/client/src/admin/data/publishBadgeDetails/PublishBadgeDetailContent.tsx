@@ -174,7 +174,8 @@ function editorName(
   const fromProfile =
     log.editorProfile?.fullname ||
     log.editorProfile?.nickname ||
-    log.editorProfile?.email;
+    log.editorProfile?.email ||
+    log.editorCanonicalEmail;
   if (fromProfile) {
     return fromProfile;
   }

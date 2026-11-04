@@ -56,6 +56,7 @@ import PublishTilesAclPlugin from "./plugins/publishTilesAclPlugin";
 import HostedTileUuidsRequiringAuthPlugin from "./plugins/hostedTileUuidsRequiringAuthPlugin";
 import TemporalPlugin from "./plugins/temporalPlugin";
 import OrganismPlugin from "./plugins/organismPlugin";
+import ChangeLogsPlugin from "./plugins/changeLogsPlugin";
 
 const pluginHook = makePluginHook([{ ...PgPubsub, ...SentryPlugin }]);
 
@@ -126,6 +127,7 @@ export default function graphileOptions(): PostGraphileOptions {
       OverlayDataTablePlugin,
       PublishTilesAclPlugin,
       HostedTileUuidsRequiringAuthPlugin,
+      ChangeLogsPlugin,
       // reorderSchemaFields(graphqlSchemaModifiers.fieldOrder),
       // extraDocumentationPlugin(graphqlSchemaModifiers.documentation),
     ],

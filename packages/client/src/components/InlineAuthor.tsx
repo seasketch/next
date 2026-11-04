@@ -8,9 +8,12 @@ import { usePopper } from "react-popper";
 export default function InlineAuthor({
   profile,
   className,
+  canonicalEmail,
 }: {
   profile: AuthorProfileFragment;
   className?: string;
+  /** Account address from users_canonical_email. Not part of the profile. */
+  canonicalEmail?: string | null;
 }) {
   const [referenceElement, setReferenceElement] = useState<any | null>(null);
   const [showPopup, setShowPopup] = useState(false);
@@ -35,7 +38,10 @@ export default function InlineAuthor({
             {...attributes.popper}
             style={{ ...styles.popper, zIndex: 99999999 }}
           >
-            <AuthorProfilePopupContents profile={profile} />
+            <AuthorProfilePopupContents
+              profile={profile}
+              canonicalEmail={canonicalEmail}
+            />
           </div>,
           document.body
         )}
@@ -56,6 +62,7 @@ export default function InlineAuthor({
           setShowPopup(true);
         }}
         profile={profile}
+        canonicalEmail={canonicalEmail}
         firstPostInTopic={false}
       />
     </>
