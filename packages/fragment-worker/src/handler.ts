@@ -23,10 +23,20 @@ import { resolveStorageUrl } from "overlay-engine";
 
 const pools = new Map<string, Pool>();
 
+// This Lambda and R2 are both on the west coast, so a range read should
+// connect and return headers in well under a second. bodyTimeout resets as
+// chunks arrive. headersTimeout otherwise stays at undici's 5-minute default,
+// and a socket that never sends headers runs until this Lambda's own timeout.
+const R2_READ_TIMEOUT_MS = 10_000;
+
 function poolFor(origin: string): Pool {
   let pool = pools.get(origin);
   if (!pool) {
-    pool = new Pool(origin, { bodyTimeout: 10 * 1000 });
+    pool = new Pool(origin, {
+      connectTimeout: R2_READ_TIMEOUT_MS,
+      headersTimeout: R2_READ_TIMEOUT_MS,
+      bodyTimeout: R2_READ_TIMEOUT_MS,
+    });
     pools.set(origin, pool);
   }
   return pool;
