@@ -265,7 +265,9 @@ export function lngLatToTilePixel(
 
 /**
  * Sample a scalar data value under lng/lat for an RGB-encoded SeaSketch raster.
- * Returns null for nodata / transparent / out-of-range / fetch failures.
+ * Returns null for source alpha 0 (encoded nodata), out-of-range pixels, or
+ * fetch failures. A class the style paints transparent still decodes; callers
+ * drop those with `rasterValueIsVisible`.
  */
 export async function queryRasterPixelValue(
   source: RasterPixelQuerySource,

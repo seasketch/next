@@ -45,6 +45,11 @@ import {
   extractRasterLegendLabels,
   rasterInteractionLabel,
 } from "./rasterLegendLabel";
+import {
+  isBlankHoverMessage,
+  rasterPaintStyleFromGlStyles,
+  rasterValueIsVisible,
+} from "./rasterPaintVisibility";
 import { decodeDataTableRawValue } from "./dataTableMapStyle";
 import { formatLegendNumber } from "./legends/DataTableLegendBubble";
 
@@ -61,6 +66,8 @@ type InteractiveRasterLayer = {
   /** Continuous legend presentation: round-numbers + value-suffix. */
   labelFormat: ReturnType<typeof extractRasterLabelFormatOptions>;
   respectScaleAndOffset: boolean;
+  /** Null when the style has no raster-color (every opaque sample is visible). */
+  paint: ReturnType<typeof rasterPaintStyleFromGlStyles>;
   glLayerId: string;
 };
 
@@ -380,6 +387,7 @@ export default class LayerInteractivityManager extends EventEmitter {
                   respectScaleAndOffset: styleRespectsScaleAndOffset(
                     layer.mapboxGlStyles
                   ),
+                  paint: rasterPaintStyleFromGlStyles(layer.mapboxGlStyles),
                   glLayerId: idForLayer(layer, 0),
                 });
                 newActiveLayers[layer.id] = layer;
@@ -706,19 +714,24 @@ export default class LayerInteractivityManager extends EventEmitter {
           interactivitySetting.longTemplate || "{{label}}",
           this.rasterMustacheContext(rasterHit.hit, rasterHit.layer)
         );
-        this.clearSidebarPopup();
-        const { element, footerTarget } = this.popupContentWithDataTablesFooter(
-          content,
-          this.tocIdOfLayer(rasterHit.layer.layer)
-        );
-        this.setActivePopup(
-          new Popup({ closeOnClick: true, closeButton: true })
-            .setLngLat([e.lngLat.lng, e.lngLat.lat])
-            .setDOMContent(element)
-            .addTo(this.map!),
-          footerTarget
-        );
-        return;
+        // Template rendered no readable text. Don't open an empty popup;
+        // let a vector feature underneath handle the click.
+        if (!isBlankHoverMessage(content)) {
+          this.clearSidebarPopup();
+          const { element, footerTarget } =
+            this.popupContentWithDataTablesFooter(
+              content,
+              this.tocIdOfLayer(rasterHit.layer.layer)
+            );
+          this.setActivePopup(
+            new Popup({ closeOnClick: true, closeButton: true })
+              .setLngLat([e.lngLat.lng, e.lngLat.lat])
+              .setDOMContent(element)
+              .addTo(this.map!),
+            footerTarget
+          );
+          return;
+        }
       }
     }
 
@@ -1422,7 +1435,12 @@ export default class LayerInteractivityManager extends EventEmitter {
             e.lngLat.lat,
             zoom
           );
-          if (!hit) {
+          // Alpha 0 is already null. Also drop pixels the style paints fully
+          // transparent (no-data / excluded classes) so they don't tooltip.
+          if (
+            !hit ||
+            !rasterValueIsVisible(rasterLayer.paint, hit.encodedValue)
+          ) {
             return null;
           }
           return {
@@ -1484,30 +1502,41 @@ export default class LayerInteractivityManager extends EventEmitter {
     // Prefer {{label}} so categorical legend names show by default; unlabeled
     // continuous values use the same formatting as legend min/max labels.
     const defaultTemplate = "{{label}}";
+    const usesHoverText =
+      interactivitySetting.type === InteractivityType.Banner ||
+      interactivitySetting.type === InteractivityType.Tooltip;
+    const renderedHoverText = usesHoverText
+      ? Mustache.render(
+          interactivitySetting.shortTemplate || defaultTemplate,
+          ctx
+        )
+      : "";
+    // No readable value (empty legend label, template that doesn't resolve).
+    // Leave the map cursor alone and don't show an empty bubble.
+    if (usesHoverText && isBlankHoverMessage(renderedHoverText)) {
+      this.map!.getCanvas().style.cursor = "";
+      delete this.previousInteractionTarget;
+      this.updateUI({
+        bannerMessages: [],
+        tooltip: undefined,
+        fixedBlocks: [],
+      });
+      return true;
+    }
     let cursor = "";
     let bannerMessages: string[] = [];
     let tooltip: Tooltip | undefined = undefined;
     switch (interactivitySetting.type) {
       case InteractivityType.Banner:
         cursor = "default";
-        bannerMessages = [
-          Mustache.render(
-            interactivitySetting.shortTemplate || defaultTemplate,
-            ctx
-          ),
-        ];
+        bannerMessages = [renderedHoverText];
         break;
       case InteractivityType.Tooltip:
         cursor = "default";
         tooltip = {
           x: e.originalEvent.x,
           y: e.originalEvent.y,
-          messages: [
-            Mustache.render(
-              interactivitySetting.shortTemplate || defaultTemplate,
-              ctx
-            ),
-          ],
+          messages: [renderedHoverText],
         };
         break;
       case InteractivityType.Popup:
