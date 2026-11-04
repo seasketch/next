@@ -162,9 +162,28 @@ export function aiGatewayEnv() {
     process.env.CF_AIG_TOKEN
   );
   const url = firstSet(handler.CF_AIG_URL, api.CF_AIG_URL, process.env.CF_AIG_URL);
+  // The handler refuses to run the Cartographer without the PII classifier,
+  // so the classifier's ARN (and an endpoint override) travel with the
+  // gateway values. Invoking the deployed classifier also needs AWS
+  // credentials in the container; compose.yaml passes AWS_ACCESS_KEY_ID and
+  // AWS_SECRET_ACCESS_KEY through from the environment.
+  const classifierArn = firstSet(
+    handler.GEOSTATS_PII_CLASSIFIER_ARN,
+    api.GEOSTATS_PII_CLASSIFIER_ARN,
+    process.env.GEOSTATS_PII_CLASSIFIER_ARN
+  );
+  const classifierEndpoint = firstSet(
+    handler.GEOSTATS_PII_CLASSIFIER_ENDPOINT,
+    api.GEOSTATS_PII_CLASSIFIER_ENDPOINT,
+    process.env.GEOSTATS_PII_CLASSIFIER_ENDPOINT
+  );
   return {
     ...(token ? { CF_AIG_TOKEN: token } : {}),
     ...(url ? { CF_AIG_URL: url } : {}),
+    ...(classifierArn ? { GEOSTATS_PII_CLASSIFIER_ARN: classifierArn } : {}),
+    ...(classifierEndpoint
+      ? { GEOSTATS_PII_CLASSIFIER_ENDPOINT: classifierEndpoint }
+      : {}),
   };
 }
 
@@ -364,9 +383,12 @@ export function dataNotices(profile, started, apiEnv = readApiDotenv()) {
   }
   if (started.has("spatial-uploads") && profile !== "e2e") {
     const gateway = aiGatewayEnv();
-    if (!gateway.CF_AIG_TOKEN || !gateway.CF_AIG_URL) {
+    const missing = ["CF_AIG_TOKEN", "CF_AIG_URL", "GEOSTATS_PII_CLASSIFIER_ARN"].filter(
+      (name) => !gateway[name]
+    );
+    if (missing.length > 0) {
       lines.push(
-        "CF_AIG_TOKEN and CF_AIG_URL are unset. A profile with the AI data analyst enabled cannot finish an upload until both are in packages/spatial-uploads-handler/.env."
+        `${missing.join(", ")} unset. An upload with the AI Cartographer enabled fails until the gateway values and the PII classifier ARN are in packages/spatial-uploads-handler/.env; uploads with it declined are unaffected.`
       );
     }
   }
