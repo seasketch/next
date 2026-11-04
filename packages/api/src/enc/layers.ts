@@ -37,8 +37,26 @@ export const ENC_LAYER_BY_CLASS: Record<string, string> = {
   FAIRWY: "route",
   RECTRC: "route",
   NAVLNE: "route",
-  M_COVR: "coverage",
+  // Group-1 skin that is not land or depth. Drawn with the land so the
+  // chart does not leave a hole where a dock or hulk sits.
+  FLODOC: "land",
+  HULKES: "land",
+  PONTON: "land",
 };
+
+/**
+ * Skin-of-the-earth classes. They tessellate each cell, so a scale minimum
+ * must not hide one of them or the chart develops a hole.
+ */
+export const SKIN_CLASSES = new Set([
+  "DEPARE",
+  "DRGARE",
+  "UNSARE",
+  "LNDARE",
+  "FLODOC",
+  "HULKES",
+  "PONTON",
+]);
 
 /** Record bookkeeping GDAL copies onto every feature. Not useful in a tile. */
 const DROPPED_ATTRIBUTES = new Set([
@@ -60,15 +78,28 @@ const DROPPED_ATTRIBUTES = new Set([
   "RUIN",
 ]);
 
-/** Web-mercator zoom range for an ENC usage band (1 overview … 6 berthing). */
-const BAND_ZOOM: Record<number, [number, number]> = {
-  1: [0, 6],
-  2: [4, 8],
-  3: [6, 10],
-  4: [8, 12],
-  5: [10, 14],
-  6: [12, 16],
+/**
+ * First zoom at which a usage band is the chart to draw. A smaller-scale
+ * cell stops at the next band's zoom wherever that larger-scale cell covers
+ * the same water, so a generalized shoreline is not drawn on top of a
+ * harbour chart. Overview stays available from zoom 0.
+ */
+export const BAND_MIN_ZOOM: Record<number, number> = {
+  1: 0,
+  2: 6,
+  3: 8,
+  4: 10,
+  5: 12,
+  6: 14,
 };
+
+export const ENC_MAX_ZOOM = 16;
+
+export function bandMinZoom(band: number | null): number {
+  if (band == null) return 0;
+  const zoom = BAND_MIN_ZOOM[band];
+  return zoom == null ? 0 : zoom;
+}
 
 export type EncFeatureMeta = {
   cell: string;
@@ -76,6 +107,11 @@ export type EncFeatureMeta = {
   band: number | null;
   /** Tile source-layer. */
   layer: string;
+  /**
+   * When set, SCAMIN does not raise minzoom. Skin-of-the-earth features need
+   * this so one depth area cannot vanish and leave a hole in the cell.
+   */
+  ignoreScaleMinimum?: boolean;
 };
 
 export function bandFromCellName(name: string): number | null {
@@ -100,15 +136,12 @@ export function zoomRangeForFeature(
   band: number | null,
   scamin: number | null
 ): { minzoom: number; maxzoom: number } {
-  const [bandMin, bandMax] = band != null ? BAND_ZOOM[band] : [0, 14];
-  let minzoom = bandMin;
-  let maxzoom = bandMax;
+  let minzoom = bandMinZoom(band);
+  const maxzoom = ENC_MAX_ZOOM;
   if (scamin != null && Number.isFinite(scamin) && scamin > 0) {
     minzoom = Math.max(minzoom, zoomForScaleDenominator(scamin));
   }
-  if (minzoom > maxzoom) {
-    maxzoom = Math.min(16, minzoom);
-  }
+  if (minzoom > maxzoom) minzoom = maxzoom;
   return { minzoom, maxzoom };
 }
 
@@ -151,7 +184,13 @@ export function rewriteEncFeature(
     const scalar = scalarProperty(raw);
     if (scalar == null) continue;
     properties[key] = scalar;
-    if (key === "SCAMIN" && typeof scalar === "number") scamin = scalar;
+    if (
+      key === "SCAMIN" &&
+      typeof scalar === "number" &&
+      !meta.ignoreScaleMinimum
+    ) {
+      scamin = scalar;
+    }
   }
   const { minzoom, maxzoom } = zoomRangeForFeature(meta.band, scamin);
   return {

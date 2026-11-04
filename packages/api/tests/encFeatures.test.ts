@@ -1,5 +1,7 @@
 import {
   bandFromCellName,
+  bandMinZoom,
+  ENC_MAX_ZOOM,
   extendBounds,
   rewriteEncFeature,
   zoomForScaleDenominator,
@@ -61,8 +63,28 @@ describe("ENC feature normalization", () => {
 
   test("a harbour cell with a large SCAMIN still has a zoom range", () => {
     const range = zoomRangeForFeature(5, 17999);
+    expect(range.maxzoom).toBe(ENC_MAX_ZOOM);
     expect(range.maxzoom).toBeGreaterThanOrEqual(range.minzoom);
-    expect(range.minzoom).toBeLessThanOrEqual(16);
+  });
+
+  test("larger-scale charts start at a higher zoom than the chart under them", () => {
+    expect(bandMinZoom(1)).toBe(0);
+    expect(bandMinZoom(4)).toBeLessThan(bandMinZoom(5));
+    expect(bandMinZoom(5)).toBeLessThan(ENC_MAX_ZOOM);
+  });
+
+  test("skin-of-the-earth features ignore SCAMIN so the cell does not develop holes", () => {
+    const feature = rewriteEncFeature(
+      {
+        type: "Feature",
+        properties: { SCAMIN: 17999, DRVAL1: 3 },
+        geometry: { type: "Polygon", coordinates: [[[-119.7, 34.4], [-119.6, 34.4], [-119.6, 34.5], [-119.7, 34.4]]] },
+      },
+      { cell: "US5CA2HS", band: 5, layer: "depth_area", ignoreScaleMinimum: true }
+    );
+    const tippecanoe = feature!.tippecanoe as { minzoom: number; maxzoom: number };
+    expect(tippecanoe.minzoom).toBe(bandMinZoom(5));
+    expect(tippecanoe.maxzoom).toBe(ENC_MAX_ZOOM);
   });
 
   test("bounds grow around coordinates and ignore junk", () => {

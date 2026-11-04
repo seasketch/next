@@ -6,6 +6,7 @@ import { Helpers } from "graphile-worker";
 import { v4 as uuid } from "uuid";
 import { storageClientV2 } from "../src/storage/client";
 import { processEncFiles } from "../src/enc/processEnc";
+import { ENC_MAX_ZOOM } from "../src/enc/layers";
 import {
   extractHostedTilesUuid,
   writeProjectAclDocToR2,
@@ -127,7 +128,7 @@ export default async function processEncBasemap(
            project_id, name, type, url, thumbnail, attribution, labels_layer_id,
            description, maxzoom
          ) values (
-           $1, $2, 'ENC', $3, $4, $5, 'enc-sounding-label', $6, 14
+           $1, $2, 'ENC', $3, $4, $5, 'enc-sounding-label', $6, ${ENC_MAX_ZOOM}
          ) returning id`,
         [
           projectId,

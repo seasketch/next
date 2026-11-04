@@ -6,11 +6,11 @@
 
 A project admin drops one or more unencrypted S-57 zip files or `.000` cells on the basemap editor (**Nautical chart**). The client PUTs each file to a presigned URL, then a background job builds one public ENC basemap.
 
-The job runs in the API's graphile worker, using GDAL and tippecanoe on that machine. It does not run in the spatial-uploads container yet. The same `processEncFiles` function is what would move into that container later. Cells are quilted only by usage-band zoom (a harbour cell draws above an approach cell). Coverage is not clipped, so overlapping cells show as stacked rectangles.
+The job runs in the API's graphile worker, using GDAL and tippecanoe on that machine. It does not run in the spatial-uploads container yet. The same `processEncFiles` function is what would move into that container later. Cells of one usage band draw together. Where a larger-scale cell covers the same place, the smaller-scale features stop at the zoom where that larger scale takes over, so a generalized shoreline is not painted over a harbour chart. Shared polygon edges are simplified together. A gap remains only where no cell covers that spot.
 
 Each tiled feature keeps the S-57 attributes the chart style reads (`DRVAL1`, `DEPTH`, `OBJNAM`, and so on). `cls` is the tile source-layer name (`depth_area`, `sounding`, …), not the S-57 acronym. The client builds a fixed style with no Mapbox sprite or glyphs, so a project without a Mapbox token can still draw the chart. `enc_basemaps.settings` is `{}` until the adjustment UI exists. The basemap attribution is "Not for navigation."
 
-The California check used three NOAA cells that are not committed (NOAA asks redistributors to show the user agreement): `US5CA2HS` (Santa Barbara), `US5NTDEB` (Ventura Harbor), and `US4CA1HO` (Santa Barbara Channel). On a public project, anonymous readers can select the basemap; `anon` has `SELECT` on `enc_basemaps`. Upload rows stay admin-only. Listing the tile UUID in the project ACL document is best-effort and is not required while pmtiles-server ACL enforcement is off.
+The California check uses every active NOAA cell whose coverage meets a box from Naples to Oxnard (`-120.05, 34.22` to `-119.15, 34.48`), overview through harbour, clipped to that box. The zips are not committed. On a public project, anonymous readers can select the basemap; `anon` has `SELECT` on `enc_basemaps`. Upload rows stay admin-only. Listing the tile UUID in the project ACL document is best-effort and is not required while pmtiles-server ACL enforcement is off.
 
 ## Intent
 

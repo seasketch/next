@@ -1,17 +1,21 @@
 import { execFile } from "child_process";
-import { createWriteStream } from "fs";
-import { mkdtemp, readdir, rm, stat } from "fs/promises";
+import { createReadStream, createWriteStream, existsSync } from "fs";
+import { mkdtemp, readdir, rm, stat, writeFile } from "fs/promises";
 import { tmpdir } from "os";
 import path from "path";
 import readline from "readline";
-import { createReadStream } from "fs";
 import {
+  BAND_MIN_ZOOM,
   ENC_LAYER_BY_CLASS,
+  ENC_MAX_ZOOM,
   EncFeatureMeta,
+  SKIN_CLASSES,
   bandFromCellName,
   extendBounds,
   rewriteEncFeature,
 } from "./layers";
+
+export type EncClip = [number, number, number, number];
 
 export type EncCellSummary = {
   cell: string;
@@ -96,13 +100,79 @@ async function readFeatures(
   return count;
 }
 
+async function readCoverage(file: string, band: number | null): Promise<unknown[]> {
+  const info = await stat(file);
+  if (info.size === 0 || band == null) return [];
+  const features: unknown[] = [];
+  const lines = readline.createInterface({
+    input: createReadStream(file),
+    crlfDelay: Infinity,
+  });
+  for await (const line of lines) {
+    const trimmed = line.replace(/^\u001e/, "").trim();
+    if (!trimmed.startsWith("{")) continue;
+    try {
+      const parsed = JSON.parse(trimmed) as { type?: string; geometry?: unknown };
+      if (parsed.type !== "Feature" || !parsed.geometry) continue;
+      features.push({
+        type: "Feature",
+        properties: { band },
+        geometry: parsed.geometry,
+      });
+    } catch {
+      continue;
+    }
+  }
+  return features;
+}
+
+function ogrExportArgs(
+  output: string,
+  cellPath: string,
+  layer: string,
+  clip?: EncClip,
+  where?: string
+): string[] {
+  const args = [
+    "-f",
+    "GeoJSONSeq",
+    output,
+    "-t_srs",
+    "EPSG:4326",
+    "-oo",
+    "SPLIT_MULTIPOINT=ON",
+    "-oo",
+    "ADD_SOUNDG_DEPTH=ON",
+  ];
+  if (clip) {
+    args.push("-clipsrc", String(clip[0]), String(clip[1]), String(clip[2]), String(clip[3]));
+  }
+  if (where) args.push("-where", where);
+  args.push(cellPath, layer);
+  return args;
+}
+
+function peelScript(): string {
+  const beside = path.join(__dirname, "peel.py");
+  if (existsSync(beside)) return beside;
+  const source = path.resolve(process.cwd(), "src/enc/peel.py");
+  if (existsSync(source)) return source;
+  throw new Error("ENC coverage peel script was not found");
+}
+
 /**
  * Turn one or more S-57 base cells (plain `.000` files, or NOAA zip exchange
- * sets) into a single PMTiles archive. Cells are quilted only by usage-band
- * zoom ranges: a harbour cell draws above an approach cell because its
- * features start at a higher zoom. Overlap clipping is left for later.
+ * sets) into a single PMTiles archive.
+ *
+ * Where two cells cover the same place, the larger-scale cell replaces the
+ * smaller-scale one from the zoom at which that larger scale is meant to be
+ * read. `clip`, when set, cuts every feature to that box so an overview cell
+ * does not pull the chart out to the whole coast.
  */
-export async function processEncFiles(inputs: string[]): Promise<EncProcessResult> {
+export async function processEncFiles(
+  inputs: string[],
+  options?: { clip?: EncClip }
+): Promise<EncProcessResult> {
   if (inputs.length === 0) {
     throw new Error("No S-57 files were provided");
   }
@@ -140,7 +210,9 @@ export async function processEncFiles(inputs: string[]): Promise<EncProcessResul
     const jsonl = createWriteStream(jsonlPath);
     const bounds: { value: [number, number, number, number] | null } = { value: null };
     const cells: EncCellSummary[] = [];
+    const coverage: unknown[] = [];
     let featureCount = 0;
+    const clip = options?.clip;
 
     for (const cellPath of baseCells) {
       const cell = path.basename(cellPath, path.extname(cellPath));
@@ -156,23 +228,21 @@ export async function processEncFiles(inputs: string[]): Promise<EncProcessResul
         );
       }
       const layers = layerNames(listed);
+      const coverPath = path.join(exportDir, `${cell}-M_COVR.geojsonl`);
+      try {
+        await run(
+          "ogr2ogr",
+          ogrExportArgs(coverPath, cellPath, "M_COVR", clip, "CATCOV = 1")
+        );
+        coverage.push(...(await readCoverage(coverPath, band)));
+      } catch {
+        // A cell with no coverage polygon cannot mask the charts under it.
+      }
       let cellFeatures = 0;
       for (const objectClass of layers) {
         const exportPath = path.join(exportDir, `${cell}-${objectClass}.geojsonl`);
         try {
-          await run("ogr2ogr", [
-            "-f",
-            "GeoJSONSeq",
-            exportPath,
-            "-t_srs",
-            "EPSG:4326",
-            "-oo",
-            "SPLIT_MULTIPOINT=ON",
-            "-oo",
-            "ADD_SOUNDG_DEPTH=ON",
-            cellPath,
-            objectClass,
-          ]);
+          await run("ogr2ogr", ogrExportArgs(exportPath, cellPath, objectClass, clip));
         } catch {
           continue;
         }
@@ -180,6 +250,7 @@ export async function processEncFiles(inputs: string[]): Promise<EncProcessResul
           cell,
           band,
           layer: ENC_LAYER_BY_CLASS[objectClass],
+          ignoreScaleMinimum: SKIN_CLASSES.has(objectClass),
         };
         cellFeatures += await readFeatures(exportPath, meta, (line) => jsonl.write(line), bounds);
       }
@@ -194,6 +265,19 @@ export async function processEncFiles(inputs: string[]): Promise<EncProcessResul
       throw new Error("The S-57 cells did not contain any features the chart style draws");
     }
 
+    const maskPath = path.join(work, "coverage.geojson");
+    const specPath = path.join(work, "peel-spec.json");
+    const peeledPath = path.join(work, "peeled.geojsonl");
+    await writeFile(
+      maskPath,
+      JSON.stringify({ type: "FeatureCollection", features: coverage })
+    );
+    await writeFile(
+      specPath,
+      JSON.stringify({ bandMinZoom: BAND_MIN_ZOOM, maxZoom: ENC_MAX_ZOOM })
+    );
+    await run("python3", [peelScript(), jsonlPath, maskPath, peeledPath, specPath]);
+
     const pmtilesPath = path.join(work, "chart.pmtiles");
     await run("tippecanoe", [
       "-o",
@@ -201,13 +285,15 @@ export async function processEncFiles(inputs: string[]): Promise<EncProcessResul
       "--force",
       "--projection=EPSG:4326",
       "--minimum-zoom=0",
-      "--maximum-zoom=14",
+      `--maximum-zoom=${ENC_MAX_ZOOM}`,
+      "--detect-shared-borders",
+      "--no-tiny-polygon-reduction",
       "--drop-densest-as-needed",
       "--extend-zooms-if-still-dropping",
       "--maximum-tile-bytes=1500000",
       "--no-feature-limit",
       "--generate-ids",
-      jsonlPath,
+      peeledPath,
     ]);
     // The caller reads the archive before the temp dir would be removed.
     // Keep the file by moving it out, then delete the work directory.
