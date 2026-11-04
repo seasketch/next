@@ -47,6 +47,8 @@ Working notes for [S-57 nautical chart basemaps](../../design-docs/enc-basemaps/
 
 This branch is a spike. Expect the first steps to change the tile schema and the settings object. Keep the schema and settings versioned from the first commit so those changes are cheap.
 
+The first vertical slice is in the repo and is narrower than the steps below. Processing runs in the API worker (`packages/api/src/enc`, task `processEncBasemap`) with host GDAL and tippecanoe, not in the spatial-uploads image. The admin control is **Nautical chart** on the basemap editor. The style is a fixed client builder (`packages/client/src/enc/buildEncStyle.ts`); settings stay `{}`. Quilting is band-to-zoom only. `cls` on a feature is the tile source-layer name. See the record's "What the spike actually does".
+
 ## Order and pull-request boundaries
 
 Each numbered item is one pull request unless noted. Steps 1 to 5 change nothing a user can see and can merge as they finish. Step 6 onward changes the database and API and should merge in order. The feature stays hidden behind the `ENC` basemap type, so no flag is needed. The create flow is only reachable from the new admin page, which step 8 adds last.

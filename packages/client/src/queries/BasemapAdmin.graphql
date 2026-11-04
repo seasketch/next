@@ -39,6 +39,11 @@ fragment BasemapDetails on Basemap {
   translatedProps
   isArcgisTiledMapservice
   maxzoom
+  encBasemap {
+    bounds
+    catalog
+    schemaVersion
+  }
 }
 
 query GetBasemaps($slug: String!) {
