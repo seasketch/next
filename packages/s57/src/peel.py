@@ -9,7 +9,7 @@ integer property "band". Writes GeoJSONSeq. A feature of band B is split:
 - the rest keeps the archive max zoom
 
 Zoom numbers come from the JSON spec argument so they stay in one place
-(packages/api/src/enc/layers.ts).
+(packages/s57/src/layers.ts).
 """
 import json
 import sys

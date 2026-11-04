@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>S-57 chart demo</title>
+    <link href="/vendor/mapbox-gl.css" rel="stylesheet" />
+    <style>
+      html,
+      body,
+      #map {
+        margin: 0;
+        height: 100%;
+        background: #d4eaee;
+      }
+      .bar {
+        position: absolute;
+        z-index: 2;
+        top: 12px;
+        left: 12px;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+        max-width: min(720px, calc(100% - 70px));
+        padding: 8px;
+        background: rgba(244, 241, 228, 0.94);
+        border: 1px solid #525a5c;
+        font: 13px/1.3 "Segoe UI", sans-serif;
+        color: #070707;
+      }
+      button {
+        font: inherit;
+        padding: 4px 8px;
+        background: #fff;
+        border: 1px solid #525a5c;
+        cursor: pointer;
+      }
+      button:hover {
+        background: #d4eaee;
+      }
+      .note {
+        align-self: center;
+        color: #525a5c;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="bar">
+      <strong>S-57</strong>
+      <button type="button" data-view="9/-119.9/34.2">Channel</button>
+      <button type="button" data-view="13/-119.69/34.406">Santa Barbara</button>
+      <button type="button" data-view="14/-119.265/34.248">Ventura</button>
+      <button type="button" data-view="11/-119.72/34.02">Santa Cruz</button>
+      <button type="button" data-view="12/-120.15/33.97">Santa Rosa</button>
+      <button type="button" data-view="12/-120.36/34.04">San Miguel</button>
+      <button type="button" data-view="13/-119.4/34.01">Anacapa</button>
+      <span class="note">Not for navigation</span>
+    </div>
+    <div id="map"></div>
+    <script src="/vendor/mapbox-gl.js"></script>
+    <script>
+      mapboxgl.accessToken = "local-demo";
+      const places = {
+        channel: { zoom: 9, center: [-119.9, 34.2] },
+      };
+      Promise.all([
+        fetch("/chart.json").then((response) => response.json()),
+        fetch("/style.json").then((response) => response.json()),
+      ]).then(([chart, style]) => {
+          const map = new mapboxgl.Map({
+            container: "map",
+            style: style,
+            bounds: chart.bounds,
+            hash: true,
+            fadeDuration: 0,
+            attributionControl: true,
+          });
+          map.on("error", (event) => {
+            const message = event && event.error ? event.error.message : String(event);
+            window.__chartErrors = window.__chartErrors || [];
+            window.__chartErrors.push(message);
+            console.error(message);
+          });
+          map.addControl(new mapboxgl.NavigationControl(), "top-right");
+          map.addControl(new mapboxgl.ScaleControl({ maxWidth: 160, unit: "nautical" }), "bottom-left");
+          map.on("load", () => {
+            if (!location.hash) map.jumpTo(places.channel);
+          });
+          document.querySelectorAll("button[data-view]").forEach((button) => {
+            button.addEventListener("click", () => {
+              const [zoom, lon, lat] = button.dataset.view.split("/").map(Number);
+              map.easeTo({ center: [lon, lat], zoom, duration: 600 });
+            });
+          });
+          window.map = map;
+        });
+    </script>
+  </body>
+</html>
