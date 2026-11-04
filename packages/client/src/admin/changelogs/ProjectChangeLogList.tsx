@@ -3,7 +3,6 @@ import {
   ReactNode,
   memo,
   useCallback,
-  useEffect,
   useLayoutEffect,
   useMemo,
   useRef,
@@ -182,6 +181,12 @@ export default function ProjectChangeLogList({
   const listRef = useRef<VariableSizeList | null>(null);
   const outerElementRef = useRef<HTMLDivElement | null>(null);
   const sizeMap = useRef(new Map<string, number>());
+  // Row layout effects measure before this list's ref is attached, and
+  // AutoSizer mounts the list only after an earlier reset effect has already
+  // run. Hold the reset until the ref exists so the first paint uses measured
+  // heights instead of the estimates rows would otherwise overlap with.
+  const pendingResetIndex = useRef<number | null>(null);
+  const [resetVersion, setResetVersion] = useState(0);
   const [sticky, setSticky] = useState<HeaderRow | null>(null);
   const scrollOffsetRef = useRef(0);
 
@@ -229,12 +234,38 @@ export default function ProjectChangeLogList({
     return next;
   }, [dayGroups, formatDay]);
 
-  const setSize = useCallback((key: string, index: number, size: number) => {
-    if (size <= 0 || sizeMap.current.get(key) === size) {
+  const requestReset = useCallback((index: number) => {
+    const list = listRef.current;
+    if (list) {
+      pendingResetIndex.current = null;
+      list.resetAfterIndex(index);
       return;
     }
-    sizeMap.current.set(key, size);
-    listRef.current?.resetAfterIndex(index);
+    pendingResetIndex.current =
+      pendingResetIndex.current == null
+        ? index
+        : Math.min(pendingResetIndex.current, index);
+    setResetVersion((version) => version + 1);
+  }, []);
+
+  const setSize = useCallback(
+    (key: string, index: number, size: number) => {
+      if (size <= 0 || sizeMap.current.get(key) === size) {
+        return;
+      }
+      sizeMap.current.set(key, size);
+      requestReset(index);
+    },
+    [requestReset]
+  );
+
+  const bindList = useCallback((instance: VariableSizeList | null) => {
+    listRef.current = instance;
+    if (!instance || sizeMap.current.size === 0) {
+      return;
+    }
+    pendingResetIndex.current = null;
+    instance.resetAfterIndex(0);
   }, []);
 
   const getSize = useCallback(
@@ -272,7 +303,16 @@ export default function ProjectChangeLogList({
   );
 
   const rowKeySignature = rows.map((row) => row.key).join("\n");
-  useEffect(() => {
+  useLayoutEffect(() => {
+    if (pendingResetIndex.current == null || listRef.current == null) {
+      return;
+    }
+    const index = pendingResetIndex.current;
+    pendingResetIndex.current = null;
+    listRef.current.resetAfterIndex(index);
+  }, [resetVersion]);
+
+  useLayoutEffect(() => {
     listRef.current?.resetAfterIndex(0);
     updateSticky(scrollOffsetRef.current);
   }, [rowKeySignature, updateSticky]);
@@ -303,7 +343,7 @@ export default function ProjectChangeLogList({
       <AutoSizer>
         {({ height, width }) => (
           <VariableSizeList
-            ref={listRef}
+            ref={bindList}
             height={height}
             width={width}
             itemCount={rows.length}
