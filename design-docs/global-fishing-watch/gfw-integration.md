@@ -13,7 +13,7 @@ Both are driven by the same stored configuration and the same `TemporalInfo` des
 
 ## Scope
 
-**Phase 1 (spike + first release)** supports **annual** aggregation only: one frame per year, 2012 through the current partial year. Monthly aggregation is kept in every schema, parameter type, and proxy allowlist so enabling it is a configuration change. Daily and hourly views are out of scope entirely; the timeslider must not offer them for a GFW source. Visualizing individual vessel tracks is out of scope.
+**Phase 1 (spike + first release)** supports **annual** aggregation only: one frame per year, 2012 through the current partial year. Monthly stays in the schema and the proxy allowlist. Turning it on is more than a flag: a monthly tile URL covers at most 2000 days, and its property keys are `year * 12 + monthIndex`. Daily and hourly views are out of scope entirely; the timeslider must not offer them for a GFW source. Visualizing individual vessel tracks is out of scope.
 
 ## Why not finish the 2024 branch
 
@@ -33,14 +33,67 @@ Checked against the GFW documentation on 2026-11-04. Re-verify during the spike.
 | Datasets: `public-global-fishing-effort` (apparent fishing hours, 2012 → 96 h ago), `public-global-presence` (AIS presence hours, 2012 → 96 h ago), `public-global-sar-presence` (detections, 2017 → 5 days ago). All support tiles and reports. | The source type and metric are dataset-agnostic. Phase 1 ships fishing effort; presence and SAR are presets later. |
 | **Pipeline v5** released 2026-10-21. `:latest` resolves to v5. The new fishing model is more conservative ("materially lower fishing activity"). `:v3.x` are deprecated. | Store an explicit version (`:v5.0`) in config and include the resolved version in every cache key and dependency hash. Never persist `:latest`. |
 | Filters on fishing effort: `flag in (...)`, `geartype in (...)`, `vessel_id`, `distance_from_port_km` (enum 0–5; GFW's map defaults to **3**). | Default `distance_from_port_km=3` so SeaSketch numbers reconcile with gfw.org. |
-| Tiles: `interval` ∈ `YEAR`, `MONTH`, `10DAYS`, `DAY`, `HOUR`. `temporal-aggregation=false` returns one value per frame per cell. MVT features carry an `id` of `{z}/{x}/{y}/{cell}`; source-layer is `main`. Zoom 0–12. | Whole 2012–present domain fits one YEAR tile set (~15 frames). MONTH is ~180 frames per cell; measure tile weight before enabling. |
-| `bins/{z}`: zoom > 0 breaks are the zoom-0 breaks divided by 4^z. | One bins call per (dataset, version, filters, interval). Derive other zooms locally. |
-| Report: `POST` with GeoJSON (custom polygon) or `GET` with `region-id`/`region-dataset` (gateway-cached). Required: `format` (JSON/CSV/TIF), `group-by` (FLAG, GEARTYPE, FLAGANDGEARTYPE, VESSEL_ID, MMSI, DETECT_ID), `temporal-resolution` (HOURLY, DAILY, MONTHLY, YEARLY, ENTIRE), `datasets[0]`. Optional `filters[0]`, `date-range`, `spatial-aggregation` (default false; true sums the region to one row per group per period), `spatial-resolution` (LOW = 0.1°, HIGH = 0.01°, used when not spatially aggregated), `buffer-value`/`buffer-unit`/`buffer-operation`. Values are **sums** of hours. | `gfw_report` is a thin wrapper over these parameters. |
-| **One concurrent report per token.** A second request returns 429 with the running report's URL. Reports over 100 s return 524; recover with `last-report`. Vessel-level `group-by` with `spatial-aggregation=false` was disabled 2026-11-03. | GFW report metrics cannot ride the parallel overlay-worker fan-out. They need a serialized queue and 429/524 handling. Ask GFW for a partner token with higher concurrency. |
-| `stats` is worldwide only (no region). | Slider histograms must be computed client-side from loaded tiles, which is also what gfw.org does. |
-| Quota: **50,000 requests/day, 1.5M/month per user**, shared across up to five tokens. Exceeding the daily limit blocks for 24 h, monthly for 30 days. Tile requests count. `x-ratelimit-*` headers report usage. | Tile caching and URL canonicalization are requirements. Quota must be observable. |
+| Tiles: `interval` ∈ `YEAR`, `MONTH`, `10DAYS`, `DAY`, `HOUR`. `temporal-aggregation=false` returns one value per frame per cell. Source-layer is `main`. Zoom 0–12. Date-range caps, from a 422: hour 10 days, day 366 days, **month 2000 days, year no limit**. | One YEAR tile URL covers 2012–present. A MONTH view of the same span is several URLs of ≤2000 days, not one. |
+| `bins/{z}`: zoom > 0 breaks are the zoom-0 breaks divided by 4^z. Confirmed exactly (z5 = z0 / 1024) aside from the leading 0. | One bins call per (dataset, version, filters, interval). Derive other zooms locally. |
+| Report: `POST` with a GeoJSON **object** (`{ "geojson": <FeatureCollection> }`; a stringified GeoJSON is `body malformed`) or `GET` with `region-id`/`region-dataset`. Required: `format`, `group-by`, `temporal-resolution`, `datasets[0]`. **`date-range` maximum is 366 days**, including `YEARLY`. `MONTHLY` over one calendar year works and returns `YYYY-MM`, omitting empty months. `spatial-aggregation=true` sums to one row per group per period. Values are sums of hours. Rows are nested: `entries[0]["<dataset>:<version>"]`. | A multi-year series is one request per calendar year. A monthly series for one year is one request. |
+| **One concurrent report per token.** A second request returns 429 naming the in-flight report. Recover the last completed report at **`/v3/4wings/last-report`** (not `/report/last`). That endpoint is per token, so only the job that owns the in-flight request may call it. Nothing we ran exceeded 5 s, so 524 was not observed. | Serialized queue. Do not poll `last-report` from a second job. |
+| `stats` is worldwide only and returns one row, not a time series. The field name is `ACTIVITY-HOURS` (hyphenated). 2024 came back as 122,061,890 hours. | Slider histograms come from loaded tiles. |
+| Quota: **50,000 requests/day, 1.5M/month per user**. Headers `x-ratelimit-daily-*` and `x-ratelimit-monthly-*` are present. They stayed at 0 usage across this whole session, so they lag (the docs say checks run every 30 minutes) and are not a live counter. Tiles respond `cache-control: private, max-age=86400` and `cf-cache-status: DYNAMIC` even on an immediate repeat. | The proxy cache is what makes the quota survivable. Do not treat the rate-limit headers as realtime. |
 | License CC BY-NC 4.0. Attribution "Powered by Global Fishing Watch" linked to globalfishingwatch.org on any page or graphic, plus a citation line with dataset, version, date range, and access date for embedded graphics. | Legend, widget footer, and exports all carry attribution. |
 | gfw.org's frontend uses deck.gl with a custom `4WINGS` varint tile format and client-side frame aggregation (`libs/deck-loaders/src/fourwings/lib/parse-fourwings.ts` in their repo). | We get the same scrub-without-refetch behavior from MVT per-frame properties and paint expressions; we do not need deck.gl. |
+
+## Spike results (2026-11-04)
+
+Run against `public-global-fishing-effort:v5.0` with a SeaSketch application token. Scripts stayed in `/tmp` and are not in the repo. The token is not recorded here.
+
+### Tiles
+
+`interval=YEAR`, `temporal-aggregation=false`, `date-range=2012-01-01,2026-11-01`:
+
+| Tile | Bytes | Features | Time |
+| --- | --- | --- | --- |
+| z0 (world) | 782 KB | 3,873 | 1.5 s |
+| z5, East China Sea | 1.06 MB | 10,912 | ~2 s |
+| z10, same area | 803 KB | 11,185 | ~2 s |
+| z7, 2×2 neighborhood, cold / immediate repeat | 3.2 MB total | — | 7.1 s / 0.7 s |
+
+Property keys are the calendar year as a string (`"2012"` … `"2026"`), plus `cell` (number) and `id` (string `"{z}/{x}/{y}/{cell}"`). Years with no activity are **omitted**, not zero, so paint is `["to-number", ["get", year], 0]`. The protobuf feature id is unset; `promoteId` must be the string `id` (`cell` repeats across tiles). Response headers `x-scale: 1` and `x-offset: 0`: the numbers are hours. 2026 is already a frame, so the partial year is in the tiles.
+
+`interval=MONTH` over 2012–present is rejected: `Duration exceeded by interval (hour: 10days, day: 366days, month: 2000days, year: no limit)`. One year of months at the same z5 tile is 807 KB and 8,867 features. Month keys are `year * 12 + monthIndex` (`24288` = January 2024 through `24299` = December 2024), not `"2024-01"`.
+
+`:latest` resolves to v5.0 (`x-datasets`) and omits `x-deprecated-dataset`. Requesting `:v5.0` sends `x-deprecated-dataset: v5.0=v4.0`, and requesting `:v4.0` sends the pair reversed, so that header is a sibling pointer, not "v5 is deprecated." The z0 bin breaks differ between v4 and v5 (top break 6.31e6 vs 8.32e6). Pin `:v5.0`.
+
+### Reports
+
+All of these used `group-by=GEARTYPE`, `format=JSON`, `spatial-aggregation=true` unless noted. A 0.02° polygon in the East China Sea (123.873°E, 28.598°N):
+
+| Request | Result |
+| --- | --- |
+| 2024, aggregated | 132.273 h in 1.4 s (trawlers 122.31, generic `fishing` 9.96) |
+| 2024, gridded HIGH (0.01°) | 14 cells, **sum 132.272 h**. Only 109.4 h have centers inside the polygon |
+| 2024, gridded LOW (0.1°) | 2 rows at one cell center, sum 132.273 h |
+| 0.005° polygon inside it | 8.626 h aggregated = the full hours of two 0.01° cells, **both centers outside the polygon** |
+| 0.2° polygon around it | 20,433.763 h aggregated = the LOW gridded sum. Centers-inside subset is 11,815 h |
+| 0.3° "sketch", 2024 | 48,493.7 h in 1.8 s |
+| Senegal EEZ, `region-id=8371`, `region-dataset=public-eez-areas`, 2024 | 153,313.8 h in 2.0 s |
+| 2022–2025 and 2012–2026 | 422, `Maximum of 366 days time range supported` |
+| 2026-01-01 → 2026-11-04 | 200, `date: "2026"`, ~154 h in 4.4 s. A partial year can already exceed a previous full year |
+| `temporal-resolution=MONTHLY` for calendar 2024 | 200 in 0.9 s, dates `2024-01` … `2024-12` with empty months omitted, sum 132.272 h |
+
+`spatial-aggregation=true` equals the sum of **whole cells that intersect** the polygon. It is not centroid-in and it is not area-weighted. A sketch smaller than a cell receives the whole cell, and two polygons that share an edge both receive the boundary cell.
+
+`filters[0]=flag in ('CHN')` dropped the 0.02° total from 132.27 h to 128.55 h. `distance_from_port_km > 3` was accepted there and returned the unfiltered total; that cell is offshore, so this did not prove the predicate. `vesselIDs` is a count of vessels in the group, not a list.
+
+Two overlapping POSTs: the second returned 429 in 271 ms while the first finished 200. The body names the in-flight report and points at `apis@globalfishingwatch.org` for higher concurrency. `GET /v3/4wings/last-report` then returned that completed report.
+
+### What this changes
+
+- Phase 1 map: one YEAR tile URL per layer config. Missing years are 0. `promoteId: "id"`.
+- Phase 2 map: MONTH needs a date window of at most 2000 days, and paint keys are `year * 12 + monthIndex`.
+- Reports are one **calendar year** per call (a leap year fits in 366 days). A 14-year series is 14 calls. Monthly-within-a-year is one `MONTHLY` call, not twelve.
+- Do the report on the **sketch union**, not on each fragment. Whole-cell intersection would double-count every shared edge, and fragment × year × a one-at-a-time token does not finish. Cache each completed year forever; recompute the partial current year on its own hash.
+- `gfw-aggregated` is the phase 1 subject model. It matches gfw.org and these calls all returned in under 5 s. `gridded-clipped` stays possible later: HIGH rows carry `lat`, `lon`, and `hours` at 0.01°. The widget says that a small sketch is counted as the cells it touches.
+- `spatial_metrics` RLS finds the sketch through `sketch_fragments` (`check_sketch_rls_policy` on `fragment_hash`). A union is not a fragment, so `gfw_report` needs its own subject, `subject_sketch_id`, beside the existing geography subject. The reports plugin must not expand this metric across fragments.
 
 ## Architecture
 
@@ -118,15 +171,15 @@ The preview-map modal from the 2024 branch (`AddRemoteServiceMapModal` with a li
 
 The slider controls two independent channels. `MapTemporalStateContext` already separates them:
 
-- **Domain and resolution → tile URL.** `interval` is `YEAR` (phase 1) or `MONTH`; `date-range` is the full coverage `2012-01-01,<today>`. These change only when admin config or the slider resolution changes. In phase 1 there is exactly one tile set per layer config.
-- **Clock → paint expression.** Each cell carries one property per frame. Instant mode styles `["get", "<year>"]`. Window mode styles `["+", ["get", y1], ["get", y2], …]`. Cumulative mode sums from the domain start. A mean-over-window option is `["/", sum, n]`. A clock tick is `setPaintProperty`; no tiles are refetched.
+- **Domain and resolution → tile URL.** Phase 1 uses `interval=YEAR` and `date-range=2012-01-01,<today>`, which the API allows with no length cap, so there is one tile set per layer config. Monthly (phase 2) is capped at 2000 days, so that view is several windows, not one URL.
+- **Clock → paint expression.** Each cell carries one property per frame. Year keys are `"2012"`; a missing key means no activity. Instant mode styles `["to-number", ["get", "<year>"], 0]`. Window mode sums those expressions. Cumulative mode sums from the domain start. A mean-over-window option divides by the number of years. A clock tick is `setPaintProperty`; no tiles are refetched. Set `promoteId: "id"` (the string `{z}/{x}/{y}/{cell}`). Month keys, when enabled, are `year * 12 + monthIndex`.
 
 Implementation lives in `MapContextManager.getComputedStyle()` as a new style-computation input, the path the temporal design doc reserves for "remote (4Wings tile params from the clock)". `setTemporalClock` (today it drives Data Table queries) also updates remote paint. `tocIdsHiddenByClock` keeps ignoring remote sources; they are never clock-hidden, only re-expressed. Add `GFW_4WINGS` to `PRELOADABLE_SOURCE_TYPES` in `mapTemporalStyle.ts` so opacity transitions snap the way other preloaded sources do.
 
 Other rendering details:
 
 - **Zoom normalization and legend.** Cell values grow with cell area. Call `bins/{z=0}` once per config (through the proxy, cached) and derive the other zooms with the documented 4^z rule, or compute breaks from `querySourceFeatures` on loaded tiles. The legend shows hours with the frame label ("hours fished, 2023"). Phase 1 uses a fixed sequential ramp (the AI cartographer prompt already prefers `interpolatePlasma` for GFW effort).
-- **Current partial year.** The last frame is year-to-date, lagging ~96 h. Legend, tooltip, and the slider label call it out ("2026, through Nov 1") so it does not read as a collapse in effort.
+- **Current partial year.** The last frame is year-to-date, lagging ~96 h, and it is already in the tiles. Legend, tooltip, and the slider label say so ("2026, through Nov 4"). A partial year can already exceed a previous full year, so the label is there for comparison, not because the value is always smaller.
 - **Hover.** Tooltip with hours for the clock's frame(s), as in the 2024 branch. Click → `interaction` for contributing vessels is phase 3 because it costs requests.
 - **Attribution.** The `attribution` column feeds the Mapbox attribution control; the legend entry also carries the linked "Powered by Global Fishing Watch" text.
 - **Slider histogram.** `providesSliderStats: true`, but `stats` is worldwide-only, so compute per-frame totals from loaded tiles (`querySourceFeatures`, summed per frame key) and publish them through the same channel the Data Table `queryStepCounts` use. It is a viewport approximation and is labeled as such.
@@ -144,24 +197,23 @@ type GfwReportParameters = {
   /** Inclusive start / exclusive end, year or month precision. */
   dateRange: { start: TemporalIso; end: TemporalIso };
   temporalResolution: "YEARLY" | "MONTHLY" | "ENTIRE"; // phase 1 offers YEARLY and ENTIRE
-  groupBy: "NONE" | "FLAG" | "GEARTYPE" | "FLAGANDGEARTYPE";
+  groupBy: "FLAG" | "GEARTYPE" | "FLAGANDGEARTYPE"; // API requires one; sum groups for a total
   /** See subject model below. */
   spatialMode: "gfw-aggregated" | "gridded-clipped";
 };
 ```
 
-Result shape: `{ series: Array<{ date: string; values: { [groupKey: string]: number } }>, unit: "hours" | "detections", datasetResolved: string, accessedAt: string, partialLastPeriod: boolean }`. Fragments combine by summation; the collection helpers in `src/reports/widgets/collection/` work unchanged.
+Result shape: `{ series: Array<{ date: string; values: { [groupKey: string]: number }; vesselIds?: { [groupKey: string]: number } }>, unit: "hours" | "detections", datasetResolved: string, accessedAt: string, partialLastPeriod: boolean }`. `vesselIDs` on each GFW row is a count. One row is the whole sketch for one calendar year. A collection sums child sketches in the widget; where two sketches touch, the shared cell is counted twice, and the footer says so.
 
 **Source URL and hashing.** `resolve_spatial_metrics_batch` requires an `overlaySourceUrl` for non-`total_area` types. Use a synthetic `gfw://public-global-fishing-effort:v5.0` the way `distance_to_shore` defaults to the land FGB URL in `packages/api/src/plugins/reportsPlugin.ts`. `hashMetricDependency` then keys the metric by dataset and version, so a pipeline bump invalidates cached metrics. Date ranges are stored as explicit ISO values in parameters; relative ranges ("last 3 years") are resolved to year or month boundaries when the widget is inserted or edited, not at calculation time, so hashes are stable.
 
-**Dispatch.** `calculateSpatialMetricsBatch` fans out to the overlay-worker Lambda at 128-way concurrency. GFW metrics are routed out of that path: the batch task skips `gfw_report` rows and enqueues one `calculateGfwReportMetric` graphile-worker job per metric with `queue_name = 'gfw-report'`, which the repository already uses for serial work (`geostats_pii_backfill`, `tiles_acl_backfill`). The task loads the fragment geobuf, simplifies it with the same tolerance the overlay worker uses, POSTs to `report`, and on 429 re-queues with backoff; on 524 it polls `last-report`. It writes results through the existing `spatial_metrics` state machine so the client sees progress and completion the usual way. If GFW grants higher concurrency, raise the limiter; nothing else changes.
+**Dispatch.** `calculateSpatialMetricsBatch` fans out to the overlay-worker Lambda at 128-way concurrency. GFW metrics leave that path: the batch task skips `gfw_report` rows and enqueues one `calculateGfwReportMetric` graphile-worker job per metric with `queue_name = 'gfw-report'` (the same serial `queue_name` pattern as `geostats_pii_backfill` and `tiles_acl_backfill`). Each job is **one calendar year of one sketch or geography**. It POSTs `{ geojson: <FeatureCollection object> }` with `spatial-aggregation=true`. A 429 means another job broke the queue; requeue with backoff and do not call `last-report` unless this job is the one in flight. A 524, which we did not observe, is recovered with `GET /v3/4wings/last-report` from that same job only. Completed years are immutable. The current partial year puts the UTC date it runs through into the dependency hash so it refreshes daily. If GFW grants higher concurrency, raise the limiter.
 
-**Subject model.** Fragments keep cache sharing with every other metric, but report cells are 0.1° or 0.01° and fragments share edges. Two options, chosen after the spike:
+**Subject model.** Phase 1 is `gfw-aggregated` on the **sketch union**, not on fragments. The spike showed `spatial-aggregation=true` equals the sum of whole intersecting 0.01° cells, including cells whose centers fall outside the polygon. Splitting into fragments would count each shared edge twice, and a 14-year series times the fragments of a sketch would be hundreds of serial calls. A collection sums child-sketch totals and the footer notes boundary cells. `gridded-clipped` (HIGH rows, area-weighted) stays a later option for sketches smaller than a cell; it will not match gfw.org.
 
-- `gfw-aggregated`: `spatial-aggregation=true` per fragment. Simplest, matches gfw.org area reports, but if GFW counts whole intersecting cells, summing fragments inflates boundary cells, and a sketch smaller than a cell gets the whole cell.
-- `gridded-clipped`: `spatial-aggregation=false` at HIGH resolution, then clip cells to the fragment with area weighting in the worker. Fragments combine exactly and small sketches get a fraction of a cell. Numbers will not match gfw.org to the hour; the widget says so.
+Geography subjects use `subject_geography_id` and POST the geography polygon. A GFW `region-id` is faster to cache on their side when we have one (Senegal EEZ `8371` returned in 2 s) but SeaSketch geographies do not carry those ids, so the polygon is the general path.
 
-Both compute **geography** subjects too, so the widget can show "% of effort in the geography captured by this sketch". Geography reports are large and cache for the life of the geography.
+`spatial_metrics` authorizes a row by joining `subject_fragment_id` to `sketch_fragments`. A union hash is not a fragment, so add `subject_sketch_id` and extend the exclusive-subject check and the RLS policy. The reports plugin creates one `gfw_report` row per sketch per year and does not expand it across fragments. The widget's "% of the geography" figure is a second metric on the geography subject.
 
 **Widget.** A block widget `GfwFishingActivity` under `src/reports/widgets/` following the README conventions:
 
@@ -169,7 +221,7 @@ Both compute **geography** subjects too, so the widget can show "% of effort in 
 - Tooltip controls: dataset (phase 1 fixed), period (year pickers), temporal resolution (YEARLY / ENTIRE in phase 1), group-by, filters popover, linked layer (`LayerPickerDropdown` filtered to `copiedFromDataLibraryTemplateId = GFW_*`), and a `TooltipMorePopover` naming the widget type and holding `spatialMode`.
 - Slash command: "Fishing activity (Global Fishing Watch)". If the project has a GFW layer, the command prefills from its `query_parameters` and links it; otherwise it offers to add one from the Data Library the way Distance to Port offers World Ports.
 - **Show on map**: toggles the linked layer through `useReportStyleToggle` and calls `setClock` with the widget's period in window mode.
-- Footer: "Powered by Global Fishing Watch" link and the citation line (dataset, version, date range, accessed date), plus caveats: apparent fishing activity is model-derived, v5 is more conservative than earlier versions, AIS coverage gaps, 96 h latency, grid cell size relative to the sketch, and that the last year is partial.
+- Footer: "Powered by Global Fishing Watch" link and the citation line (dataset, version, date range, accessed date), plus caveats: apparent fishing activity is model-derived, v5 classifies many vessels as generic `fishing`, AIS coverage gaps, 96 h latency, hours are whole intersecting 0.01° cells (a small sketch gets the full cell; adjacent sketches can share a boundary cell), and the last year is partial.
 - Inline presentation in `InlineMetric`: "1,240 fishing hours (2024)".
 - Exporter registered in `exports/registry.ts`; rows are the flat series with `scope`, `date`, group key, and value, and the citation line goes in the manifest.
 - Print mode: nothing hidden behind tabs in phase 1.
@@ -186,13 +238,13 @@ Both compute **geography** subjects too, so the widget can show "% of effort in 
 
 A throwaway script (not committed to the repo) run with a personal token.
 
-- [ ] Confirm `interval=YEAR`, `temporal-aggregation=false` MVT property keys and `id` format at z0, z5, z10. Record a MONTH tile's size at the same zooms for the later decision.
-- [ ] Call `bins/0` for the default config and confirm the 4^z rule against `bins/5`.
-- [ ] Run `report` on a small polygon (smaller than a 0.1° cell) with `spatial-aggregation=true` and with `=false` at HIGH, and compare. Decide `gfw-aggregated` vs `gridded-clipped`.
-- [ ] Time reports for a typical sketch, a large geography, and `temporal-resolution=YEARLY` over 2012–present. Note any 524.
-- [ ] Fire two reports concurrently; record the 429 body and `last-report` behavior.
-- [ ] Count requests from a realistic map session (pan and zoom over a region for a minute) to size the cache and quota.
-- [ ] Email `apis@globalfishingwatch.org`: confirm SeaSketch's non-commercial use, request a partner token with higher report concurrency and quota, ask whether report cell membership is intersect or centroid.
+- [x] Confirm `interval=YEAR`, `temporal-aggregation=false` MVT property keys and `id` format at z0, z5, z10. Record a MONTH tile's size at the same zooms for the later decision.
+- [x] Call `bins/0` for the default config and confirm the 4^z rule against `bins/5`.
+- [x] Run `report` on a small polygon (smaller than a 0.1° cell) with `spatial-aggregation=true` and with `=false` at HIGH, and compare. Decide `gfw-aggregated` vs `gridded-clipped`.
+- [x] Time reports for a typical sketch, a large geography, and `temporal-resolution=YEARLY` over 2012–present. Note any 524.
+- [x] Fire two reports concurrently; record the 429 body and `last-report` behavior.
+- [x] Count requests from a realistic map session (pan and zoom over a region for a minute) to size the cache and quota.
+- [ ] Email `apis@globalfishingwatch.org`: confirm SeaSketch's non-commercial use and request a partner token with higher report concurrency. Cell membership is answered by the spike (whole intersecting cells).
 
 ### Phase 1: annual layer and report
 
@@ -200,15 +252,15 @@ A throwaway script (not committed to the repo) run with a personal token.
 - [ ] `gfw-4wings` source type, `query_parameters` constraint, `create_gfw_4wings_table_of_contents_item`, Data Library card and modal, `GFW_FISHING_EFFORT` template id documented in `packages/api/src/DataLibrary/README.md`.
 - [ ] `getComputedStyle()` remote input: tile URL from config, paint from clock (instant, window, cumulative). Legend from `bins`, hover tooltip, attribution, partial-year labels.
 - [ ] Slider histogram from loaded tiles.
-- [ ] `gfw_report` metric type, parameters, hashing, serialized worker task with 429/524 handling, synthetic source URL.
+- [ ] `gfw_report` metric type, `subject_sketch_id`, parameters, hashing, serialized worker task with 429/524 handling, one calendar year per row, synthetic source URL.
 - [ ] `GfwFishingActivity` widget, inline presentation, slash command, show-on-map, exporter, attribution footer and caveats.
 - [ ] Update the GFW worked example in [Temporal Data](../temporal-data/temporal-data.md) and the GFW row in [service-inventory](../dev-environment/service-inventory.md).
 - [ ] Golden snapshot: none required. The card creates project-local items; no superuser template is seeded.
 
 ### Phase 2: monthly
 
-- [ ] Flip `supportedViewResolutions` and `intervals`; allowlist `MONTH` in the proxy. Measure tile weight at high zoom; cap `maxzoom` for monthly tiles if needed.
-- [ ] `MONTHLY` in the widget's resolution control; month pickers for the period.
+- [ ] Flip `supportedViewResolutions` and `intervals`. Allowlist `MONTH`, with date windows of at most 2000 days. Paint keys are `year * 12 + monthIndex`. A one-year monthly tile at z5 was 807 KB.
+- [ ] `MONTHLY` in the widget's resolution control. One report call covers a calendar year (`date` comes back as `YYYY-MM`); a longer monthly series is one call per year.
 
 ### Phase 3: closer to gfw.org
 
@@ -219,7 +271,7 @@ A throwaway script (not committed to the repo) run with a personal token.
 
 ## Open questions
 
-- Report cell membership (intersect vs centroid vs clipped) determines the subject model. Spike item.
-- Whether GFW will grant partner concurrency. If not, the serialized queue is the permanent design and the widget's loading state should say "queued behind N other fishing activity reports".
-- Whether to simplify fragment geometry before POSTing. The overlay worker already simplifies for distance metrics; GFW has not documented a polygon size limit.
-- Whether gfw.org's "hours" per cell at low zoom are raw sums or already normalized. Affects whether our legend matches theirs. Spike item alongside the bins check.
+- Whether GFW will grant partner concurrency. Until then the queue is serial, and the widget's loading state should say it is waiting on that queue. A 14-year sketch is about 14 calls; the calls we timed were 1–4 s, so a cold sketch is on the order of a minute if nothing else is queued.
+- How `distance_from_port_km` is spelled so it actually filters. `> 3` was accepted and, on an offshore cell, changed nothing. Confirm against a nearshore polygon before defaulting the layer to 3 km.
+- Polygon complexity. The spike used simple boxes and one EEZ region id. A detailed coastline sketch was not timed, and GFW has not documented a vertex limit. Simplify with the overlay worker's tolerance if a real sketch is slow or rejected.
+- Whether low-zoom tile hours are raw sums. `x-scale: 1` and `x-offset: 0`, and `bins/{z}` divides by exactly 4^z, which is what raw sums of quartered cells look like. The legend can use the derived breaks. Confirm visually against gfw.org once the layer renders.
