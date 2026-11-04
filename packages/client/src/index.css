@@ -9666,11 +9666,6 @@ select{
   border-top-right-radius:0.375rem
 }
 
-.rounded-t-xl{
-  border-top-left-radius:0.75rem;
-  border-top-right-radius:0.75rem
-}
-
 .rounded-bl-lg{
   border-bottom-left-radius:0.5rem
 }
@@ -14545,10 +14540,6 @@ input[type="checkbox"][indeterminate="true"]:checked {
   content:var(--tw-content)
 }
 
-.first\:pt-1:first-child{
-  padding-top:0.25rem
-}
-
 .last\:mb-0:last-child{
   margin-bottom:0px
 }
@@ -16136,12 +16127,12 @@ input[type="checkbox"][indeterminate="true"]:checked {
   display:none
 }
 
-.data-\[disabled\]\:cursor-not-allowed[data-disabled]{
-  cursor:not-allowed
-}
-
 .data-\[disabled\]\:cursor-default[data-disabled]{
   cursor:default
+}
+
+.data-\[disabled\]\:cursor-not-allowed[data-disabled]{
+  cursor:not-allowed
 }
 
 .data-\[state\=active\]\:border-b-2[data-state="active"]{
@@ -16295,6 +16286,11 @@ input[type="checkbox"][indeterminate="true"]:checked {
     margin-right:0px
   }
 
+  .sm\:mx-6{
+    margin-left:1.5rem;
+    margin-right:1.5rem
+  }
+
   .sm\:mx-auto{
     margin-left:auto;
     margin-right:auto
@@ -16303,11 +16299,6 @@ input[type="checkbox"][indeterminate="true"]:checked {
   .sm\:my-8{
     margin-top:2rem;
     margin-bottom:2rem
-  }
-
-  .sm\:mx-6{
-    margin-left:1.5rem;
-    margin-right:1.5rem
   }
 
   .sm\:-mt-40{
