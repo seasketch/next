@@ -296,6 +296,21 @@ export default function TableOfContentsEditor() {
     (draggable, targetTreeItem, state) => {
       const items =
         tocQuery.data?.projectBySlug?.draftTableOfContentsItems || [];
+      const destinationIsInsideDragged = (
+        destinationStableId?: string | null
+      ) => {
+        const seen = new Set<string>();
+        let current = destinationStableId;
+        while (current && !seen.has(current)) {
+          if (current === draggable.id) {
+            return true;
+          }
+          seen.add(current);
+          current = items.find((item) => item.stableId === current)
+            ?.parentStableId;
+        }
+        return false;
+      };
       if (
         state === SortingState.OVER_EXISTING_POSITION ||
         state === SortingState.NONE
@@ -315,6 +330,9 @@ export default function TableOfContentsEditor() {
         }
         if (!draggedItem) {
           throw new Error("Dragged item not found");
+        }
+        if (destinationIsInsideDragged(folder.stableId)) {
+          return;
         }
         const siblings = items
           .filter((item) => item.parentStableId === folder.stableId)
@@ -357,6 +375,9 @@ export default function TableOfContentsEditor() {
         );
         if (!draggedItem) {
           throw new Error("Dragged item not found");
+        }
+        if (destinationIsInsideDragged(target.parentStableId)) {
+          return;
         }
         let siblings: OverlayFragment[] = [];
         let parent: OverlayFragment | undefined = undefined;

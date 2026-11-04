@@ -177,18 +177,20 @@ export default function TreeItemComponent({
   const [{ canDrop, isOverCurrent }, drop] = useDrop(
     () => ({
       accept: node.dropAcceptsTypes || [],
-      canDrop: (item: TreeItem, monitor) => {
+      canDrop: (item: TreeItem) => {
         if (disableEditing) {
           return false;
         }
-        if (sortable && item.id !== node.id) {
+        // parents is the target's ancestor chain. Dropping an ancestor into
+        // its own subtree makes the two folders each other's parent, and the
+        // whole branch disappears from the table of contents.
+        if (item.id === node.id || parents.indexOf(item.id) !== -1) {
+          return false;
+        }
+        if (sortable) {
           return true;
         }
-        if (
-          node.isLeaf ||
-          item.id === node.id ||
-          parents.indexOf(item.id) !== -1
-        ) {
+        if (node.isLeaf) {
           return false;
         }
         return true;
@@ -247,7 +249,7 @@ export default function TreeItemComponent({
         }
       },
     }),
-    [onDrop, onDropEnd, onSortEnd, sortable, disableEditing]
+    [onDrop, onDropEnd, onSortEnd, sortable, disableEditing, parents, node.id, node.isLeaf]
   );
 
   const attachRef = useCallback(

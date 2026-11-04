@@ -24300,13 +24300,39 @@ CREATE FUNCTION public.table_of_contents_item_by_stable_id(stable_id text) RETUR
 CREATE FUNCTION public.table_of_contents_items_breadcrumbs(item public.table_of_contents_items) RETURNS SETOF public.folder_breadcrumbs
     LANGUAGE sql STABLE SECURITY DEFINER
     AS $$
-      with recursive breadcrumbs as (
-        select 0 as position, id, title, parent_stable_id, stable_id, is_draft from table_of_contents_items where id = item.id and is_draft = item.is_draft
-        union all
-        select b.position + 1 as position, t.id, t.title, t.parent_stable_id, t.stable_id, t.is_draft from breadcrumbs b join table_of_contents_items t on b.parent_stable_id = t.stable_id and b.is_draft = t.is_draft
-      )
-      select id, stable_id, title from breadcrumbs where position > 0 order by position desc;
-    $$;
+  with recursive breadcrumbs as (
+    select
+      0 as position,
+      id,
+      title,
+      parent_stable_id,
+      stable_id,
+      array[stable_id] as seen
+    from table_of_contents_items
+    where id = item.id
+      and is_draft = item.is_draft
+      and project_id = item.project_id
+    union all
+    select
+      b.position + 1,
+      t.id,
+      t.title,
+      t.parent_stable_id,
+      t.stable_id,
+      b.seen || t.stable_id
+    from breadcrumbs b
+    join table_of_contents_items t
+      on t.stable_id = b.parent_stable_id
+     and t.is_draft = item.is_draft
+     and t.project_id = item.project_id
+     and not t.stable_id = any (b.seen)
+     and b.position < 64
+  )
+  select id, stable_id, title
+  from breadcrumbs
+  where position > 0
+  order by position desc;
+$$;
 
 
 --
@@ -24359,27 +24385,37 @@ COMMENT ON FUNCTION public.table_of_contents_items_change_logs(item public.table
 CREATE FUNCTION public.table_of_contents_items_contained_by(t public.table_of_contents_items) RETURNS public.table_of_contents_items[]
     LANGUAGE plpgsql STABLE SECURITY DEFINER
     AS $$
-    declare 
-      parents table_of_contents_items[];
-      parent table_of_contents_items;
-    begin
-      if t.parent_stable_id is null then
-        return null;
-      else
-        select * into parent from table_of_contents_items where stable_id = t.parent_stable_id limit 1;
-        parents := array_append(parents, parent);
-        while parent.parent_stable_id is not null loop
-          select * into parent from table_of_contents_items where stable_id = parent.parent_stable_id limit 1;
-          if parent is null
-          then
-            return parents;
-          end if;
-          parents := array_append(parents, parent);
-        end loop;
-      end if;
-      return parents;
-    end;
-  $$;
+declare
+  parents table_of_contents_items[];
+  parent table_of_contents_items;
+  seen text[] := array[t.stable_id];
+begin
+  if t.parent_stable_id is null then
+    return null;
+  end if;
+
+  loop
+    exit when t.parent_stable_id is null
+      or t.parent_stable_id = any (seen)
+      or cardinality(seen) > 64;
+
+    select * into parent
+    from table_of_contents_items
+    where stable_id = t.parent_stable_id
+      and is_draft = t.is_draft
+      and project_id = t.project_id
+    limit 1;
+
+    exit when not found;
+
+    parents := array_append(parents, parent);
+    seen := seen || parent.stable_id;
+    t := parent;
+  end loop;
+
+  return parents;
+end;
+$$;
 
 
 --
@@ -27847,6 +27883,20 @@ begin
   end if;
   select path into current_path from table_of_contents_items where id = "itemId" and is_draft = true;
 
+  if "parentStableId" is not null then
+    select path into parent_path
+    from table_of_contents_items
+    where is_draft = true and project_id = pid and stable_id = "parentStableId";
+    if parent_path is null then
+      raise 'Could not find valid parent with stable_id=%', "parentStableId";
+    end if;
+    -- parent_path <@ current_path is true when the new parent is this item
+    -- or one of its descendants. That move closes a cycle.
+    if parent_path <@ current_path then
+      raise 'Cannot move an item into itself or one of its subfolders';
+    end if;
+  end if;
+
   update table_of_contents_items
   set parent_stable_id = "parentStableId", sort_index = "sortIndex"
   where id = "itemId"
@@ -27856,16 +27906,9 @@ begin
     );
 
   if "parentStableId" is not null then
-    select path into parent_path
-    from table_of_contents_items
-    where is_draft = true and project_id = pid and stable_id = "parentStableId";
-    if parent_path is null then
-      raise 'Could not find valid parent with stable_id=%', "parentStableId";
-    else
-      update table_of_contents_items
-      set path = parent_path || subpath(path, nlevel(current_path) - 1)
-      where is_draft = true and path <@ current_path;
-    end if;
+    update table_of_contents_items
+    set path = parent_path || subpath(path, nlevel(current_path) - 1)
+    where is_draft = true and path <@ current_path;
   else
     update table_of_contents_items
     set path = subpath(path, nlevel(current_path) - 1)
