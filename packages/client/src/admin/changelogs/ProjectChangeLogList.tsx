@@ -180,9 +180,30 @@ export default function ProjectChangeLogList({
   beginningMessage: ReactNode;
 }) {
   const listRef = useRef<VariableSizeList | null>(null);
+  const outerElementRef = useRef<HTMLDivElement | null>(null);
   const sizeMap = useRef(new Map<string, number>());
   const [sticky, setSticky] = useState<HeaderRow | null>(null);
   const scrollOffsetRef = useRef(0);
+
+  const syncOuterElement = useCallback(
+    (element: HTMLDivElement | null) => {
+      if (!element) {
+        return;
+      }
+      // Chromium scroll anchoring jumps back to the top when virtualized
+      // rows are swapped, which hides the footer.
+      element.style.setProperty("overflow-anchor", "none");
+      element.dataset.changelogList = "true";
+      element.dataset.changelogCount = String(entryCount);
+    },
+    [entryCount]
+  );
+
+  // react-window invokes outerRef only when the scroller mounts. Pages that
+  // append later still need the loaded-entry count written onto that node.
+  useLayoutEffect(() => {
+    syncOuterElement(outerElementRef.current);
+  }, [syncOuterElement]);
 
   const rows = useMemo(() => {
     const next: ChangeLogRow[] = [];
@@ -289,13 +310,12 @@ export default function ProjectChangeLogList({
             itemSize={getSize}
             itemKey={(index) => rows[index]?.key ?? index}
             itemData={itemData}
+            estimatedItemSize={88}
             overscanCount={8}
             onScroll={({ scrollOffset }) => updateSticky(scrollOffset)}
             outerRef={(element) => {
-              if (element) {
-                element.dataset.changelogList = "true";
-                element.dataset.changelogCount = String(entryCount);
-              }
+              outerElementRef.current = element;
+              syncOuterElement(element);
             }}
           >
             {ChangeLogRowView}

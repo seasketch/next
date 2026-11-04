@@ -34,9 +34,13 @@ test.describe("demo-samoa layer list changelog", () => {
         await list.evaluate((element) => {
           element.scrollTop = element.scrollHeight;
         });
-        await page.getByRole("button", { name: "Load older changes" }).click();
+        await page
+          .getByRole("button", { name: "Load older changes" })
+          .click({ timeout: 3_000 });
       }
-      await expect(list).toHaveAttribute("data-changelog-count", "130");
+      await expect(list).toHaveAttribute("data-changelog-count", "130", {
+        timeout: 3_000,
+      });
     }).toPass({ timeout: 60_000 });
 
     await expect(async () => {
