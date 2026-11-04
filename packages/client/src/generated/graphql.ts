@@ -889,6 +889,8 @@ export type ChangeLog = Node & {
 export type ChangeLogCondition = {
   /** Checks for equality with the object’s `id` field. */
   id?: Maybe<Scalars['BigInt']>;
+  /** Filters on the `net_zero_changes` flag. Pass `false` to exclude changes that were reverted to their original value. */
+  netZeroChanges?: Maybe<Scalars['Boolean']>;
   /** Checks for equality with the object’s `projectId` field. */
   projectId?: Maybe<Scalars['Int']>;
 };
@@ -958,6 +960,8 @@ export type ChangeLogsEdge = {
 export enum ChangeLogsOrderBy {
   IdAsc = 'ID_ASC',
   IdDesc = 'ID_DESC',
+  LastAtAsc = 'LAST_AT_ASC',
+  LastAtDesc = 'LAST_AT_DESC',
   Natural = 'NATURAL',
   PrimaryKeyAsc = 'PRIMARY_KEY_ASC',
   PrimaryKeyDesc = 'PRIMARY_KEY_DESC',
@@ -23944,6 +23948,59 @@ export type CreateFileUploadForAboutPageMutation = (
   ) }
 );
 
+export type ProjectChangeLogHistoryQueryVariables = Exact<{
+  slug: Scalars['String'];
+  first: Scalars['Int'];
+  after?: Maybe<Scalars['Cursor']>;
+}>;
+
+
+export type ProjectChangeLogHistoryQuery = (
+  { __typename?: 'Query' }
+  & { projectBySlug?: Maybe<(
+    { __typename?: 'Project' }
+    & Pick<Project, 'id'>
+    & { changeLogsConnection: (
+      { __typename?: 'ChangeLogsConnection' }
+      & { nodes: Array<(
+        { __typename?: 'ChangeLog' }
+        & ChangeLogDetailsFragment
+      )>, pageInfo: (
+        { __typename?: 'PageInfo' }
+        & Pick<PageInfo, 'hasNextPage' | 'endCursor'>
+      ) }
+    ) }
+  )> }
+);
+
+export type ChangeLogEntityLookupsQueryVariables = Exact<{
+  slug: Scalars['String'];
+}>;
+
+
+export type ChangeLogEntityLookupsQuery = (
+  { __typename?: 'Query' }
+  & { projectBySlug?: Maybe<(
+    { __typename?: 'Project' }
+    & Pick<Project, 'id'>
+    & { draftTableOfContentsItems?: Maybe<Array<(
+      { __typename?: 'TableOfContentsItem' }
+      & Pick<TableOfContentsItem, 'id' | 'title' | 'isFolder'>
+      & { overlayDataTables?: Maybe<Array<(
+        { __typename?: 'OverlayDataTable' }
+        & Pick<OverlayDataTable, 'id' | 'name'>
+      )>>, dataLayer?: Maybe<(
+        { __typename?: 'DataLayer' }
+        & Pick<DataLayer, 'id'>
+        & { dataSource?: Maybe<(
+          { __typename?: 'DataSource' }
+          & Pick<DataSource, 'id' | 'dataLibraryTemplateId'>
+        )> }
+      )> }
+    )>> }
+  )> }
+);
+
 export type ProjectDashboardQueryVariables = Exact<{
   slug: Scalars['String'];
   period?: Maybe<ActivityStatsPeriod>;
@@ -38356,6 +38413,108 @@ export function useCreateFileUploadForAboutPageMutation(baseOptions?: Apollo.Mut
 export type CreateFileUploadForAboutPageMutationHookResult = ReturnType<typeof useCreateFileUploadForAboutPageMutation>;
 export type CreateFileUploadForAboutPageMutationResult = Apollo.MutationResult<CreateFileUploadForAboutPageMutation>;
 export type CreateFileUploadForAboutPageMutationOptions = Apollo.BaseMutationOptions<CreateFileUploadForAboutPageMutation, CreateFileUploadForAboutPageMutationVariables>;
+export const ProjectChangeLogHistoryDocument = gql`
+    query ProjectChangeLogHistory($slug: String!, $first: Int!, $after: Cursor) {
+  projectBySlug(slug: $slug) {
+    id
+    changeLogsConnection(
+      first: $first
+      after: $after
+      orderBy: [LAST_AT_DESC]
+      condition: {netZeroChanges: false}
+    ) {
+      nodes {
+        ...ChangeLogDetails
+      }
+      pageInfo {
+        hasNextPage
+        endCursor
+      }
+    }
+  }
+}
+    ${ChangeLogDetailsFragmentDoc}`;
+
+/**
+ * __useProjectChangeLogHistoryQuery__
+ *
+ * To run a query within a React component, call `useProjectChangeLogHistoryQuery` and pass it any options that fit your needs.
+ * When your component renders, `useProjectChangeLogHistoryQuery` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = useProjectChangeLogHistoryQuery({
+ *   variables: {
+ *      slug: // value for 'slug'
+ *      first: // value for 'first'
+ *      after: // value for 'after'
+ *   },
+ * });
+ */
+export function useProjectChangeLogHistoryQuery(baseOptions: Apollo.QueryHookOptions<ProjectChangeLogHistoryQuery, ProjectChangeLogHistoryQueryVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useQuery<ProjectChangeLogHistoryQuery, ProjectChangeLogHistoryQueryVariables>(ProjectChangeLogHistoryDocument, options);
+      }
+export function useProjectChangeLogHistoryLazyQuery(baseOptions?: Apollo.LazyQueryHookOptions<ProjectChangeLogHistoryQuery, ProjectChangeLogHistoryQueryVariables>) {
+          const options = {...defaultOptions, ...baseOptions}
+          return Apollo.useLazyQuery<ProjectChangeLogHistoryQuery, ProjectChangeLogHistoryQueryVariables>(ProjectChangeLogHistoryDocument, options);
+        }
+export type ProjectChangeLogHistoryQueryHookResult = ReturnType<typeof useProjectChangeLogHistoryQuery>;
+export type ProjectChangeLogHistoryLazyQueryHookResult = ReturnType<typeof useProjectChangeLogHistoryLazyQuery>;
+export type ProjectChangeLogHistoryQueryResult = Apollo.QueryResult<ProjectChangeLogHistoryQuery, ProjectChangeLogHistoryQueryVariables>;
+export const ChangeLogEntityLookupsDocument = gql`
+    query ChangeLogEntityLookups($slug: String!) {
+  projectBySlug(slug: $slug) {
+    id
+    draftTableOfContentsItems {
+      id
+      title
+      isFolder
+      overlayDataTables {
+        id
+        name
+      }
+      dataLayer {
+        id
+        dataSource {
+          id
+          dataLibraryTemplateId
+        }
+      }
+    }
+  }
+}
+    `;
+
+/**
+ * __useChangeLogEntityLookupsQuery__
+ *
+ * To run a query within a React component, call `useChangeLogEntityLookupsQuery` and pass it any options that fit your needs.
+ * When your component renders, `useChangeLogEntityLookupsQuery` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = useChangeLogEntityLookupsQuery({
+ *   variables: {
+ *      slug: // value for 'slug'
+ *   },
+ * });
+ */
+export function useChangeLogEntityLookupsQuery(baseOptions: Apollo.QueryHookOptions<ChangeLogEntityLookupsQuery, ChangeLogEntityLookupsQueryVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useQuery<ChangeLogEntityLookupsQuery, ChangeLogEntityLookupsQueryVariables>(ChangeLogEntityLookupsDocument, options);
+      }
+export function useChangeLogEntityLookupsLazyQuery(baseOptions?: Apollo.LazyQueryHookOptions<ChangeLogEntityLookupsQuery, ChangeLogEntityLookupsQueryVariables>) {
+          const options = {...defaultOptions, ...baseOptions}
+          return Apollo.useLazyQuery<ChangeLogEntityLookupsQuery, ChangeLogEntityLookupsQueryVariables>(ChangeLogEntityLookupsDocument, options);
+        }
+export type ChangeLogEntityLookupsQueryHookResult = ReturnType<typeof useChangeLogEntityLookupsQuery>;
+export type ChangeLogEntityLookupsLazyQueryHookResult = ReturnType<typeof useChangeLogEntityLookupsLazyQuery>;
+export type ChangeLogEntityLookupsQueryResult = Apollo.QueryResult<ChangeLogEntityLookupsQuery, ChangeLogEntityLookupsQueryVariables>;
 export const ProjectDashboardDocument = gql`
     query ProjectDashboard($slug: String!, $period: ActivityStatsPeriod = _7_DAYS, $activityPeriod: UserActivityPeriod = D7) {
   projectBySlug(slug: $slug) {
@@ -45138,6 +45297,8 @@ export const namedOperations = {
     OverlayDataTableVisualizationMetadata: 'OverlayDataTableVisualizationMetadata',
     OverlayDataTableVisualizationMetadataForLayer: 'OverlayDataTableVisualizationMetadataForLayer',
     ProjectAccessControlSettings: 'ProjectAccessControlSettings',
+    ProjectChangeLogHistory: 'ProjectChangeLogHistory',
+    ChangeLogEntityLookups: 'ChangeLogEntityLookups',
     ProjectDashboard: 'ProjectDashboard',
     ProjectDashboardBannerStats: 'ProjectDashboardBannerStats',
     ProjectMetadata: 'ProjectMetadata',

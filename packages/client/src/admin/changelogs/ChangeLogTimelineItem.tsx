@@ -55,6 +55,7 @@ export default function ChangeLogTimelineItem({
   summary,
   itemTitle,
   footer,
+  timeDisplay = "relative",
 }: {
   profile?: ChangeLogAuthorProfile | null;
   /** Shown when `profile` is missing (e.g. Data Library–originated edits with no editor profile). */
@@ -66,6 +67,11 @@ export default function ChangeLogTimelineItem({
   summary: ReactNode;
   itemTitle?: ReactNode;
   footer?: ReactNode;
+  /**
+   * "time" shows the time of day, for lists already grouped under a date
+   * heading. Defaults to a relative description such as "3 days ago".
+   */
+  timeDisplay?: "relative" | "time";
 }) {
   const { t } = useTranslation("admin:data");
   const rowRef = useRef<HTMLDivElement | null>(null);
@@ -159,7 +165,12 @@ export default function ChangeLogTimelineItem({
           dateTime={date.toISOString()}
           title={date.toLocaleString()}
         >
-          {formatTimeAgo(date)}
+          {timeDisplay === "time"
+            ? date.toLocaleTimeString(undefined, {
+                hour: "numeric",
+                minute: "2-digit",
+              })
+            : formatTimeAgo(date)}
         </time>
         {footer != null ? <div className="mt-3 max-w-xl">{footer}</div> : null}
       </div>

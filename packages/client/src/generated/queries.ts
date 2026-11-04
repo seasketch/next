@@ -887,6 +887,8 @@ export type ChangeLog = Node & {
 export type ChangeLogCondition = {
   /** Checks for equality with the object’s `id` field. */
   id?: Maybe<Scalars['BigInt']>;
+  /** Filters on the `net_zero_changes` flag. Pass `false` to exclude changes that were reverted to their original value. */
+  netZeroChanges?: Maybe<Scalars['Boolean']>;
   /** Checks for equality with the object’s `projectId` field. */
   projectId?: Maybe<Scalars['Int']>;
 };
@@ -956,6 +958,8 @@ export type ChangeLogsEdge = {
 export enum ChangeLogsOrderBy {
   IdAsc = 'ID_ASC',
   IdDesc = 'ID_DESC',
+  LastAtAsc = 'LAST_AT_ASC',
+  LastAtDesc = 'LAST_AT_DESC',
   Natural = 'NATURAL',
   PrimaryKeyAsc = 'PRIMARY_KEY_ASC',
   PrimaryKeyDesc = 'PRIMARY_KEY_DESC',
@@ -23942,6 +23946,59 @@ export type CreateFileUploadForAboutPageMutation = (
   ) }
 );
 
+export type ProjectChangeLogHistoryQueryVariables = Exact<{
+  slug: Scalars['String'];
+  first: Scalars['Int'];
+  after?: Maybe<Scalars['Cursor']>;
+}>;
+
+
+export type ProjectChangeLogHistoryQuery = (
+  { __typename?: 'Query' }
+  & { projectBySlug?: Maybe<(
+    { __typename?: 'Project' }
+    & Pick<Project, 'id'>
+    & { changeLogsConnection: (
+      { __typename?: 'ChangeLogsConnection' }
+      & { nodes: Array<(
+        { __typename?: 'ChangeLog' }
+        & ChangeLogDetailsFragment
+      )>, pageInfo: (
+        { __typename?: 'PageInfo' }
+        & Pick<PageInfo, 'hasNextPage' | 'endCursor'>
+      ) }
+    ) }
+  )> }
+);
+
+export type ChangeLogEntityLookupsQueryVariables = Exact<{
+  slug: Scalars['String'];
+}>;
+
+
+export type ChangeLogEntityLookupsQuery = (
+  { __typename?: 'Query' }
+  & { projectBySlug?: Maybe<(
+    { __typename?: 'Project' }
+    & Pick<Project, 'id'>
+    & { draftTableOfContentsItems?: Maybe<Array<(
+      { __typename?: 'TableOfContentsItem' }
+      & Pick<TableOfContentsItem, 'id' | 'title' | 'isFolder'>
+      & { overlayDataTables?: Maybe<Array<(
+        { __typename?: 'OverlayDataTable' }
+        & Pick<OverlayDataTable, 'id' | 'name'>
+      )>>, dataLayer?: Maybe<(
+        { __typename?: 'DataLayer' }
+        & Pick<DataLayer, 'id'>
+        & { dataSource?: Maybe<(
+          { __typename?: 'DataSource' }
+          & Pick<DataSource, 'id' | 'dataLibraryTemplateId'>
+        )> }
+      )> }
+    )>> }
+  )> }
+);
+
 export type ProjectDashboardQueryVariables = Exact<{
   slug: Scalars['String'];
   period?: Maybe<ActivityStatsPeriod>;
@@ -32811,6 +32868,50 @@ export const CreateFileUploadForAboutPageDocument = /*#__PURE__*/ gql`
   }
 }
     ${FileUploadDetailsFragmentDoc}`;
+export const ProjectChangeLogHistoryDocument = /*#__PURE__*/ gql`
+    query ProjectChangeLogHistory($slug: String!, $first: Int!, $after: Cursor) {
+  projectBySlug(slug: $slug) {
+    id
+    changeLogsConnection(
+      first: $first
+      after: $after
+      orderBy: [LAST_AT_DESC]
+      condition: {netZeroChanges: false}
+    ) {
+      nodes {
+        ...ChangeLogDetails
+      }
+      pageInfo {
+        hasNextPage
+        endCursor
+      }
+    }
+  }
+}
+    ${ChangeLogDetailsFragmentDoc}`;
+export const ChangeLogEntityLookupsDocument = /*#__PURE__*/ gql`
+    query ChangeLogEntityLookups($slug: String!) {
+  projectBySlug(slug: $slug) {
+    id
+    draftTableOfContentsItems {
+      id
+      title
+      isFolder
+      overlayDataTables {
+        id
+        name
+      }
+      dataLayer {
+        id
+        dataSource {
+          id
+          dataLibraryTemplateId
+        }
+      }
+    }
+  }
+}
+    `;
 export const ProjectDashboardDocument = /*#__PURE__*/ gql`
     query ProjectDashboard($slug: String!, $period: ActivityStatsPeriod = _7_DAYS, $activityPeriod: UserActivityPeriod = D7) {
   projectBySlug(slug: $slug) {
@@ -35198,6 +35299,8 @@ export const namedOperations = {
     OverlayDataTableVisualizationMetadata: 'OverlayDataTableVisualizationMetadata',
     OverlayDataTableVisualizationMetadataForLayer: 'OverlayDataTableVisualizationMetadataForLayer',
     ProjectAccessControlSettings: 'ProjectAccessControlSettings',
+    ProjectChangeLogHistory: 'ProjectChangeLogHistory',
+    ChangeLogEntityLookups: 'ChangeLogEntityLookups',
     ProjectDashboard: 'ProjectDashboard',
     ProjectDashboardBannerStats: 'ProjectDashboardBannerStats',
     ProjectMetadata: 'ProjectMetadata',

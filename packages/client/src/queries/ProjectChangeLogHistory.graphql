@@ -1,0 +1,41 @@
+query ProjectChangeLogHistory($slug: String!, $first: Int!, $after: Cursor) {
+  projectBySlug(slug: $slug) {
+    id
+    changeLogsConnection(
+      first: $first
+      after: $after
+      orderBy: [LAST_AT_DESC]
+      condition: { netZeroChanges: false }
+    ) {
+      nodes {
+        ...ChangeLogDetails
+      }
+      pageInfo {
+        hasNextPage
+        endCursor
+      }
+    }
+  }
+}
+
+query ChangeLogEntityLookups($slug: String!) {
+  projectBySlug(slug: $slug) {
+    id
+    draftTableOfContentsItems {
+      id
+      title
+      isFolder
+      overlayDataTables {
+        id
+        name
+      }
+      dataLayer {
+        id
+        dataSource {
+          id
+          dataLibraryTemplateId
+        }
+      }
+    }
+  }
+}

@@ -68,6 +68,7 @@ import AddRemoteGeoJSONModal from "./AddRemoteGeoJSONModal";
 import QuotaUsageDetails from "./QuotaUsageDetails";
 import DataDownloadSettingsPanel from "./DataDownloadSettingsPanel";
 import SharingSettingsPanel from "./SharingSettingsPanel";
+import ProjectChangeLogPanel from "../changelogs/ProjectChangeLogPanel";
 import AdminDataViewScreenHeading from "./AdminDataViewScreenHeading";
 import DataHostingRetentionPeriodModal from "./DataHostingRetentionPeriodModal";
 import AiDataAnalystProfileSettingsModal from "./AiDataAnalystProfileSettingsModal";
@@ -117,6 +118,9 @@ export default function TableOfContentsEditor() {
       } else if (view === "sharing") {
         // eslint-disable-next-line i18next/no-literal-string
         history.push(`/${slug}/admin/data/sharing-settings`);
+      } else if (view === "changelog") {
+        // eslint-disable-next-line i18next/no-literal-string
+        history.push(`/${slug}/admin/data/changelog`);
       } else {
         // eslint-disable-next-line i18next/no-literal-string
         history.push(`/${slug}/admin/data`);
@@ -133,6 +137,8 @@ export default function TableOfContentsEditor() {
     ? "sharing"
     : /download-settings/.test(history.location.pathname)
     ? "downloads"
+    : /changelog/.test(history.location.pathname)
+    ? "changelog"
     : "tree";
   const { manager } = useContext(MapManagerContext);
 
@@ -748,6 +754,10 @@ export default function TableOfContentsEditor() {
         )}
       </Route>
 
+      <Route path={`/${slug}/admin/data/changelog`}>
+        <ProjectChangeLogPanel slug={slug} />
+      </Route>
+
       {layerEditingContext.openEditor &&
         !layerEditingContext.openEditor.isFolder && (
           <LayerTableOfContentsItemEditor
@@ -877,6 +887,9 @@ function Header({
                 </MenubarRadioItem>
                 <MenubarRadioItem value="sharing">
                   <Trans ns="admin:data">Sharing Settings</Trans>
+                </MenubarRadioItem>
+                <MenubarRadioItem value="changelog">
+                  <Trans ns="admin:data">Changelog</Trans>
                 </MenubarRadioItem>
               </Menubar.RadioGroup>
               <MenuBarSeparator />

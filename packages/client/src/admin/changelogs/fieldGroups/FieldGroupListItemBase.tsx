@@ -13,6 +13,12 @@ export interface FieldGroupListItemProps {
   changeLog: ChangeLogDetailsFragment;
   last?: boolean;
   itemTitle?: ReactNode;
+  /**
+   * Whether the entry is listed beside the history of a single layer, or in the
+   * project-wide changelog. Project-level events (e.g. publishing) read
+   * differently in each context. Defaults to "layer".
+   */
+  scope?: "layer" | "project";
   /** When the change log has no editor profile, show this instead of "Unknown user". */
   missingProfileLabel?: string;
   /** When set, replacement entries may offer rollback in a details tooltip. */
@@ -132,6 +138,7 @@ export default function BaseFieldGroupListItem({
   missingProfileLabel,
   children,
   footer,
+  scope,
 }: FieldGroupListItemProps & {
   icon: ReactNode;
   iconClassName: string;
@@ -153,6 +160,7 @@ export default function BaseFieldGroupListItem({
         itemTitle={itemTitle}
         summary={children}
         footer={footer}
+        timeDisplay={scope === "project" ? "time" : "relative"}
       />
     </Tooltip.Provider>
   );

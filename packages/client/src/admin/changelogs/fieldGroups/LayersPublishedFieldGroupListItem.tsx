@@ -9,16 +9,22 @@ export default function LayersPublishedFieldGroupListItem(
   props: FieldGroupListItemProps
 ) {
   const to = summary(props.changeLog.toSummary);
-  const layerCount = to.layer_count ?? 0;
+  const layerCount = typeof to.layer_count === "number" ? to.layer_count : 0;
   return (
     <BaseFieldGroupListItem
       {...props}
       icon={<SpeakerphoneIcon className="h-5 w-5" />}
       iconClassName="bg-emerald-100 text-emerald-700"
     >
-      <Trans ns="admin:data">
-        published this layer along with {{ layerCount }} others
-      </Trans>
+      {props.scope === "project" ? (
+        <Trans ns="admin:data" count={layerCount}>
+          published {{ count: layerCount }} layers to project users
+        </Trans>
+      ) : (
+        <Trans ns="admin:data">
+          published this layer along with {{ layerCount }} others
+        </Trans>
+      )}
     </BaseFieldGroupListItem>
   );
 }
