@@ -204,7 +204,7 @@ export default function ProjectChangeLogList({
         });
       });
     });
-    next.push({ type: "footer", key: "*" });
+    next.push({ type: "footer", key: "footer" });
     return next;
   }, [dayGroups, formatDay]);
 
