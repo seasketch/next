@@ -15,6 +15,8 @@ export interface TextInputOptions {
   value: string;
   /** Label displayed above the input */
   label: string | React.ReactNode;
+  /** Rendered on its own line above the label. */
+  labelAdornment?: React.ReactNode;
   /** Appears below the label */
   description?: string | React.ReactNode;
   /** Validation error */
@@ -58,6 +60,7 @@ export default forwardRef(function TextInput(
     value,
     placeholder,
     label,
+    labelAdornment,
     required,
     disabled,
     description,
@@ -110,6 +113,9 @@ export default forwardRef(function TextInput(
 
   return (
     <div>
+      {labelAdornment && (
+        <div className="mb-2 flex max-w-full justify-start">{labelAdornment}</div>
+      )}
       <label
         htmlFor={name}
         className={`block text-sm font-medium leading-5 text-gray-800 ${
