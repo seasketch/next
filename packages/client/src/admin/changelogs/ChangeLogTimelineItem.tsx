@@ -47,6 +47,7 @@ export type ChangeLogAuthorProfile = Pick<
 
 export default function ChangeLogTimelineItem({
   profile,
+  canonicalEmail,
   missingProfileLabel,
   date,
   icon,
@@ -58,6 +59,8 @@ export default function ChangeLogTimelineItem({
   timeDisplay = "relative",
 }: {
   profile?: ChangeLogAuthorProfile | null;
+  /** Account address, kept separate from the profile email. */
+  canonicalEmail?: string | null;
   /** Shown when `profile` is missing (e.g. Data Library–originated edits with no editor profile). */
   missingProfileLabel?: string;
   date: Date;
@@ -126,6 +129,7 @@ export default function ChangeLogTimelineItem({
             {profile ? (
               <InlineAuthor
                 profile={profile as AuthorProfileFragment}
+                canonicalEmail={canonicalEmail}
                 className="flex-none"
               />
             ) : (

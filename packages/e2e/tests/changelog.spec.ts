@@ -21,20 +21,35 @@ test.describe("demo-samoa layer list changelog", () => {
     await page.getByRole("menuitemradio", { name: "Changelog" }).click();
     await expect(page).toHaveURL(/\/demo-samoa\/admin\/data\/changelog/);
 
-    const entries = page.locator("section ul > li");
-    await expect(entries).toHaveCount(100);
+    const list = page.locator("[data-changelog-list]");
     await expect(
       page.getByText("published 3 layers to project users")
     ).toBeVisible();
 
-    await page.getByRole("button", { name: "Load older changes" }).click();
-    await expect(entries).toHaveCount(130);
-    await expect(
-      page.getByRole("button", { name: "Load older changes" })
-    ).toHaveCount(0);
-    await expect(
-      page.getByText("This is the beginning of the changelog.")
-    ).toBeVisible();
+    // The list is windowed, so older pages are not all in the DOM. The count
+    // attribute is the number of loaded entries, excluding net-zero rows.
+    await expect(async () => {
+      const count = await list.getAttribute("data-changelog-count");
+      if (count !== "130") {
+        await list.evaluate((element) => {
+          element.scrollTop = element.scrollHeight;
+        });
+        await page.getByRole("button", { name: "Load older changes" }).click();
+      }
+      await expect(list).toHaveAttribute("data-changelog-count", "130");
+    }).toPass({ timeout: 60_000 });
+
+    await expect(async () => {
+      await list.evaluate((element) => {
+        element.scrollTop = element.scrollHeight;
+      });
+      await expect(
+        page.getByRole("button", { name: "Load older changes" })
+      ).toHaveCount(0);
+      await expect(
+        page.getByText("The changelog feature was introduced on")
+      ).toBeVisible();
+    }).toPass();
 
     await page.getByRole("button", { name: "Back to layer list" }).click();
     await expect(page).toHaveURL(/\/demo-samoa\/admin\/data$/);

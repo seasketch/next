@@ -1,24 +1,27 @@
 import { NetworkStatus } from "@apollo/client";
-import { ChevronDownIcon } from "@heroicons/react/outline";
-import { useMemo } from "react";
+import { useCallback, useMemo } from "react";
 import { Trans, useTranslation } from "react-i18next";
 import Spinner from "../../components/Spinner";
 import Warning from "../../components/Warning";
 import {
   ChangeLogDetailsFragment,
   useChangeLogEntityLookupsQuery,
+  useDraftTableOfContentsQuery,
   useProjectChangeLogHistoryQuery,
 } from "../../generated/graphql";
 import AdminDataViewScreenHeading from "../data/AdminDataViewScreenHeading";
+import ChangeLogLayerTitle from "./ChangeLogLayerTitle";
 import ChangeLogListItem from "./ChangeLogListItem";
 import {
+  ChangeLogTocItem,
   buildChangeLogEntityLookups,
   titleForChangeLog,
 } from "./changeLogEntityTitle";
 import { CHANGE_LOG_INTRODUCTION_DATE } from "./constants";
 import { TOC_ENTITY_TYPE } from "../data/publishChangelogSummary";
+import ProjectChangeLogList from "./ProjectChangeLogList";
 
-export const PROJECT_CHANGE_LOG_PAGE_SIZE = 100;
+export const PROJECT_CHANGE_LOG_PAGE_SIZE = 50;
 
 interface DayGroup {
   key: string;
@@ -48,7 +51,6 @@ function groupByDay(changeLogs: ChangeLogDetailsFragment[]): DayGroup[] {
 
 export default function ProjectChangeLogPanel({ slug }: { slug: string }) {
   const { t } = useTranslation("admin:data");
-  const { t: adminT } = useTranslation("admin");
 
   const { data, error, networkStatus, fetchMore } =
     useProjectChangeLogHistoryQuery({
@@ -60,6 +62,10 @@ export default function ProjectChangeLogPanel({ slug }: { slug: string }) {
   const lookupsQuery = useChangeLogEntityLookupsQuery({
     variables: { slug },
     fetchPolicy: "cache-and-network",
+  });
+  const draftTableOfContents = useDraftTableOfContentsQuery({
+    variables: { slug },
+    fetchPolicy: "cache-first",
   });
 
   const connection = data?.projectBySlug?.changeLogsConnection;
@@ -77,7 +83,61 @@ export default function ProjectChangeLogPanel({ slug }: { slug: string }) {
       ),
     [lookupsQuery.data?.projectBySlug?.draftTableOfContentsItems]
   );
+  const tocItems = useMemo((): ChangeLogTocItem[] => {
+    return (
+      draftTableOfContents.data?.projectBySlug?.draftTableOfContentsItems ?? []
+    ).map((item) => ({
+      id: item.id,
+      title: item.title,
+      isFolder: Boolean(item.isFolder),
+      stableId: item.stableId,
+      parentStableId: item.parentStableId,
+      hasDataLayer: item.dataLayerId != null,
+    }));
+  }, [draftTableOfContents.data?.projectBySlug?.draftTableOfContentsItems]);
+  const tocItemById = useMemo(() => {
+    const byId = new Map<number, ChangeLogTocItem>();
+    for (const item of tocItems) {
+      byId.set(item.id, item);
+    }
+    return byId;
+  }, [tocItems]);
   const dayGroups = useMemo(() => groupByDay(changeLogs), [changeLogs]);
+  const renderLayerTitle = useCallback(
+    (title: string, itemId: number) => {
+      const item = tocItemById.get(itemId);
+      if (!item) {
+        return title;
+      }
+      return (
+        <ChangeLogLayerTitle item={item} title={title} tocItems={tocItems} />
+      );
+    },
+    [tocItemById, tocItems]
+  );
+  const renderEntry = useCallback(
+    (changeLog: ChangeLogDetailsFragment, lastInGroup: boolean) => (
+      <ChangeLogListItem
+        changeLog={changeLog}
+        scope="project"
+        last={lastInGroup}
+        itemTitle={titleForChangeLog(
+          changeLog,
+          lookups.itemTitleById,
+          lookups.dataTableNameById,
+          t,
+          renderLayerTitle
+        )}
+        missingProfileLabel={
+          changeLog.entityType === TOC_ENTITY_TYPE &&
+          lookups.tocItemIdsWithDataLibrarySource.has(changeLog.entityId)
+            ? t("Data Library")
+            : undefined
+        }
+      />
+    ),
+    [lookups, renderLayerTitle, t]
+  );
 
   const loadMore = () => {
     if (!endCursor || loadingMore) {
@@ -147,105 +207,44 @@ export default function ProjectChangeLogPanel({ slug }: { slug: string }) {
         </AdminDataViewScreenHeading>
         <p className="mt-2 max-w-4xl text-sm leading-snug text-gray-600">
           <Trans ns="admin:data">
-            Every change made to the layer list, newest first, whether or not it
-            has been published.
+            Each recorded change to the data layers list appears below.
           </Trans>
         </p>
       </header>
-      <div className="min-h-0 flex-1 overflow-y-auto px-4 pb-8 sm:px-6">
-        <div className="max-w-4xl">
-          {error && !data?.projectBySlug && (
-            <Warning level="error">
-              {error.message || t("An error occurred loading the changelog.")}
-            </Warning>
-          )}
-          {initialLoading && !error && (
-            <div className="flex justify-center py-10">
-              <Spinner />
-            </div>
-          )}
-          {!initialLoading && changeLogs.length === 0 && !error && (
-            <div className="rounded-lg border border-gray-200 bg-gray-50 px-4 py-6 text-center text-sm text-gray-500">
-              {t(
-                "No changes have been logged yet. Change logging was introduced on {{date}}, so earlier changes were not recorded.",
-                { date: CHANGE_LOG_INTRODUCTION_DATE.toLocaleDateString() }
-              )}
-            </div>
-          )}
-          <div className="flex flex-col gap-6">
-            {dayGroups.map((group) => (
-              <section
-                key={group.key}
-                className="rounded-xl border border-slate-200/90 bg-white shadow-sm ring-1 ring-slate-950/5"
-              >
-                <header className="sticky top-0 z-20 flex items-center justify-between gap-3 rounded-t-xl border-b border-slate-100 bg-slate-50 px-4 py-2.5">
-                  <h3 className="min-w-0 truncate text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
-                    {formatDay(group)}
-                  </h3>
-                  <span className="shrink-0 text-xs font-medium tabular-nums text-slate-700">
-                    {adminT("{{count}} changes", {
-                      count: group.changeLogs.length,
-                    })}
-                  </span>
-                </header>
-                <ul className="px-4 py-5">
-                  {group.changeLogs.map((changeLog, index) => (
-                    <ChangeLogListItem
-                      key={changeLog.id}
-                      changeLog={changeLog}
-                      scope="project"
-                      last={index === group.changeLogs.length - 1}
-                      itemTitle={titleForChangeLog(
-                        changeLog,
-                        lookups.itemTitleById,
-                        lookups.dataTableNameById,
-                        t
-                      )}
-                      missingProfileLabel={
-                        changeLog.entityType === TOC_ENTITY_TYPE &&
-                        lookups.tocItemIdsWithDataLibrarySource.has(
-                          changeLog.entityId
-                        )
-                          ? t("Data Library")
-                          : undefined
-                      }
-                    />
-                  ))}
-                </ul>
-              </section>
-            ))}
+      <div className="relative min-h-0 flex-1">
+        {error && !data?.projectBySlug && (
+          <Warning level="error" className="mx-4 sm:mx-6">
+            {error.message || t("An error occurred loading the changelog.")}
+          </Warning>
+        )}
+        {initialLoading && !error && (
+          <div className="flex justify-center py-10">
+            <Spinner />
           </div>
-          {hasNextPage && (
-            <div className="flex justify-center pt-6">
-              <button
-                type="button"
-                onClick={loadMore}
-                disabled={loadingMore}
-                className="inline-flex items-center gap-1.5 rounded-md border border-gray-200 bg-white px-3 py-2 text-sm font-medium text-gray-700 shadow-sm transition hover:border-gray-300 hover:bg-gray-50 hover:text-gray-900 disabled:cursor-wait disabled:opacity-70"
-              >
-                {loadingMore ? (
-                  <Spinner mini />
-                ) : (
-                  <ChevronDownIcon
-                    className="h-4 w-4 text-gray-500"
-                    aria-hidden
-                  />
-                )}
-                <span>
-                  <Trans ns="admin:data">Load older changes</Trans>
-                </span>
-              </button>
-            </div>
-          )}
-          {!hasNextPage && changeLogs.length > 0 && (
-            <p className="pt-6 text-center text-xs text-gray-400">
-              {t(
-                "This is the beginning of the changelog. Changes made before {{date}} were not recorded.",
-                { date: CHANGE_LOG_INTRODUCTION_DATE.toLocaleDateString() }
-              )}
-            </p>
-          )}
-        </div>
+        )}
+        {!initialLoading && changeLogs.length === 0 && !error && (
+          <div className="mx-4 rounded-lg border border-gray-200 bg-gray-50 px-4 py-6 text-center text-sm text-gray-500 sm:mx-6">
+            {t(
+              "No changes have been logged yet. Change logging was introduced on {{date}}, so earlier changes were not recorded.",
+              { date: CHANGE_LOG_INTRODUCTION_DATE.toLocaleDateString() }
+            )}
+          </div>
+        )}
+        {changeLogs.length > 0 && (
+          <ProjectChangeLogList
+            dayGroups={dayGroups}
+            formatDay={formatDay}
+            renderEntry={renderEntry}
+            hasNextPage={hasNextPage}
+            loadingMore={loadingMore}
+            onLoadMore={loadMore}
+            entryCount={changeLogs.length}
+            beginningMessage={t(
+              "The changelog feature was introduced on {{date}}. Changes before that date were not recorded.",
+              { date: CHANGE_LOG_INTRODUCTION_DATE.toLocaleDateString() }
+            )}
+          />
+        )}
       </div>
     </div>
   );

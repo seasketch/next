@@ -14,6 +14,7 @@ import { motion } from "framer-motion";
 
 export default function InlineAuthorDetails({
   profile,
+  canonicalEmail,
   dateString,
   firstPostInTopic,
   onProfileClick,
@@ -22,6 +23,7 @@ export default function InlineAuthorDetails({
   className,
 }: {
   profile: AuthorProfileFragment;
+  canonicalEmail?: string | null;
   dateString?: string;
   firstPostInTopic: boolean;
   onProfileClick?: (
@@ -62,7 +64,7 @@ export default function InlineAuthorDetails({
         onClick={onClick}
         className="w-6 h-6 flex items-center flex-none rounded-full"
       >
-        <ProfilePhoto {...profile} canonicalEmail="" />
+        <ProfilePhoto {...profile} canonicalEmail={canonicalEmail || ""} />
       </button>
       <motion.div
         animate={isFocused || linkCopied ? "focused" : "normal"}
@@ -90,7 +92,7 @@ export default function InlineAuthorDetails({
             maxWidth: sidebarContext.isSmall ? "11rem" : "13rem",
           }}
         >
-          {nameForProfile(profile)}
+          {nameForProfile(profile) || canonicalEmail}
         </button>
         {date && (
           <>

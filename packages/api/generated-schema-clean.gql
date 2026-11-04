@@ -1033,6 +1033,11 @@ type CardDependencyLists {
 }
 
 type ChangeLog implements Node {
+  """
+  Account address for the editor. Returned only to admins of a project that person has joined, same as users_canonical_email. Not part of the profile.
+  
+  """
+  editorCanonicalEmail: String
   editorId: Int!
   editorProfile: Profile
   entityId: Int!

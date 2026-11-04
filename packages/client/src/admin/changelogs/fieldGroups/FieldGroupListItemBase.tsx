@@ -152,6 +152,7 @@ export default function BaseFieldGroupListItem({
     >
       <ChangeLogTimelineItem
         profile={changeLog.editorProfile}
+        canonicalEmail={changeLog.editorCanonicalEmail}
         missingProfileLabel={missingProfileLabel}
         date={new Date((changeLog as ChangeLogWithTimestamp).lastAt)}
         icon={icon}

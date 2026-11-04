@@ -859,6 +859,8 @@ export type CardDependencyLists = {
 
 export type ChangeLog = Node & {
   __typename?: 'ChangeLog';
+  /** Account address for the editor. Returned only to admins of a project that person has joined, same as users_canonical_email. Not part of the profile. */
+  editorCanonicalEmail?: Maybe<Scalars['String']>;
   editorId: Scalars['Int'];
   editorProfile?: Maybe<Profile>;
   entityId: Scalars['Int'];
@@ -21291,7 +21293,7 @@ export type FullAdminDataLayerFragment = (
 
 export type ChangeLogDetailsFragment = (
   { __typename?: 'ChangeLog' }
-  & Pick<ChangeLog, 'id' | 'entityId' | 'entityType' | 'fieldGroup' | 'meta' | 'startedAt' | 'lastAt' | 'saveCount' | 'fromSummary' | 'toSummary'>
+  & Pick<ChangeLog, 'id' | 'entityId' | 'entityType' | 'fieldGroup' | 'meta' | 'startedAt' | 'lastAt' | 'saveCount' | 'fromSummary' | 'toSummary' | 'editorCanonicalEmail'>
   & { editorProfile?: Maybe<(
     { __typename?: 'Profile' }
     & Pick<Profile, 'userId' | 'fullname' | 'affiliations' | 'email' | 'nickname' | 'picture'>
@@ -28331,6 +28333,7 @@ export const ChangeLogDetailsFragmentDoc = gql`
     nickname
     picture
   }
+  editorCanonicalEmail
 }
     `;
 export const FullAdminSourceFragmentDoc = gql`

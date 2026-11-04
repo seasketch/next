@@ -4,15 +4,22 @@ import { AuthorProfileFragment } from "../../generated/graphql";
 
 export default function AuthorProfilePopupContents({
   profile,
+  canonicalEmail,
   onClose,
 }: {
   profile: AuthorProfileFragment;
+  canonicalEmail?: string | null;
   onClose?: () => void;
 }) {
+  const email = profile.email || canonicalEmail || null;
   return (
     <div role="dialog" className="flex">
       <div className="w-16 h-16 flex-none m-1">
-        <ProfilePhoto square canonicalEmail="" {...profile} />
+        <ProfilePhoto
+          square
+          {...profile}
+          canonicalEmail={canonicalEmail || ""}
+        />
       </div>
       <div className="flex-1 px-2">
         {profile.nickname && (
@@ -21,14 +28,14 @@ export default function AuthorProfilePopupContents({
         {profile.fullname && (
           <h3 className="text-base font-semibold">{profile.fullname}</h3>
         )}
-        {profile.email && (
+        {email && (
           <a
             target="_blank"
-            href={`mailto:${profile.email}`}
+            href={`mailto:${email}`}
             className="text-primary-500"
             rel="noreferrer"
           >
-            {profile.email}
+            {email}
           </a>
         )}
         {profile.affiliations && <p>{profile.affiliations}</p>}

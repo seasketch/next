@@ -434,6 +434,7 @@ fragment ChangeLogDetails on ChangeLog {
     nickname
     picture
   }
+  editorCanonicalEmail
 }
 
 query LayerSettingsChangeLog($id: Int!, $first: Int!) {
