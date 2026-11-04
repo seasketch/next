@@ -36,7 +36,7 @@ export default function EditorLanguageSelector({
       <select
         onChange={(e) => setLanguage(e.target.value)}
         value={lang.code || "EN"}
-        className={` border-gray-300 shadow-sm rounded text-sm pl-8 pr-8 text-black bg-white ${
+        className={`max-w-full border-gray-300 shadow-sm rounded text-sm pl-8 pr-8 text-black bg-white ${
           large ? "py-0.5" : "py-0"
         }`}
       >
