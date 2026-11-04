@@ -1,4 +1,10 @@
 /* eslint-disable i18next/no-literal-string */
+import { colord, extend } from "colord";
+import namesPlugin from "colord/plugins/names";
+
+// Keyword "transparent" and named palette colors. Same plugin the legend uses.
+extend([namesPlugin]);
+
 /**
  * Decide whether a decoded raster pixel is actually painted.
  *
@@ -17,11 +23,6 @@ export type RasterPaintStyle = {
   rasterColor: unknown;
   colorRange: [number, number] | null;
 };
-
-const RGBA_RE =
-  /^rgba?\(\s*([0-9.]+)\s*,\s*([0-9.]+)\s*,\s*([0-9.]+)(?:\s*,\s*([0-9.]+))?\s*\)$/;
-const HSLA_RE =
-  /^hsla?\(\s*[0-9.]+\s*,\s*[0-9.]+%\s*,\s*[0-9.]+%(?:\s*,\s*([0-9.]+))?\s*\)$/;
 
 export function rasterPaintStyleFromGlStyles(
   mapboxGlStyles: unknown
@@ -229,50 +230,15 @@ function evalNumber(expr: unknown, rasterValue: number): number | null {
   return null;
 }
 
-/**
- * Alpha of a CSS color SeaSketch writes into `raster-color`.
- * null means we do not recognize it (caller fails open).
- */
-function cssColorAlpha(color: string): number | null {
-  const c = color.trim().toLowerCase();
-  if (c === "transparent") {
-    return 0;
-  }
-  const rgba = RGBA_RE.exec(c);
-  if (rgba) {
-    if (rgba[4] === undefined) return 1;
-    const alpha = Number(rgba[4]);
-    return Number.isFinite(alpha) ? alpha : null;
-  }
-  const hsla = HSLA_RE.exec(c);
-  if (hsla) {
-    if (hsla[1] === undefined) return 1;
-    const alpha = Number(hsla[1]);
-    return Number.isFinite(alpha) ? alpha : null;
-  }
-  if (/^#[0-9a-f]{8}$/.test(c)) {
-    return parseInt(c.slice(7), 16) / 255;
-  }
-  if (/^#[0-9a-f]{4}$/.test(c)) {
-    return parseInt(c[4] + c[4], 16) / 255;
-  }
-  if (/^#[0-9a-f]{6}$/.test(c) || /^#[0-9a-f]{3}$/.test(c)) {
-    return 1;
-  }
-  // Named palette colors (yellow, red, …). "transparent" is handled above.
-  if (/^[a-z]+$/.test(c)) {
-    return 1;
-  }
-  return null;
-}
-
 function colorStringDecision(color: unknown): ColorDecision {
   if (typeof color !== "string") {
     return "unknown";
   }
-  const alpha = cssColorAlpha(color);
-  if (alpha === null) {
+  // Names plugin supplies the "transparent" keyword. Unrecognized strings
+  // fail open so a style we cannot read still tooltips.
+  const parsed = colord(color);
+  if (!parsed.isValid()) {
     return "unknown";
   }
-  return alpha === 0 ? "transparent" : "visible";
+  return parsed.alpha() === 0 ? "transparent" : "visible";
 }
