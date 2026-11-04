@@ -6,6 +6,7 @@ import { PropertiesBackend } from "./propertiesBackend";
 import {
   aclNamespaceFromRequest,
   classifyResource,
+  isUploadsHost,
   resourceAclEnabled,
 } from "./resource";
 import { isTilePresentationKey } from "./presentationRoutes";
@@ -79,7 +80,7 @@ export default class extends WorkerEntrypoint<Env> {
     if (!resource) return new Response("Invalid object path", { status: 400 });
     // uploads host is always opaque R2; tiles/overlay hosts prefer PMTiles
     // presentation (including root fixture archives like crdss-cells-6).
-    const uploadsHost = url.hostname === "uploads.seasketch.org";
+    const uploadsHost = isUploadsHost(url, this.env);
     const useObjectBackend =
       uploadsHost || !isTilePresentationKey(resource.key);
 

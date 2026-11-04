@@ -86,6 +86,27 @@ export function classifyResource(pathOrKey: string): ResourceDescriptor | null {
   return { kind: "public", key };
 }
 
+const DEFAULT_UPLOADS_HOST = "uploads.seasketch.org";
+
+/**
+ * The uploads host serves every key as an opaque object. In production that
+ * is `uploads.seasketch.org`. Under `wrangler dev` there is only localhost,
+ * so the session playing the uploads role sets UPLOADS_HOST to its own
+ * `host[:port]`; a comma-separated list is accepted so a container reaching
+ * the same session through another name can be included.
+ */
+export function isUploadsHost(
+  url: URL,
+  env: { UPLOADS_HOST?: string },
+): boolean {
+  const configured = env.UPLOADS_HOST?.trim();
+  const hosts = configured
+    ? configured.split(",").map((h) => h.trim().toLowerCase()).filter(Boolean)
+    : [DEFAULT_UPLOADS_HOST];
+  return hosts.includes(url.host.toLowerCase()) ||
+    hosts.includes(url.hostname.toLowerCase());
+}
+
 /** When false, skip ACL/token checks (capability-URL compatibility). */
 export function aclEnabled(env: Env): boolean {
   return String(env.AUTH_ACL_ENABLED).toLowerCase() === "true";

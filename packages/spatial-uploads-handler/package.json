@@ -19,7 +19,7 @@
     "url": "git+https://github.com/seasketch/next.git"
   },
   "scripts": {
-    "start": "docker run -p 9000:8080 --env-file .env spatial-uploads-handler:latest",
+    "start": "cd ../.. && docker compose --profile data up spatial-uploads",
     "dev": "tsx watch server.ts",
     "build": "tsc -b",
     "watch": "tsc -b --watch",

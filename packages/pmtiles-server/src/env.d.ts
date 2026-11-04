@@ -9,7 +9,17 @@ interface Env {
   };
   MAPBOX_ACCESS_TOKEN?: string;
   TILES_BUCKET: R2Bucket;
+  /**
+   * Host (or origin) written into TileJSON tile URLs. Defaults to the
+   * request origin, which is right for production routes and for a local
+   * `wrangler dev` session on `http://localhost:8787`.
+   */
   PUBLIC_HOSTNAME?: string;
+  /**
+   * `host[:port]` list that plays the uploads role (opaque objects). Unset
+   * means `uploads.seasketch.org`; a local session sets its own host.
+   */
+  UPLOADS_HOST?: string;
   JWKS_URL?: string;
   /** When "true", consult ACL docs and require tokens for protected data. */
   AUTH_ACL_ENABLED?: string;

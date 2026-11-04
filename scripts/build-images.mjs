@@ -14,6 +14,9 @@
 // Subdivision and the PII classifier pin linux/amd64 in their Dockerfiles and
 // the stacks do not pass Platform, so this script does not pass --platform
 // for them either.
+//
+// The spatial uploads handler imports a BuildKit registry cache for its GDAL
+// stages (see its Dockerfile); `cacheFrom` mirrors the stack's `cacheFrom`.
 
 import { spawn } from "node:child_process";
 import fs from "node:fs";
@@ -29,6 +32,7 @@ const images = [
     context: ".",
     file: "packages/spatial-uploads-handler/Dockerfile",
     platform: "linux/amd64",
+    cacheFrom: ["type=registry,ref=ghcr.io/seasketch/spatial-uploads-runtime:cache"],
     tag: "spatial-uploads-handler:latest",
   },
   {
@@ -125,6 +129,9 @@ function dockerArgs(image) {
   args.push("--tag", image.tag);
   if (image.file) args.push("--file", image.file);
   if (image.platform) args.push("--platform", image.platform);
+  for (const source of image.cacheFrom ?? []) {
+    args.push("--cache-from", source);
+  }
   args.push(".");
   return args;
 }

@@ -9,17 +9,81 @@ const lambda = new AWS.Lambda({
   },
 });
 
+type SubdivisionPayload = {
+  url: string;
+  jobKey: string;
+  key: string;
+  queueUrl: string | undefined;
+  repair_invalid: boolean;
+};
+
+/**
+ * Same rule as the other handlers: a dev handler URL (the Lambda emulator
+ * `npm run dev` starts) is used before the deployed function's ARN.
+ */
+function subdivisionTarget():
+  | { devHandler: string }
+  | { arn: string } {
+  if (process.env.SUBDIVISION_WORKER_DEV_HANDLER) {
+    return { devHandler: process.env.SUBDIVISION_WORKER_DEV_HANDLER };
+  }
+  if (process.env.SUBDIVISION_WORKER_LAMBDA_ARN) {
+    return { arn: process.env.SUBDIVISION_WORKER_LAMBDA_ARN };
+  }
+  throw new Error(
+    "Neither SUBDIVISION_WORKER_DEV_HANDLER nor SUBDIVISION_WORKER_LAMBDA_ARN is set",
+  );
+}
+
+/**
+ * Production invokes asynchronously and the worker reports through the
+ * results queue. The emulator only answers when the handler returns, which
+ * can take minutes, so the request is not awaited here either. Progress and
+ * completion still arrive through the queue.
+ */
+async function invokeSubdivisionWorker(
+  target: ReturnType<typeof subdivisionTarget>,
+  payload: SubdivisionPayload,
+) {
+  if ("devHandler" in target) {
+    const url = target.devHandler;
+    void fetch(url, {
+      method: "POST",
+      body: JSON.stringify(payload),
+      headers: { "Content-Type": "application/json" },
+    })
+      .then(async (response) => {
+        const text = await response.text();
+        if (!response.ok) {
+          console.error(
+            `Subdivision dev handler HTTP ${response.status} for ${payload.jobKey}: ${text.slice(0, 500)}`,
+          );
+        }
+      })
+      .catch((e) => {
+        console.error(
+          `Could not reach subdivision dev handler (${url}) for ${payload.jobKey}. Is the subdivision container running?`,
+          e,
+        );
+      });
+    return;
+  }
+  await lambda
+    .invoke({
+      FunctionName: target.arn,
+      InvocationType: "Event",
+      Payload: JSON.stringify(payload),
+    })
+    .promise();
+}
+
 export default async function preprocessSource(
   payload: { jobKey: string; repairInvalid?: boolean },
   helpers: Helpers,
 ) {
   const { jobKey, repairInvalid } = payload;
 
-  if (!process.env.SUBDIVISION_WORKER_LAMBDA_ARN) {
-    throw new Error("SUBDIVISION_WORKER_LAMBDA_ARN is not set");
-  }
-
-  const arn = process.env.SUBDIVISION_WORKER_LAMBDA_ARN;
+  const target = subdivisionTarget();
 
   await helpers.withPgClient(async (client) => {
     const existingJobQ = await client.query(
@@ -121,7 +185,7 @@ export default async function preprocessSource(
     const objectKey = `projects/${slug}/subdivided/${dataSourceId}-${uuid()}${extension}`;
     console.log("sourceUrl", sourceUrl);
     console.log("objectKey", objectKey);
-    const payloadForLambda = {
+    const payloadForLambda: SubdivisionPayload = {
       url: sourceUrl,
       jobKey,
       key: objectKey,
@@ -129,14 +193,7 @@ export default async function preprocessSource(
       repair_invalid: repairInvalid || false,
     };
 
-    // Invoke subdivision worker lambda asynchronously
-    await lambda
-      .invoke({
-        FunctionName: arn,
-        InvocationType: "Event",
-        Payload: JSON.stringify(payloadForLambda),
-      })
-      .promise();
+    await invokeSubdivisionWorker(target, payloadForLambda);
 
     await client.query(
       `update source_processing_jobs set state = 'processing' where job_key = $1`,

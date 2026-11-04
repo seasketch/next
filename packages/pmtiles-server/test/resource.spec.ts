@@ -3,6 +3,7 @@ import {
   aclEnabled,
   aclNamespaceFromRequest,
   classifyResource,
+  isUploadsHost,
   missingAclIsPublic,
   normalizeObjectKey,
   resourceAclEnabled,
@@ -129,5 +130,27 @@ describe("overlay resource classification", () => {
         new Request("https://tiles.example/x?ns=bad/ns"),
       ),
     ).toBe("prod");
+  });
+});
+
+describe("isUploadsHost", () => {
+  it("defaults to uploads.seasketch.org", () => {
+    expect(isUploadsHost(new URL("https://uploads.seasketch.org/x.fgb"), {})).toBe(true);
+    expect(isUploadsHost(new URL("https://tiles.seasketch.org/x.fgb"), {})).toBe(false);
+    expect(isUploadsHost(new URL("http://localhost:8788/x.fgb"), {})).toBe(false);
+  });
+
+  it("matches UPLOADS_HOST entries by host, ignoring case and spaces", () => {
+    const env = { UPLOADS_HOST: "localhost:8788, host.docker.internal:8788" };
+    expect(isUploadsHost(new URL("http://localhost:8788/x.fgb"), env)).toBe(true);
+    expect(isUploadsHost(new URL("http://LOCALHOST:8788/x.fgb"), env)).toBe(true);
+    expect(isUploadsHost(new URL("http://host.docker.internal:8788/x"), env)).toBe(true);
+    expect(isUploadsHost(new URL("http://localhost:8787/x.fgb"), env)).toBe(false);
+    // Setting the variable replaces the default rather than adding to it.
+    expect(isUploadsHost(new URL("https://uploads.seasketch.org/x"), env)).toBe(false);
+  });
+
+  it("treats a blank UPLOADS_HOST as unset", () => {
+    expect(isUploadsHost(new URL("https://uploads.seasketch.org/x"), { UPLOADS_HOST: "  " })).toBe(true);
   });
 });

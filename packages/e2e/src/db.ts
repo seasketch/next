@@ -101,6 +101,26 @@ export async function projectInviteStatus(slug: string): Promise<string | null> 
   }
 }
 
+export type DisposableUser = {
+  sub: string;
+  email: string;
+  superuser: false;
+};
+
+/**
+ * An account for one journey. Spec files run at the same time, so a journey
+ * that changes a user's profile or joins a project as that user takes its
+ * own account rather than the shared e2e|member persona.
+ */
+export function disposableUser(label: string): DisposableUser {
+  const stamp = `${Date.now().toString(36)}-${crypto.randomBytes(2).toString("hex")}`;
+  return {
+    sub: `e2e|${label}-${stamp}`,
+    email: `${label}-${stamp}@example.test`,
+    superuser: false,
+  };
+}
+
 /**
  * The row a first authenticated request would insert. Test mode only signs
  * tokens for users who already exist, and the suite does not sign up through
@@ -117,13 +137,32 @@ export async function createE2EUser(sub: string, email: string) {
   }
 }
 
-/** Remove a user this journey created. Seed personas are refused. */
+/**
+ * Remove a user this journey created, with the forum posts they wrote.
+ * Seed personas are refused.
+ */
 export async function deleteE2EUser(sub: string) {
   assertDisposableE2ESub(sub);
   const client = new Client({ connectionString: databaseURL });
   await client.connect();
   try {
-    await client.query(`delete from users where sub = $1`, [sub]);
+    await client.query("BEGIN");
+    const found = await client.query("SELECT id FROM users WHERE sub = $1", [sub]);
+    if (found.rowCount === 0) {
+      await client.query("ROLLBACK");
+      return;
+    }
+    const id = found.rows[0].id;
+    // These foreign keys are NO ACTION. The rest cascade from users.
+    await client.query("DELETE FROM posts WHERE author_id = $1", [id]);
+    await client.query("DELETE FROM topics WHERE author_id = $1", [id]);
+    await client.query("DELETE FROM pending_topic_notifications WHERE user_id = $1", [id]);
+    await client.query("DELETE FROM topic_notification_unsubscribes WHERE user_id = $1", [id]);
+    await client.query("DELETE FROM users WHERE id = $1", [id]);
+    await client.query("COMMIT");
+  } catch (error) {
+    await client.query("ROLLBACK");
+    throw error;
   } finally {
     await client.end();
   }
@@ -136,17 +175,22 @@ function assertDisposableE2ESub(sub: string) {
 }
 
 /**
- * The forum journey expects e2e|member's full name to be empty. Access
- * journeys that submit the profile form put it back.
+ * Put a user back to never having been asked about the AI Cartographer, so
+ * an upload journey always gets the first-upload prompt and decides for
+ * itself. The choice is per account and persists in the e2e database
+ * between journeys and reruns.
  */
-export async function clearMemberProfile() {
+export async function resetAiCartographerChoice(sub: string) {
   const client = new Client({ connectionString: databaseURL });
   await client.connect();
   try {
     await client.query(
       `update user_profiles
-       set fullname = null, nickname = null, email = null, affiliations = null
-       where user_id = (select id from users where sub = 'e2e|member')`
+       set enable_ai_data_analyst = false,
+           ai_data_analyst_enabled_at = null,
+           was_prompted_to_enable_ai_data_analyst_at = null
+       where user_id = (select id from users where sub = $1)`,
+      [sub]
     );
   } finally {
     await client.end();

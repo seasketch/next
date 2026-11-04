@@ -25,4 +25,4 @@ enabled = true
 [[r2_buckets]]
 binding = 'TILES_BUCKET'
 bucket_name = 'ssn-tiles'
-preview_bucket_name = 'ssn-tiles'
+preview_bucket_name = 'ssn-tiles-local'

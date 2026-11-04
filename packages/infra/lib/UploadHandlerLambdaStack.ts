@@ -71,6 +71,21 @@ export class UploadHandlerLambdaStack extends cdk.Stack {
         {
           file: "packages/spatial-uploads-handler/Dockerfile",
           platform: Platform.LINUX_AMD64,
+          // The GDAL stages of that Dockerfile are slow to build. The
+          // "Spatial uploads runtime cache" workflow exports them as a
+          // BuildKit registry cache; importing it here makes a deploy from
+          // a machine that has never built them a pull instead of a 30+
+          // minute compile. A checkout that changes those stages still
+          // builds them locally and deploys what it built. The cache is
+          // public; the pull needs no login.
+          cacheFrom: [
+            {
+              type: "registry",
+              params: {
+                ref: "ghcr.io/seasketch/spatial-uploads-runtime:cache",
+              },
+            },
+          ],
         },
       ),
       timeout: cdk.Duration.minutes(15),

@@ -11,6 +11,10 @@
 **/.logs
 **/.tsbuildinfo
 **/dist
+# compose.yaml watches this directory into the running spatial-uploads
+# container, and Compose Watch applies this file to the watched paths. The
+# builder stage recompiles it, so a stale host copy never reaches the image.
+!packages/spatial-uploads-handler/dist
 **/coverage
 **/__tests__
 **/*.test.ts
@@ -30,3 +34,5 @@ packages/data-library-crw/**/*.tif
 packages/data-library-crw/**/*.vrt
 packages/data-library-crw/**/*.pmtiles
 packages/h3-land/data
+# Local object storage and wrangler state. Large, and never part of an image.
+.data

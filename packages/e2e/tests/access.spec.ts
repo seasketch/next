@@ -7,9 +7,9 @@ import {
 } from "../src/accessProject";
 import { personas } from "../src/config";
 import {
-  clearMemberProfile,
   createE2EUser,
   deleteE2EUser,
+  disposableUser,
   expireInviteToken,
   hardDeleteProject,
   projectInviteStatus,
@@ -27,7 +27,6 @@ test.afterEach(async () => {
   for (const sub of createdUsers.splice(0)) {
     await deleteE2EUser(sub);
   }
-  await clearMemberProfile();
 });
 
 function slug(label: string) {
@@ -302,9 +301,7 @@ test.describe("access @access", () => {
     });
     created.push(project.slug);
 
-    const stamp = Date.now().toString(36);
-    const email = `invitee-${stamp}@example.test`;
-    const sub = `e2e|invitee-${stamp}`;
+    const { sub, email } = disposableUser("invitee");
     createdUsers.push(sub);
 
     const sentAt = Date.now();
@@ -355,9 +352,7 @@ test.describe("access @access", () => {
     });
     created.push(project.slug);
 
-    const stamp = Date.now().toString(36);
-    const otherSub = `e2e|other-${stamp}`;
-    const otherEmail = `other-${stamp}@example.test`;
+    const { sub: otherSub, email: otherEmail } = disposableUser("other");
     createdUsers.push(otherSub);
     await createE2EUser(otherSub, otherEmail);
 

@@ -1,0 +1,84 @@
+name: Spatial uploads runtime cache
+
+# Builds the native-tool stages of packages/spatial-uploads-handler/Dockerfile
+# (GDAL and its libraries, tippecanoe, go-pmtiles, rclone, and the Python
+# raster libraries on the Lambda Node base) and exports every layer as a
+# BuildKit registry cache:
+#
+#   ghcr.io/seasketch/spatial-uploads-runtime:cache            from master
+#   ghcr.io/seasketch/spatial-uploads-runtime:cache-<branch>   from a branch
+#
+# compose.yaml, the CDK stack, and scripts/build-images.mjs pass the master
+# ref as --cache-from, so a machine that has never built GDAL pulls the
+# layers instead, and a checkout that changes one of those stages builds the
+# difference. Nothing has to be published for a branch to build or deploy;
+# without a matching cache the build is slow, not broken.
+#
+# Runs on a push that changes the Dockerfile, and by hand. A manual run from
+# a branch writes that branch's ref; a manual run from master writes the
+# master ref. With a warm cache the job is a few minutes; a cold one is 30
+# minutes or more. The branch name becomes the tag the same way the smoke
+# job computes it (unit-tests.yml), so a branch's smoke run finds its cache.
+
+on:
+  push:
+    paths:
+      - packages/spatial-uploads-handler/Dockerfile
+      - .github/workflows/spatial-uploads-runtime.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  cache:
+    name: Build and export cache
+    runs-on: ubuntu-latest
+    timeout-minutes: 240
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Choose the cache ref
+        id: ref
+        run: |
+          repo=ghcr.io/seasketch/spatial-uploads-runtime
+          echo "main=$repo:cache" >> "$GITHUB_OUTPUT"
+          if [ "${{ github.ref_name }}" = "master" ]; then
+            echo "to=$repo:cache" >> "$GITHUB_OUTPUT"
+          else
+            slug="$(echo "${{ github.ref_name }}" | tr '[:upper:]' '[:lower:]' | sed -E 's/[^a-z0-9._-]+/-/g' | cut -c1-100)"
+            echo "to=$repo:cache-$slug" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Log in to the GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Free disk space for the build
+        run: |
+          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /opt/hostedtoolcache/CodeQL
+          docker system prune -af > /dev/null
+          df -h /
+
+      - uses: docker/setup-buildx-action@v3
+
+      # Imports from the ref being written too, so a re-run of a branch that
+      # changed one stage rebuilds only that stage again. mode=max exports
+      # the intermediate stages, which is the point: a consumer building the
+      # whole Dockerfile has to find `tools`, `gdal`, and `runtime` in here.
+      - name: Build the runtime stages and export the cache
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: packages/spatial-uploads-handler/Dockerfile
+          target: runtime
+          platforms: linux/amd64
+          push: false
+          cache-from: |
+            type=registry,ref=${{ steps.ref.outputs.main }}
+            type=registry,ref=${{ steps.ref.outputs.to }}
+          cache-to: type=registry,ref=${{ steps.ref.outputs.to }},mode=max

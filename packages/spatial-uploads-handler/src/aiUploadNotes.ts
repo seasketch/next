@@ -17,7 +17,14 @@ export function isAiDataAnalystEnabled(): boolean {
   return Boolean(process.env.CF_AIG_TOKEN && process.env.CF_AIG_URL);
 }
 
-/** Throws if AI Data Analyst LLM features were requested but Cloudflare AI Gateway env is incomplete. */
+/**
+ * Throws if the AI Cartographer was requested but the environment cannot run
+ * it safely. That is the Cloudflare AI Gateway, and the PII classifier: the
+ * classifier screens attribute values before any of them reach a language
+ * model, so without it no prompt is sent at all. Callers run this before the
+ * first prompt, so a misconfigured deployment fails the upload rather than
+ * quietly sending data on.
+ */
 export function assertAiDataAnalystEnvVarsPresent(): void {
   const missing: string[] = [];
   if (!process.env.CF_AIG_TOKEN) {
@@ -26,19 +33,40 @@ export function assertAiDataAnalystEnvVarsPresent(): void {
   if (!process.env.CF_AIG_URL) {
     missing.push("CF_AIG_URL");
   }
+  if (!isPiiClassifierConfigured()) {
+    missing.push("GEOSTATS_PII_CLASSIFIER_ARN");
+  }
   if (missing.length > 0) {
     throw new Error(
-      `enableAiDataAnalyst is true but required environment variables are not set: ${missing.join(", ")}`,
+      `enableAiDataAnalyst is true but required environment variables are not set: ${missing.join(", ")}. The AI Cartographer does not run without the PII classifier.`,
     );
   }
+}
+
+/**
+ * Whether the PII classifier Lambda is wired up. The CDK stack only sets the
+ * ARN when the classifier is deployed, and local development has no Lambda.
+ * With the AI Cartographer off, an upload proceeds without classification
+ * when it is absent, and the layer is stored without `piiRiskWasAssessed`,
+ * which the admin UI shows. With the Cartographer on, the classifier is
+ * required; see assertAiDataAnalystEnvVarsPresent.
+ */
+export function isPiiClassifierConfigured(): boolean {
+  return Boolean(process.env.GEOSTATS_PII_CLASSIFIER_ARN);
 }
 
 let _lambdaClient: InstanceType<typeof AWS.Lambda> | null = null;
 function getLambdaClient() {
   if (!_lambdaClient) {
+    // GEOSTATS_PII_CLASSIFIER_ENDPOINT is a local stand-in for the Lambda
+    // service: the emulator running the classifier image, or the e2e
+    // profile's mock. Both serve the Invoke path for a function named
+    // `function`, which is what GEOSTATS_PII_CLASSIFIER_ARN holds then.
+    const endpoint = process.env.GEOSTATS_PII_CLASSIFIER_ENDPOINT;
     _lambdaClient = new AWS.Lambda({
       region: process.env.AWS_REGION || "us-west-2",
       httpOptions: { timeout: 30_000 },
+      ...(endpoint ? { endpoint } : {}),
     });
   }
   return _lambdaClient;

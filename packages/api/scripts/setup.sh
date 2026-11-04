@@ -10,6 +10,14 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 CONTAINER_NAME="${SEASKETCH_DB_CONTAINER:-seasketch_db}"
 DB_NAME="${SEASKETCH_DB_NAME:-seasketch}"
 DUMP_PATH="$API_DIR/snapshots/golden.dump"
+# Local object storage (packages/local-r2) lives beside the database it
+# belongs to: .data/wrangler for the dev database, .data/wrangler-e2e for
+# seasketch_e2e. --reset clears the one that matches DB_NAME.
+if [[ "$DB_NAME" == "seasketch" ]]; then
+  LOCAL_STORAGE_DIR="$ROOT_DIR/.data/wrangler"
+else
+  LOCAL_STORAGE_DIR="$ROOT_DIR/.data/wrangler-${DB_NAME#seasketch_}"
+fi
 reset=0
 
 for arg in "$@"; do
@@ -136,6 +144,10 @@ docker compose -f "$ROOT_DIR/compose.yaml" up -d --wait
 
 if [[ "$reset" -eq 1 ]]; then
   drop_database
+  if [[ -d "$LOCAL_STORAGE_DIR" ]]; then
+    echo "Removing local object storage ${LOCAL_STORAGE_DIR#"$ROOT_DIR"/}."
+    rm -rf "$LOCAL_STORAGE_DIR"
+  fi
 fi
 
 if ! database_exists; then

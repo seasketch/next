@@ -5,7 +5,8 @@ import http from "node:http";
 import net from "node:net";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { servicesInProfile } from "./dev.config.mjs";
+import { defaultProfile, servicesInProfile } from "./dev.config.mjs";
+import { servicesStoppedForProduction } from "./dev.data.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 
@@ -48,7 +49,10 @@ function readyPort(ready) {
   return new URL(ready.replace(/^http-get:\/\//, "http://")).port;
 }
 
-const services = servicesInProfile("core");
+const services = servicesInProfile(defaultProfile);
+// Services .env would keep stopped. `npm run dev -- --local-data` starts them
+// anyway, so probe first and only explain a service that is not listening.
+const stopped = servicesStoppedForProduction();
 for (const service of services) {
   if (!service.ready) {
     console.log(`${service.name}: no probe`);
@@ -56,7 +60,15 @@ for (const service of services) {
   }
   const up = await probe(service.ready);
   const port = readyPort(service.ready);
-  console.log(up ? `${service.name}: listening (${port})` : `${service.name}: not responding`);
+  if (up) {
+    console.log(`${service.name}: listening (${port})`);
+  } else if (stopped.has(service.name)) {
+    console.log(
+      `${service.name}: not started (packages/api/.env points at production; npm run dev -- --local-data starts it)`
+    );
+  } else {
+    console.log(`${service.name}: not responding`);
+  }
 }
 
 const compose = spawn("docker", ["compose", "ps"], { cwd: root, stdio: "inherit" });

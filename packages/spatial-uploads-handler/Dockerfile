@@ -1,4 +1,30 @@
-FROM public.ecr.aws/lambda/nodejs:24 AS builder
+# Image for the spatial uploads handler. Build context is the repo root (see
+# UploadHandlerLambdaStack, scripts/build-images.mjs, and compose.yaml).
+#
+# The `tools`, `gdal`, and `runtime` stages are the slow part: GDAL and its
+# libraries, tippecanoe, go-pmtiles, rclone, unrar, and the Python raster
+# libraries on the Lambda Node base. Nothing in them depends on SeaSketch
+# code. The "Spatial uploads runtime cache" workflow builds them on Actions
+# and exports every layer as a BuildKit registry cache at
+#
+#   ghcr.io/seasketch/spatial-uploads-runtime:cache
+#
+# Every builder of this file (compose.yaml, the CDK stack, build-images.mjs)
+# passes that as --cache-from, so a machine that has never built GDAL pulls
+# the finished layers instead, and a machine whose checkout changes one of
+# these stages builds what changed and reuses the rest. Nothing has to be
+# published before a branch can be built or deployed; a cache miss is a slow
+# build, not a failure.
+#
+# The base image is pinned by digest. BuildKit keys a stage's cache on the
+# base image it resolved, so a floating tag would invalidate every layer the
+# day AWS republished it. Bump the digest deliberately, with the libraries.
+#
+# Heavily inspired by
+# https://github.com/lambgeo/docker-lambda/blob/master/dockerfiles/Dockerfile
+ARG LAMBDA_NODE_BASE=public.ecr.aws/lambda/nodejs:24@sha256:8466f17dcfbec19afcfefff53964fac7bc3f7975fa132d5fd74dce53004827d0
+
+FROM --platform=linux/amd64 ${LAMBDA_NODE_BASE} AS tools
 WORKDIR /usr/app
 RUN dnf install -y tar unzip
 RUN curl https://rclone.org/install.sh | bash
@@ -12,25 +38,8 @@ RUN make install
 WORKDIR /usr/app
 RUN curl -L https://github.com/protomaps/go-pmtiles/releases/download/v1.8.0/go-pmtiles_1.8.0_Linux_x86_64.tar.gz > ./pmtiles.tar.gz
 RUN tar -zxvf ./pmtiles.tar.gz
-# Build context is the repo root (see UploadHandlerLambdaStack).
-# Only these workspaces are copied. npm ci refuses a lockfile whose other
-# workspaces are absent, and npm ci --workspace still installs every
-# workspace. npm install keeps the locked versions for the packages present.
-# devDependencies stay: gdal-async and aws-sdk are imported by the handler
-# at runtime and their types are needed to compile.
-WORKDIR /usr/app
-COPY package.json package-lock.json ./
-COPY packages/spatial-uploads-handler ./packages/spatial-uploads-handler
-COPY packages/geostats-types ./packages/geostats-types
-COPY packages/metadata-parser ./packages/metadata-parser
-COPY packages/ai-data-analyst ./packages/ai-data-analyst
-RUN npm install --no-audit --no-fund \
- && npm run build --workspace=spatial-uploads-handler
 
-
-# Heavily inspired by
-# https://github.com/lambgeo/docker-lambda/blob/master/dockerfiles/Dockerfile
-FROM public.ecr.aws/lambda/nodejs:24 AS gdal
+FROM --platform=linux/amd64 ${LAMBDA_NODE_BASE} AS gdal
 RUN dnf update -y
 RUN dnf install -y git autoconf libtool flex bison cmake make \
       tar gzip gcc gcc-c++ libpng-devel nasm \
@@ -107,21 +116,21 @@ RUN mkdir /tmp/geos \
   && make -j $(nproc) --silent && make install \
   && rm -rf /tmp/geos
 
-  ENV PROJ_VERSION=9.3.1
-  RUN mkdir /tmp/proj && mkdir /tmp/proj/data \
-    && curl -sfL https://github.com/OSGeo/proj/archive/${PROJ_VERSION}.tar.gz | tar zxf - -C /tmp/proj --strip-components=1 \
-    && cd /tmp/proj \
-    && mkdir build && cd build \
-    && cmake3 .. \
-      -DCMAKE_BUILD_TYPE=Release \
-      -DCMAKE_INSTALL_PREFIX:PATH=$PREFIX \
-      -DCMAKE_INSTALL_LIBDIR:PATH=lib \
-      -DCMAKE_INSTALL_INCLUDEDIR:PATH=include \
-      -DBUILD_TESTING=OFF \
-      -DCMAKE_C_FLAGS="-O2 -Wl,-S" \
-      -DCMAKE_CXX_FLAGS="-O2 -Wl,-S" \
-    && make -j $(nproc) --silent && make install \
-    && rm -rf /tmp/proj
+ENV PROJ_VERSION=9.3.1
+RUN mkdir /tmp/proj && mkdir /tmp/proj/data \
+  && curl -sfL https://github.com/OSGeo/proj/archive/${PROJ_VERSION}.tar.gz | tar zxf - -C /tmp/proj --strip-components=1 \
+  && cd /tmp/proj \
+  && mkdir build && cd build \
+  && cmake3 .. \
+    -DCMAKE_BUILD_TYPE=Release \
+    -DCMAKE_INSTALL_PREFIX:PATH=$PREFIX \
+    -DCMAKE_INSTALL_LIBDIR:PATH=lib \
+    -DCMAKE_INSTALL_INCLUDEDIR:PATH=include \
+    -DBUILD_TESTING=OFF \
+    -DCMAKE_C_FLAGS="-O2 -Wl,-S" \
+    -DCMAKE_CXX_FLAGS="-O2 -Wl,-S" \
+  && make -j $(nproc) --silent && make install \
+  && rm -rf /tmp/proj
 
 # GeoTIFF
 ENV LIBGEOTIFF_VERSION=1.7.1
@@ -180,7 +189,6 @@ RUN mkdir /tmp/szip \
 
 RUN dnf install -y libtirpc libtirpc-devel
 
-
 # Install HDF5 from source
 ENV HDF5_VERSION=1.10.5
 RUN mkdir /tmp/hdf5 \
@@ -236,7 +244,9 @@ RUN curl -O https://www.rarlab.com/rar/unrarsrc-6.0.7.tar.gz && \
   make -f makefile && \
   cp unrar /usr/local/bin/
 
-FROM public.ecr.aws/lambda/nodejs:24
+# The Lambda base with the native tools installed. This is the last stage
+# the registry cache covers; the workflow builds `--target runtime`.
+FROM --platform=linux/amd64 ${LAMBDA_NODE_BASE} AS runtime
 WORKDIR ${LAMBDA_TASK_ROOT}
 # Bring C libs from lambgeo/lambda-gdal image
 COPY --from=gdal /usr/lib/ /usr/lib/
@@ -252,20 +262,45 @@ ENV \
   GEOS_CONFIG=/usr/bin/geos-config \
   PATH=/usr/bin:$PATH
 
-COPY --from=builder /usr/local/bin/tippecanoe /usr/local/bin/tippecanoe
+COPY --from=tools /usr/local/bin/tippecanoe /usr/local/bin/tippecanoe
+COPY --from=tools /usr/bin/rclone /bin/rclone
+COPY --from=tools /usr/bin/unzip /bin/unzip
+COPY --from=tools /usr/app/pmtiles /bin/pmtiles
+COPY --from=gdal /usr/local/bin/unrar /usr/bin/unrar
+# LD_LIBRARY_PATH flag is necessary to avoid ssl errors
+RUN dnf install -y openssl python-pip python3 swig python-devel
+RUN LD_LIBRARY_PATH="" pip install cython numpy==1.25
+RUN LD_LIBRARY_PATH="" pip3 install --no-cache-dir --upgrade rasterio fiona
+
+# The application, compiled on the plain Lambda base. Cheap, and rebuilt on
+# every source change.
+FROM --platform=linux/amd64 ${LAMBDA_NODE_BASE} AS builder
+WORKDIR /usr/app
+# Only these workspaces are copied. npm ci refuses a lockfile whose other
+# workspaces are absent, and npm ci --workspace still installs every
+# workspace. npm install keeps the locked versions for the packages present.
+# devDependencies stay: gdal-async and aws-sdk are imported by the handler
+# at runtime and their types are needed to compile.
+#
+# Manifests first so the install layer survives source edits.
+COPY package.json package-lock.json ./
+COPY packages/spatial-uploads-handler/package.json ./packages/spatial-uploads-handler/
+COPY packages/geostats-types/package.json ./packages/geostats-types/
+COPY packages/metadata-parser/package.json ./packages/metadata-parser/
+COPY packages/ai-data-analyst/package.json ./packages/ai-data-analyst/
+RUN npm install --no-audit --no-fund
+COPY packages/spatial-uploads-handler ./packages/spatial-uploads-handler
+COPY packages/geostats-types ./packages/geostats-types
+COPY packages/metadata-parser ./packages/metadata-parser
+COPY packages/ai-data-analyst ./packages/ai-data-analyst
+RUN npm run build --workspace=spatial-uploads-handler
+
+FROM runtime
+WORKDIR ${LAMBDA_TASK_ROOT}
 # Keep the workspace layout: node_modules/@seasketch/* and ai-data-analyst
 # are symlinks into packages/, and any package-local node_modules must stay
 # next to the code that resolves them.
 COPY --from=builder /usr/app/node_modules ./node_modules
 COPY --from=builder /usr/app/packages ./packages
-COPY --from=builder /usr/bin/rclone /bin/rclone
-COPY --from=builder /usr/bin/unzip /bin/unzip
-COPY --from=builder /usr/app/pmtiles /bin/pmtiles
 COPY packages/spatial-uploads-handler/.rclone.conf /var/task/rclone.conf
-COPY --from=gdal /usr/local/bin/unrar /usr/bin/unrar
-# RUN dnf install -y openssl python-pip python3
-# LD_LIBRARY_PATH flag is necessary to avoid ssl errors
-RUN dnf install -y openssl python-pip python3 swig python-devel
-RUN LD_LIBRARY_PATH="" pip install cython numpy==1.25
-RUN LD_LIBRARY_PATH="" pip3 install --no-cache-dir --upgrade rasterio fiona
 CMD ["packages/spatial-uploads-handler/dist/handler.processUpload"]
