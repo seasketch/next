@@ -20,7 +20,7 @@ import {
 } from "./layers.js";
 import { ChartFeature, clipDepthCoveredByLand } from "./landCover.js";
 import { peelFeatures } from "./peel.js";
-import { lightSectorFeatures } from "./sectors.js";
+import { LightFeature, lightSectorFeatures, sectorRings } from "./sectors.js";
 import { labelLightsFromStructures } from "./labels.js";
 import { writeAreaLabels } from "./areaLabels.js";
 import { cellEdge, outlineFeatures } from "./outlines.js";
@@ -159,14 +159,19 @@ async function readCoverage(
 async function writeLightSectors(peeledPoints: string, out: string): Promise<number> {
   const stream = createWriteStream(out);
   let count = 0;
+  const lights: LightFeature[] = [];
   const lines = readline.createInterface({ input: createReadStream(peeledPoints), crlfDelay: Infinity });
   for await (const line of lines) {
     if (!line.includes('"LIGHTS"') || !line.includes("SECTR1")) continue;
-    for (const sector of lightSectorFeatures(JSON.parse(line))) {
+    lights.push(JSON.parse(line));
+  }
+  const rings = sectorRings(lights);
+  lights.forEach((light, index) => {
+    for (const sector of lightSectorFeatures(light, rings[index])) {
       stream.write(JSON.stringify({ type: "Feature", ...sector }) + "\n");
       count += 1;
     }
-  }
+  });
   await new Promise<void>((resolve, reject) => {
     stream.end(() => resolve());
     stream.on("error", reject);

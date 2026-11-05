@@ -12,7 +12,7 @@ import {
   seabedLabel,
 } from "../src/labels.js";
 import { rewriteEncFeature } from "../src/layers.js";
-import { lightSectorFeatures, sectorBearings, sectorColour } from "../src/sectors.js";
+import { lightSectorFeatures, sectorBearings, sectorColour, sectorRings } from "../src/sectors.js";
 
 describe("chart text", () => {
   it("reads S-57 list attributes", () => {
@@ -100,6 +100,44 @@ describe("light sectors", () => {
     assert.ok(Math.abs(reach(arcs[0]) / reach(arcs[1]) - 2) < 0.01);
     assert.equal(arcs[0].properties.colour, "red");
   });
+
+  const light = (SECTR1: number, SECTR2: number, extra: Record<string, unknown> = {}) => ({
+    properties: { obj: "LIGHTS", cell: "US5CA2HS", SECTR1, SECTR2, ...extra },
+    geometry: { type: "Point", coordinates: [-119.69, 34.39] },
+    tippecanoe: { minzoom: 12, maxzoom: 12 },
+  });
+
+  it("keeps abutting sectors of one light on one ring", () => {
+    assert.deepEqual(sectorRings([light(0, 90), light(90, 180), light(180, 270)]), [0, 0, 0]);
+  });
+
+  it("moves an overlapping sector out to the next ring, longer range first", () => {
+    assert.deepEqual(
+      sectorRings([light(0, 90, { VALNMR: 4 }), light(45, 135, { VALNMR: 9 }), light(100, 120, { VALNMR: 2 })]),
+      [1, 0, 1]
+    );
+  });
+
+  it("does not stagger lights at different positions or in different cells", () => {
+    const moved = light(0, 90);
+    moved.geometry.coordinates = [-119.7, 34.39];
+    const other = light(0, 90, { cell: "US4CA1HO" });
+    assert.deepEqual(sectorRings([light(0, 90), moved, other]), [0, 0, 0]);
+  });
+
+  it("sees overlap across north", () => {
+    assert.deepEqual(sectorRings([light(150, 210), light(180, 200)]), [0, 1]);
+  });
+
+  it("draws an outer ring's arc further out", () => {
+    const [inner] = lightSectorFeatures(light(0, 90), 0);
+    const [outer] = lightSectorFeatures(light(0, 90), 1);
+    const reach = (arc: typeof inner) => {
+      const [lng, lat] = (arc.geometry.coordinates as unknown as number[][])[0];
+      return Math.hypot(lng + 119.69, lat - 34.39);
+    };
+    assert.ok(reach(outer) > reach(inner) * 1.2);
+  });
 });
 
 describe("labels placed once", () => {
@@ -153,3 +191,4 @@ describe("labels placed once", () => {
     assert.deepEqual(label.tippecanoe, { layer: "land", minzoom: 10, maxzoom: 13 });
   });
 });
+
