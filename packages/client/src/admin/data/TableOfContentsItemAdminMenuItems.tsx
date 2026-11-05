@@ -25,12 +25,10 @@ export default function TableOfContentsItemAdminMenuItems({
   type,
   items,
   onExpand,
-  onRequestPublish,
 }: {
   type: typeof DropdownMenu | typeof ContextMenu | typeof MenuBar;
   items: TocMenuItemType[];
   onExpand?: (node: TreeItem, isExpanded: boolean) => void;
-  onRequestPublish?: (item: TocMenuItemType) => void;
 }) {
   const MenuType = type;
   const { t } = useTranslation("admin:data");
@@ -151,18 +149,6 @@ export default function TableOfContentsItemAdminMenuItems({
             <Trans ns="admin:data">Paste style</Trans>
           </MenuType.Item>
         </>
-      )}
-      {onRequestPublish && (
-        <MenuType.Item
-          className={MenuBarItemClasses}
-          onSelect={() => onRequestPublish(item)}
-        >
-          {item.isFolder ? (
-            <Trans ns="admin:data">Publish this folder...</Trans>
-          ) : (
-            <Trans ns="admin:data">Publish this layer...</Trans>
-          )}
-        </MenuType.Item>
       )}
       <MenuType.Item
         className={MenuBarItemClasses}

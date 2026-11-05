@@ -26,6 +26,8 @@ import {
   PublishZOrderSummary,
 } from "./publishChangelogSummary";
 
+export const MOCK_SELECTIVE_PUBLISHING = true;
+
 const Z_ORDER_KEY = "z-order";
 
 function rowKey(category: PublishSummaryRow["category"], entityId: number) {

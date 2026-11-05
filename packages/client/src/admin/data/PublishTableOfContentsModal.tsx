@@ -32,9 +32,7 @@ import {
 import { ChangeLogFieldGroup } from "../../generated/graphql";
 import LayerMetadataRevisionModal from "./LayerMetadataRevisionModal";
 import LayerCartographyRevisionModal from "./LayerCartographyRevisionModal";
-import MockPausedLayersNotice, {
-  MOCK_SELECTIVE_PUBLISHING,
-} from "./MockPausedLayersNotice";
+import { MOCK_SELECTIVE_PUBLISHING } from "./MockSelectivePublishModal";
 
 export default function PublishTableOfContentsModal(props: {
   onRequestClose: () => void;
@@ -304,9 +302,6 @@ export default function PublishTableOfContentsModal(props: {
                   changeLogs={changeLogs}
                   draftItems={draftTableOfContentsItems}
                   tableOfContentsLastPublished={tableOfContentsLastPublished}
-                />
-                <MockPausedLayersNotice
-                  draftItems={draftTableOfContentsItems}
                 />
               </>
             )}

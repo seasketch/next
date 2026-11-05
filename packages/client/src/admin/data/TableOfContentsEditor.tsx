@@ -49,10 +49,7 @@ import React from "react";
 import { ZIndexEditableList } from "./ZIndexEditableList";
 import { LayerEditingContext } from "./LayerEditingContext";
 import FullScreenLoadingSpinner from "./FullScreenLoadingSpinner";
-import {
-  TableOfContentsItemMenu,
-  TocMenuItemType,
-} from "./TableOfContentsItemMenu";
+import { TableOfContentsItemMenu } from "./TableOfContentsItemMenu";
 import * as ContextMenu from "@radix-ui/react-context-menu";
 import useOverlaySearchState from "../../dataLayers/useOverlaySearchState";
 import useOverlayTaxonSearch from "../../dataLayers/useOverlayTaxonSearch";
@@ -81,7 +78,6 @@ import withScrolling, {
 } from "@nosferatu500/react-dnd-scrollzone";
 import { useApolloClient } from "@apollo/client";
 import { parseTocItemIdFromSearch } from "./layerAdminDeepLink";
-import MockPublishTableOfContentsItemModal from "./MockPublishTableOfContentsItemModal";
 import MockSelectivePublishModal, {
   MockPublishSplitButton,
 } from "./MockSelectivePublishModal";
@@ -157,7 +153,6 @@ export default function TableOfContentsEditor() {
   const [folderId, setFolderId] = useState<number>();
   const [publishOpen, setPublishOpen] = useState(false);
   const [selectivePublishOpen, setSelectivePublishOpen] = useState(false);
-  const [mockPublishItem, setMockPublishItem] = useState<TocMenuItemType>();
   const [arcgisCartOpen, setArcgisCartOpen] = useState(false);
   useDraftStatusSubscription({
     variables: {
@@ -526,21 +521,6 @@ export default function TableOfContentsEditor() {
           }}
         />
       )}
-      {mockPublishItem && (
-        <MockPublishTableOfContentsItemModal
-          item={mockPublishItem}
-          onRequestClose={() => setMockPublishItem(undefined)}
-          onConfirm={() => {
-            const item = mockPublishItem;
-            setMockPublishItem(undefined);
-            layerEditingContext.setOpenEditor({
-              id: item.id,
-              isFolder: item.isFolder,
-              title: item.title,
-            });
-          }}
-        />
-      )}
       {selectivePublishOpen && (
         <MockSelectivePublishModal
           onRequestClose={() => setSelectivePublishOpen(false)}
@@ -666,7 +646,6 @@ export default function TableOfContentsEditor() {
                         items={[item]}
                         type={ContextMenu}
                         onExpand={onExpand}
-                        onRequestPublish={setMockPublishItem}
                         editable
                         transform={{
                           x: clickEvent.clientX,
