@@ -63,12 +63,73 @@ function wantsLabel(properties: Record<string, unknown>): boolean {
 }
 
 /**
+ * A name repeats no closer than this, in degrees: about 5 km. An area split
+ * across harbour cells, or by a larger-scale cell under it, is one piece per
+ * cell. Without it a town on a cell corner is named four times.
+ */
+export const LABEL_SPACING = 0.05;
+
+type Zooms = { minzoom: number; maxzoom: number };
+
+export type LabelCandidate = {
+  key: string | null;
+  area: number;
+  x: number;
+  y: number;
+  zooms: Zooms;
+  feature: { properties: Record<string, unknown>; tippecanoe: Record<string, unknown> };
+};
+
+/** Same name, same class. Seabed letters are a texture and repeat freely. */
+function labelKey(properties: Record<string, unknown>): string | null {
+  const objectClass = String(properties.obj);
+  if (objectClass === "SBDARE") return null;
+  const name = typeof properties.OBJNAM === "string" ? properties.OBJNAM : "";
+  return `${objectClass}\0${name}`;
+}
+
+function zoomsOf(tippecanoe: Record<string, unknown>): Zooms {
+  const minzoom = typeof tippecanoe.minzoom === "number" ? tippecanoe.minzoom : 0;
+  const maxzoom = typeof tippecanoe.maxzoom === "number" ? tippecanoe.maxzoom : 99;
+  return { minzoom, maxzoom };
+}
+
+/**
+ * Keep the label of the largest piece, and drop or shorten the zoom range of
+ * nearby pieces with the same name where a kept label already shows.
+ */
+export function spaceLabels(candidates: LabelCandidate[]): LabelCandidate[] {
+  const placed: LabelCandidate[] = [];
+  const kept = new Map<string, LabelCandidate[]>();
+  const sorted = [...candidates].sort((a, b) => b.area - a.area);
+  for (const candidate of sorted) {
+    if (candidate.key == null) {
+      placed.push(candidate);
+      continue;
+    }
+    const zooms = { ...candidate.zooms };
+    for (const other of kept.get(candidate.key) || []) {
+      if (Math.hypot(other.x - candidate.x, other.y - candidate.y) > LABEL_SPACING) continue;
+      if (other.zooms.maxzoom < zooms.minzoom || other.zooms.minzoom > zooms.maxzoom) continue;
+      if (other.zooms.minzoom <= zooms.minzoom) zooms.minzoom = other.zooms.maxzoom + 1;
+      else if (other.zooms.maxzoom >= zooms.maxzoom) zooms.maxzoom = other.zooms.minzoom - 1;
+      if (zooms.minzoom > zooms.maxzoom) break;
+    }
+    if (zooms.minzoom > zooms.maxzoom) continue;
+    const label = { ...candidate, zooms };
+    placed.push(label);
+    if (!kept.has(candidate.key)) kept.set(candidate.key, []);
+    kept.get(candidate.key)!.push(label);
+  }
+  return placed;
+}
+
+/**
  * Read peeled area features and write a label point for each labelled
  * polygon, with the polygon's own zoom range. Returns how many were written.
  */
 export async function writeAreaLabels(peeledAreas: string, out: string): Promise<number> {
-  const stream = createWriteStream(out);
-  let count = 0;
+  const candidates: LabelCandidate[] = [];
   const lines = readline.createInterface({ input: createReadStream(peeledAreas), crlfDelay: Infinity });
   for await (const line of lines) {
     if (!line.includes('"obj"')) continue;
@@ -80,20 +141,34 @@ export async function writeAreaLabels(peeledAreas: string, out: string): Promise
     if (feature.geometry?.type !== "Polygon" && feature.geometry?.type !== "MultiPolygon") continue;
     if (!wantsLabel(feature.properties)) continue;
     let point: { x: number; y: number } | null = null;
+    let area = 0;
     try {
       const geometry = gdal.Geometry.fromGeoJson(feature.geometry) as gdal.Polygon;
-      if (geometry.getArea() < SMALLEST_LABELLED_AREA) continue;
+      area = geometry.getArea();
+      if (area < SMALLEST_LABELLED_AREA) continue;
       point = interiorPoint(geometry);
     } catch {
       continue;
     }
     if (!point || !Number.isFinite(point.x) || !Number.isFinite(point.y)) continue;
+    candidates.push({
+      key: labelKey(feature.properties),
+      area,
+      x: point.x,
+      y: point.y,
+      zooms: zoomsOf(feature.tippecanoe),
+      feature: { properties: feature.properties, tippecanoe: feature.tippecanoe },
+    });
+  }
+  const stream = createWriteStream(out);
+  let count = 0;
+  for (const label of spaceLabels(candidates)) {
     stream.write(
       JSON.stringify({
         type: "Feature",
-        properties: { ...feature.properties, labelpoint: true },
-        geometry: { type: "Point", coordinates: [point.x, point.y] },
-        tippecanoe: feature.tippecanoe,
+        properties: { ...label.feature.properties, labelpoint: true },
+        geometry: { type: "Point", coordinates: [label.x, label.y] },
+        tippecanoe: { ...label.feature.tippecanoe, ...label.zooms },
       }) + "\n"
     );
     count += 1;

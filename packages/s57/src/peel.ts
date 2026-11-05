@@ -24,7 +24,57 @@ type Mask = {
   band: number;
   cell: string;
   geom: Geometry;
+  west: number;
+  south: number;
+  east: number;
+  north: number;
 };
+
+/** Grid size for the coverage index, in degrees. A harbour cell fits in one square. */
+const GRID = 1;
+
+/**
+ * Coverage masks bucketed by band and by grid square. Without it every
+ * feature is intersected with every larger-scale cell in the upload, which
+ * is fine for a harbour and hours for a coastline.
+ */
+export class MaskIndex {
+  private buckets = new Map<string, Mask[]>();
+
+  constructor(masks: Mask[]) {
+    for (const mask of masks) {
+      for (let x = Math.floor(mask.west / GRID); x <= Math.floor(mask.east / GRID); x += 1) {
+        for (let y = Math.floor(mask.south / GRID); y <= Math.floor(mask.north / GRID); y += 1) {
+          const key = `${mask.band}:${x}:${y}`;
+          const list = this.buckets.get(key);
+          if (list) list.push(mask);
+          else this.buckets.set(key, [mask]);
+        }
+      }
+    }
+  }
+
+  /** Masks of `band` whose bounding box meets the envelope, each once. */
+  near(band: number, envelope: { minX: number; minY: number; maxX: number; maxY: number }): Mask[] {
+    const found = new Set<Mask>();
+    for (let x = Math.floor(envelope.minX / GRID); x <= Math.floor(envelope.maxX / GRID); x += 1) {
+      for (let y = Math.floor(envelope.minY / GRID); y <= Math.floor(envelope.maxY / GRID); y += 1) {
+        for (const mask of this.buckets.get(`${band}:${x}:${y}`) || []) {
+          if (
+            mask.west > envelope.maxX ||
+            mask.east < envelope.minX ||
+            mask.south > envelope.maxY ||
+            mask.north < envelope.minY
+          ) {
+            continue;
+          }
+          found.add(mask);
+        }
+      }
+    }
+    return [...found];
+  }
+}
 
 type Feature = {
   type: string;
@@ -107,7 +157,16 @@ function loadMasks(geojson: { features?: Array<Record<string, unknown>> }): Mask
     }
     const geom = gdal.Geometry.fromGeoJson(feature.geometry as object);
     if (!geom || geom.isEmpty()) continue;
-    masks.push({ band: props.band, cell: props.cell, geom });
+    const envelope = geom.getEnvelope();
+    masks.push({
+      band: props.band,
+      cell: props.cell,
+      geom,
+      west: envelope.minX,
+      south: envelope.minY,
+      east: envelope.maxX,
+      north: envelope.maxY,
+    });
   }
   return masks;
 }
@@ -225,7 +284,7 @@ function cut(
   geom: Geometry,
   band: number,
   layer: string,
-  masks: Mask[],
+  masks: MaskIndex,
   starts: Starts,
   maxZoom: number,
   family: string,
@@ -234,10 +293,11 @@ function cut(
   let remaining = clean(geom);
   if (!remaining) return 0;
   let written = 0;
+  const envelope = remaining.getEnvelope();
   for (let higher = band + 1; higher <= 6; higher += 1) {
-    const covering = masks.filter(
-      (mask) => mask.band === higher && starts.byClass.has(`${mask.cell}\0${layer}`)
-    );
+    const covering = masks
+      .near(higher, envelope)
+      .filter((mask) => starts.byClass.has(`${mask.cell}\0${layer}`));
     for (const mask of covering) {
       if (!remaining || remaining.isEmpty()) return written;
       const inside = clean(remaining.intersection(mask.geom));
@@ -261,7 +321,7 @@ export async function peelFeatures(
 ): Promise<number> {
   const spec = JSON.parse(await readFile(specPath, "utf8")) as { maxZoom: number };
   const maxZoom = spec.maxZoom;
-  const masks = loadMasks(JSON.parse(await readFile(masksPath, "utf8")));
+  const masks = new MaskIndex(loadMasks(JSON.parse(await readFile(masksPath, "utf8"))));
   const starts = await classStarts(featuresPath);
   const out = createWriteStream(outPath);
   let written = 0;

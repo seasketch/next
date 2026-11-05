@@ -99,6 +99,8 @@ function contourText(): Expr {
 
 const obj = ["coalesce", ["get", "obj"], ""] as Expr;
 const beacon = ["==", ["slice", obj, 0, 3], "BCN"] as Expr;
+/** Lines only. Stroked areas come with a separate outline that leaves out the cell edge. */
+const stroke = ["match", ["geometry-type"], ["LineString", "MultiLineString"], true, false] as Expr;
 
 /** IALA-B mark: cans to port, cones to starboard, cardinals by CATCAM. */
 function aidIcon(): Expr {
@@ -240,11 +242,60 @@ export type S57StyleOptions = {
   sprite?: string;
 };
 
+export type S57SourceSet = Array<{
+  /** Archive id, such as `harbour`. Becomes part of the source and layer ids. */
+  id: string;
+  source: S57VectorSource;
+}>;
+
+/**
+ * A small-scale archive stops short of zoom 16 and is overzoomed. Ranges the
+ * tiles can no longer express travel as `zmin` / `zmax`. Filters see integer
+ * zooms, as tippecanoe's tile ranges do.
+ */
+const zoomGate = [
+  "all",
+  [">=", ["zoom"], ["coalesce", ["get", "zmin"], 0]],
+  ["<=", ["zoom"], ["coalesce", ["get", "zmax"], 24]],
+] as Expr;
+
 /**
  * Mapbox GL style for an S-57 chart. Pass a TileJSON url, or a vector-tile
- * template such as the demo's `/tiles/{z}/{x}/{y}.mvt`. Not for navigation.
+ * template such as the demo's `/tiles/{z}/{x}/{y}.mvt`, or one of those per
+ * scale archive, smallest scale first. Each chart layer is repeated per
+ * archive, so a harbour chart draws over the approach chart beneath it.
+ * Not for navigation.
  */
 export function buildS57Style(
+  source: S57VectorSource | S57SourceSet,
+  options?: S57StyleOptions
+): Record<string, unknown> {
+  const set: S57SourceSet = Array.isArray(source) ? source : [{ id: "", source }];
+  const style = singleSourceStyle(set[0].source, options);
+  const sources: Record<string, unknown> = {};
+  const layers: Array<Record<string, unknown>> = [];
+  const sourceId = (entry: S57SourceSet[number]) => (entry.id ? `s57-${entry.id}` : "s57");
+  for (const entry of set) {
+    sources[sourceId(entry)] = (singleSourceStyle(entry.source, options).sources as Record<string, unknown>).s57;
+  }
+  for (const layer of style.layers as Array<Record<string, unknown>>) {
+    if (!layer.source) {
+      layers.push(layer);
+      continue;
+    }
+    for (const entry of set) {
+      layers.push({
+        ...layer,
+        id: entry.id ? `${layer.id}-${entry.id}` : layer.id,
+        source: sourceId(entry),
+        filter: layer.filter ? ["all", zoomGate, layer.filter] : zoomGate,
+      });
+    }
+  }
+  return { ...style, sources, layers };
+}
+
+function singleSourceStyle(
   source: S57VectorSource,
   options?: S57StyleOptions
 ): Record<string, unknown> {
@@ -363,7 +414,7 @@ export function buildS57Style(
         type: "line",
         source: id,
         "source-layer": "depth_area",
-        filter: ["==", obj, "DRGARE"],
+        filter: ["all", stroke, ["==", obj, "DRGARE"]],
         paint: { "line-color": CHBLK, "line-width": 0.7, "line-dasharray": [2, 1] },
       },
       {
@@ -453,6 +504,7 @@ export function buildS57Style(
         type: "line",
         source: id,
         "source-layer": "separation",
+        filter: stroke,
         layout: { "line-join": "round", "line-cap": "butt" },
         paint: { "line-color": CHMGD, "line-width": 1.35, "line-dasharray": [5, 2] },
       },
@@ -462,6 +514,7 @@ export function buildS57Style(
         source: id,
         "source-layer": "regulated",
         minzoom: 9,
+        filter: stroke,
         paint: { "line-color": CHMGD, "line-width": 1.25, "line-dasharray": [3, 2] },
       },
       {
@@ -496,6 +549,7 @@ export function buildS57Style(
         source: id,
         "source-layer": "cable",
         minzoom: 11,
+        filter: stroke,
         paint: { "line-color": CHMGD, "line-width": 1.15, "line-dasharray": [8, 3] },
       },
       {
@@ -513,6 +567,7 @@ export function buildS57Style(
         source: id,
         "source-layer": "route",
         minzoom: 11,
+        filter: stroke,
         paint: { "line-color": CHBLK, "line-width": 1.05, "line-dasharray": [6, 3] },
       },
       {
@@ -520,7 +575,7 @@ export function buildS57Style(
         type: "line",
         source: id,
         "source-layer": "hazard",
-        filter: ["!=", ["geometry-type"], "Point"],
+        filter: stroke,
         minzoom: 11,
         paint: { "line-color": CHMGD, "line-width": 1.15, "line-dasharray": [1, 1] },
       },

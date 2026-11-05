@@ -1,8 +1,8 @@
 # @seasketch/s57
 
-Reads unencrypted NOAA S-57 cells, peels overlapping usage bands, and writes a PMTiles archive of Mapbox vector tiles. The chart style uses the S-52 day colours (shallow water is the saturated blue, deep water is the pale wash), italic soundings, and IALA-B buoy marks from `public/s57`.
+Reads unencrypted NOAA S-57 cells, peels overlapping usage bands, and writes Mapbox vector tiles as one PMTiles archive per chart scale (`small`, `coastal`, `approach`, `harbour`). Each archive is cut only as deep as its charts, and the style overzooms it past that, which keeps a large catalog from filling zoom 16 with open ocean. The chart style uses the S-52 day colours (shallow water is the saturated blue, deep water is the pale wash), italic soundings, and IALA-B buoy marks from `public/s57`.
 
-SeaSketch's API calls `processEncFiles`. The demo is separate: it serves those tiles as `/{z}/{x}/{y}.mvt` and draws them with the same mapbox-gl 3.4 build the client uses.
+SeaSketch's API calls `processEncFiles`. The demo is separate: it serves those tiles as `/tiles/{archive}/{z}/{x}/{y}.mvt` and draws them with the same mapbox-gl 3.4 build the client uses.
 
 ```bash
 # Downloads the NOAA cells for the Santa Barbara Channel into

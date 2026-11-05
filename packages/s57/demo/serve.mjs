@@ -1,9 +1,11 @@
 /**
- * Serves the chart demo and the archive as raw Mapbox vector tiles.
+ * Serves the chart demo and its archives as raw Mapbox vector tiles. Takes a
+ * chart directory (one archive per scale and a manifest.json), or a single
+ * archive from before charts were split by scale.
  *
- *   node demo/serve.mjs [chart.pmtiles] [port]
+ *   node demo/serve.mjs [chart-dir | chart.pmtiles] [port]
  */
-import { createReadStream, existsSync, statSync } from "fs";
+import { createReadStream, existsSync, readFileSync, statSync } from "fs";
 import { createServer } from "http";
 import path from "path";
 import { fileURLToPath } from "url";
@@ -16,8 +18,7 @@ const require = createRequire(import.meta.url);
 const { buildS57Style } = require(path.join(here, "../dist/style.js"));
 // SeaSketch pins mapbox-gl 3.4 on the client. The demo uses that same build.
 const mapboxDir = path.join(root, "packages/client/node_modules/mapbox-gl");
-const archive =
-  process.argv[2] || path.join(root, ".data/enc-fixtures/channel.pmtiles");
+const archive = process.argv[2] || path.join(root, ".data/enc-fixtures/channel");
 const port = Number(process.argv[3] || 4173);
 if (!existsSync(archive)) {
   console.error(`No chart archive at ${archive}. Run npm run chart --workspace @seasketch/s57`);
@@ -45,8 +46,29 @@ class FileBytes {
   }
 }
 
-const tiles = new PMTiles(new FileBytes(archive));
-const header = await tiles.getHeader();
+const entries = statSync(archive).isDirectory()
+  ? JSON.parse(readFileSync(path.join(archive, "manifest.json"), "utf8")).map((entry) => ({
+      ...entry,
+      file: path.join(archive, entry.file),
+    }))
+  : [{ source: "", file: archive }];
+const archives = new Map();
+for (const entry of entries) {
+  const tiles = new PMTiles(new FileBytes(entry.file));
+  archives.set(entry.source, { tiles, header: await tiles.getHeader() });
+}
+const headers = [...archives.values()].map((entry) => entry.header);
+const header = {
+  minLon: Math.min(...headers.map((h) => h.minLon)),
+  minLat: Math.min(...headers.map((h) => h.minLat)),
+  maxLon: Math.max(...headers.map((h) => h.maxLon)),
+  maxLat: Math.max(...headers.map((h) => h.maxLat)),
+  minZoom: Math.min(...headers.map((h) => h.minZoom)),
+  maxZoom: Math.max(...headers.map((h) => h.maxZoom)),
+  centerLon: headers[headers.length - 1].centerLon,
+  centerLat: headers[headers.length - 1].centerLat,
+  centerZoom: headers[headers.length - 1].centerZoom,
+};
 
 const assetDir = path.join(here, "../public/s57");
 const types = {
@@ -72,13 +94,15 @@ const server = createServer(async (req, res) => {
   const url = new URL(req.url || "/", "http://localhost");
   if (url.pathname === "/style.json") {
     const origin = `http://${req.headers.host}`;
+    const sourceFor = (id, h) => ({
+      tiles: [`${origin}/tiles/${id ? `${id}/` : ""}{z}/{x}/{y}.mvt`],
+      bounds: [h.minLon, h.minLat, h.maxLon, h.maxLat],
+      minzoom: h.minZoom,
+      maxzoom: h.maxZoom,
+    });
+    const set = [...archives.entries()].map(([id, entry]) => ({ id, source: sourceFor(id, entry.header) }));
     const style = buildS57Style(
-      {
-        tiles: [`${origin}/tiles/{z}/{x}/{y}.mvt`],
-        bounds: [header.minLon, header.minLat, header.maxLon, header.maxLat],
-        minzoom: header.minZoom,
-        maxzoom: header.maxZoom,
-      },
+      set.length === 1 && !set[0].id ? set[0].source : set,
       // Mapbox only accepts a sprite URL with a scheme. A root-relative path throws.
       { sprite: `${origin}/s57/sprite` }
     );
@@ -99,12 +123,12 @@ const server = createServer(async (req, res) => {
     );
     return;
   }
-  const tileMatch = url.pathname.match(/^\/tiles\/(\d+)\/(\d+)\/(\d+)\.mvt$/);
-  if (tileMatch) {
-    const z = Number(tileMatch[1]);
-    const x = Number(tileMatch[2]);
-    const y = Number(tileMatch[3]);
-    const tile = await tiles.getZxy(z, x, y);
+  const tileMatch = url.pathname.match(/^\/tiles\/(?:([a-z]+)\/)?(\d+)\/(\d+)\/(\d+)\.mvt$/);
+  if (tileMatch && archives.has(tileMatch[1] || "")) {
+    const z = Number(tileMatch[2]);
+    const x = Number(tileMatch[3]);
+    const y = Number(tileMatch[4]);
+    const tile = await archives.get(tileMatch[1] || "").tiles.getZxy(z, x, y);
     if (!tile) {
       res.writeHead(204);
       res.end();

@@ -144,6 +144,46 @@ export const BAND_MIN_ZOOM: Record<number, number> = {
 
 export const ENC_MAX_ZOOM = 16;
 
+export type EncSource = { id: string; bands: number[]; maxzoom: number };
+
+/**
+ * One tile archive per group of usage bands, each cut only as deep as its
+ * data. The map overzooms past that. In one archive, every overview depth
+ * area runs to zoom 16 wherever no harbour chart covers it: a coastline's
+ * open ocean becomes millions of tiles of a single fill.
+ */
+export const ENC_SOURCES: EncSource[] = [
+  { id: "small", bands: [1, 2], maxzoom: 10 },
+  { id: "coastal", bands: [3], maxzoom: 12 },
+  { id: "approach", bands: [4], maxzoom: 14 },
+  { id: "harbour", bands: [5, 6], maxzoom: ENC_MAX_ZOOM },
+];
+
+/** The archive a band's features go in. A cell without a band is treated as harbour scale. */
+export function sourceForBand(band: unknown): EncSource {
+  const found = ENC_SOURCES.find((source) => typeof band === "number" && source.bands.includes(band));
+  return found || ENC_SOURCES[ENC_SOURCES.length - 1];
+}
+
+/**
+ * Fit a feature's zoom range into its archive. Past the archive's last zoom
+ * the map overzooms that tile, so a range that ends or starts there moves to
+ * `zmin` / `zmax` properties for the style to filter on.
+ */
+export function fitToSource(
+  feature: { properties: Record<string, unknown>; tippecanoe: { minzoom: number; maxzoom: number } },
+  source: EncSource
+): void {
+  const { minzoom, maxzoom } = feature.tippecanoe;
+  if (source.maxzoom >= ENC_MAX_ZOOM) return;
+  if (minzoom > source.maxzoom) {
+    feature.properties.zmin = minzoom;
+    feature.tippecanoe.minzoom = source.maxzoom;
+  }
+  if (maxzoom >= source.maxzoom && maxzoom < ENC_MAX_ZOOM) feature.properties.zmax = maxzoom;
+  feature.tippecanoe.maxzoom = Math.min(maxzoom, source.maxzoom);
+}
+
 export function bandMinZoom(band: number | null): number {
   if (band == null) return 0;
   const zoom = BAND_MIN_ZOOM[band];

@@ -13,8 +13,10 @@ const root = path.resolve(__dirname, "../../..");
 /** Gitignored NOAA ENC zips for the channel demo. */
 export const channelCellsDir = path.join(root, ".data/enc-fixtures/sb-channel");
 
-/** Gitignored PMTiles archive the demo serves. */
-export const channelArchivePath = path.join(root, ".data/enc-fixtures/channel.pmtiles");
+/** Gitignored directory of PMTiles archives, one per scale, and their `manifest.json`. */
+export const channelChartDir = path.join(root, ".data/enc-fixtures/channel");
+
+export type ChartManifest = Array<{ source: string; maxzoom: number; file: string }>;
 
 /** Daily NOAA ENC product catalog. Cells and their zip URLs live here. */
 export const NOAA_ENC_CATALOG_URL = "https://charts.noaa.gov/ENCs/ENCProdCat.xml";
