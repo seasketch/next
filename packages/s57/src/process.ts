@@ -14,6 +14,7 @@ import {
   extendBounds,
   rewriteEncFeature,
 } from "./layers.js";
+import { ChartFeature, clipDepthCoveredByLand } from "./landCover.js";
 import { peelFeatures } from "./peel.js";
 
 export type EncClip = [number, number, number, number];
@@ -282,7 +283,7 @@ export async function processEncFiles(
       } catch {
         // A cell with no coverage polygon cannot mask the charts under it.
       }
-      let cellFeatures = 0;
+      const pending: ChartFeature[] = [];
       for (const objectClass of layers) {
         const exportPath = path.join(exportDir, `${cell}-${objectClass}.geojsonl`);
         try {
@@ -297,8 +298,13 @@ export async function processEncFiles(
           objectClass,
           ignoreScaleMinimum: ignoresScaleMinimum(objectClass),
         };
-        cellFeatures += await readFeatures(exportPath, meta, write, bounds);
+        await readFeatures(exportPath, meta, (feature) => pending.push(feature as ChartFeature), bounds);
       }
+      // Creek beds are shallow depth areas tucked into the shoreline. Close the
+      // narrow ones and join the small fingers onto the land before tiling.
+      const clipped = clipDepthCoveredByLand(pending);
+      for (const feature of clipped) write(feature as Record<string, unknown>);
+      const cellFeatures = clipped.length;
       cells.push({ cell, band, layers, featureCount: cellFeatures });
       featureCount += cellFeatures;
     }
@@ -343,6 +349,7 @@ export async function processEncFiles(
         "--full-detail=14",
         "--low-detail=12",
         "--detect-shared-borders",
+        "--no-simplification-of-shared-nodes",
         "--no-tiny-polygon-reduction",
         // Coastal tiles are the dense ones. Dropping their largest polygons
         // to fit a byte budget leaves the shore blank and the next tile,

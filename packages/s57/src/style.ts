@@ -255,19 +255,25 @@ export function buildS57Style(
         paint: { "fill-color": LANDA },
       },
       {
-        id: "s57-built",
-        type: "fill",
-        source: id,
-        "source-layer": "land",
-        filter: ["==", obj, "BUAARE"],
-        paint: { "fill-color": "#b7a56a" },
-      },
-      {
         id: "s57-inland",
         type: "fill",
         source: id,
         "source-layer": "inland_water",
+        filter: ["in", ["geometry-type"], ["literal", ["Polygon", "MultiPolygon"]]],
         paint: { "fill-color": DEPMS },
+      },
+      {
+        // River and canal centerlines. A fill layer never draws a line.
+        id: "s57-river",
+        type: "line",
+        source: id,
+        "source-layer": "inland_water",
+        filter: ["in", ["geometry-type"], ["literal", ["LineString", "MultiLineString"]]],
+        layout: { "line-join": "round", "line-cap": "round" },
+        paint: {
+          "line-color": "#5aa3d6",
+          "line-width": ["interpolate", ["linear"], ["zoom"], 9, 0.6, 14, 1.6],
+        },
       },
       {
         id: "s57-coast-fill",
