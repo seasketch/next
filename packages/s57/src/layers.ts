@@ -78,6 +78,17 @@ export const SKIN_CLASSES = new Set([
   "PONTON",
 ]);
 
+/**
+ * These objects are the chart at that usage band, so they appear for the whole
+ * time the band is the one on screen. A scale minimum would hide the coastal
+ * contours while the coastal depth areas were already drawn.
+ */
+export function ignoresScaleMinimum(objectClass: string | undefined): boolean {
+  return (
+    objectClass != null && (SKIN_CLASSES.has(objectClass) || objectClass === "DEPCNT")
+  );
+}
+
 /** Record bookkeeping GDAL copies onto every feature. Not useful in a tile. */
 const DROPPED_ATTRIBUTES = new Set([
   "RCID",

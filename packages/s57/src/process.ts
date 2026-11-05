@@ -9,7 +9,7 @@ import {
   ENC_LAYER_BY_CLASS,
   ENC_MAX_ZOOM,
   EncFeatureMeta,
-  SKIN_CLASSES,
+  ignoresScaleMinimum,
   bandFromCellName,
   extendBounds,
   rewriteEncFeature,
@@ -99,7 +99,11 @@ async function readFeatures(
   return count;
 }
 
-async function readCoverage(file: string, band: number | null): Promise<unknown[]> {
+async function readCoverage(
+  file: string,
+  band: number | null,
+  cell: string
+): Promise<unknown[]> {
   const info = await stat(file);
   if (info.size === 0 || band == null) return [];
   const features: unknown[] = [];
@@ -115,7 +119,7 @@ async function readCoverage(file: string, band: number | null): Promise<unknown[
       if (parsed.type !== "Feature" || !parsed.geometry) continue;
       features.push({
         type: "Feature",
-        properties: { band },
+        properties: { band, cell },
         geometry: parsed.geometry,
       });
     } catch {
@@ -281,7 +285,7 @@ export async function processEncFiles(
       const coverPath = path.join(exportDir, `${cell}-M_COVR.geojsonl`);
       try {
         await run("ogr2ogr", ogrExportArgs(coverPath, cellPath, "M_COVR", clip, "CATCOV = 1"));
-        coverage.push(...(await readCoverage(coverPath, band)));
+        coverage.push(...(await readCoverage(coverPath, band, cell)));
       } catch {
         // A cell with no coverage polygon cannot mask the charts under it.
       }
@@ -298,7 +302,7 @@ export async function processEncFiles(
           band,
           layer: ENC_LAYER_BY_CLASS[objectClass],
           objectClass,
-          ignoreScaleMinimum: SKIN_CLASSES.has(objectClass),
+          ignoreScaleMinimum: ignoresScaleMinimum(objectClass),
         };
         cellFeatures += await readFeatures(exportPath, meta, write, bounds);
       }
@@ -347,9 +351,10 @@ export async function processEncFiles(
         "--low-detail=12",
         "--detect-shared-borders",
         "--no-tiny-polygon-reduction",
-        "--drop-densest-as-needed",
-        "--extend-zooms-if-still-dropping",
-        "--maximum-tile-bytes=1500000",
+        // Coastal tiles are the dense ones. Dropping their largest polygons
+        // to fit a byte budget leaves the shore blank and the next tile,
+        // offshore, still holding the depth bands. Simplify instead.
+        "--no-tile-size-limit",
         "--no-feature-limit",
         "--generate-ids",
         peeledAreas,

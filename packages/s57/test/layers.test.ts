@@ -4,6 +4,7 @@ import {
   ENC_LAYER_BY_CLASS,
   ENC_MAX_ZOOM,
   aidMark,
+  ignoresScaleMinimum,
   bandFromCellName,
   bandMinZoom,
   extendBounds,
@@ -79,6 +80,28 @@ describe("S-57 feature normalization", () => {
     assert.equal(bandMinZoom(1), 0);
     assert.ok(bandMinZoom(4) < bandMinZoom(5));
     assert.ok(bandMinZoom(5) < ENC_MAX_ZOOM);
+  });
+
+  it("depth contours use the band zoom so a coastal chart is not blank", () => {
+    assert.equal(ignoresScaleMinimum("DEPCNT"), true);
+    assert.equal(ignoresScaleMinimum("DEPARE"), true);
+    assert.equal(ignoresScaleMinimum("SOUNDG"), false);
+    const feature = rewriteEncFeature(
+      {
+        type: "Feature",
+        properties: { SCAMIN: 349999, VALDCO: 18.2 },
+        geometry: { type: "LineString", coordinates: [[-120, 34.4], [-119.5, 34.4]] },
+      },
+      {
+        cell: "US3CA1DH",
+        band: 3,
+        layer: "depth_contour",
+        objectClass: "DEPCNT",
+        ignoreScaleMinimum: ignoresScaleMinimum("DEPCNT"),
+      }
+    );
+    const tippecanoe = feature!.tippecanoe as { minzoom: number };
+    assert.equal(tippecanoe.minzoom, bandMinZoom(3));
   });
 
   it("skin-of-the-earth features ignore SCAMIN so the cell does not develop holes", () => {

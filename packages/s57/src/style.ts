@@ -27,7 +27,11 @@ function depthMetres(): Expr {
   return ["to-number", ["coalesce", ["get", "DRVAL1"], 30]];
 }
 
-/** Four depth shades split at 0, 2, 5 and 10 metres, plus intertidal and unsurveyed. */
+/**
+ * Harbour charts step at 2, 5 and 10 m. Coastal charts step at the fathom
+ * lines (about 18, 37, 55, 91 m), so those shelves have to stay visible or
+ * the zoomed-out coast is the same colour as empty water.
+ */
 function depthColor(): Expr {
   const depth = depthMetres();
   return [
@@ -42,6 +46,12 @@ function depthColor(): Expr {
     DEPMS,
     ["<", depth, 10],
     DEPMD,
+    ["<", depth, 20],
+    "#b4d3e3",
+    ["<", depth, 50],
+    "#c3dce6",
+    ["<", depth, 100],
+    "#cde4eb",
     DEPDW,
   ];
 }
