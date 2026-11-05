@@ -13,7 +13,7 @@ Goals
 - An admin can publish any valid subset of pending overlay-list changes. Unselected published items keep their current public state; unselected new items stay unpublished.
 - The published tree is always structurally valid after every publish (no orphans, unique stable ids, correct paths, a usable order).
 - What a checkbox will do is legible from the list itself, without warning banners.
-- Partial publish works by inspecting the two trees and making the smallest possible edits to the published one. It does not add changelog field groups or change what existing changelog rows store.
+- Partial publish works by inspecting the two trees and making the smallest possible edits to the published one. It does not add changelog field groups or change what existing changelog rows store. Renumbering `sort_index`/`z_index` integers on unselected rows is fine; only the visible order matters.
 
 Non-goals
 
@@ -98,25 +98,20 @@ Removed units and their bundles are computed from the **published** tree: a publ
 
 Publishing a removal deletes the published TOC row and, by cascade or explicit delete, its data layer, interactivity settings, ACL, data tables, and the data source if no remaining published layer references it. Nothing in the changelog is consulted or stored.
 
-### 5.4 Sibling order: place the item between its draft neighbours (hard: deterministic; nothing else moves)
+### 5.4 Sibling order: insert the item after its draft predecessor (hard: deterministic; visible order of unselected siblings is unchanged)
 
-Publishing an Added or moved item must give it a `sort_index` among its published siblings. Unselected siblings must not move. The server looks at the draft order and the published order and edits only the item being published:
+Publishing an Added or moved item must give it a position among its published siblings. The *visible* order of unselected siblings must not change; their `sort_index` integers may. Neither `sort_index` nor `z_index` is exposed to users, only the order they produce, so the server simply rewrites the integers of the affected sibling group:
 
-1. In the draft, find the nearest preceding sibling A of X (same `parent_stable_id`) that will exist in the target tree under that parent.
-2. In the published tree, find B, the sibling immediately after A (or the first published sibling if there is no A).
-3. Set `X.sort_index` strictly between A and B: `(A + B) / 2`, or `B - 1` / `A + 1` at the ends.
+1. Take the published children of X's draft parent in their published order (after this run's removals).
+2. In the draft, find the nearest preceding sibling A of X that is in that list; insert X immediately after A (or first if there is no A).
+3. Renumber the group 0..n-1.
 
-If X is Updated and still sits between the same published neighbours as before, its published `sort_index` is reused; publishing an edit never changes position. Selected siblings are processed in draft order so that chains (`A, X, Y`) place correctly. Removed items simply leave gaps.
-
-`sort_index` is `integer` today, so "change 4 to 1.5" needs one of:
-
-- **(a) Widen `sort_index` (and `z_index`) to `double precision`.** Draft-side functions keep writing integers; GraphQL changes from `Int` to `Float`, which is still `number` on the client; the full publish still copies integers. Recommended: unselected rows are never written.
-- (b) Keep integers; use the gap when `B - A ≥ 2`, otherwise shift B and the published siblings after it by +1. Touches unselected rows (derived order only) and needs the immutability bypass.
+Selected siblings are processed in draft order so chains (`A, X, Y`) land correctly. An Updated item that did not move keeps its slot. Removed items are dropped before renumbering. The renumbering of unselected published rows is a derived-column write and runs under the publish-time bypass (§6.3).
 
 ### 5.5 Z-order: same rule, project-wide (hard: a published layer always has a defined z)
 
-- A published Added/Updated layer gets `z_index` placed between the published `z_index` values of its nearest draft neighbours in the stacking order, using the same midpoint rule as §5.4. An Updated layer that is still between the same published neighbours keeps its published `z_index`.
-- The existing **Layer stacking order** checkbox (from the `layers:z-order-change` row) is the only way to publish reorders of layers that are not otherwise changing. When selected, every published layer whose `stable_id` exists in draft takes its draft `z_index` (a derived-column copy under the bypass; no content changes). When not selected, nothing else moves.
+- A published Added/Updated layer is inserted into the published stacking order immediately after its nearest draft z-predecessor that exists in the published tree, and all published `z_index` values are renumbered 1..n, mirroring `update_z_indexes`. An Updated layer whose draft z-neighbours are unchanged keeps its slot.
+- The existing **Layer stacking order** checkbox (from the `layers:z-order-change` row) is the only way to publish reorders of layers that are not otherwise changing. When selected, published layers whose `stable_id` exists in draft are renumbered to the draft stacking order. When not selected, the relative order of unselected layers is unchanged.
 - Pending state for this row is a diff, not a timestamp: it is shown while the relative stacking of layers present in both trees differs.
 
 ### 5.6 Shared data sources (hard for coherence, cheap to enforce)
@@ -177,9 +172,9 @@ No new field groups, and nothing new is written into `from_summary`, `to_summary
 1. Advisory lock; permission check.
 2. Compute units and edges (`requires`, `bound`) from the two trees; expand `stable_ids` to the closure. The UI already shows these as linked, so the server behaves identically and returns the final set.
 3. Removed units, deepest `path` first: delete published rows and dependents (§5.3).
-4. Added/Updated units, ancestors first: delete the stale published copy if any, compute `sort_index` and `z_index` per §5.4/§5.5, `_publish_copy_toc_item` with the published parent's path.
+4. Added/Updated units, ancestors first: delete the stale published copy if any, `_publish_copy_toc_item` with the published parent's path and a provisional `sort_index`/`z_index`.
 5. Copy sources for the layers written in this run; repoint.
-6. Under `set local seasketch.publishing = 'true'` (honoured by the immutability trigger like the existing bypass): rewrite `path` for descendants of moved folders; if `include_z_order`, copy draft `z_index` onto matching published layers.
+6. Under `set local seasketch.publishing = 'true'` (honoured by the immutability trigger like the existing bypass): renumber `sort_index` for every sibling group that gained or lost members (§5.4); renumber `z_index` across published layers (§5.5), to the draft order if `include_z_order`; rewrite `path` for descendants of moved folders (§5.7).
 7. Stamp `published_at`, update project flags, record `layers:published`, return the published rows written.
 8. `publishTilesAclPlugin` rewrites the tiles ACL document; extend the wrapper to this mutation.
 
@@ -258,10 +253,10 @@ Folders
 Ordering
 
 28. Reordered siblings within a folder, nothing else → not listed (no changelog, as today) → ships with the next full publish.
-29. Added a layer and reordered its siblings; admin checks the layer → layer inserted between the published versions of its draft neighbours; siblings untouched → §5.4.
-30. Moved a published layer to a new position in the same folder *and* edited it → Updated; placed between its new draft neighbours → §5.4.
+29. Added a layer and reordered its siblings; admin checks the layer → layer inserted after the published version of its draft predecessor; siblings keep their visible order (integers renumbered) → §5.4.
+30. Moved a published layer to a new position in the same folder *and* edited it → Updated; inserted after its new draft predecessor → §5.4.
 31. Changed only z-order → Layer stacking order row → §5.5.
-32. Added layers without checking the stacking row → each placed between its draft z-neighbours; the row remains pending if other layers still differ.
+32. Added layers without checking the stacking row → each inserted after its draft z-predecessor and `z_index` renumbered; the row remains pending if other layers still differ.
 33. Checked the stacking row only → published layers present in draft take draft `z_index`; nothing else published.
 
 Multi-editor and timing
@@ -279,7 +274,6 @@ Cross-cutting
 
 ## 9. Open questions
 
-- Widen `sort_index`/`z_index` to `double precision` (5.4a) or keep integers and shift neighbours (5.4b)?
-- Should selecting an Added layer imply the stacking row when its draft z-neighbours are themselves pending? Current recommendation: no; midpoint placement is good enough and keeps the row honest.
+- Should selecting an Added layer imply the stacking row when its draft z-neighbours are themselves pending? Current recommendation: no; predecessor placement is good enough and keeps the row honest.
 - Published reports referencing layers: should publishing a Removed layer check published report cards, or is a dangling reference acceptable?
 - Whether the per-item pending computation lives in SQL (shared with the mutation's closure) or a plugin. One SQL implementation is preferred.
