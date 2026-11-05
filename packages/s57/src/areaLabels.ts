@@ -8,6 +8,7 @@ import gdal from "gdal-async";
  * would say its name four times. These get one interior point instead.
  */
 export const LABELLED_AREAS = new Set([
+  "LNDARE",
   "BUAARE",
   "ACHARE",
   "RESARE",

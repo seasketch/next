@@ -525,26 +525,6 @@ export function buildS57Style(
         paint: { "line-color": CHMGD, "line-width": 1.15, "line-dasharray": [1, 1] },
       },
       {
-        id: "s57-sea-name",
-        type: "symbol",
-        source: id,
-        "source-layer": "place",
-        minzoom: 7,
-        filter: ["all", point, named, ["in", obj, ["literal", ["SEAARE", "LNDRGN"]]]],
-        layout: {
-          "text-field": ["get", "OBJNAM"],
-          "text-font": ITALIC,
-          "text-size": ["interpolate", ["linear"], ["zoom"], 7, 12, 12, 18],
-          "text-max-width": 8,
-          "text-padding": 8,
-        },
-        paint: {
-          "text-color": ["case", ["==", obj, "LNDRGN"], CHBLK, "#2c3d44"],
-          "text-halo-color": ["case", ["==", obj, "LNDRGN"], "#f3ecd4", PAPER],
-          "text-halo-width": 1.4,
-        },
-      },
-      {
         id: "s57-town-name",
         type: "symbol",
         source: id,
@@ -583,6 +563,52 @@ export function buildS57Style(
         },
       },
       {
+        // Above the soundings, so a bay or point keeps its name where the
+        // soundings are dense. Sea names are the large ones.
+        id: "s57-sea-name",
+        type: "symbol",
+        source: id,
+        "source-layer": "place",
+        minzoom: 7,
+        filter: ["all", point, named, ["in", obj, ["literal", ["SEAARE", "LNDRGN"]]]],
+        layout: {
+          "text-field": ["get", "OBJNAM"],
+          "text-font": ITALIC,
+          "text-size": [
+            "interpolate",
+            ["linear"],
+            ["zoom"],
+            7,
+            ["case", ["==", obj, "LNDRGN"], 10, 12],
+            12,
+            ["case", ["==", obj, "LNDRGN"], 12, 16],
+          ],
+          "text-max-width": 8,
+          "text-padding": 6,
+        },
+        paint: {
+          "text-color": ["case", ["==", obj, "LNDRGN"], CHBLK, "#2c3d44"],
+          "text-halo-color": ["case", ["==", obj, "LNDRGN"], LAND_HALO, PAPER],
+          "text-halo-width": 1.4,
+        },
+      },
+      {
+        id: "s57-island-name",
+        type: "symbol",
+        source: id,
+        "source-layer": "land",
+        minzoom: 9,
+        filter: ["all", point, named, ["==", obj, "LNDARE"]],
+        layout: {
+          "text-field": ["get", "OBJNAM"],
+          "text-font": ROMAN,
+          "text-size": ["interpolate", ["linear"], ["zoom"], 9, 11, 13, 14],
+          "text-max-width": 8,
+          "text-padding": 6,
+        },
+        paint: { "text-color": CHBLK, "text-halo-color": LAND_HALO, "text-halo-width": 1.3 },
+      },
+      {
         id: "s57-seabed",
         type: "symbol",
         source: id,
@@ -593,7 +619,8 @@ export function buildS57Style(
           "text-field": ["get", "seabed"],
           "text-font": ITALIC,
           "text-size": 10,
-          "text-padding": 6,
+          // Seabed letters are a texture, not a list: a few per screen.
+          "text-padding": 22,
         },
         paint: { "text-color": CHGRD, "text-halo-color": "#e7f3f5", "text-halo-width": 0.7 },
       },
@@ -746,7 +773,7 @@ export function buildS57Style(
         type: "circle",
         source: id,
         "source-layer": "land",
-        filter: ["all", point, ["==", obj, "LNDARE"]],
+        filter: ["all", point, ["==", obj, "LNDARE"], ["!", ["has", "labelpoint"]]],
         minzoom: 11,
         paint: {
           "circle-radius": ["interpolate", ["linear"], ["zoom"], 11, 1.6, 15, 3.2],
