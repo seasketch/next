@@ -20313,7 +20313,7 @@ export type BasemapDetailsFragment = (
     & Pick<OptionalBasemapLayer, 'basemapId' | 'id' | 'defaultVisibility' | 'description' | 'options' | 'groupType' | 'layers' | 'metadata' | 'name'>
   )>, encBasemap?: Maybe<(
     { __typename?: 'EncBasemap' }
-    & Pick<EncBasemap, 'bounds' | 'catalog' | 'schemaVersion'>
+    & Pick<EncBasemap, 'bounds' | 'catalog' | 'schemaVersion' | 'settings'>
   )> }
 );
 
@@ -28293,6 +28293,7 @@ export const BasemapDetailsFragmentDoc = gql`
     bounds
     catalog
     schemaVersion
+    settings
   }
 }
     `;

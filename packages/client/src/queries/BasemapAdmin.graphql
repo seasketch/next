@@ -43,6 +43,7 @@ fragment BasemapDetails on Basemap {
     bounds
     catalog
     schemaVersion
+    settings
   }
 }
 

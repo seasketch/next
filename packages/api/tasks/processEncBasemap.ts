@@ -18,6 +18,9 @@ const THUMBNAIL =
     '<svg xmlns="http://www.w3.org/2000/svg" width="240" height="240"><rect fill="#c5e8f7" width="240" height="240"/><path fill="#efe4c6" d="M0 150 L70 110 L130 160 L240 100 L240 240 L0 240 Z"/><circle cx="168" cy="78" r="6" fill="#e6a817"/><text x="16" y="36" font-family="sans-serif" font-size="20" fill="#16324a">ENC</text></svg>'
   );
 
+/** The basemap description names this many cells. The catalog keeps all of them. */
+const LISTED_CELLS = 30;
+
 async function fail(helpers: Helpers, jobId: string, message: string) {
   await helpers.withPgClient((client) =>
     client.query(
@@ -53,7 +56,7 @@ export default async function processEncBasemap(
   }
 
   const work = await mkdtemp(path.join(tmpdir(), "enc-job-"));
-  let pmtilesPath: string | null = null;
+  let archivePaths: string[] = [];
   try {
     const { rows } = await helpers.withPgClient((client) =>
       client.query(
@@ -95,8 +98,37 @@ export default async function processEncBasemap(
         [jobId]
       )
     );
-    const processed = await processEncFiles(inputs);
-    pmtilesPath = processed.pmtilesPath;
+    // A national chart takes hours. While the build is alive, keep pushing the
+    // timeout out so the cleanup task does not fail a job that is still working.
+    let stage = "reading charts";
+    const heartbeat = () =>
+      helpers
+        .withPgClient((client) =>
+          client.query(
+            `update project_background_jobs
+             set progress_message = $2,
+                 timeout_at = timezone('utc', now()) + interval '20 minutes'
+             where id = $1 and state = 'running'`,
+            [jobId, stage.slice(0, 200)]
+          )
+        )
+        .catch((error: unknown) => {
+          helpers.logger.warn(
+            `ENC job ${jobId} heartbeat failed: ${error instanceof Error ? error.message : String(error)}`
+          );
+        });
+    const beating = setInterval(heartbeat, 60_000);
+    let processed: Awaited<ReturnType<typeof processEncFiles>>;
+    try {
+      processed = await processEncFiles(inputs, {
+        onProgress: (message) => {
+          stage = message;
+        },
+      });
+    } finally {
+      clearInterval(beating);
+    }
+    archivePaths = processed.archives.map((archive) => archive.pmtilesPath);
 
     await helpers.withPgClient((client) =>
       client.query(
@@ -108,18 +140,32 @@ export default async function processEncBasemap(
       client.query(`select slug from projects where id = $1`, [projectId])
     );
     const slug = slugRow.rows[0].slug as string;
-    const tileId = uuid();
-    const objectKey = `projects/${slug}/public/${tileId}.pmtiles`;
-    await s3
-      .upload({
-        Bucket: tilesBucket,
-        Key: objectKey,
-        Body: createReadStream(pmtilesPath),
-        ContentType: "application/octet-stream",
-      })
-      .promise();
-    const url = `${tilesBase}/projects/${slug}/public/${tileId}`;
-    const cellList = processed.cells.map((cell) => cell.cell).join(", ");
+    // One hosted archive per chart scale. The style overzooms each past its
+    // maxzoom. `url` names the largest-scale archive for clients that read one.
+    const sources: Array<{ id: string; url: string; maxzoom: number }> = [];
+    for (const archive of processed.archives) {
+      const tileId = uuid();
+      await s3
+        .upload({
+          Bucket: tilesBucket,
+          Key: `projects/${slug}/public/${tileId}.pmtiles`,
+          Body: createReadStream(archive.pmtilesPath),
+          ContentType: "application/octet-stream",
+        })
+        .promise();
+      sources.push({
+        id: archive.source,
+        url: `${tilesBase}/projects/${slug}/public/${tileId}`,
+        maxzoom: archive.maxzoom,
+      });
+    }
+    if (sources.length === 0) throw new Error("The chart build produced no tile archives");
+    const url = sources[sources.length - 1].url;
+    const names = processed.cells.map((cell) => cell.cell);
+    const cellList =
+      names.length > LISTED_CELLS
+        ? `${names.slice(0, LISTED_CELLS).join(", ")} and ${names.length - LISTED_CELLS} more cells`
+        : names.join(", ");
     const description = `${cellList}. Not for navigation.`;
 
     const basemap = await helpers.withPgClient((client) =>
@@ -144,8 +190,8 @@ export default async function processEncBasemap(
     await helpers.withPgClient((client) =>
       client.query(
         `insert into enc_basemaps (basemap_id, settings, schema_version, catalog, bounds)
-         values ($1, '{}'::jsonb, 1, $2::jsonb, $3)`,
-        [basemapId, JSON.stringify(processed.cells), processed.bounds]
+         values ($1, $2::jsonb, 2, $3::jsonb, $4)`,
+        [basemapId, JSON.stringify({ sources }), JSON.stringify(processed.cells), processed.bounds]
       )
     );
     await helpers.withPgClient((client) =>
@@ -172,7 +218,7 @@ export default async function processEncBasemap(
         }`
       );
     }
-    const hosted = extractHostedTilesUuid(url);
+    const hosted = sources.map((source) => extractHostedTilesUuid(source.url)).join(", ");
     helpers.logger.info(
       `ENC basemap ${basemapId} (${hosted}) from ${processed.featureCount} features in ${processed.cells.length} cells`
     );
@@ -182,6 +228,6 @@ export default async function processEncBasemap(
     await fail(helpers, jobId, message);
   } finally {
     await rm(work, { recursive: true, force: true });
-    if (pmtilesPath) await rm(pmtilesPath, { force: true });
+    for (const archive of archivePaths) await rm(archive, { force: true });
   }
 }

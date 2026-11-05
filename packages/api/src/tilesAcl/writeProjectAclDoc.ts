@@ -301,8 +301,16 @@ async function addPublicEncBasemaps(
      ) as has_enc`
   );
   if (!enumRow.rows[0]?.has_enc) return doc;
+  // A chart split by scale hosts one archive per scale, listed in its settings.
   const enc = await client.query<{ url: string | null }>(
-    `select url from basemaps where project_id = $1 and type = 'ENC' and url is not null`,
+    `select b.url from basemaps b where b.project_id = $1 and b.type = 'ENC' and b.url is not null
+     union
+     select source->>'url' from basemaps b
+       join enc_basemaps e on e.basemap_id = b.id
+       cross join lateral jsonb_array_elements(
+         case when jsonb_typeof(e.settings->'sources') = 'array' then e.settings->'sources' else '[]'::jsonb end
+       ) as source
+     where b.project_id = $1 and b.type = 'ENC'`,
     [projectId]
   );
   const publicIds = new Set(doc.public);

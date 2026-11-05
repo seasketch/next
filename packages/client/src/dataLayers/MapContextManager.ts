@@ -2448,11 +2448,7 @@ class MapContextManager extends EventEmitter {
       "mapbox://styles/underbluewaters/cklb3vusx2dvs17pay6jp5q7e";
     let baseStyle: Style;
     if (basemap && isEncBasemapType(basemap.type)) {
-      const tileJson = this.styleSourceUrl(
-        // eslint-disable-next-line i18next/no-literal-string
-        basemap.url.endsWith(".json") ? basemap.url : `${basemap.url}.json`
-      );
-      baseStyle = buildEncStyle(tileJson);
+      baseStyle = buildEncStyle(basemap, (url) => this.styleSourceUrl(url));
     } else if (basemap?.type === BasemapType.RasterUrlTemplate) {
       let url = basemap.url;
       if (
