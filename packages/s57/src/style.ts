@@ -16,6 +16,12 @@ const CHGRD = "#5c686b";
 const DEPSC = "#3e4749";
 const CHMGD = "#c545c3";
 const PAPER = "#f4f7f4";
+const CHBRN = "#a39480";
+const LANDF = "#8c7a55";
+const LITRD = "#e8505b";
+const LITGN = "#3cb44b";
+const LITYW = "#f2c230";
+const LAND_HALO = "#ece2c0";
 
 const GLYPHS = "/s57/font/{fontstack}/{range}.pbf";
 const ITALIC = ["Open Sans Italic"];
@@ -80,51 +86,6 @@ function soundingText(): Expr {
   ];
 }
 
-function lightText(): Expr {
-  const characteristic = [
-    "match",
-    ["to-number", ["coalesce", ["get", "LITCHR"], 0]],
-    1, "F",
-    2, "Fl",
-    3, "LFl",
-    4, "Q",
-    5, "VQ",
-    6, "UQ",
-    7, "Iso",
-    8, "Oc",
-    9, "IQ",
-    12, "Mo",
-    13, "FFl",
-    25, "Al",
-    "Lt",
-  ];
-  const colour = [
-    "match",
-    ["to-number", ["coalesce", ["get", "colour"], 0]],
-    1, " W",
-    3, " R",
-    4, " G",
-    5, " Bu",
-    6, " Y",
-    11, " Y",
-    "",
-  ];
-  const group = [
-    "case",
-    ["==", ["to-string", ["coalesce", ["get", "SIGGRP"], ""]], ""],
-    "",
-    ["concat", " ", ["to-string", ["get", "SIGGRP"]]],
-  ];
-  const period = ["to-number", ["coalesce", ["get", "SIGPER"], 0]];
-  const timing = [
-    "case",
-    [">", period, 0],
-    ["concat", " ", ["to-string", ["round", period]], "s"],
-    "",
-  ];
-  return ["concat", characteristic, group, colour, timing];
-}
-
 function contourText(): Expr {
   const value = ["to-number", ["coalesce", ["get", "VALDCO"], 0]];
   const rounded = ["round", value];
@@ -159,12 +120,21 @@ function aidIcon(): Expr {
     1, "daymark",
     "daymark",
   ];
+  // Lateral marks take colour from COLOUR and shape from BOYSHP, as S-52
+  // does, so one rule serves IALA-A and the red-right-returning IALA-B.
+  const colour = ["to-number", ["coalesce", ["get", "colour"], 0]];
+  const red = ["==", colour, 3];
+  const lateralBuoy = [
+    "concat",
+    "buoy-",
+    ["case", red, "red", "green"],
+    "-",
+    ["match", ["to-number", ["coalesce", ["get", "BOYSHP"], 0]], 1, "cone", 4, "pillar", 5, "pillar", "can"],
+  ];
   return [
     "case",
-    ["==", ["get", "mark"], "port"],
-    ["case", beacon, "beacon-port", "buoy-port"],
-    ["==", ["get", "mark"], "starboard"],
-    ["case", beacon, "beacon-stbd", "buoy-stbd"],
+    ["in", ["get", "mark"], ["literal", ["port", "starboard", "lateral"]]],
+    ["case", beacon, ["case", red, "beacon-red", "beacon-green"], lateralBuoy],
     ["==", ["get", "mark"], "special"],
     ["case", beacon, "beacon-special", "buoy-special"],
     ["==", ["get", "mark"], "safe"],
@@ -192,6 +162,67 @@ function hazardIcon(): Expr {
     "WRECKS", "wreck",
     "OBSTRN", "obstruction",
     ["case", awash, "rock-awash", "rock"],
+  ];
+}
+
+function lightIcon(): Expr {
+  return [
+    "case",
+    // A sector light is drawn by its arcs; a flare would sit on top of them.
+    ["has", "SECTR1"],
+    "",
+    [
+      "match",
+      ["to-number", ["coalesce", ["get", "colour"], 0]],
+      3, "light-red",
+      4, "light-green",
+      1, "light-yellow",
+      6, "light-yellow",
+      11, "light-yellow",
+      "light",
+    ],
+  ];
+}
+
+/** A lighthouse has a name of its own. Lights on buoys and beacons do not. */
+const majorLight = [
+  "all",
+  ["has", "label"],
+  ["!=", ["slice", ["get", "label"], 0, 1], '"'],
+] as Expr;
+
+/**
+ * Lighthouses carry name and description from the approach scale. Every other
+ * light gets its description in harbour view, where there is room.
+ */
+function lightText(): Expr {
+  const description = ["coalesce", ["get", "litdsn"], ""];
+  const named = [
+    "format",
+    ["get", "label"],
+    { "font-scale": 1.05 },
+    "\n",
+    {},
+    description,
+    { "font-scale": 0.92 },
+  ];
+  return [
+    "step",
+    ["zoom"],
+    ["case", majorLight, named, ""],
+    13,
+    ["case", majorLight, named, description],
+  ];
+}
+
+function sectorColour(): Expr {
+  return [
+    "match",
+    ["get", "colour"],
+    "red", LITRD,
+    "green", LITGN,
+    "yellow", LITYW,
+    CHMGD,
   ];
 }
 
@@ -229,6 +260,7 @@ export function buildS57Style(
         };
   const id = "s57";
   const point = ["==", ["geometry-type"], "Point"];
+  const polygon = ["in", ["geometry-type"], ["literal", ["Polygon", "MultiPolygon"]]];
   const contour = ["to-number", ["coalesce", ["get", "VALDCO"], -1]];
   const named = ["!=", ["coalesce", ["get", "OBJNAM"], ""], ""];
   return {
@@ -253,6 +285,41 @@ export function buildS57Style(
         "source-layer": "land",
         filter: ["!=", ["geometry-type"], "Point"],
         paint: { "fill-color": LANDA },
+      },
+      {
+        id: "s57-built",
+        type: "fill",
+        source: id,
+        "source-layer": "land",
+        filter: ["all", ["==", obj, "BUAARE"], ["!=", ["geometry-type"], "Point"]],
+        paint: { "fill-color": CHBRN, "fill-opacity": 0.45 },
+      },
+      {
+        id: "s57-building-area",
+        type: "fill",
+        source: id,
+        "source-layer": "land_detail",
+        minzoom: 12,
+        filter: ["all", ["in", obj, ["literal", ["BUISGL", "SILTNK"]]], polygon],
+        paint: { "fill-color": "#8f7f5c", "fill-outline-color": CHBLK },
+      },
+      {
+        id: "s57-land-contour",
+        type: "line",
+        source: id,
+        "source-layer": "land_detail",
+        minzoom: 11,
+        filter: ["all", ["==", obj, "LNDELV"], ["in", ["geometry-type"], ["literal", ["LineString", "MultiLineString"]]]],
+        paint: { "line-color": LANDF, "line-width": 0.6, "line-opacity": 0.8 },
+      },
+      {
+        id: "s57-land-line",
+        type: "line",
+        source: id,
+        "source-layer": "land_detail",
+        minzoom: 13,
+        filter: ["all", ["in", obj, ["literal", ["DYKCON", "FNCLNE"]]], ["in", ["geometry-type"], ["literal", ["LineString", "MultiLineString"]]]],
+        paint: { "line-color": CHBLK, "line-width": 0.9 },
       },
       {
         id: "s57-inland",
@@ -298,6 +365,15 @@ export function buildS57Style(
         "source-layer": "depth_area",
         filter: ["==", obj, "DRGARE"],
         paint: { "line-color": CHBLK, "line-width": 0.7, "line-dasharray": [2, 1] },
+      },
+      {
+        id: "s57-kelp",
+        type: "fill",
+        source: id,
+        "source-layer": "seabed",
+        minzoom: 11,
+        filter: ["all", ["==", obj, "WEDKLP"], polygon],
+        paint: { "fill-pattern": "kelp-pattern" },
       },
       {
         id: "s57-contour",
@@ -389,6 +465,32 @@ export function buildS57Style(
         paint: { "line-color": CHMGD, "line-width": 1.25, "line-dasharray": [3, 2] },
       },
       {
+        id: "s57-light-sector-leg",
+        type: "line",
+        source: id,
+        "source-layer": "light_sector",
+        filter: ["==", ["get", "part"], "leg"],
+        paint: { "line-color": CHBLK, "line-width": 0.8, "line-dasharray": [4, 3] },
+      },
+      {
+        id: "s57-light-sector-casing",
+        type: "line",
+        source: id,
+        "source-layer": "light_sector",
+        filter: ["==", ["get", "part"], "arc"],
+        layout: { "line-cap": "butt" },
+        paint: { "line-color": CHBLK, "line-width": 4.6 },
+      },
+      {
+        id: "s57-light-sector",
+        type: "line",
+        source: id,
+        "source-layer": "light_sector",
+        filter: ["==", ["get", "part"], "arc"],
+        layout: { "line-cap": "butt" },
+        paint: { "line-color": sectorColour(), "line-width": 2.8 },
+      },
+      {
         id: "s57-cable",
         type: "line",
         source: id,
@@ -428,7 +530,7 @@ export function buildS57Style(
         source: id,
         "source-layer": "place",
         minzoom: 7,
-        filter: ["all", named, ["in", obj, ["literal", ["SEAARE", "LNDRGN"]]]],
+        filter: ["all", point, named, ["in", obj, ["literal", ["SEAARE", "LNDRGN"]]]],
         layout: {
           "text-field": ["get", "OBJNAM"],
           "text-font": ITALIC,
@@ -443,11 +545,208 @@ export function buildS57Style(
         },
       },
       {
+        id: "s57-town-name",
+        type: "symbol",
+        source: id,
+        "source-layer": "land",
+        minzoom: 10,
+        filter: ["all", point, named, ["==", obj, "BUAARE"]],
+        layout: {
+          "text-field": ["get", "OBJNAM"],
+          "text-font": ROMAN,
+          "text-size": ["interpolate", ["linear"], ["zoom"], 10, 11, 14, 14],
+          "text-max-width": 8,
+          "text-padding": 10,
+        },
+        paint: { "text-color": CHBLK, "text-halo-color": LAND_HALO, "text-halo-width": 1.3 },
+      },
+      {
+        // Soundings sit under every other label, so a light description or a
+        // buoy number is never the one that gives way.
+        id: "s57-sounding",
+        type: "symbol",
+        source: id,
+        "source-layer": "sounding",
+        minzoom: 11,
+        filter: point,
+        layout: {
+          "text-field": soundingText(),
+          "text-font": ITALIC,
+          "text-size": ["interpolate", ["linear"], ["zoom"], 11, 11, 14, 14, 16, 16],
+          "text-padding": 4,
+          "text-allow-overlap": false,
+        },
+        paint: {
+          "text-color": soundingColour(),
+          "text-halo-color": "#e7f3f5",
+          "text-halo-width": 0.7,
+        },
+      },
+      {
+        id: "s57-seabed",
+        type: "symbol",
+        source: id,
+        "source-layer": "seabed",
+        minzoom: 12,
+        filter: ["all", point, ["has", "seabed"]],
+        layout: {
+          "text-field": ["get", "seabed"],
+          "text-font": ITALIC,
+          "text-size": 10,
+          "text-padding": 6,
+        },
+        paint: { "text-color": CHGRD, "text-halo-color": "#e7f3f5", "text-halo-width": 0.7 },
+      },
+      {
+        id: "s57-kelp-point",
+        type: "symbol",
+        source: id,
+        "source-layer": "seabed",
+        minzoom: 12,
+        filter: ["all", point, ["==", obj, "WEDKLP"]],
+        layout: { "icon-image": "kelp", "icon-size": 0.4, "icon-padding": 2 },
+      },
+      {
+        id: "s57-regulated-name",
+        type: "symbol",
+        source: id,
+        "source-layer": "regulated",
+        minzoom: 12,
+        filter: [
+          "all",
+          point,
+          named,
+          ["in", obj, ["literal", ["RESARE", "MIPARE", "DMPGRD", "PRCARE", "MARCUL"]]],
+        ],
+        layout: {
+          "text-field": ["get", "OBJNAM"],
+          "text-font": ITALIC,
+          "text-size": 11,
+          "text-max-width": 9,
+          "text-padding": 12,
+        },
+        paint: { "text-color": CHMGD, "text-halo-color": PAPER, "text-halo-width": 1.2 },
+      },
+      {
+        id: "s57-anchorage",
+        type: "symbol",
+        source: id,
+        "source-layer": "regulated",
+        minzoom: 11,
+        filter: ["all", point, ["==", obj, "ACHARE"]],
+        layout: {
+          "icon-image": "anchor",
+          "icon-size": ["interpolate", ["linear"], ["zoom"], 11, 0.32, 15, 0.5],
+          "icon-padding": 20,
+          "text-field": ["step", ["zoom"], "", 13, ["coalesce", ["get", "OBJNAM"], ""]],
+          "text-font": ITALIC,
+          "text-size": 11,
+          "text-max-width": 9,
+          "text-offset": [0, 1.4],
+          "text-anchor": "top",
+          "text-optional": true,
+        },
+        paint: { "text-color": CHMGD, "text-halo-color": PAPER, "text-halo-width": 1.2 },
+      },
+      {
+        id: "s57-pilot",
+        type: "symbol",
+        source: id,
+        "source-layer": "regulated",
+        minzoom: 12,
+        filter: ["all", point, ["==", obj, "PILBOP"]],
+        layout: {
+          "text-field": "Pilots",
+          "text-font": ITALIC,
+          "text-size": 11,
+        },
+        paint: { "text-color": CHMGD, "text-halo-color": PAPER, "text-halo-width": 1.2 },
+      },
+      {
+        id: "s57-elevation",
+        type: "symbol",
+        source: id,
+        "source-layer": "land_detail",
+        minzoom: 12,
+        filter: ["all", point, ["==", obj, "LNDELV"], ["has", "ELEVAT"]],
+        layout: {
+          "icon-image": "spot-height",
+          "icon-size": 0.28,
+          "text-field": ["concat", ["to-string", ["round", ["to-number", ["get", "ELEVAT"]]]], "m"],
+          "text-font": ROMAN,
+          "text-size": 10,
+          "text-anchor": "left",
+          "text-offset": [0.5, 0],
+          "text-padding": 6,
+        },
+        paint: { "text-color": CHBLK, "text-halo-color": LAND_HALO, "text-halo-width": 1 },
+      },
+      {
+        id: "s57-elevation-contour",
+        type: "symbol",
+        source: id,
+        "source-layer": "land_detail",
+        minzoom: 13,
+        filter: ["all", ["==", obj, "LNDELV"], ["!=", ["geometry-type"], "Point"], ["has", "ELEVAT"]],
+        layout: {
+          "symbol-placement": "line",
+          "text-field": ["to-string", ["round", ["to-number", ["get", "ELEVAT"]]]],
+          "text-font": ROMAN,
+          "text-size": 9,
+          "symbol-spacing": 320,
+        },
+        paint: { "text-color": LANDF, "text-halo-color": LAND_HALO, "text-halo-width": 1 },
+      },
+      {
+        id: "s57-landmark",
+        type: "symbol",
+        source: id,
+        "source-layer": "land_detail",
+        minzoom: 11,
+        filter: ["all", point, ["has", "symbol"]],
+        layout: {
+          "icon-image": ["get", "symbol"],
+          // Conspicuous landmarks are the ones a chart is read by from sea.
+          "icon-size": [
+            "interpolate",
+            ["linear"],
+            ["zoom"],
+            11,
+            ["case", ["==", ["get", "CONVIS"], 1], 0.42, 0.3],
+            15,
+            ["case", ["==", ["get", "CONVIS"], 1], 0.62, 0.44],
+          ],
+          "icon-padding": 1,
+          "text-field": ["step", ["zoom"], "", 14, ["coalesce", ["get", "OBJNAM"], ""]],
+          "text-font": ROMAN,
+          "text-size": 10,
+          "text-max-width": 8,
+          "text-offset": [0, 0.9],
+          "text-anchor": "top",
+          "text-optional": true,
+        },
+        paint: { "text-color": CHBLK, "text-halo-color": LAND_HALO, "text-halo-width": 1.1 },
+      },
+      {
+        id: "s57-coastguard",
+        type: "symbol",
+        source: id,
+        "source-layer": "land_detail",
+        minzoom: 13,
+        filter: ["==", obj, "CGUSTA"],
+        layout: {
+          "text-field": "CG",
+          "text-font": ROMAN,
+          "text-size": 11,
+        },
+        paint: { "text-color": CHBLK, "text-halo-color": LAND_HALO, "text-halo-width": 1.1 },
+      },
+      {
         id: "s57-islet",
         type: "circle",
         source: id,
         "source-layer": "land",
-        filter: point,
+        filter: ["all", point, ["==", obj, "LNDARE"]],
         minzoom: 11,
         paint: {
           "circle-radius": ["interpolate", ["linear"], ["zoom"], 11, 1.6, 15, 3.2],
@@ -461,11 +760,11 @@ export function buildS57Style(
         type: "symbol",
         source: id,
         "source-layer": "hazard",
-        minzoom: 12,
+        minzoom: 11,
         filter: point,
         layout: {
           "icon-image": hazardIcon(),
-          "icon-size": ["interpolate", ["linear"], ["zoom"], 12, 0.38, 15, 0.62],
+          "icon-size": ["interpolate", ["linear"], ["zoom"], 11, 0.32, 15, 0.62],
           "icon-allow-overlap": false,
           "icon-padding": 1,
         },
@@ -475,22 +774,37 @@ export function buildS57Style(
         type: "circle",
         source: id,
         "source-layer": "pile",
-        minzoom: 14,
+        minzoom: 12,
         filter: point,
-        paint: { "circle-radius": 1.7, "circle-color": CHBLK },
+        paint: { "circle-radius": ["interpolate", ["linear"], ["zoom"], 12, 1.1, 15, 1.8], "circle-color": CHBLK },
       },
       {
         id: "s57-mooring",
         type: "symbol",
         source: id,
         "source-layer": "mooring",
-        minzoom: 13,
-        filter: point,
+        minzoom: 12,
+        filter: ["all", point, ["==", obj, "MORFAC"]],
         layout: {
           "icon-image": "mooring",
-          "icon-size": 0.55,
+          "icon-size": ["interpolate", ["linear"], ["zoom"], 12, 0.4, 15, 0.55],
           "icon-allow-overlap": true,
         },
+      },
+      {
+        id: "s57-berth",
+        type: "symbol",
+        source: id,
+        "source-layer": "mooring",
+        minzoom: 15,
+        filter: ["all", named, ["==", obj, "BERTHS"]],
+        layout: {
+          "text-field": ["get", "OBJNAM"],
+          "text-font": ROMAN,
+          "text-size": 10,
+          "symbol-placement": "point",
+        },
+        paint: { "text-color": CHBLK, "text-halo-color": PAPER, "text-halo-width": 1 },
       },
       {
         id: "s57-platform",
@@ -525,16 +839,59 @@ export function buildS57Style(
         paint: { "fill-color": "#4a4030", "fill-outline-color": CHBLK },
       },
       {
+        id: "s57-fog",
+        type: "symbol",
+        source: id,
+        "source-layer": "aid",
+        minzoom: 12,
+        filter: ["all", point, ["==", ["get", "mark"], "fog"]],
+        layout: {
+          "icon-image": "fog",
+          "icon-size": ["interpolate", ["linear"], ["zoom"], 12, 0.4, 15, 0.6],
+          "icon-allow-overlap": true,
+          "icon-ignore-placement": true,
+        },
+      },
+      {
+        id: "s57-racon",
+        type: "symbol",
+        source: id,
+        "source-layer": "aid",
+        minzoom: 12,
+        filter: ["all", point, ["==", obj, "RTPBCN"]],
+        layout: {
+          "text-field": "Racon",
+          "text-font": ITALIC,
+          "text-size": 10,
+          "text-anchor": "right",
+          "text-offset": [-1, 0.6],
+          "text-optional": true,
+        },
+        paint: { "text-color": CHMGD, "text-halo-color": PAPER, "text-halo-width": 1 },
+      },
+      {
         id: "s57-aid",
         type: "symbol",
         source: id,
         "source-layer": "aid",
-        filter: ["all", point, ["!=", ["get", "mark"], "light"], ["!=", ["get", "mark"], "fog"]],
+        filter: [
+          "all",
+          point,
+          ["has", "mark"],
+          ["!", ["in", ["get", "mark"], ["literal", ["light", "fog"]]]],
+        ],
         layout: {
           "icon-image": aidIcon(),
           "icon-size": ["interpolate", ["linear"], ["zoom"], 9, 0.42, 13, 0.7, 16, 0.86],
           "icon-allow-overlap": true,
+          "text-field": ["step", ["zoom"], "", 13, ["coalesce", ["get", "label"], ""]],
+          "text-font": ROMAN,
+          "text-size": 11,
+          "text-anchor": "left",
+          "text-offset": [0.9, 0.5],
+          "text-optional": true,
         },
+        paint: { "text-color": CHBLK, "text-halo-color": PAPER, "text-halo-width": 1.2 },
       },
       {
         id: "s57-light",
@@ -543,79 +900,25 @@ export function buildS57Style(
         "source-layer": "aid",
         filter: ["all", point, ["==", ["get", "mark"], "light"]],
         layout: {
-          "icon-image": "light",
+          "icon-image": lightIcon(),
           "icon-size": ["interpolate", ["linear"], ["zoom"], 9, 0.4, 14, 0.62],
           "icon-allow-overlap": true,
-          "text-field": ["step", ["zoom"], "", 13, lightText()],
+          // The flare shares its position with a buoy or beacon whose number
+          // has to fit beside it.
+          "icon-ignore-placement": true,
+          "text-field": lightText(),
           "text-font": ROMAN,
           "text-size": 11,
-          "text-offset": [0.9, -0.85],
+          "text-offset": [1.1, -1.1],
           "text-anchor": "left",
+          "text-justify": "left",
+          "text-max-width": 14,
           "text-optional": true,
         },
         paint: {
           "text-color": CHBLK,
           "text-halo-color": PAPER,
           "text-halo-width": 1.2,
-        },
-      },
-      {
-        id: "s57-fog",
-        type: "symbol",
-        source: id,
-        "source-layer": "aid",
-        minzoom: 14,
-        filter: ["all", point, ["==", ["get", "mark"], "fog"]],
-        layout: {
-          "text-field": "Fog Sig",
-          "text-font": ROMAN,
-          "text-size": 10,
-          "text-offset": [0, 0.8],
-        },
-        paint: {
-          "text-color": CHGRD,
-          "text-halo-color": PAPER,
-          "text-halo-width": 1,
-        },
-      },
-      {
-        id: "s57-sounding",
-        type: "symbol",
-        source: id,
-        "source-layer": "sounding",
-        minzoom: 11,
-        filter: point,
-        layout: {
-          "text-field": soundingText(),
-          "text-font": ITALIC,
-          "text-size": ["interpolate", ["linear"], ["zoom"], 11, 11, 14, 14, 16, 16],
-          "text-padding": 4,
-          "text-allow-overlap": false,
-        },
-        paint: {
-          "text-color": soundingColour(),
-          "text-halo-color": "#e7f3f5",
-          "text-halo-width": 0.7,
-        },
-      },
-      {
-        id: "s57-landmark",
-        type: "symbol",
-        source: id,
-        "source-layer": "place",
-        minzoom: 13,
-        filter: ["all", named, ["==", obj, "LNDMRK"]],
-        layout: {
-          "text-field": ["get", "OBJNAM"],
-          "text-font": ROMAN,
-          "text-size": 11,
-          "text-offset": [0, 0.6],
-          "text-optional": true,
-        },
-        paint: {
-          "text-color": CHBLK,
-          "text-halo-color": "#f3ecd4",
-          "text-halo-width": 1.1,
         },
       },
     ],

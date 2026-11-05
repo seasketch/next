@@ -1,3 +1,5 @@
+import { codes, lightDescription, markLabel, seabedLabel } from "./labels.js";
+
 /**
  * S-57 object classes the chart tiles, grouped the way the style draws them.
  * Classes not listed are left out of the tiles.
@@ -8,6 +10,15 @@ export const ENC_LAYER_BY_CLASS: Record<string, string> = {
   UNSARE: "depth_area",
   LNDARE: "land",
   BUAARE: "land",
+  LNDELV: "land_detail",
+  LNDMRK: "land_detail",
+  BUISGL: "land_detail",
+  SILTNK: "land_detail",
+  CGUSTA: "land_detail",
+  DYKCON: "land_detail",
+  FNCLNE: "land_detail",
+  SBDARE: "seabed",
+  WEDKLP: "seabed",
   // Lakes and rivers sit inside the land polygon. They are drawn after land
   // so they read as water rather than as another tan fill.
   LAKARE: "inland_water",
@@ -34,12 +45,14 @@ export const ENC_LAYER_BY_CLASS: Record<string, string> = {
   BCNSAW: "aid",
   DAYMAR: "aid",
   FOGSIG: "aid",
+  RTPBCN: "aid",
   OBSTRN: "hazard",
   WRECKS: "hazard",
   UWTROC: "hazard",
   PILPNT: "pile",
   OFSPLF: "platform",
   MORFAC: "mooring",
+  BERTHS: "mooring",
   CBLSUB: "cable",
   CBLARE: "cable",
   PIPSOL: "cable",
@@ -47,13 +60,18 @@ export const ENC_LAYER_BY_CLASS: Record<string, string> = {
   TSSBND: "separation",
   TSELNE: "separation",
   DWRTPT: "separation",
+  TSEZNE: "separation",
   BRIDGE: "structure",
   SEAARE: "place",
   LNDRGN: "place",
-  LNDMRK: "place",
   RESARE: "regulated",
   ACHARE: "regulated",
   CTNARE: "regulated",
+  MIPARE: "regulated",
+  DMPGRD: "regulated",
+  PRCARE: "regulated",
+  MARCUL: "regulated",
+  PILBOP: "regulated",
   FAIRWY: "route",
   RECTRC: "route",
   NAVLNE: "route",
@@ -190,6 +208,14 @@ export function zoomRangeForFeature(
 }
 
 function scalarProperty(value: unknown): string | number | boolean | null {
+  // GDAL writes S-57 list attributes (COLOUR, NATSUR, CATLMK) as arrays.
+  // Tiles only hold scalars, so keep them as the comma list S-57 uses.
+  if (Array.isArray(value)) {
+    const items = value.filter(
+      (item) => typeof item === "string" || (typeof item === "number" && Number.isFinite(item))
+    );
+    return items.length ? scalarProperty(items.join(",")) : null;
+  }
   if (typeof value === "string") {
     const trimmed = value.trim();
     return trimmed.length > 0 && trimmed.length <= 200 ? trimmed : null;
@@ -239,6 +265,36 @@ export function aidMark(
   return fixed[objectClass] || null;
 }
 
+/**
+ * Sprite for a landmark, building or tank: the INT 1 shapes for the
+ * categories that read differently from the water, else a position circle.
+ */
+export function landmarkSymbol(objectClass: string, source: Record<string, unknown>): string | null {
+  if (objectClass === "SILTNK") return "tank";
+  if (objectClass === "BUISGL") return "building";
+  if (objectClass !== "LNDMRK") return null;
+  const category = codes(scalarProperty(source.CATLMK))[0];
+  const byCategory: Record<number, string> = {
+    3: "landmark-chimney",
+    6: "landmark-chimney",
+    4: "landmark-mast",
+    5: "landmark-mast",
+    7: "landmark-mast",
+    16: "landmark-mast",
+    15: "landmark-dome",
+    17: "landmark-tower",
+    18: "landmark-windmill",
+    19: "landmark-windmill",
+    20: "landmark-spire",
+    9: "landmark-monument",
+    10: "landmark-monument",
+    12: "landmark-monument",
+    13: "landmark-monument",
+    14: "landmark-monument",
+  };
+  return (category && byCategory[category]) || "landmark";
+}
+
 function firstLatitude(geometry: unknown): number {
   let value: unknown = (geometry as { coordinates?: unknown }).coordinates;
   while (Array.isArray(value) && Array.isArray(value[0])) value = value[0];
@@ -281,10 +337,23 @@ export function rewriteEncFeature(
     }
   }
   if (meta.objectClass) {
-    const mark = aidMark(meta.objectClass, source);
+    const objectClass = meta.objectClass;
+    const mark = aidMark(objectClass, source);
     if (mark) properties.mark = mark;
-    const colour = firstColour(source.COLOUR);
+    const colour = firstColour(properties.COLOUR);
     if (colour != null) properties.colour = colour;
+    const label = markLabel(objectClass, properties.OBJNAM);
+    if (label && (mark || objectClass === "LIGHTS")) properties.label = label;
+    if (objectClass === "LIGHTS") {
+      const description = lightDescription(properties);
+      if (description) properties.litdsn = description;
+    }
+    if (objectClass === "SBDARE") {
+      const seabed = seabedLabel(properties);
+      if (seabed) properties.seabed = seabed;
+    }
+    const symbol = landmarkSymbol(objectClass, properties);
+    if (symbol) properties.symbol = symbol;
   }
   const range = zoomRangeForFeature(meta.band, scamin, firstLatitude(feature.geometry));
   return {

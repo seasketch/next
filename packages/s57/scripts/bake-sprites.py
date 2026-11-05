@@ -20,6 +20,8 @@ YELLOW = (244, 210, 64, 255)
 BLACK = (12, 12, 12, 255)
 MAGENTA = (197, 69, 195, 255)
 WHITE = (255, 255, 255, 255)
+LIGHT_YELLOW = (244, 210, 64, 255)
+BROWN = (120, 98, 60, 255)
 NONE = (0, 0, 0, 0)
 
 CELL = 64
@@ -31,8 +33,12 @@ NAMES = [
     "rock-awash",
     "wreck",
     "obstruction",
-    "buoy-port",
-    "buoy-stbd",
+    "buoy-red-can",
+    "buoy-green-can",
+    "buoy-red-cone",
+    "buoy-green-cone",
+    "buoy-red-pillar",
+    "buoy-green-pillar",
     "buoy-special",
     "buoy-safe",
     "buoy-isolated",
@@ -40,8 +46,8 @@ NAMES = [
     "buoy-east",
     "buoy-south",
     "buoy-west",
-    "beacon-port",
-    "beacon-stbd",
+    "beacon-red",
+    "beacon-green",
     "beacon-special",
     "light",
     "daymark",
@@ -50,6 +56,24 @@ NAMES = [
     "daymark-yellow",
     "platform",
     "mooring",
+    "light-red",
+    "light-green",
+    "light-yellow",
+    "fog",
+    "anchor",
+    "kelp",
+    "kelp-pattern",
+    "building",
+    "tank",
+    "landmark",
+    "landmark-tower",
+    "landmark-chimney",
+    "landmark-mast",
+    "landmark-dome",
+    "landmark-windmill",
+    "landmark-spire",
+    "landmark-monument",
+    "spot-height",
 ]
 
 
@@ -131,13 +155,20 @@ def draw_obstruction(draw):
         draw.arc(box, start=start, end=start + 11, fill=MAGENTA, width=12)
 
 
-def draw_buoy_port(draw):
-    draw.rounded_rectangle([78, 48, 178, 208], radius=28, fill=RED, outline=BLACK, width=12)
+def draw_buoy_can(draw, fill):
+    draw.rounded_rectangle([78, 48, 178, 208], radius=28, fill=fill, outline=BLACK, width=12)
 
 
-def draw_buoy_stbd(draw):
-    draw.polygon([(128, 40), (58, 214), (198, 214)], fill=GREEN)
+def draw_buoy_cone(draw, fill):
+    draw.polygon([(128, 40), (58, 214), (198, 214)], fill=fill)
     draw.line([(128, 40), (58, 214), (198, 214), (128, 40)], fill=BLACK, width=12, joint="curve")
+
+
+def draw_buoy_pillar(draw, fill):
+    # Tall and narrow with a pointed head, as INT 1 Q22.
+    outline = [(100, 226), (108, 70), (128, 30), (148, 70), (156, 226)]
+    draw.polygon(outline, fill=fill)
+    draw.line(outline + [outline[0]], fill=BLACK, width=12, joint="curve")
 
 
 def draw_buoy_special(draw):
@@ -185,14 +216,16 @@ def draw_buoy_west(draw):
     draw.rectangle([100, 150, 156, 190], fill=BLACK)
 
 
-def draw_beacon_port(draw):
+def draw_beacon_green(draw):
+    # IALA-B port-hand daybeacon: green square.
     draw.line([(128, 230), (128, 108)], fill=BLACK, width=12)
-    draw.rectangle([78, 36, 178, 120], fill=RED, outline=BLACK, width=12)
+    draw.rectangle([78, 36, 178, 120], fill=GREEN, outline=BLACK, width=12)
 
 
-def draw_beacon_stbd(draw):
+def draw_beacon_red(draw):
+    # IALA-B starboard-hand daybeacon: red triangle.
     draw.line([(128, 236), (128, 130)], fill=BLACK, width=12)
-    draw.polygon([(128, 28), (70, 140), (186, 140)], fill=GREEN)
+    draw.polygon([(128, 28), (70, 140), (186, 140)], fill=RED)
     draw.line([(128, 28), (70, 140), (186, 140), (128, 28)], fill=BLACK, width=12, joint="curve")
 
 
@@ -204,11 +237,115 @@ def draw_beacon_special(draw):
     draw.line([(164, 72), (92, 140)], fill=BLACK, width=8)
 
 
-def draw_light(draw):
+def draw_light(draw, fill=MAGENTA):
     # Position dot at the centre. The flare reaches up and to the right.
-    draw.polygon([(150, 118), (214, 36), (236, 78), (168, 146)], fill=MAGENTA)
-    draw.ellipse([196, 28, 244, 76], fill=MAGENTA)
+    draw.polygon([(150, 118), (214, 36), (236, 78), (168, 146)], fill=fill, outline=BLACK)
+    draw.ellipse([196, 28, 244, 76], fill=fill, outline=BLACK, width=4)
     draw.ellipse([104, 104, 152, 152], fill=BLACK)
+
+
+def draw_fog(draw):
+    # Three arcs fanning out from the position, as INT 1 R10.
+    for radius in (60, 92, 124):
+        box = [128 - radius, 128 - radius, 128 + radius, 128 + radius]
+        draw.arc(box, start=200, end=250, fill=MAGENTA, width=12)
+
+
+def draw_anchor(draw):
+    draw.ellipse([108, 28, 148, 68], outline=MAGENTA, width=12)
+    draw.line([(128, 68), (128, 220)], fill=MAGENTA, width=14)
+    draw.line([(84, 96), (172, 96)], fill=MAGENTA, width=12)
+    draw.arc([56, 120, 200, 224], start=20, end=160, fill=MAGENTA, width=14)
+    draw.polygon([(56, 160), (44, 196), (80, 184)], fill=MAGENTA)
+    draw.polygon([(200, 160), (212, 196), (176, 184)], fill=MAGENTA)
+
+
+def kelp_frond(draw, x, y, scale):
+    import math
+    points = []
+    for step in range(41):
+        t = step / 40
+        points.append((x + 16 * scale * math.sin(t * math.pi * 3), y - 170 * scale * t))
+    draw.line(points, fill=BLACK, width=max(6, int(9 * scale)), joint="curve")
+
+
+def draw_kelp(draw):
+    for x in (84, 128, 172):
+        kelp_frond(draw, x, 220, 1)
+
+
+def draw_kelp_pattern(draw):
+    # Sparse so the depth colour still reads through a kelp bed.
+    kelp_frond(draw, 64, 120, 0.6)
+    kelp_frond(draw, 192, 248, 0.6)
+
+
+def draw_building(draw):
+    draw.rectangle([84, 84, 172, 172], fill=BROWN, outline=BLACK, width=10)
+
+
+def draw_tank(draw):
+    ring(draw, [64, 64, 192, 192], BROWN, BLACK, 12)
+    draw.ellipse([112, 112, 144, 144], fill=BLACK)
+
+
+def position(draw):
+    draw.ellipse([112, 196, 144, 228], fill=BLACK)
+
+
+def draw_landmark(draw):
+    ring(draw, [72, 72, 184, 184], NONE, BLACK, 12)
+    draw.ellipse([116, 116, 140, 140], fill=BLACK)
+
+
+def draw_landmark_tower(draw):
+    draw.polygon([(104, 212), (116, 56), (140, 56), (152, 212)], outline=BLACK, fill=WHITE)
+    draw.line([(104, 212), (116, 56), (140, 56), (152, 212), (104, 212)], fill=BLACK, width=10)
+    draw.rectangle([106, 36, 150, 60], fill=BLACK)
+    position(draw)
+
+
+def draw_landmark_chimney(draw):
+    draw.polygon([(100, 212), (114, 40), (142, 40), (156, 212)], fill=WHITE)
+    draw.line([(100, 212), (114, 40), (142, 40), (156, 212)], fill=BLACK, width=10)
+    draw.arc([116, 4, 196, 52], start=180, end=300, fill=BLACK, width=8)
+    position(draw)
+
+
+def draw_landmark_mast(draw):
+    draw.line([(128, 30), (128, 200)], fill=BLACK, width=10)
+    draw.line([(128, 60), (86, 200)], fill=BLACK, width=8)
+    draw.line([(128, 60), (170, 200)], fill=BLACK, width=8)
+    position(draw)
+
+
+def draw_landmark_dome(draw):
+    draw.pieslice([72, 80, 184, 192], start=180, end=360, fill=WHITE, outline=BLACK, width=10)
+    draw.line([(64, 136), (192, 136)], fill=BLACK, width=10)
+    draw.ellipse([116, 124, 140, 148], fill=BLACK)
+
+
+def draw_landmark_windmill(draw):
+    draw.line([(128, 112), (128, 212)], fill=BLACK, width=10)
+    for end in ((72, 60), (184, 60), (128, 176)):
+        draw.line([(128, 112), end], fill=BLACK, width=10)
+    position(draw)
+
+
+def draw_landmark_spire(draw):
+    draw.polygon([(128, 24), (100, 200), (156, 200)], fill=WHITE)
+    draw.line([(128, 24), (100, 200), (156, 200), (128, 24)], fill=BLACK, width=10, joint="curve")
+    position(draw)
+
+
+def draw_landmark_monument(draw):
+    draw.polygon([(112, 200), (118, 70), (128, 52), (138, 70), (144, 200)], fill=WHITE)
+    draw.line([(112, 200), (118, 70), (128, 52), (138, 70), (144, 200), (112, 200)], fill=BLACK, width=10)
+    position(draw)
+
+
+def draw_spot_height(draw):
+    draw.ellipse([108, 108, 148, 148], fill=BLACK)
 
 
 def draw_daymark(draw, fill):
@@ -235,8 +372,12 @@ PAINTERS = {
     "rock-awash": lambda im, dr: draw_rock_awash(dr),
     "wreck": lambda im, dr: draw_wreck(dr),
     "obstruction": lambda im, dr: draw_obstruction(dr),
-    "buoy-port": lambda im, dr: draw_buoy_port(dr),
-    "buoy-stbd": lambda im, dr: draw_buoy_stbd(dr),
+    "buoy-red-can": lambda im, dr: draw_buoy_can(dr, RED),
+    "buoy-green-can": lambda im, dr: draw_buoy_can(dr, GREEN),
+    "buoy-red-cone": lambda im, dr: draw_buoy_cone(dr, RED),
+    "buoy-green-cone": lambda im, dr: draw_buoy_cone(dr, GREEN),
+    "buoy-red-pillar": lambda im, dr: draw_buoy_pillar(dr, RED),
+    "buoy-green-pillar": lambda im, dr: draw_buoy_pillar(dr, GREEN),
     "buoy-special": lambda im, dr: draw_buoy_special(dr),
     "buoy-safe": lambda im, dr: draw_buoy_safe((im, dr)) or None,
     "buoy-isolated": lambda im, dr: draw_buoy_isolated(dr),
@@ -244,8 +385,8 @@ PAINTERS = {
     "buoy-east": lambda im, dr: draw_buoy_east(dr),
     "buoy-south": lambda im, dr: draw_buoy_south(dr),
     "buoy-west": lambda im, dr: draw_buoy_west(dr),
-    "beacon-port": lambda im, dr: draw_beacon_port(dr),
-    "beacon-stbd": lambda im, dr: draw_beacon_stbd(dr),
+    "beacon-red": lambda im, dr: draw_beacon_red(dr),
+    "beacon-green": lambda im, dr: draw_beacon_green(dr),
     "beacon-special": lambda im, dr: draw_beacon_special(dr),
     "light": lambda im, dr: draw_light(dr),
     "daymark": lambda im, dr: draw_daymark(dr, WHITE),
@@ -254,6 +395,24 @@ PAINTERS = {
     "daymark-yellow": lambda im, dr: draw_daymark(dr, YELLOW),
     "platform": lambda im, dr: draw_platform(dr),
     "mooring": lambda im, dr: draw_mooring(dr),
+    "light-red": lambda im, dr: draw_light(dr, RED),
+    "light-green": lambda im, dr: draw_light(dr, GREEN),
+    "light-yellow": lambda im, dr: draw_light(dr, LIGHT_YELLOW),
+    "fog": lambda im, dr: draw_fog(dr),
+    "anchor": lambda im, dr: draw_anchor(dr),
+    "kelp": lambda im, dr: draw_kelp(dr),
+    "kelp-pattern": lambda im, dr: draw_kelp_pattern(dr),
+    "building": lambda im, dr: draw_building(dr),
+    "tank": lambda im, dr: draw_tank(dr),
+    "landmark": lambda im, dr: draw_landmark(dr),
+    "landmark-tower": lambda im, dr: draw_landmark_tower(dr),
+    "landmark-chimney": lambda im, dr: draw_landmark_chimney(dr),
+    "landmark-mast": lambda im, dr: draw_landmark_mast(dr),
+    "landmark-dome": lambda im, dr: draw_landmark_dome(dr),
+    "landmark-windmill": lambda im, dr: draw_landmark_windmill(dr),
+    "landmark-spire": lambda im, dr: draw_landmark_spire(dr),
+    "landmark-monument": lambda im, dr: draw_landmark_monument(dr),
+    "spot-height": lambda im, dr: draw_spot_height(dr),
 }
 
 

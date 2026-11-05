@@ -16,6 +16,9 @@ import {
 } from "./layers.js";
 import { ChartFeature, clipDepthCoveredByLand } from "./landCover.js";
 import { peelFeatures } from "./peel.js";
+import { lightSectorFeatures } from "./sectors.js";
+import { labelLightsFromStructures } from "./labels.js";
+import { writeAreaLabels } from "./areaLabels.js";
 
 export type EncClip = [number, number, number, number];
 
@@ -129,6 +132,24 @@ async function readCoverage(
     }
   }
   return features;
+}
+
+async function writeLightSectors(peeledPoints: string, out: string): Promise<number> {
+  const stream = createWriteStream(out);
+  let count = 0;
+  const lines = readline.createInterface({ input: createReadStream(peeledPoints), crlfDelay: Infinity });
+  for await (const line of lines) {
+    if (!line.includes('"LIGHTS"') || !line.includes("SECTR1")) continue;
+    for (const sector of lightSectorFeatures(JSON.parse(line))) {
+      stream.write(JSON.stringify({ type: "Feature", ...sector }) + "\n");
+      count += 1;
+    }
+  }
+  await new Promise<void>((resolve, reject) => {
+    stream.end(() => resolve());
+    stream.on("error", reject);
+  });
+  return count;
 }
 
 function ogrExportArgs(
@@ -300,6 +321,7 @@ export async function processEncFiles(
         };
         await readFeatures(exportPath, meta, (feature) => pending.push(feature as ChartFeature), bounds);
       }
+      labelLightsFromStructures(pending);
       // Creek beds are shallow depth areas tucked into the shoreline. Close the
       // narrow ones and join the small fingers onto the land before tiling.
       const clipped = clipDepthCoveredByLand(pending);
@@ -328,11 +350,18 @@ export async function processEncFiles(
     const peeledPoints = path.join(work, "points-peeled.geojsonl");
     await writeFile(maskPath, JSON.stringify({ type: "FeatureCollection", features: coverage }));
     await writeFile(specPath, JSON.stringify({ bandMinZoom: BAND_MIN_ZOOM, maxZoom: ENC_MAX_ZOOM }));
+    const areaLabelsPath = path.join(work, "area-labels.geojsonl");
+    let areaLabelCount = 0;
     if (areaCount > 0) {
       await peelFeatures(areasPath, maskPath, peeledAreas, specPath);
+      areaLabelCount = await writeAreaLabels(peeledAreas, areaLabelsPath);
     }
+    const sectorsPath = path.join(work, "sectors.geojsonl");
+    let sectorCount = 0;
     if (pointCount > 0) {
       await peelFeatures(pointsPath, maskPath, peeledPoints, specPath);
+      // From the peeled lights, so an arc stops where its light does.
+      sectorCount = await writeLightSectors(peeledPoints, sectorsPath);
     }
 
     const pmtilesPath = path.join(work, "chart.pmtiles");
@@ -362,7 +391,7 @@ export async function processEncFiles(
       if (areaRun.stderr.trim()) console.warn(areaRun.stderr.trim().slice(0, 2000));
       parts.push(areasTiles);
     }
-    if (pointCount > 0) {
+    if (pointCount > 0 || areaLabelCount > 0) {
       const pointTiles = path.join(work, "points.pmtiles");
       // No size limit: a harbour sounding or a buoy is never the feature
       // that should be thrown away to make a tile smaller.
@@ -379,7 +408,9 @@ export async function processEncFiles(
         // top, so rocks and soundings blink out and back as you zoom.
         "--drop-rate=1",
         "--generate-ids",
-        peeledPoints,
+        ...(pointCount > 0 ? [peeledPoints] : []),
+        ...(sectorCount > 0 ? [sectorsPath] : []),
+        ...(areaLabelCount > 0 ? [areaLabelsPath] : []),
       ]);
       if (pointRun.stderr.trim()) console.warn(pointRun.stderr.trim().slice(0, 2000));
       parts.push(pointTiles);
