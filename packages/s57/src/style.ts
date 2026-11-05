@@ -240,6 +240,8 @@ export type S57VectorSource =
 export type S57StyleOptions = {
   /** Sprite URL without an extension. Defaults to the sheet shipped with the package. */
   sprite?: string;
+  /** Glyph URL template. Defaults to the root-relative fonts shipped with the package. */
+  glyphs?: string;
 };
 
 export type S57SourceSet = Array<{
@@ -316,7 +318,7 @@ function singleSourceStyle(
   const named = ["!=", ["coalesce", ["get", "OBJNAM"], ""], ""];
   return {
     version: 8,
-    glyphs: GLYPHS,
+    glyphs: options?.glyphs || GLYPHS,
     // Must be an absolute URL. Mapbox's sprite loader rejects a root-relative path.
     sprite: options?.sprite || "/s57/sprite",
     sources: { [id]: vector },

@@ -55,6 +55,7 @@ export function buildEncStyle(
       : toJson(basemap.url);
   return buildS57Style(source, {
     sprite: `${origin}/s57/sprite`,
+    glyphs: `${origin}/s57/font/{fontstack}/{range}.pbf`,
   }) as unknown as Style;
 }
 
