@@ -4,6 +4,9 @@
   "private": true,
   "description": "Turn unencrypted S-57 ENC cells into vector tiles and an S-52 day chart style",
   "license": "BSD-3-Clause",
+  "dependencies": {
+    "gdal-async": "^3.11.3"
+  },
   "main": "./dist/style.js",
   "types": "./dist/index.d.ts",
   "exports": {
@@ -18,7 +21,7 @@
   },
   "scripts": {
     "build": "tsc -b",
-    "test": "node --import tsx --test test/*.test.ts && python3 test/peel.test.py",
+    "test": "node --import tsx --test test/*.test.ts",
     "fetch": "tsx scripts/fetch-chart.ts",
     "chart": "tsx scripts/build-chart.ts",
     "demo": "node demo/serve.mjs"

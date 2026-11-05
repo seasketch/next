@@ -1,5 +1,5 @@
 import { execFile } from "child_process";
-import { createReadStream, createWriteStream, existsSync } from "fs";
+import { createReadStream, createWriteStream } from "fs";
 import { mkdtemp, readdir, rm, stat, writeFile } from "fs/promises";
 import { tmpdir } from "os";
 import path from "path";
@@ -14,6 +14,7 @@ import {
   extendBounds,
   rewriteEncFeature,
 } from "./layers.js";
+import { peelFeatures } from "./peel.js";
 
 export type EncClip = [number, number, number, number];
 
@@ -153,14 +154,6 @@ function ogrExportArgs(
   if (where) args.push("-where", where);
   args.push(cellPath, layer);
   return args;
-}
-
-function peelScript(): string {
-  const beside = path.join(__dirname, "peel.py");
-  if (existsSync(beside)) return beside;
-  const fromDist = path.resolve(__dirname, "../src/peel.py");
-  if (existsSync(fromDist)) return fromDist;
-  throw new Error("s57 coverage peel script was not found");
 }
 
 /**
@@ -330,10 +323,10 @@ export async function processEncFiles(
     await writeFile(maskPath, JSON.stringify({ type: "FeatureCollection", features: coverage }));
     await writeFile(specPath, JSON.stringify({ bandMinZoom: BAND_MIN_ZOOM, maxZoom: ENC_MAX_ZOOM }));
     if (areaCount > 0) {
-      await run("python3", [peelScript(), areasPath, maskPath, peeledAreas, specPath]);
+      await peelFeatures(areasPath, maskPath, peeledAreas, specPath);
     }
     if (pointCount > 0) {
-      await run("python3", [peelScript(), pointsPath, maskPath, peeledPoints, specPath]);
+      await peelFeatures(pointsPath, maskPath, peeledPoints, specPath);
     }
 
     const pmtilesPath = path.join(work, "chart.pmtiles");

@@ -13,4 +13,6 @@ npm run demo --workspace @seasketch/s57
 
 `npm run fetch --workspace @seasketch/s57` downloads the cells and stops. The chart command does that itself when the zips are missing. Cells already the size NOAA published are kept. The catalog is [charts.noaa.gov/ENCs/ENCProdCat.xml](https://charts.noaa.gov/ENCs/ENCProdCat.xml).
 
+The build needs `ogr2ogr` and `tippecanoe` on `PATH`. Coverage peeling uses the `gdal-async` package, which brings its own GDAL, so Python and the `osgeo` module are not required. Run `npm install` at the repo root after pulling so that package is linked.
+
 The demo is at http://localhost:4173. It is not for navigation.
