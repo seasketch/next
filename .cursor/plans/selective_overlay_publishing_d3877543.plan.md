@@ -23,6 +23,8 @@ Administrators edit only the draft overlay list. Today, [publish_table_of_conten
 
 Partners rejected freeze/pause and per-item context-menu publish. The settled UX is a **partial publish**: choose which unpublished overlay-list changes to include. Layers and folders that are currently published but not included remain unchanged.
 
+Semantics, hard constraints, dependency rules, and the scenario catalog are in [design-docs/overlay-publishing/selective-publish.md](design-docs/overlay-publishing/selective-publish.md). That document is the source of truth for the todos below.
+
 Throwaway mock to replace during implementation:
 
 - [MockSelectivePublishModal.tsx](packages/client/src/admin/data/MockSelectivePublishModal.tsx)
