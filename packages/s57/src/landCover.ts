@@ -223,97 +223,197 @@ function isShallowFinger(feature: ChartFeature): boolean {
   );
 }
 
-function landMask(features: ChartFeature[]): Geometry | null {
-  let mask: Geometry | null = null;
-  for (const feature of features) {
-    if (feature.properties.obj !== "LNDARE" || !isPolygon(feature.geometry)) continue;
-    const geom = prepared(feature.geometry);
-    if (!geom) continue;
-    if (!mask) {
-      mask = geom;
-      continue;
-    }
+/** Slack for a coastline that lies on the edge of the filled water. About 10 cm. */
+const ON_EDGE = 1e-6;
+
+function unionOf(geometries: Geometry[]): Geometry | null {
+  let united: Geometry | null = null;
+  for (const geom of geometries) {
     try {
-      const united = mask.union(geom);
-      mask = united.isValid() ? united : united.makeValid();
+      const next: Geometry = united ? united.union(geom) : geom;
+      united = next.isValid() ? next : next.makeValid();
     } catch {
-      // Keep the mask built so far. A broken islet should not skip the clip.
+      // Keep the union built so far. A broken islet should not skip the rest.
     }
   }
-  return mask;
+  return united;
 }
 
-function absorbFinger(land: ChartFeature[], finger: ChartFeature): boolean {
-  const geom = prepared(finger.geometry);
-  if (!geom) return false;
-  let nearest: ChartFeature | null = null;
-  let nearestGeom: Geometry | null = null;
-  let nearestDistance = Infinity;
-  for (const piece of land) {
-    const pieceGeom = prepared(piece.geometry);
-    if (!pieceGeom) continue;
-    let distance = Infinity;
-    try {
-      distance = pieceGeom.distance(geom);
-    } catch {
-      continue;
-    }
-    if (distance < nearestDistance) {
-      nearestDistance = distance;
-      nearest = piece;
-      nearestGeom = pieceGeom;
+function linesOf(geom: Geometry): GeoJsonGeometry | null {
+  const object = geom.toObject() as GeoJsonGeometry;
+  if (object.type === "LineString" || object.type === "MultiLineString") return object;
+  if (object.type !== "GeometryCollection" || !object.geometries) return null;
+  const coordinates: unknown[] = [];
+  for (const piece of object.geometries) {
+    if (piece.type === "LineString") coordinates.push(piece.coordinates);
+    else if (piece.type === "MultiLineString" && Array.isArray(piece.coordinates)) {
+      coordinates.push(...piece.coordinates);
     }
   }
-  // A finger that does not touch the shore is a pond. Leave it as water.
-  if (!nearest || !nearestGeom || nearestDistance > 0.002) return false;
+  if (coordinates.length === 0) return null;
+  return { type: "MultiLineString", coordinates };
+}
+
+function polygonParts(geom: Geometry): Geometry[] {
+  const object = geom.toObject() as GeoJsonGeometry;
+  if (object.type === "Polygon") return [geom];
+  const polygons: GeoJsonGeometry[] =
+    object.type === "MultiPolygon" && Array.isArray(object.coordinates)
+      ? (object.coordinates as unknown[]).map((coordinates) => ({ type: "Polygon", coordinates }))
+      : (object.geometries || []).filter((part) => part.type === "Polygon");
+  return polygons.map((polygon) => prepared(polygon)).filter((part): part is Geometry => part != null);
+}
+
+function isLine(geometry: GeoJsonGeometry | undefined): boolean {
+  return geometry?.type === "LineString" || geometry?.type === "MultiLineString";
+}
+
+/** Lines that stop at the water's edge, and so end where the filled water begins. */
+const SHORE_LINES = new Set(["COALNE", "DEPCNT"]);
+
+/** The land piece, grown by the filled water that touches it. Records which parts it took. */
+function joinFilled(piece: ChartFeature, original: Geometry, parts: Geometry[], joined: Set<number>): ChartFeature {
   try {
-    const united = nearestGeom.union(geom);
-    const geometry = polygonsOf(united.isValid() ? united : united.makeValid());
-    if (!geometry) return false;
-    nearest.geometry = geometry;
-    return true;
+    const touching = parts.filter((part, index) => {
+      if (original.distance(part) > ON_EDGE) return false;
+      joined.add(index);
+      return true;
+    });
+    const united = touching.length ? unionOf([original, ...touching]) : original;
+    const geometry = united && polygonsOf(united);
+    return geometry ? { ...piece, geometry } : piece;
   } catch {
-    return false;
+    return piece;
+  }
+}
+
+/** Coastline across each closed mouth: the edge of the filled water that was not already shore. */
+function mouthCoastline(features: ChartFeature[], filled: Geometry, originalLand: Geometry): ChartFeature[] {
+  const template = features.find((feature) => feature.properties.obj === "COALNE");
+  if (!template) return [];
+  try {
+    const mouths = filled.boundary().difference(originalLand.boundary().buffer(ON_EDGE * 10, 2));
+    if (!mouths || mouths.isEmpty()) return [];
+    const geometry = linesOf(mouths);
+    if (!geometry) return [];
+    const properties = { ...template.properties };
+    delete properties.OBJNAM;
+    delete properties.CATCOA;
+    return [{ ...template, properties, geometry }];
+  } catch {
+    return [];
   }
 }
 
 /**
- * Drop the parts of depth areas that sit inside the same cell's land.
- * Narrow creek notches in the shoreline are closed first, and a small
- * shallow finger that still sticks inland is joined onto the land.
+ * Generalize one cell's shoreline without breaking its topology. Narrow creek
+ * notches are closed and small shallow fingers joined onto the land. The water
+ * those take is one region: the land gains exactly it, the depth areas lose
+ * exactly it, coastline and contours inside it are dropped, and a coastline
+ * is drawn across each closed mouth. Depth areas are also cut where they
+ * overlap the land.
  */
 export function clipDepthCoveredByLand(features: ChartFeature[]): ChartFeature[] {
-  const covered = features.map((feature) => {
-    if (feature.properties.obj !== "LNDARE" || !isPolygon(feature.geometry) || isHarbour(feature)) return feature;
-    return { ...feature, geometry: closeSpurs(feature.geometry) };
-  });
-  const land = covered.filter((feature) => feature.properties.obj === "LNDARE" && isPolygon(feature.geometry));
-  const pending: ChartFeature[] = [];
-  for (const feature of covered) {
-    if (feature.properties.obj === "LNDARE" && isPolygon(feature.geometry)) continue;
-    if (isShallowFinger(feature) && absorbFinger(land, feature)) continue;
-    pending.push(feature);
+  const originals = new Map<ChartFeature, Geometry>();
+  for (const feature of features) {
+    if (feature.properties.obj !== "LNDARE" || !isPolygon(feature.geometry)) continue;
+    const geom = prepared(feature.geometry);
+    if (geom) originals.set(feature, geom);
   }
-  const mask = landMask(land);
-  if (!mask) return features;
-  const kept: ChartFeature[] = [...land];
-  for (const feature of pending) {
+  const originalLand = unionOf([...originals.values()]);
+  if (!originalLand) return features;
+
+  const gained: Geometry[] = [];
+  for (const piece of originals.keys()) {
+    if (isHarbour(piece)) continue;
+    const closed = prepared(closeSpurs(piece.geometry));
+    if (closed) gained.push(closed);
+  }
+  const fingers = new Set<ChartFeature>();
+  for (const feature of features) {
+    if (!isShallowFinger(feature)) continue;
+    const geom = prepared(feature.geometry);
+    if (!geom) continue;
+    // A finger that does not touch the shore is a pond. Leave it as water.
+    try {
+      if (originalLand.distance(geom) > ON_EDGE) continue;
+    } catch {
+      continue;
+    }
+    fingers.add(feature);
+    gained.push(geom);
+  }
+  let filled: Geometry | null = null;
+  const grown = unionOf(gained);
+  if (grown) {
+    try {
+      const outside = grown.difference(originalLand);
+      if (!outside.isEmpty()) filled = outside.isValid() ? outside : outside.makeValid();
+    } catch {
+      filled = null;
+    }
+  }
+  const land = (filled && unionOf([originalLand, filled])) || originalLand;
+  const edge = filled ? filled.buffer(ON_EDGE, 2) : null;
+  const filledParts = filled ? polygonParts(filled) : [];
+
+  const kept: ChartFeature[] = [];
+  const joined = new Set<number>();
+  for (const feature of features) {
+    if (fingers.has(feature)) continue;
     const objectClass = feature.properties.obj;
-    if (typeof objectClass !== "string" || !COVERED_BY_LAND.has(objectClass) || !isPolygon(feature.geometry)) {
+    const original = originals.get(feature);
+    if (original) {
+      kept.push(joinFilled(feature, original, filledParts, joined));
+      continue;
+    }
+    if (typeof objectClass !== "string") {
       kept.push(feature);
       continue;
     }
-    const geom = prepared(feature.geometry);
-    if (!geom) continue;
-    try {
-      const outside = geom.difference(mask);
-      if (!outside || outside.isEmpty()) continue;
-      const geometry = polygonsOf(outside.isValid() ? outside : outside.makeValid());
-      if (!geometry) continue;
-      kept.push({ ...feature, geometry });
-    } catch {
-      kept.push(feature);
+    if (COVERED_BY_LAND.has(objectClass) && isPolygon(feature.geometry)) {
+      const geom = prepared(feature.geometry);
+      if (!geom) continue;
+      try {
+        const outside = geom.difference(land);
+        if (!outside || outside.isEmpty()) continue;
+        const geometry = polygonsOf(outside.isValid() ? outside : outside.makeValid());
+        if (geometry) kept.push({ ...feature, geometry });
+      } catch {
+        kept.push(feature);
+      }
+      continue;
     }
+    if (edge && SHORE_LINES.has(objectClass) && isLine(feature.geometry)) {
+      const geom = prepared(feature.geometry);
+      if (!geom) continue;
+      try {
+        const outside = geom.difference(edge);
+        if (!outside || outside.isEmpty()) continue;
+        const geometry = linesOf(outside);
+        if (geometry) kept.push({ ...feature, geometry });
+      } catch {
+        kept.push(feature);
+      }
+      continue;
+    }
+    if (filled && objectClass === "SOUNDG" && feature.geometry?.type === "Point") {
+      const geom = prepared(feature.geometry);
+      if (geom && filled.contains(geom)) continue;
+    }
+    kept.push(feature);
   }
+  // Filled water that meets no land piece (a closed loop whose banks are two
+  // pieces' corners) still becomes land, or it would be a hole in the chart.
+  const template = originals.keys().next().value as ChartFeature;
+  filledParts.forEach((part, index) => {
+    if (joined.has(index)) return;
+    const geometry = polygonsOf(part);
+    if (!geometry) return;
+    const properties = { ...template.properties };
+    delete properties.OBJNAM;
+    kept.push({ ...template, properties, geometry });
+  });
+  if (filled) kept.push(...mouthCoastline(features, filled, originalLand));
   return kept;
 }

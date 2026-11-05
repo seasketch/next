@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import gdal from "gdal-async";
 import { describe, it } from "node:test";
 import { clipDepthCoveredByLand } from "../src/landCover.js";
 
@@ -293,5 +294,79 @@ describe("depth areas covered by land", () => {
     const depth = kept.find((item) => item.properties.obj === "DEPARE");
     assert.ok(depth);
     assert.ok(maxLatitude(depth.geometry) > 0.6);
+  });
+});
+
+describe("closing a creek keeps the chart's topology", () => {
+  const notched = [
+    [0, 0],
+    [0.45, 0],
+    [0.45, 0.02],
+    [0.451, 0.02],
+    [0.451, 0],
+    [1, 0],
+    [1, 1],
+    [0, 1],
+    [0, 0],
+  ];
+  const line = (objectClass: string, coordinates: number[][]) => ({
+    type: "Feature",
+    properties: { obj: objectClass, cell: "US4" },
+    geometry: { type: "LineString", coordinates },
+  });
+  const kept = clipDepthCoveredByLand([
+    feature("LNDARE", [notched]),
+    line("COALNE", notched),
+    line("DEPCNT", [
+      [0.4503, 0.001],
+      [0.4503, 0.015],
+    ]),
+    {
+      type: "Feature",
+      properties: { obj: "SOUNDG", cell: "US4", DEPTH: 1 },
+      geometry: { type: "Point", coordinates: [0.4505, 0.01] },
+    },
+    {
+      type: "Feature",
+      properties: { obj: "SOUNDG", cell: "US4", DEPTH: 9 },
+      geometry: { type: "Point", coordinates: [0.6, -0.1] },
+    },
+  ]);
+  const byClass = (objectClass: string) => kept.filter((item) => item.properties.obj === objectClass);
+
+  it("fills the notch into the land without leaving a hole", () => {
+    const land = byClass("LNDARE");
+    assert.equal(land.length, 1);
+    assert.equal(land[0].geometry.type, "Polygon");
+    assert.equal((land[0].geometry.coordinates as unknown[]).length, 1);
+  });
+
+  it("drops contours and soundings inside the filled water", () => {
+    assert.equal(byClass("DEPCNT").length, 0);
+    assert.deepEqual(
+      byClass("SOUNDG").map((item) => item.properties.DEPTH),
+      [9]
+    );
+  });
+
+  it("draws coastline across the mouth and drops it inside the creek", () => {
+    const points: number[][] = [];
+    const walk = (value: unknown) => {
+      if (!Array.isArray(value)) return;
+      if (typeof value[0] === "number") {
+        points.push(value as number[]);
+        return;
+      }
+      for (const child of value) walk(child);
+    };
+    for (const coast of byClass("COALNE")) walk(coast.geometry.coordinates);
+    assert.equal(
+      points.some((point) => point[1] > 0.001 && point[1] < 0.019 && point[0] > 0.449 && point[0] < 0.452),
+      false
+    );
+    const mouth = gdal.Geometry.fromGeoJson({ type: "Point", coordinates: [0.4505, 0] });
+    assert.ok(
+      byClass("COALNE").some((coast) => gdal.Geometry.fromGeoJson(coast.geometry).distance(mouth) < 1e-7)
+    );
   });
 });
