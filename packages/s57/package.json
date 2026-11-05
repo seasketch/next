@@ -24,6 +24,11 @@
     "test": "node --import tsx --test test/*.test.ts",
     "fetch": "tsx scripts/fetch-chart.ts",
     "chart": "tsx scripts/build-chart.ts",
-    "demo": "node demo/serve.mjs"
+    "demo": "node demo/serve.mjs",
+    "compare": "tsx scripts/compare.ts",
+    "gaps": "tsx scripts/zoomGaps.ts"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.55.0"
   }
 }
