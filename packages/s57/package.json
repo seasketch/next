@@ -18,7 +18,8 @@
   },
   "scripts": {
     "build": "tsc -b",
-    "test": "node --import tsx --test test/layers.test.ts",
+    "test": "node --import tsx --test test/*.test.ts",
+    "fetch": "tsx scripts/fetch-chart.ts",
     "chart": "tsx scripts/build-chart.ts",
     "demo": "node demo/serve.mjs"
   }
