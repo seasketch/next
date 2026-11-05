@@ -30,6 +30,10 @@ describe("S-57 feature normalization", () => {
     assert.ok(harbor <= 16);
     // 1:18,000 harbour soundings are readable when the harbour fills the view.
     assert.equal(zoomForScaleDenominator(17999), 14);
+    // Santa Barbara's 1:22,000 anchorage: 1:22,000 is reached at about zoom 13.4.
+    assert.equal(zoomForScaleDenominator(21999, 34.4), 13);
+    // The same scale is reached sooner farther from the equator.
+    assert.ok(zoomForScaleDenominator(89999, 60) < zoomForScaleDenominator(89999, 0));
   });
 
   it("keeps chart attributes and drops record ids", () => {

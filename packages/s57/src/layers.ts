@@ -155,26 +155,35 @@ export function bandFromCellName(name: string): number | null {
   return band;
 }
 
+/** Metres per screen pixel the S-52 display scale assumes. */
+const S52_PIXEL_METRES = 0.00028;
+const EARTH_CIRCUMFERENCE = 40075016.686;
+/** Mapbox and MapLibre zoom 0 is one 512-pixel tile for the whole world. */
+const WORLD_PIXELS_AT_ZOOM_0 = 512;
+
 /**
- * Zoom at which a feature with this S-57 SCAMIN (scale denominator) may
- * appear. Larger denominators are smaller scales, so they show up sooner.
- * Floored, so the feature is on screen at the first zoom finer than that
- * scale instead of waiting until the scale has already been passed.
+ * Zoom at which the display scale reaches this S-57 SCAMIN (a scale
+ * denominator), at that latitude. Larger denominators are smaller scales, so
+ * they show up sooner. Rounded to the nearest zoom, so a symbol appears close
+ * to the scale the chart compiler chose rather than a whole zoom late.
  */
-export function zoomForScaleDenominator(denominator: number): number {
+export function zoomForScaleDenominator(denominator: number, latitude = 0): number {
   if (!Number.isFinite(denominator) || denominator <= 0) return 0;
-  const zoom = Math.log2(156543.03392 / (denominator * 0.00028));
-  return Math.max(0, Math.min(16, Math.floor(zoom)));
+  const lat = Number.isFinite(latitude) ? Math.max(-85, Math.min(85, latitude)) : 0;
+  const metresAcross = EARTH_CIRCUMFERENCE * Math.cos((lat * Math.PI) / 180);
+  const zoom = Math.log2(metresAcross / (WORLD_PIXELS_AT_ZOOM_0 * denominator * S52_PIXEL_METRES));
+  return Math.max(0, Math.min(16, Math.round(zoom)));
 }
 
 export function zoomRangeForFeature(
   band: number | null,
-  scamin: number | null
+  scamin: number | null,
+  latitude = 0
 ): { minzoom: number; maxzoom: number } {
   let minzoom = bandMinZoom(band);
   const maxzoom = ENC_MAX_ZOOM;
   if (scamin != null && Number.isFinite(scamin) && scamin > 0) {
-    minzoom = Math.max(minzoom, zoomForScaleDenominator(scamin));
+    minzoom = Math.max(minzoom, zoomForScaleDenominator(scamin, latitude));
   }
   if (minzoom > maxzoom) minzoom = maxzoom;
   return { minzoom, maxzoom };
@@ -230,6 +239,13 @@ export function aidMark(
   return fixed[objectClass] || null;
 }
 
+function firstLatitude(geometry: unknown): number {
+  let value: unknown = (geometry as { coordinates?: unknown }).coordinates;
+  while (Array.isArray(value) && Array.isArray(value[0])) value = value[0];
+  if (Array.isArray(value) && typeof value[1] === "number") return value[1];
+  return 0;
+}
+
 /**
  * One GeoJSON feature as tippecanoe reads it: chart attributes, plus the
  * source-layer and zoom hint. Returns null when the input is not a feature
@@ -270,7 +286,7 @@ export function rewriteEncFeature(
     const colour = firstColour(source.COLOUR);
     if (colour != null) properties.colour = colour;
   }
-  const range = zoomRangeForFeature(meta.band, scamin);
+  const range = zoomRangeForFeature(meta.band, scamin, firstLatitude(feature.geometry));
   return {
     type: "Feature",
     geometry: feature.geometry,

@@ -375,6 +375,9 @@ export async function processEncFiles(
         `--maximum-zoom=${ENC_MAX_ZOOM}`,
         "--no-tile-size-limit",
         "--no-feature-limit",
+        // Tippecanoe otherwise keeps 1 point in 2.5 at each zoom below the
+        // top, so rocks and soundings blink out and back as you zoom.
+        "--drop-rate=1",
         "--generate-ids",
         peeledPoints,
       ]);

@@ -7,10 +7,12 @@ import gdal from "gdal-async";
  * Stop a smaller-scale chart where a larger-scale cell covers the same place.
  *
  * A feature of band B is split against each larger-scale cell that covers it
- * and that actually draws the same layer. The covered part ends at the zoom
- * before that cell's own features of the layer appear. Ending it at the
+ * and that actually draws the same object class. The covered part ends at the
+ * zoom before that cell's own features of the class appear. Ending it at the
  * cell's usage-band zoom instead leaves a gap: the small-scale contours are
- * gone, and the large-scale contours have not started.
+ * gone, and the large-scale contours have not started. The class, not the
+ * tile layer, decides: a harbour anchorage with a large SCAMIN starts after
+ * the harbour's restricted areas, which share its layer.
  *
  * Geometry comes from gdal-async, which ships its own GDAL. The chart build
  * does not need the Python osgeo module.
@@ -110,20 +112,112 @@ function loadMasks(geojson: { features?: Array<Record<string, unknown>> }): Mask
   return masks;
 }
 
-async function layerStarts(featuresPath: string): Promise<Map<string, number>> {
-  const starts = new Map<string, number>();
+/** The S-57 object class, or the tile layer for a feature without one. */
+function drawnAs(properties: Record<string, unknown>): string | null {
+  if (typeof properties.obj === "string") return properties.obj;
+  if (typeof properties.cls === "string") return properties.cls;
+  return null;
+}
+
+/**
+ * The chart itself: these hand over when the covering cell draws the class
+ * at all. Matching them object by object would cost a geometry test per
+ * sounding and per contour, and they carry no per-object SCAMIN to honour.
+ */
+export const WHOLE_CLASS = new Set(["DEPARE", "DRGARE", "UNSARE", "LNDARE", "DEPCNT", "SOUNDG", "COALNE", "SLCONS"]);
+
+/** How far apart two cells may place the same buoy or landmark. About 300 m. */
+const SAME_OBJECT = 0.003;
+
+type Extent = { west: number; south: number; east: number; north: number; minzoom: number };
+
+type Starts = {
+  /** First zoom of each class in each cell. */
+  byClass: Map<string, number>;
+  /** Where each symbol-class feature of each cell sits, and when it appears. */
+  extents: Map<string, Extent[]>;
+};
+
+function extentOf(geometry: unknown): Omit<Extent, "minzoom"> | null {
+  let west = Infinity;
+  let south = Infinity;
+  let east = -Infinity;
+  let north = -Infinity;
+  const visit = (value: unknown) => {
+    if (!Array.isArray(value)) return;
+    if (typeof value[0] === "number" && typeof value[1] === "number") {
+      west = Math.min(west, value[0]);
+      east = Math.max(east, value[0]);
+      south = Math.min(south, value[1]);
+      north = Math.max(north, value[1]);
+      return;
+    }
+    for (const child of value) visit(child);
+  };
+  visit((geometry as { coordinates?: unknown }).coordinates);
+  return Number.isFinite(west) ? { west, south, east, north } : null;
+}
+
+async function classStarts(featuresPath: string): Promise<Starts> {
+  const byClass = new Map<string, number>();
+  const extents = new Map<string, Extent[]>();
   await readLines(featuresPath, (line) => {
     const feature = JSON.parse(line) as Feature;
     const cell = feature.properties.cell;
-    const layer = feature.properties.cls;
-    if (typeof cell !== "string" || typeof layer !== "string") return;
+    const layer = drawnAs(feature.properties);
+    if (typeof cell !== "string" || layer == null) return;
     const zoom = feature.tippecanoe?.minzoom;
     if (typeof zoom !== "number") return;
     const key = `${cell}\0${layer}`;
-    const current = starts.get(key);
-    if (current == null || zoom < current) starts.set(key, zoom);
+    const current = byClass.get(key);
+    if (current == null || zoom < current) byClass.set(key, zoom);
+    if (WHOLE_CLASS.has(layer)) return;
+    const extent = extentOf(feature.geometry);
+    if (!extent) return;
+    if (!extents.has(key)) extents.set(key, []);
+    extents.get(key)!.push({ ...extent, minzoom: zoom });
   });
-  return starts;
+  return { byClass, extents };
+}
+
+/**
+ * The zoom the covering cell takes this object over. A buoy, light or
+ * anchorage hands over when the covering cell's own copy of it appears, so a
+ * per-object SCAMIN in the larger-scale cell does not leave a zoom with
+ * neither. Null when the covering cell has no copy of it: the object stays
+ * on its own chart, or goes to a larger-scale cell that does carry it.
+ */
+function handover(starts: Starts, key: string, layer: string, part: Geometry): number | null {
+  const classStart = starts.byClass.get(key);
+  if (classStart == null) return null;
+  if (WHOLE_CLASS.has(layer)) return classStart;
+  const candidates = starts.extents.get(key);
+  if (!candidates) return null;
+  const envelope = part.getEnvelope();
+  let closest: Extent | undefined;
+  let closestMismatch = Infinity;
+  for (const other of candidates) {
+    if (
+      other.west > envelope.maxX + SAME_OBJECT ||
+      other.east < envelope.minX - SAME_OBJECT ||
+      other.south > envelope.maxY + SAME_OBJECT ||
+      other.north < envelope.minY - SAME_OBJECT
+    ) {
+      continue;
+    }
+    // Two rocks 200 m apart can both be in range; the copy is the one whose
+    // extent matches best, not whichever appears first.
+    const mismatch =
+      Math.abs(other.west - envelope.minX) +
+      Math.abs(other.east - envelope.maxX) +
+      Math.abs(other.south - envelope.minY) +
+      Math.abs(other.north - envelope.maxY);
+    if (mismatch < closestMismatch) {
+      closest = other;
+      closestMismatch = mismatch;
+    }
+  }
+  return closest?.minzoom ?? null;
 }
 
 function cut(
@@ -132,7 +226,7 @@ function cut(
   band: number,
   layer: string,
   masks: Mask[],
-  starts: Map<string, number>,
+  starts: Starts,
   maxZoom: number,
   family: string,
   write: (line: string) => void
@@ -142,15 +236,15 @@ function cut(
   let written = 0;
   for (let higher = band + 1; higher <= 6; higher += 1) {
     const covering = masks.filter(
-      (mask) => mask.band === higher && starts.has(`${mask.cell}\0${layer}`)
+      (mask) => mask.band === higher && starts.byClass.has(`${mask.cell}\0${layer}`)
     );
     for (const mask of covering) {
       if (!remaining || remaining.isEmpty()) return written;
       const inside = clean(remaining.intersection(mask.geom));
-      if (inside && !inside.isEmpty()) {
-        const start = starts.get(`${mask.cell}\0${layer}`);
-        if (start != null) written += emit(feature, inside, start - 1, family, write);
-      }
+      if (!inside || inside.isEmpty()) continue;
+      const start = handover(starts, `${mask.cell}\0${layer}`, layer, inside);
+      if (start == null) continue;
+      written += emit(feature, inside, start - 1, family, write);
       remaining = clean(remaining.difference(mask.geom));
     }
   }
@@ -168,7 +262,7 @@ export async function peelFeatures(
   const spec = JSON.parse(await readFile(specPath, "utf8")) as { maxZoom: number };
   const maxZoom = spec.maxZoom;
   const masks = loadMasks(JSON.parse(await readFile(masksPath, "utf8")));
-  const starts = await layerStarts(featuresPath);
+  const starts = await classStarts(featuresPath);
   const out = createWriteStream(outPath);
   let written = 0;
   const write = (line: string) => {
@@ -185,10 +279,10 @@ export async function peelFeatures(
     }
     if (!geom) return;
     const band = feature.properties.band;
-    const layer = feature.properties.cls;
+    const layer = drawnAs(feature.properties);
     const family = geom.name;
     try {
-      if (typeof band !== "number" || typeof layer !== "string") {
+      if (typeof band !== "number" || layer == null) {
         written += emit(feature, geom, feature.tippecanoe.maxzoom, family, write);
         return;
       }
