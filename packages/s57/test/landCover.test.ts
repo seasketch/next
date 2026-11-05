@@ -176,35 +176,81 @@ describe("depth areas covered by land", () => {
     assert.ok(maxLatitude(depth.geometry) > 0.01);
   });
 
+  // A creek bed in a notch wider than a closable mouth: shore on three sides.
+  const creekShore = [
+    [0, 0],
+    [1, 0],
+    [1, 1],
+    [0.4025, 1],
+    [0.4025, 0.991],
+    [0.4, 0.991],
+    [0.4, 1],
+    [0, 1],
+    [0, 0],
+  ];
+  const creekBed = [
+    [0.4, 0.991],
+    [0.4025, 0.991],
+    [0.4025, 1],
+    [0.4, 1],
+    [0.4, 0.991],
+  ];
+  const depthArea = (band: number, DRVAL1: number, DRVAL2: number, ring: number[][]) => ({
+    type: "Feature",
+    properties: { obj: "DEPARE", cell: `US${band}`, DRVAL1, DRVAL2, band },
+    geometry: polygon([ring]),
+  });
+  const landCovers = (kept: Array<{ properties: Record<string, unknown>; geometry: unknown }>, x: number, y: number) => {
+    const point = gdal.Geometry.fromGeoJson({ type: "Point", coordinates: [x, y] });
+    return kept.some(
+      (item) =>
+        item.properties.obj === "LNDARE" &&
+        gdal.Geometry.fromGeoJson(item.geometry as Record<string, unknown>).contains(point)
+    );
+  };
+
   it("joins a very shallow creek finger onto the land", () => {
-    const shore = [
-      [0, 0],
-      [1, 0],
-      [1, 1],
-      [0, 1],
-      [0, 0],
-    ];
-    const finger = {
-      type: "Feature",
-      properties: { obj: "DEPARE", cell: "US4", DRVAL1: 0, DRVAL2: 1.8, band: 4 },
-      geometry: polygon([
-        [
-          [0.4, 1],
-          [0.402, 1],
-          [0.402, 1.012],
-          [0.4, 1.012],
-          [0.4, 1],
-        ],
-      ]),
-    };
-    const kept = clipDepthCoveredByLand([feature("LNDARE", [shore]), finger]);
+    const kept = clipDepthCoveredByLand([feature("LNDARE", [creekShore]), depthArea(4, 0, 1.8, creekBed)]);
     assert.equal(
       kept.some((item) => item.properties.obj === "DEPARE"),
       false
     );
-    const land = kept.find((item) => item.properties.obj === "LNDARE");
-    assert.ok(land);
-    assert.ok(maxLatitude(land.geometry) > 1.005);
+    assert.ok(landCovers(kept, 0.401, 0.995));
+  });
+
+  it("keeps a shoal that only grazes the shore as water", () => {
+    const shoal = [
+      [0.4, 1],
+      [0.402, 1],
+      [0.402, 1.012],
+      [0.4, 1.012],
+      [0.4, 1],
+    ];
+    const kept = clipDepthCoveredByLand([feature("LNDARE", [land]), depthArea(4, 0, 1.8, shoal)]);
+    const depth = kept.find((item) => item.properties.obj === "DEPARE");
+    assert.ok(depth);
+    assert.ok(maxLatitude(depth.geometry) > 1.005);
+  });
+
+  it("keeps a shelf band along the shore that reaches past two metres", () => {
+    const band = [
+      [0.3, 1],
+      [0.328, 1],
+      [0.328, 1.001],
+      [0.3, 1.001],
+      [0.3, 1],
+    ];
+    const kept = clipDepthCoveredByLand([feature("LNDARE", [land]), depthArea(4, 0, 5.4, band)]);
+    const depth = kept.find((item) => item.properties.obj === "DEPARE");
+    assert.ok(depth);
+    assert.ok(maxLatitude(depth.geometry) > 1.0005);
+    assert.equal(landCovers(kept, 0.31, 1.0005), false);
+  });
+
+  it("keeps a creek bed deeper than two metres", () => {
+    const kept = clipDepthCoveredByLand([feature("LNDARE", [creekShore]), depthArea(4, 1.8, 5.4, creekBed)]);
+    assert.ok(kept.some((item) => item.properties.obj === "DEPARE"));
+    assert.equal(landCovers(kept, 0.401, 0.995), false);
   });
 
   it("leaves a narrow notch open on a harbour chart", () => {
@@ -243,30 +289,12 @@ describe("depth areas covered by land", () => {
   });
 
   it("keeps the same finger on a harbour chart", () => {
-    const shore = [
-      [0, 0],
-      [1, 0],
-      [1, 1],
-      [0, 1],
-      [0, 0],
-    ];
-    const finger = {
-      type: "Feature",
-      properties: { obj: "DEPARE", cell: "US5", DRVAL1: 0, DRVAL2: 1.8, band: 5 },
-      geometry: polygon([
-        [
-          [0.4, 1],
-          [0.402, 1],
-          [0.402, 1.012],
-          [0.4, 1.012],
-          [0.4, 1],
-        ],
-      ]),
-    };
-    const kept = clipDepthCoveredByLand([feature("LNDARE", [shore]), finger]);
-    const depth = kept.find((item) => item.properties.obj === "DEPARE");
-    assert.ok(depth);
-    assert.ok(maxLatitude(depth.geometry) > 1.005);
+    const kept = clipDepthCoveredByLand([
+      { ...feature("LNDARE", [creekShore]), properties: { obj: "LNDARE", cell: "US5", band: 5 } },
+      depthArea(5, 0, 1.8, creekBed),
+    ]);
+    assert.ok(kept.some((item) => item.properties.obj === "DEPARE"));
+    assert.equal(landCovers(kept, 0.401, 0.995), false);
   });
 
   it("keeps a lake that sits in a hole in the land", () => {

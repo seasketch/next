@@ -367,14 +367,6 @@ export function topmarkSymbol(shape: unknown): string {
   return (code && byShape[code]) || "topmark-board";
 }
 
-/** Pattern for a seabed area whose main surface is rock or coral. */
-export function seabedTexture(natureOfSurface: unknown): string | null {
-  const code = codes(scalarProperty(natureOfSurface))[0];
-  if (code === 9) return "rock";
-  if (code === 14) return "coral";
-  return null;
-}
-
 function firstLatitude(geometry: unknown): number {
   let value: unknown = (geometry as { coordinates?: unknown }).coordinates;
   while (Array.isArray(value) && Array.isArray(value[0])) value = value[0];
@@ -431,8 +423,6 @@ export function rewriteEncFeature(
     if (objectClass === "SBDARE") {
       const seabed = seabedLabel(properties);
       if (seabed) properties.seabed = seabed;
-      const texture = seabedTexture(properties.NATSUR);
-      if (texture) properties.texture = texture;
     }
     if (objectClass === "TOPMAR") properties.topmark = topmarkSymbol(properties.TOPSHP);
     const symbol = landmarkSymbol(objectClass, properties);

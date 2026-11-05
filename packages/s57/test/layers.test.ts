@@ -10,7 +10,6 @@ import {
   extendBounds,
   firstColour,
   rewriteEncFeature,
-  seabedTexture,
   topmarkSymbol,
   zoomForScaleDenominator,
   zoomRangeForFeature,
@@ -175,7 +174,7 @@ describe("S-57 feature normalization", () => {
   });
 });
 
-describe("topmarks and seabed textures", () => {
+describe("topmarks and seabed areas", () => {
   it("draws each topmark shape, and an unknown one as a board", () => {
     assert.equal(topmarkSymbol(3), "topmark-sphere");
     assert.equal(topmarkSymbol("13"), "topmark-cones-up");
@@ -183,14 +182,7 @@ describe("topmarks and seabed textures", () => {
     assert.equal(topmarkSymbol(null), "topmark-board");
   });
 
-  it("textures rock and coral by the main surface only", () => {
-    assert.equal(seabedTexture("9"), "rock");
-    assert.equal(seabedTexture(14), "coral");
-    assert.equal(seabedTexture("4,9"), null);
-    assert.equal(seabedTexture(undefined), null);
-  });
-
-  it("keeps the new classes and tags topmarks and textures", () => {
+  it("keeps the new classes, tags topmarks, and letters rock areas", () => {
     assert.equal(ENC_LAYER_BY_CLASS.SLOGRD, "land_detail");
     assert.equal(ENC_LAYER_BY_CLASS.SNDWAV, "seabed");
     const at = { type: "Point", coordinates: [-120, 34] };
@@ -203,6 +195,7 @@ describe("topmarks and seabed textures", () => {
       { type: "Feature", geometry: at, properties: { NATSUR: ["9"] } },
       { cell: "US5", band: 5, layer: "seabed", objectClass: "SBDARE" }
     );
-    assert.equal((rock?.properties as Record<string, unknown>).texture, "rock");
+    assert.equal((rock?.properties as Record<string, unknown>).texture, undefined);
+    assert.equal((rock?.properties as Record<string, unknown>).seabed, "R");
   });
 });

@@ -78,8 +78,6 @@ NAMES = [
     "slope",
     "sand-waves",
     "sand-waves-pattern",
-    "rock-pattern",
-    "coral-pattern",
     "topmark-cone-up",
     "topmark-cone-down",
     "topmark-sphere",
@@ -97,7 +95,7 @@ NAMES = [
 
 
 # Seabed textures cover wide areas, so they repeat at twice the icon cell.
-LARGE = {"sand-waves-pattern", "rock-pattern", "coral-pattern"}
+LARGE = {"sand-waves-pattern", "kelp-pattern"}
 FAINT = (96, 104, 110, 150)
 
 
@@ -284,13 +282,13 @@ def draw_anchor(draw):
     draw.polygon([(200, 160), (212, 196), (176, 184)], fill=MAGENTA)
 
 
-def kelp_frond(draw, x, y, scale):
+def kelp_frond(draw, x, y, scale, fill=BLACK):
     import math
     points = []
     for step in range(41):
         t = step / 40
         points.append((x + 16 * scale * math.sin(t * math.pi * 3), y - 170 * scale * t))
-    draw.line(points, fill=BLACK, width=max(6, int(9 * scale)), joint="curve")
+    draw.line(points, fill=fill, width=max(6, int(9 * scale)), joint="curve")
 
 
 def draw_kelp(draw):
@@ -299,9 +297,10 @@ def draw_kelp(draw):
 
 
 def draw_kelp_pattern(draw):
-    # Sparse so the depth colour still reads through a kelp bed.
-    kelp_frond(draw, 64, 120, 0.6)
-    kelp_frond(draw, 192, 248, 0.6)
+    # A large tile with two small fronds, so a kelp bed reads as a scatter of
+    # marks over the depth colour rather than a hatching.
+    kelp_frond(draw, 128, 170, 0.5, FAINT)
+    kelp_frond(draw, 384, 426, 0.5, FAINT)
 
 
 def draw_building(draw):
@@ -423,19 +422,6 @@ def draw_sand_waves_pattern(draw):
     wave(draw, 304, 464, 384, 14, 9, FAINT)
 
 
-def draw_rock_pattern(draw):
-    for cx, cy in ((128, 128), (384, 384)):
-        draw.line([(cx - 22, cy), (cx + 22, cy)], fill=FAINT, width=9)
-        draw.line([(cx, cy - 22), (cx, cy + 22)], fill=FAINT, width=9)
-
-
-def draw_coral_pattern(draw):
-    for cx, cy in ((128, 136), (384, 392)):
-        draw.line([(cx, cy + 24), (cx, cy - 8)], fill=FAINT, width=8)
-        draw.line([(cx, cy + 4), (cx - 20, cy - 20)], fill=FAINT, width=7)
-        draw.line([(cx, cy), (cx + 20, cy - 24)], fill=FAINT, width=7)
-
-
 def cone(draw, apex, base_y, half):
     x, y = apex
     draw.polygon([(x, y), (x - half, base_y), (x + half, base_y)], fill=BLACK)
@@ -507,8 +493,6 @@ PAINTERS = {
     "slope": lambda im, dr: draw_slope(dr),
     "sand-waves": lambda im, dr: draw_sand_waves(dr),
     "sand-waves-pattern": lambda im, dr: draw_sand_waves_pattern(dr),
-    "rock-pattern": lambda im, dr: draw_rock_pattern(dr),
-    "coral-pattern": lambda im, dr: draw_coral_pattern(dr),
 }
 for _shape, _paint in TOPMARKS.items():
     PAINTERS[f"topmark-{_shape}"] = lambda im, dr, paint=_paint: paint(dr)

@@ -19,6 +19,7 @@ const places: Array<{ name: string; lat: number; lng: number; zooms: number[]; n
   { name: "ventura", lat: 34.245, lng: -119.265, zooms: [12, 13, 14], note: "Ventura harbour" },
   { name: "ci-harbor", lat: 34.16, lng: -119.225, zooms: [13, 14], note: "Channel Islands Harbor" },
   { name: "anacapa", lat: 34.012, lng: -119.39, zooms: [11, 12, 13], note: "island, cliffs, light" },
+  { name: "anacapa-east", lat: 34.0137, lng: -119.3693, zooms: [15], note: "north-shore shelf band, kelp, rock" },
   { name: "scorpion", lat: 34.05, lng: -119.555, zooms: [12, 13], note: "Santa Cruz anchorage" },
   { name: "bechers", lat: 34.0, lng: -120.04, zooms: [11, 12], note: "Santa Rosa, Bechers Bay" },
   { name: "cuyler", lat: 34.05, lng: -120.35, zooms: [11, 12], note: "San Miguel, Cuyler Harbor" },

@@ -34,6 +34,13 @@ const MAX_MEAN_WIDTH = 0.0018;
 /** A shallow finger smaller than this is a creek, not the coastal shelf. About 0.3 km². */
 const FINGER_AREA = 0.00003;
 const FINGER_WIDTH = 0.002;
+/** Creek beds are drawn 0–1.8 m. A band reaching deeper is the shelf along the shore. */
+const FINGER_DEPTH = 2;
+/**
+ * A creek bed sits in a notch, so much of its edge is shore. A shoal that only
+ * grazes the land, or a strip that runs along it, is water.
+ */
+const FINGER_SHORE_SHARE = 0.3;
 
 function signedArea(ring: number[][]): number {
   let area = 0;
@@ -211,7 +218,9 @@ function isShallowFinger(feature: ChartFeature): boolean {
   if (feature.properties.obj !== "DEPARE") return false;
   if (isHarbour(feature)) return false;
   const depth = feature.properties.DRVAL1;
-  if (typeof depth !== "number" || depth < 0 || depth >= 2) return false;
+  const deepest = feature.properties.DRVAL2;
+  if (typeof depth !== "number" || depth < 0 || depth >= FINGER_DEPTH) return false;
+  if (typeof deepest !== "number" || deepest > FINGER_DEPTH) return false;
   const metrics = polygonMetrics(feature.geometry);
   if (!metrics) return false;
   return (
@@ -252,6 +261,19 @@ function linesOf(geom: Geometry): GeoJsonGeometry | null {
   }
   if (coordinates.length === 0) return null;
   return { type: "MultiLineString", coordinates };
+}
+
+function lineLength(geom: Geometry): number {
+  const lines = linesOf(geom);
+  if (!lines || !Array.isArray(lines.coordinates)) return 0;
+  const parts = (lines.type === "LineString" ? [lines.coordinates] : lines.coordinates) as number[][][];
+  let length = 0;
+  for (const part of parts) {
+    for (let index = 0; index < part.length - 1; index += 1) {
+      length += Math.hypot(part[index + 1][0] - part[index][0], part[index + 1][1] - part[index][1]);
+    }
+  }
+  return length;
 }
 
 function polygonParts(geom: Geometry): Geometry[] {
@@ -330,6 +352,7 @@ export function clipDepthCoveredByLand(features: ChartFeature[]): ChartFeature[]
     if (closed) gained.push(closed);
   }
   const fingers = new Set<ChartFeature>();
+  let shore: Geometry | null = null;
   for (const feature of features) {
     if (!isShallowFinger(feature)) continue;
     const geom = prepared(feature.geometry);
@@ -337,6 +360,9 @@ export function clipDepthCoveredByLand(features: ChartFeature[]): ChartFeature[]
     // A finger that does not touch the shore is a pond. Leave it as water.
     try {
       if (originalLand.distance(geom) > ON_EDGE) continue;
+      shore = shore || originalLand.boundary().buffer(ON_EDGE * 10, 2);
+      const edge = geom.boundary();
+      if (lineLength(edge.intersection(shore)) < FINGER_SHORE_SHARE * lineLength(edge)) continue;
     } catch {
       continue;
     }

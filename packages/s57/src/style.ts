@@ -438,15 +438,6 @@ function singleSourceStyle(
         paint: { "fill-pattern": "kelp-pattern" },
       },
       {
-        id: "s57-seabed-texture",
-        type: "fill",
-        source: id,
-        "source-layer": "seabed",
-        minzoom: 11,
-        filter: ["all", ["==", obj, "SBDARE"], polygon, ["has", "texture"]],
-        paint: { "fill-pattern": ["concat", ["get", "texture"], "-pattern"] },
-      },
-      {
         id: "s57-sand-wave-area",
         type: "fill",
         source: id,
