@@ -9,6 +9,7 @@ import {
   labelLightsFromStructures,
   lightDescription,
   markLabel,
+  placeTopmarks,
   seabedLabel,
 } from "../src/labels.js";
 import { rewriteEncFeature } from "../src/layers.js";
@@ -192,3 +193,35 @@ describe("labels placed once", () => {
   });
 });
 
+describe("topmarks", () => {
+  const point = (obj: string, lng: number, extra: Record<string, unknown> = {}) => ({
+    properties: { obj, ...extra } as Record<string, unknown>,
+    geometry: { type: "Point", coordinates: [lng, 34] },
+  });
+
+  it("stands a topmark on the mark at its position", () => {
+    const topmark = point("TOPMAR", -120);
+    const kept = placeTopmarks([point("BOYSAW", -120, { mark: "safe" }), topmark]);
+    assert.equal(kept.length, 2);
+    assert.equal(topmark.properties.hosted, true);
+  });
+
+  it("drops a topmark the cardinal or isolated-danger symbol already draws", () => {
+    const kept = placeTopmarks([
+      point("BOYCAR", -120, { mark: "cardinal" }),
+      point("TOPMAR", -120),
+      point("BCNISD", -121, { mark: "isolated" }),
+      point("TOPMAR", -121),
+    ]);
+    assert.deepEqual(
+      kept.map((feature) => feature.properties.obj),
+      ["BOYCAR", "BCNISD"]
+    );
+  });
+
+  it("draws a topmark with no structure under it on its own position", () => {
+    const topmark = point("TOPMAR", -122);
+    assert.equal(placeTopmarks([point("BOYSAW", -120, { mark: "safe" }), topmark]).length, 2);
+    assert.equal(topmark.properties.hosted, undefined);
+  });
+});

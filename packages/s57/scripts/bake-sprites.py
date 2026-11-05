@@ -22,6 +22,7 @@ MAGENTA = (197, 69, 195, 255)
 WHITE = (255, 255, 255, 255)
 LIGHT_YELLOW = (244, 210, 64, 255)
 BROWN = (120, 98, 60, 255)
+GREY = (96, 104, 110, 255)
 NONE = (0, 0, 0, 0)
 
 CELL = 64
@@ -74,11 +75,34 @@ NAMES = [
     "landmark-spire",
     "landmark-monument",
     "spot-height",
+    "slope",
+    "sand-waves",
+    "sand-waves-pattern",
+    "rock-pattern",
+    "coral-pattern",
+    "topmark-cone-up",
+    "topmark-cone-down",
+    "topmark-sphere",
+    "topmark-spheres",
+    "topmark-can",
+    "topmark-board",
+    "topmark-x",
+    "topmark-cross",
+    "topmark-diamond",
+    "topmark-cones-in",
+    "topmark-cones-out",
+    "topmark-cones-up",
+    "topmark-cones-down",
 ]
 
 
-def new():
-    image = Image.new("RGBA", (S, S), NONE)
+# Seabed textures cover wide areas, so they repeat at twice the icon cell.
+LARGE = {"sand-waves-pattern", "rock-pattern", "coral-pattern"}
+FAINT = (96, 104, 110, 150)
+
+
+def new(size=S):
+    image = Image.new("RGBA", (size, size), NONE)
     return image, ImageDraw.Draw(image)
 
 
@@ -367,6 +391,73 @@ def draw_mooring(draw):
     draw.arc([96, 196, 160, 248], start=0, end=180, fill=BLACK, width=12)
 
 
+def draw_slope(draw):
+    # A hill or dune: the crest, with hachures running down its face.
+    import math
+    box = [20, 64, 236, 280]
+    draw.arc(box, start=195, end=345, fill=BROWN, width=16)
+    cx, cy, r = 128, 172, 108
+    for angle in (210, 240, 270, 300, 330):
+        t = math.radians(angle)
+        x, y = cx + r * math.cos(t), cy + r * math.sin(t)
+        draw.line([(x, y + 4), (x + 0.45 * (x - cx), y + 70)], fill=BROWN, width=11)
+
+
+def wave(draw, x0, x1, y, amplitude, width, fill=GREY):
+    import math
+    points = []
+    for step in range(33):
+        t = step / 32
+        points.append((x0 + (x1 - x0) * t, y + amplitude * math.sin(t * math.pi * 4)))
+    draw.line(points, fill=fill, width=width, joint="curve")
+
+
+def draw_sand_waves(draw):
+    for y in (92, 128, 164):
+        wave(draw, 48, 208, y, 14, 10)
+
+
+# Pattern tiles are 2S square. Marks sit on a diagonal so rows do not line up.
+def draw_sand_waves_pattern(draw):
+    wave(draw, 48, 208, 128, 14, 9, FAINT)
+    wave(draw, 304, 464, 384, 14, 9, FAINT)
+
+
+def draw_rock_pattern(draw):
+    for cx, cy in ((128, 128), (384, 384)):
+        draw.line([(cx - 22, cy), (cx + 22, cy)], fill=FAINT, width=9)
+        draw.line([(cx, cy - 22), (cx, cy + 22)], fill=FAINT, width=9)
+
+
+def draw_coral_pattern(draw):
+    for cx, cy in ((128, 136), (384, 392)):
+        draw.line([(cx, cy + 24), (cx, cy - 8)], fill=FAINT, width=8)
+        draw.line([(cx, cy + 4), (cx - 20, cy - 20)], fill=FAINT, width=7)
+        draw.line([(cx, cy), (cx + 20, cy - 24)], fill=FAINT, width=7)
+
+
+def cone(draw, apex, base_y, half):
+    x, y = apex
+    draw.polygon([(x, y), (x - half, base_y), (x + half, base_y)], fill=BLACK)
+
+
+TOPMARKS = {
+    "cone-up": lambda dr: cone(dr, (128, 140), 240, 46),
+    "cone-down": lambda dr: dr.polygon([(82, 140), (174, 140), (128, 240)], fill=BLACK),
+    "sphere": lambda dr: dr.ellipse([86, 156, 170, 240], fill=BLACK),
+    "spheres": lambda dr: (dr.ellipse([100, 120, 156, 176], fill=BLACK), dr.ellipse([100, 184, 156, 240], fill=BLACK)),
+    "can": lambda dr: dr.rectangle([94, 150, 162, 240], fill=BLACK),
+    "board": lambda dr: dr.rectangle([82, 164, 174, 236], fill=BLACK),
+    "x": lambda dr: (dr.line([(90, 150), (166, 240)], fill=BLACK, width=20), dr.line([(166, 150), (90, 240)], fill=BLACK, width=20)),
+    "cross": lambda dr: (dr.line([(128, 136), (128, 244)], fill=BLACK, width=20), dr.line([(84, 172), (172, 172)], fill=BLACK, width=20)),
+    "diamond": lambda dr: dr.polygon([(128, 132), (174, 188), (128, 244), (82, 188)], fill=BLACK),
+    "cones-in": lambda dr: (dr.polygon([(88, 132), (168, 132), (128, 188)], fill=BLACK), cone(dr, (128, 188), 244, 40)),
+    "cones-out": lambda dr: (cone(dr, (128, 132), 188, 40), dr.polygon([(88, 188), (168, 188), (128, 244)], fill=BLACK)),
+    "cones-up": lambda dr: (cone(dr, (128, 130), 182, 36), cone(dr, (128, 190), 242, 36)),
+    "cones-down": lambda dr: (dr.polygon([(92, 130), (164, 130), (128, 182)], fill=BLACK), dr.polygon([(92, 190), (164, 190), (128, 242)], fill=BLACK)),
+}
+
+
 PAINTERS = {
     "rock": lambda im, dr: draw_rock(dr),
     "rock-awash": lambda im, dr: draw_rock_awash(dr),
@@ -413,11 +504,18 @@ PAINTERS = {
     "landmark-spire": lambda im, dr: draw_landmark_spire(dr),
     "landmark-monument": lambda im, dr: draw_landmark_monument(dr),
     "spot-height": lambda im, dr: draw_spot_height(dr),
+    "slope": lambda im, dr: draw_slope(dr),
+    "sand-waves": lambda im, dr: draw_sand_waves(dr),
+    "sand-waves-pattern": lambda im, dr: draw_sand_waves_pattern(dr),
+    "rock-pattern": lambda im, dr: draw_rock_pattern(dr),
+    "coral-pattern": lambda im, dr: draw_coral_pattern(dr),
 }
+for _shape, _paint in TOPMARKS.items():
+    PAINTERS[f"topmark-{_shape}"] = lambda im, dr, paint=_paint: paint(dr)
 
 
 def render(name):
-    image, draw = new()
+    image, draw = new(2 * S if name in LARGE else S)
     if name == "buoy-safe":
         return draw_buoy_safe((image, draw))
     PAINTERS[name](image, draw)
@@ -427,17 +525,23 @@ def render(name):
 def pack(scale):
     columns = 8
     cell = CELL // scale
-    rows = (len(NAMES) + columns - 1) // columns
-    sheet = Image.new("RGBA", (columns * cell, rows * cell), NONE)
+    small = [name for name in NAMES if name not in LARGE]
+    large = [name for name in NAMES if name in LARGE]
+    rows = (len(small) + columns - 1) // columns
+    large_rows = (len(large) + columns // 2 - 1) // (columns // 2)
+    sheet = Image.new("RGBA", (columns * cell, (rows + 2 * large_rows) * cell), NONE)
     index = {}
-    for number, name in enumerate(NAMES):
-        icon = render(name).resize((cell, cell), Image.Resampling.LANCZOS)
-        x = (number % columns) * cell
-        y = (number // columns) * cell
+    placed = [(name, (n % columns) * cell, (n // columns) * cell, cell) for n, name in enumerate(small)]
+    placed += [
+        (name, (n % (columns // 2)) * 2 * cell, (rows + 2 * (n // (columns // 2))) * cell, 2 * cell)
+        for n, name in enumerate(large)
+    ]
+    for name, x, y, size in placed:
+        icon = render(name).resize((size, size), Image.Resampling.LANCZOS)
         sheet.alpha_composite(icon, (x, y))
         index[name] = {
-            "width": cell,
-            "height": cell,
+            "width": size,
+            "height": size,
             "x": x,
             "y": y,
             "pixelRatio": 2 if scale == 1 else 1,

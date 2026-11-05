@@ -17,8 +17,10 @@ export const ENC_LAYER_BY_CLASS: Record<string, string> = {
   CGUSTA: "land_detail",
   DYKCON: "land_detail",
   FNCLNE: "land_detail",
+  SLOGRD: "land_detail",
   SBDARE: "seabed",
   WEDKLP: "seabed",
+  SNDWAV: "seabed",
   // Lakes and rivers sit inside the land polygon. They are drawn after land
   // so they read as water rather than as another tan fill.
   LAKARE: "inland_water",
@@ -44,6 +46,7 @@ export const ENC_LAYER_BY_CLASS: Record<string, string> = {
   BCNLAT: "aid",
   BCNSAW: "aid",
   DAYMAR: "aid",
+  TOPMAR: "aid",
   FOGSIG: "aid",
   RTPBCN: "aid",
   OBSTRN: "hazard",
@@ -335,6 +338,43 @@ export function landmarkSymbol(objectClass: string, source: Record<string, unkno
   return (category && byCategory[category]) || "landmark";
 }
 
+/**
+ * Sprite for a topmark, by TOPSHP. Drawn black, as S-52 does, so the shape
+ * reads against any buoy colour.
+ */
+export function topmarkSymbol(shape: unknown): string {
+  const byShape: Record<number, string> = {
+    1: "topmark-cone-up",
+    24: "topmark-cone-up",
+    2: "topmark-cone-down",
+    25: "topmark-cone-down",
+    3: "topmark-sphere",
+    26: "topmark-sphere",
+    4: "topmark-spheres",
+    5: "topmark-can",
+    7: "topmark-x",
+    8: "topmark-cross",
+    27: "topmark-cross",
+    28: "topmark-cross",
+    9: "topmark-diamond",
+    12: "topmark-diamond",
+    10: "topmark-cones-in",
+    11: "topmark-cones-out",
+    13: "topmark-cones-up",
+    14: "topmark-cones-down",
+  };
+  const code = codes(scalarProperty(shape))[0];
+  return (code && byShape[code]) || "topmark-board";
+}
+
+/** Pattern for a seabed area whose main surface is rock or coral. */
+export function seabedTexture(natureOfSurface: unknown): string | null {
+  const code = codes(scalarProperty(natureOfSurface))[0];
+  if (code === 9) return "rock";
+  if (code === 14) return "coral";
+  return null;
+}
+
 function firstLatitude(geometry: unknown): number {
   let value: unknown = (geometry as { coordinates?: unknown }).coordinates;
   while (Array.isArray(value) && Array.isArray(value[0])) value = value[0];
@@ -391,7 +431,10 @@ export function rewriteEncFeature(
     if (objectClass === "SBDARE") {
       const seabed = seabedLabel(properties);
       if (seabed) properties.seabed = seabed;
+      const texture = seabedTexture(properties.NATSUR);
+      if (texture) properties.texture = texture;
     }
+    if (objectClass === "TOPMAR") properties.topmark = topmarkSymbol(properties.TOPSHP);
     const symbol = landmarkSymbol(objectClass, properties);
     if (symbol) properties.symbol = symbol;
   }

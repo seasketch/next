@@ -21,7 +21,7 @@ import {
 import { ChartFeature, clipDepthCoveredByLand } from "./landCover.js";
 import { peelFeatures } from "./peel.js";
 import { LightFeature, lightSectorFeatures, sectorRings } from "./sectors.js";
-import { labelLightsFromStructures } from "./labels.js";
+import { labelLightsFromStructures, placeTopmarks } from "./labels.js";
 import { writeAreaLabels } from "./areaLabels.js";
 import { cellEdge, outlineFeatures } from "./outlines.js";
 
@@ -432,7 +432,7 @@ export async function processEncFiles(
       labelLightsFromStructures(pending);
       // Creek beds are shallow depth areas tucked into the shoreline. Close the
       // narrow ones and join the small fingers onto the land before tiling.
-      const clipped = clipDepthCoveredByLand(pending);
+      const clipped = clipDepthCoveredByLand(placeTopmarks(pending));
       const edge = cellEdge(cellCoverage as Array<{ geometry?: unknown }>, pending, clipped);
       clipped.push(...outlineFeatures(clipped, edge));
       for (const feature of clipped) write(feature as Record<string, unknown>);

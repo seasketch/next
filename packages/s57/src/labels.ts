@@ -190,3 +190,32 @@ export function labelLightsFromStructures(features: PointFeature[]): void {
     if (label) feature.properties.label = label;
   }
 }
+
+/** Marks whose sprite already carries the IALA topmark. */
+const DRAWN_TOPMARK = new Set(["cardinal", "isolated"]);
+
+/**
+ * A topmark is a slave of the buoy or beacon at its position, and is drawn
+ * on top of that mark's symbol. One on a cardinal or isolated-danger mark is
+ * dropped: those symbols already show it. One with no structure under it is
+ * drawn on its position. Features from one cell only.
+ */
+export function placeTopmarks<T extends PointFeature>(features: T[]): T[] {
+  const hosts = new Map<string, unknown>();
+  for (const feature of features) {
+    const objectClass = feature.properties.obj;
+    if (typeof objectClass !== "string" || !/^(BOY|BCN)/.test(objectClass)) continue;
+    const key = positionKey(feature);
+    if (key) hosts.set(key, feature.properties.mark);
+  }
+  return features.filter((feature) => {
+    if (feature.properties.obj !== "TOPMAR") return true;
+    const key = positionKey(feature);
+    if (!key) return false;
+    if (!hosts.has(key)) return true;
+    const mark = hosts.get(key);
+    if (typeof mark === "string" && DRAWN_TOPMARK.has(mark)) return false;
+    feature.properties.hosted = true;
+    return true;
+  });
+}
