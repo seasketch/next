@@ -32,7 +32,6 @@ import {
 import { ChangeLogFieldGroup } from "../../generated/graphql";
 import LayerMetadataRevisionModal from "./LayerMetadataRevisionModal";
 import LayerCartographyRevisionModal from "./LayerCartographyRevisionModal";
-import { MOCK_SELECTIVE_PUBLISHING } from "./MockSelectivePublishModal";
 
 export default function PublishTableOfContentsModal(props: {
   onRequestClose: () => void;
@@ -194,10 +193,6 @@ export default function PublishTableOfContentsModal(props: {
           loading: publishState.loading,
           variant: "primary",
           onClick: async () => {
-            if (MOCK_SELECTIVE_PUBLISHING) {
-              props.onRequestClose();
-              return;
-            }
             await publish({
               variables: {
                 projectId: projectId!,

@@ -7978,6 +7978,8 @@ export type Mutation = {
   publishReport?: Maybe<PublishReportPayload>;
   /** Copies draft TOC to published; sets project flags. Records change_logs (layers:published) with draft layer_count when session.user_id is set. */
   publishTableOfContents?: Maybe<PublishTableOfContentsPayload>;
+  /** Publishes the selected draft overlay items (and anything they require) without replacing the rest of the published tree. */
+  publishTableOfContentsItems?: Maybe<PublishTableOfContentsItemsPayload>;
   recalculateSpatialMetrics?: Maybe<RecalculateSpatialMetricsPayload>;
   /** Remove a group from a given access control list. Must be an administrator. */
   removeGroupFromAcl?: Maybe<RemoveGroupFromAclPayload>;
@@ -9299,6 +9301,12 @@ export type MutationPublishReportArgs = {
 /** The root mutation type which contains root level fields which mutate data. */
 export type MutationPublishTableOfContentsArgs = {
   input: PublishTableOfContentsInput;
+};
+
+
+/** The root mutation type which contains root level fields which mutate data. */
+export type MutationPublishTableOfContentsItemsArgs = {
+  input: PublishTableOfContentsItemsInput;
 };
 
 
@@ -10667,6 +10675,20 @@ export enum ParticipationStatus {
   PendingApproval = 'PENDING_APPROVAL'
 }
 
+export type PendingPublishItem = {
+  __typename?: 'PendingPublishItem';
+  bundleId?: Maybe<Scalars['String']>;
+  draftId?: Maybe<Scalars['Int']>;
+  includedInBundle?: Maybe<Scalars['Boolean']>;
+  isFolder?: Maybe<Scalars['Boolean']>;
+  kind?: Maybe<Scalars['String']>;
+  parentStableId?: Maybe<Scalars['String']>;
+  path?: Maybe<Scalars['String']>;
+  requiresStableIds?: Maybe<Array<Maybe<Scalars['String']>>>;
+  stableId?: Maybe<Scalars['String']>;
+  title?: Maybe<Scalars['String']>;
+};
+
 export type Post = Node & {
   __typename?: 'Post';
   authorId: Scalars['Int'];
@@ -10989,6 +11011,7 @@ export type Project = Node & {
   isOfflineEnabled?: Maybe<Scalars['Boolean']>;
   /** Reads and enables pagination through a set of `Post`. */
   latestPostsConnection: PostsConnection;
+  layerStackOrderPending?: Maybe<Scalars['Boolean']>;
   /** If a logoUrl is provided, it will link to this url in a new window if provided. */
   logoLink?: Maybe<Scalars['String']>;
   /** URL referencing an image that will be used to represent the project. Will be displayed at 48x48 pixels and must be a public url. */
@@ -11028,6 +11051,8 @@ export type Project = Node & {
    * in this list. Those users can be accessed via `unapprovedParticipants()`
    */
   participants?: Maybe<Array<User>>;
+  /** Reads and enables pagination through a set of `PendingPublishItem`. */
+  pendingPublishItems?: Maybe<Array<PendingPublishItem>>;
   /**
    * Draft polygon overlays that can be used as a Geography base or clipping layer.
    * Limited to layers with Polygon/MultiPolygon geometry and a FlatGeobuf output.
@@ -11454,6 +11479,16 @@ export type ProjectParticipantsArgs = {
   first?: Maybe<Scalars['Int']>;
   offset?: Maybe<Scalars['Int']>;
   orderBy?: Maybe<ParticipantSortBy>;
+};
+
+
+/**
+ * SeaSketch Project type. This root type contains most of the fields and queries
+ * needed to drive the application.
+ */
+export type ProjectPendingPublishItemsArgs = {
+  first?: Maybe<Scalars['Int']>;
+  offset?: Maybe<Scalars['Int']>;
 };
 
 
@@ -12204,6 +12239,31 @@ export type PublishTableOfContentsInput = {
    */
   clientMutationId?: Maybe<Scalars['String']>;
   projectId?: Maybe<Scalars['Int']>;
+};
+
+/** All input for the `publishTableOfContentsItems` mutation. */
+export type PublishTableOfContentsItemsInput = {
+  /**
+   * An arbitrary string value with no semantic meaning. Will be included in the
+   * payload verbatim. May be used to track mutations by the client.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  includeZOrder?: Maybe<Scalars['Boolean']>;
+  projectId?: Maybe<Scalars['Int']>;
+  stableIds?: Maybe<Array<Maybe<Scalars['String']>>>;
+};
+
+/** The output of our `publishTableOfContentsItems` mutation. */
+export type PublishTableOfContentsItemsPayload = {
+  __typename?: 'PublishTableOfContentsItemsPayload';
+  /**
+   * The exact same `clientMutationId` that was provided in the mutation input,
+   * unchanged and unused. May be used by a client to track mutations.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  /** Our root query field type. Allows us to run any query from our mutation payload. */
+  query?: Maybe<Query>;
+  tableOfContentsItems?: Maybe<Array<TableOfContentsItem>>;
 };
 
 /** The output of our `publishTableOfContents` mutation. */
@@ -16407,6 +16467,8 @@ export type TableOfContentsItem = Node & {
   /** Reads and enables pagination through a set of `ProjectBackgroundJob`. */
   projectBackgroundJobs?: Maybe<Array<ProjectBackgroundJob>>;
   projectId: Scalars['Int'];
+  /** When this published row was written. Null on draft rows. Pending edits are changelog rows newer than the published counterpart. */
+  publishedAt?: Maybe<Scalars['Datetime']>;
   /** Reads and enables pagination through a set of `QuotaDetail`. */
   quotaUsed?: Maybe<Array<QuotaDetail>>;
   /** Reads and enables pagination through a set of `ChangeLog`. */
@@ -24308,6 +24370,58 @@ export type DataDownloadInfoQuery = (
         & Pick<DataSource, 'createdAt' | 'id' | 'type' | 'uploadedSourceFilename'>
       )> }
     )> }
+  )> }
+);
+
+export type SelectivePublishDetailsQueryVariables = Exact<{
+  slug: Scalars['String'];
+}>;
+
+
+export type SelectivePublishDetailsQuery = (
+  { __typename?: 'Query' }
+  & { projectBySlug?: Maybe<(
+    { __typename?: 'Project' }
+    & Pick<Project, 'id' | 'tableOfContentsLastPublished' | 'layerStackOrderPending'>
+    & { pendingPublishItems?: Maybe<Array<(
+      { __typename?: 'PendingPublishItem' }
+      & Pick<PendingPublishItem, 'stableId' | 'kind' | 'title' | 'isFolder' | 'parentStableId' | 'path' | 'requiresStableIds' | 'bundleId' | 'draftId' | 'includedInBundle'>
+    )>>, draftTableOfContentsItems?: Maybe<Array<(
+      { __typename?: 'TableOfContentsItem' }
+      & Pick<TableOfContentsItem, 'id' | 'stableId' | 'title' | 'isFolder' | 'parentStableId'>
+      & { dataLayer?: Maybe<(
+        { __typename?: 'DataLayer' }
+        & Pick<DataLayer, 'id'>
+        & { dataSource?: Maybe<(
+          { __typename?: 'DataSource' }
+          & Pick<DataSource, 'createdAt' | 'dataLibraryTemplateId'>
+        )> }
+      )> }
+    )>>, tableOfContentsItems?: Maybe<Array<(
+      { __typename?: 'TableOfContentsItem' }
+      & Pick<TableOfContentsItem, 'id' | 'stableId' | 'title' | 'isFolder' | 'parentStableId'>
+    )>>, changeLogsSinceLastPublish?: Maybe<Array<(
+      { __typename?: 'ChangeLog' }
+      & ChangeLogDetailsFragment
+    )>> }
+  )> }
+);
+
+export type PublishTableOfContentsItemsMutationVariables = Exact<{
+  projectId: Scalars['Int'];
+  stableIds?: Maybe<Array<Scalars['String']> | Scalars['String']>;
+  includeZOrder?: Maybe<Scalars['Boolean']>;
+}>;
+
+
+export type PublishTableOfContentsItemsMutation = (
+  { __typename?: 'Mutation' }
+  & { publishTableOfContentsItems?: Maybe<(
+    { __typename?: 'PublishTableOfContentsItemsPayload' }
+    & { tableOfContentsItems?: Maybe<Array<(
+      { __typename?: 'TableOfContentsItem' }
+      & Pick<TableOfContentsItem, 'id' | 'stableId'>
+    )>> }
   )> }
 );
 
@@ -33110,6 +33224,63 @@ export const DataDownloadInfoDocument = /*#__PURE__*/ gql`
   }
 }
     `;
+export const SelectivePublishDetailsDocument = /*#__PURE__*/ gql`
+    query SelectivePublishDetails($slug: String!) {
+  projectBySlug(slug: $slug) {
+    id
+    tableOfContentsLastPublished
+    layerStackOrderPending
+    pendingPublishItems {
+      stableId
+      kind
+      title
+      isFolder
+      parentStableId
+      path
+      requiresStableIds
+      bundleId
+      draftId
+      includedInBundle
+    }
+    draftTableOfContentsItems {
+      id
+      stableId
+      title
+      isFolder
+      parentStableId
+      dataLayer {
+        id
+        dataSource {
+          createdAt
+          dataLibraryTemplateId
+        }
+      }
+    }
+    tableOfContentsItems {
+      id
+      stableId
+      title
+      isFolder
+      parentStableId
+    }
+    changeLogsSinceLastPublish {
+      ...ChangeLogDetails
+    }
+  }
+}
+    ${ChangeLogDetailsFragmentDoc}`;
+export const PublishTableOfContentsItemsDocument = /*#__PURE__*/ gql`
+    mutation PublishTableOfContentsItems($projectId: Int!, $stableIds: [String!], $includeZOrder: Boolean) {
+  publishTableOfContentsItems(
+    input: {projectId: $projectId, stableIds: $stableIds, includeZOrder: $includeZOrder}
+  ) {
+    tableOfContentsItems {
+      id
+      stableId
+    }
+  }
+}
+    `;
 export const ProjectListingDocument = /*#__PURE__*/ gql`
     query ProjectListing($first: Int, $after: Cursor, $last: Int, $before: Cursor) {
   projects: projectsConnection(
@@ -35315,6 +35486,7 @@ export const namedOperations = {
     PublishedTableOfContents: 'PublishedTableOfContents',
     SearchOverlays: 'SearchOverlays',
     DataDownloadInfo: 'DataDownloadInfo',
+    SelectivePublishDetails: 'SelectivePublishDetails',
     ProjectListing: 'ProjectListing',
     SketchClassForm: 'SketchClassForm',
     TemplateSketchClasses: 'TemplateSketchClasses',
@@ -35491,6 +35663,7 @@ export const namedOperations = {
     updateAboutPageEnabled: 'updateAboutPageEnabled',
     createFileUploadForAboutPage: 'createFileUploadForAboutPage',
     UpdateProjectRegion: 'UpdateProjectRegion',
+    PublishTableOfContentsItems: 'PublishTableOfContentsItems',
     UpdateSketchClassGeographies: 'UpdateSketchClassGeographies',
     CreateSketchClass: 'CreateSketchClass',
     UpdateSketchClass: 'UpdateSketchClass',

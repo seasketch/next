@@ -78,9 +78,9 @@ import withScrolling, {
 } from "@nosferatu500/react-dnd-scrollzone";
 import { useApolloClient } from "@apollo/client";
 import { parseTocItemIdFromSearch } from "./layerAdminDeepLink";
-import MockSelectivePublishModal, {
-  MockPublishSplitButton,
-} from "./MockSelectivePublishModal";
+import SelectivePublishModal, {
+  PublishSplitButton,
+} from "./SelectivePublishModal";
 
 const ScrollingComponent = withScrolling("div");
 
@@ -522,7 +522,7 @@ export default function TableOfContentsEditor() {
         />
       )}
       {selectivePublishOpen && (
-        <MockSelectivePublishModal
+        <SelectivePublishModal
           onRequestClose={() => setSelectivePublishOpen(false)}
         />
       )}
@@ -1081,7 +1081,7 @@ function Header({
           </div>
         )}
         <div className="ml-auto shrink-0 pl-3">
-          <MockPublishSplitButton
+          <PublishSplitButton
             publishDisabled={publishDisabled}
             lastPublished={lastPublished}
             onRequestPublish={onRequestPublish}

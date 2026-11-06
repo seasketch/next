@@ -1,0 +1,62 @@
+query SelectivePublishDetails($slug: String!) {
+  projectBySlug(slug: $slug) {
+    id
+    tableOfContentsLastPublished
+    layerStackOrderPending
+    pendingPublishItems {
+      stableId
+      kind
+      title
+      isFolder
+      parentStableId
+      path
+      requiresStableIds
+      bundleId
+      draftId
+      includedInBundle
+    }
+    draftTableOfContentsItems {
+      id
+      stableId
+      title
+      isFolder
+      parentStableId
+      dataLayer {
+        id
+        dataSource {
+          createdAt
+          dataLibraryTemplateId
+        }
+      }
+    }
+    tableOfContentsItems {
+      id
+      stableId
+      title
+      isFolder
+      parentStableId
+    }
+    changeLogsSinceLastPublish {
+      ...ChangeLogDetails
+    }
+  }
+}
+
+mutation PublishTableOfContentsItems(
+  $projectId: Int!
+  $stableIds: [String!]
+  $includeZOrder: Boolean
+) {
+  publishTableOfContentsItems(
+    input: {
+      projectId: $projectId
+      stableIds: $stableIds
+      includeZOrder: $includeZOrder
+    }
+  ) {
+    tableOfContentsItems {
+      id
+      stableId
+    }
+  }
+}
