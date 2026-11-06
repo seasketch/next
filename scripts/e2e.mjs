@@ -1,5 +1,6 @@
 #!/usr/bin/env node
-// Restore seasketch_e2e from the golden snapshot, then run Playwright.
+// Restore seasketch_e2e from the golden snapshot, apply current.sql, then run
+// Playwright.
 // The dev database is not touched. Playwright starts its own API and client.
 import { spawn } from "node:child_process";
 import fs from "node:fs";

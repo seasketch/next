@@ -1,11 +1,16 @@
 import fs from "fs";
 import os from "os";
 import path from "path";
-import { Client } from "pg";
-import { APIRequestContext, Locator, Page, expect, test } from "@playwright/test";
-import { databaseURL, personas } from "../src/config";
+import { Locator, Page, expect, test } from "@playwright/test";
+import { personas } from "../src/config";
 import { resetAiCartographerChoice } from "../src/db";
-import { graphql } from "../src/graphql";
+import {
+  asAdmin,
+  overlapCard,
+  uploadOverlay,
+  waitForReportingOutputs,
+  withDb,
+} from "../src/overlays";
 import { openMap, signIn } from "../src/project";
 
 /**
@@ -19,244 +24,41 @@ const seamountsFixture = path.resolve(__dirname, "../fixtures/samoa-seamounts.ge
 const ebsaFixture = path.resolve(__dirname, "../fixtures/samoa-ebsas.geojson");
 const observationsFixture = path.resolve(__dirname, "../fixtures/eez-observations.csv");
 
-type Job = {
-  id: string;
-  state: "QUEUED" | "RUNNING" | "COMPLETE" | "FAILED";
-  errorMessage: string | null;
-  progressMessage: string;
-  dataUploadTask: {
-    filename: string;
-    dataSource: { id: number; outputs: { remote: string }[] } | null;
-    layers: { tableOfContentsItem: { stableId: string } | null }[] | null;
-  } | null;
-};
-
-const jobsQuery = `
-  query UploadJobs($slug: String!) {
-    projectBySlug(slug: $slug) {
-      projectBackgroundJobs {
-        id
-        state
-        errorMessage
-        progressMessage
-        dataUploadTask {
-          filename
-          dataSource { id outputs { remote } }
-          layers { tableOfContentsItem { stableId } }
-        }
-      }
-    }
-  }
-`;
-
-function overlapCard(title: string, stableId: string, phrase: string) {
-  return {
-    type: "doc",
-    content: [
-      { type: "reportTitle", content: [{ text: title, type: "text" }] },
-      {
-        type: "paragraph",
-        content: [
-          { text: "This sketch overlaps ", type: "text" },
-          {
-            type: "metric",
-            attrs: {
-              type: "InlineMetric",
-              metrics: [
-                { type: "overlay_area", subjectType: "fragments", stableId },
-              ],
-              componentSettings: { presentation: "overlay_area" },
-            },
-          },
-          { text: ` ${phrase}`, type: "text" },
-        ],
-      },
-    ],
-  };
-}
-
-async function withDb<T>(run: (client: Client) => Promise<T>): Promise<T> {
-  const client = new Client({ connectionString: databaseURL });
-  await client.connect();
-  try {
-    return await run(client);
-  } finally {
-    await client.end();
-  }
-}
-
-async function uploadOverlay(
-  page: Page,
-  request: APIRequestContext,
-  file: string,
-  promptTimeoutMs: number
-): Promise<{ stableId: string; dataSourceId: number }> {
-  const issued = await signIn(page, request, personas.admin);
-  await page.goto("/demo-samoa/admin/data");
-  await page.getByText("Overlay Layers", { exact: true }).click();
-  const fileInput = page.locator('input[type="file"]').first();
-  await expect(fileInput).toBeAttached({ timeout: 30_000 });
-
-  const listJobs = async (): Promise<Job[]> => {
-    const data = await graphql<{ projectBySlug: { projectBackgroundJobs: Job[] } }>(
-      request,
-      issued.accessToken,
-      jobsQuery,
-      { slug: "demo-samoa" }
-    );
-    return data.projectBySlug.projectBackgroundJobs;
-  };
-  const earlierJobIds = new Set((await listJobs()).map((job) => job.id));
-  const filename = path.basename(file);
-  await fileInput.setInputFiles(file);
-
-  const prompt = page.getByRole("dialog").filter({ hasText: "AI Cartographer" });
-  const prompted = await prompt
-    .getByRole("button", { name: "Disable for now" })
-    .waitFor({ state: "visible", timeout: promptTimeoutMs })
-    .then(() => true)
-    .catch(() => false);
-  if (prompted) {
-    await prompt.getByRole("button", { name: "Disable for now" }).click();
-  }
-
-  let job: Job | undefined;
-  await expect
-    .poll(
-      async () => {
-        job = (await listJobs()).find(
-          (candidate) =>
-            !earlierJobIds.has(candidate.id) &&
-            candidate.dataUploadTask?.filename === filename
-        );
-        if (job?.state === "FAILED") {
-          throw new Error(`Upload failed: ${job.errorMessage} (${job.progressMessage})`);
-        }
-        return job?.state;
-      },
-      { timeout: 240_000, intervals: [2_000] }
-    )
-    .toBe("COMPLETE");
-
-  const source = job!.dataUploadTask!.dataSource!;
-  expect(source.outputs.length).toBeGreaterThan(0);
-  for (const output of source.outputs) {
-    expect(output.remote).toMatch(/^r2:\/\/ssn-tiles-local\//);
-  }
-  const stableId = job!.dataUploadTask!.layers?.[0]?.tableOfContentsItem?.stableId;
-  const dataSourceId = job!.dataUploadTask!.dataSource!.id;
-  expect(stableId, `${filename} stable id`).toBeTruthy();
-  return { stableId: stableId!, dataSourceId };
-}
-
-/**
- * Overlay metrics read ReportingFlatgeobufV1, which the subdivision worker
- * writes after preprocess_source. The upload job can be complete before that
- * output exists.
- */
-async function queueReportingPreprocess(dataSourceId: number) {
-  await withDb(async (client) => {
-    await client.query("begin");
-    try {
-      await client.query(
-        `select set_config('session.user_id', (select id::text from users where sub = 'e2e|admin'), true)`
-      );
-      await client.query(`select preprocess_source('demo-samoa', $1)`, [dataSourceId]);
-      await client.query("commit");
-    } catch (error) {
-      await client.query("rollback");
-      throw error;
-    }
-  });
-}
-
-/**
- * The local Lambda emulator accepts one invoke at a time, so each layer is
- * preprocessed only after the previous reporting output has landed.
- */
-async function waitForReportingOutput(dataSourceId: number) {
-  await queueReportingPreprocess(dataSourceId);
-  await expect
-    .poll(
-      async () =>
-        withDb(async (client) => {
-          const jobs = await client.query(
-            `select state::text as state, error_message
-             from source_processing_jobs
-             where data_source_id = $1`,
-            [dataSourceId]
-          );
-          const failed = jobs.rows.find((row) => row.state === "error");
-          if (failed) {
-            throw new Error(
-              `Reporting preprocess failed: ${failed.error_message || failed.state}`
-            );
-          }
-          const outputs = await client.query(
-            `select count(*)::int as ready
-             from data_upload_outputs
-             where data_source_id = $1
-               and type = 'ReportingFlatgeobufV1'`,
-            [dataSourceId]
-          );
-          return outputs.rows[0].ready as number;
-        }),
-      { timeout: 180_000, intervals: [2_000] }
-    )
-    .toBeGreaterThan(0);
-}
-
-async function waitForReportingOutputs(dataSourceIds: number[]) {
-  for (const dataSourceId of dataSourceIds) {
-    await waitForReportingOutput(dataSourceId);
-  }
-}
-
 async function publishOverlayReport(seamountsStableId: string, ebsaStableId: string) {
-  await withDb(async (client) => {
-    await client.query("begin");
-    try {
-      await client.query(
-        `select set_config('session.user_id', (select id::text from users where sub = 'e2e|admin'), true)`
-      );
-      const project = await client.query(`select id from projects where slug = 'demo-samoa'`);
-      const projectId = project.rows[0].id as number;
-      await client.query(`select publish_table_of_contents($1)`, [projectId]);
-      const draft = await client.query(
-        `select draft.id as report_id, tab.id as tab_id
-         from sketch_classes sc
-         join sketch_class_reports scr
-           on scr.sketch_class_id = sc.id and scr.is_primary
-         join reports draft on draft.id = scr.draft_report_id
-         join report_tabs tab on tab.report_id = draft.id
-         where sc.project_id = $1
-           and sc.name = 'Marine Protected Area'
-           and sc.is_template = false
-           and draft.version = 0
-         order by tab.position
-         limit 1`,
-        [projectId]
-      );
-      expect(draft.rowCount, "draft report tab").toBe(1);
-      const { report_id: reportId, tab_id: tabId } = draft.rows[0] as {
-        report_id: number;
-        tab_id: number;
-      };
-      for (const body of [
-        overlapCard("Seamounts", seamountsStableId, "of the seamounts layer."),
-        overlapCard("EBSAs", ebsaStableId, "of the EBSA layer."),
-      ]) {
-        await client.query(`select add_report_card($1, '{}'::jsonb, 'textBlock', $2::jsonb)`, [
-          tabId,
-          JSON.stringify(body),
-        ]);
-      }
-      await client.query(`select publish_report_snapshot($1)`, [reportId]);
-      await client.query("commit");
-    } catch (error) {
-      await client.query("rollback");
-      throw error;
+  await asAdmin(async (client) => {
+    const project = await client.query(`select id from projects where slug = 'demo-samoa'`);
+    const projectId = project.rows[0].id as number;
+    await client.query(`select publish_table_of_contents($1)`, [projectId]);
+    const draft = await client.query(
+      `select draft.id as report_id, tab.id as tab_id
+       from sketch_classes sc
+       join sketch_class_reports scr
+         on scr.sketch_class_id = sc.id and scr.is_primary
+       join reports draft on draft.id = scr.draft_report_id
+       join report_tabs tab on tab.report_id = draft.id
+       where sc.project_id = $1
+         and sc.name = 'Marine Protected Area'
+         and sc.is_template = false
+         and draft.version = 0
+       order by tab.position
+       limit 1`,
+      [projectId]
+    );
+    expect(draft.rowCount, "draft report tab").toBe(1);
+    const { report_id: reportId, tab_id: tabId } = draft.rows[0] as {
+      report_id: number;
+      tab_id: number;
+    };
+    for (const body of [
+      overlapCard("Seamounts", seamountsStableId, "of the seamounts layer."),
+      overlapCard("EBSAs", ebsaStableId, "of the EBSA layer."),
+    ]) {
+      await client.query(`select add_report_card($1, '{}'::jsonb, 'textBlock', $2::jsonb)`, [
+        tabId,
+        JSON.stringify(body),
+      ]);
     }
+    await client.query(`select publish_report_snapshot($1)`, [reportId]);
   });
 }
 
