@@ -299,7 +299,7 @@ GFW does not get `_when_*` columns or a stored cube. Its `TemporalInfo` is a cap
 }
 ```
 
-The map clock is translated into 4Wings request params. Report metrics (`gfw_report` and the like) take the same range and aggregation from widget config, defaulting to this descriptor. Do not persist `availability` here — slider stats are queried live.
+The map clock is translated into 4Wings tile params. Sketch reports do not call that API. They read a per-year COG built for the project's EEZ, described in [Global Fishing Watch integration](../global-fishing-watch/gfw-integration.md). Do not persist `availability` here — slider stats for the tile layer are queried live.
 
 ### Map clock (client state, not stored on the source)
 
@@ -502,10 +502,8 @@ Admin can set or correct `coverage`, precision, granularity, and the column/band
 - Data Tables
   - These aren't yet integrating into the reporting system, but it is likely that new metrics will be added to support them, and these will have analogous concerns as Vector and Raster sources with regards to requiring standardized temporal metadata/data, and filtering and aggregation support in the overlay engine and metric parameterization and output types
 - GFW
-  - GFW integration will likely end up directly pointing SeaSketch to the GFW API, instead of pulling data out of GFW and storing it directly in SeaSketch.
-  - The map will pull tiles directly from GFW
-  - The reporting system will likely be augmented with new metric types like `gfw_report`
-  - Report metric dependencies will be configured with appropriate temporal range and aggregation options that feed through to the GFW 4wings api.
+  - The map pulls MVT tiles from the 4Wings API. That layer is a table-of-contents source.
+  - Reports do not call the API per sketch. A global archive stores one single-band COG per EEZ per year, shared across projects with the same Marine Regions id, and fragment `raster_stats` runs on it. See [Global Fishing Watch integration](../global-fishing-watch/gfw-integration.md).
 
 ## Data Upload and Ingest
 

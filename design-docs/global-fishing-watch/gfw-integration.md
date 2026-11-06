@@ -7,9 +7,9 @@ Notes from 2026-11-04. Companion to [Temporal Data](../temporal-data/temporal-da
 Bring Global Fishing Watch (GFW) apparent fishing activity into SeaSketch in a way that feels like gfw.org rather than "a 2024 fishing effort layer uploaded by hand":
 
 1. A **Data Library item** an admin adds to a project. It renders GFW's gridded activity from the 4Wings API on the map, and the map clock (timeslider) scrubs it in time without refetching tiles.
-2. A **report widget** that farms overlay analysis out to the 4Wings report endpoint and shows fishing effort over time for a sketch, with the configuration options GFW's own area reports offer (dataset, gear types, flags, distance from port, grouping, period).
+2. A **report widget** that shows annual fishing hours for a sketch over time. The numbers come from fragment `raster_stats` on a COG we build for the project's EEZ, not from a live 4Wings report of the sketch.
 
-Both are driven by the same stored configuration and the same `TemporalInfo` descriptor, so a report widget can point at the project's GFW layer and "show on map" sets the clock to the widget's period.
+The map layer and the report raster share a dataset version and a `TemporalInfo` descriptor. "Show on map" sets the clock to the widget's period. They are not the same source: the layer is a live tile URL in the table of contents, and the report raster is a global EEZ archive that does not appear in the overlay list.
 
 ## Scope
 
@@ -90,10 +90,9 @@ Two overlapping POSTs: the second returned 429 in 271 ms while the first finishe
 
 - Phase 1 map: one YEAR tile URL per layer config. Missing years are 0. `promoteId: "id"`.
 - Phase 2 map: MONTH needs a date window of at most 2000 days, and paint keys are `year * 12 + monthIndex`.
-- Reports are one **calendar year** per call (a leap year fits in 366 days). A 14-year series is 14 calls. Monthly-within-a-year is one `MONTHLY` call, not twelve.
-- Do the report on the **sketch union**, not on each fragment. Whole-cell intersection would double-count every shared edge, and fragment × year × a one-at-a-time token does not finish. Cache each completed year forever; recompute the partial current year on its own hash.
-- `gfw-aggregated` is the phase 1 subject model. It matches gfw.org and these calls all returned in under 5 s. `gridded-clipped` stays possible later: HIGH rows carry `lat`, `lon`, and `hours` at 0.01°. The widget says that a small sketch is counted as the cells it touches.
-- `spatial_metrics` RLS finds the sketch through `sketch_fragments` (`check_sketch_rls_policy` on `fragment_hash`). A union is not a fragment, so `gfw_report` needs its own subject, `subject_sketch_id`, beside the existing geography subject. The reports plugin must not expand this metric across fragments.
+- A 4Wings report is one **calendar year** per call (a leap year fits in 366 days). That limit is why the archive is one COG per year, fetched once per EEZ, not once per sketch.
+- `spatial-aggregation=true` is the wrong statistic for fragments. It sums whole intersecting 0.01° cells, so a shared fragment edge is counted twice, and a sketch smaller than a cell receives the whole cell. The archive stores those cell hours as pixels and lets `raster_stats` area-weight them.
+- `format=TIF` is documented as a zip containing a GeoTIFF (`spatial-aggregation` must be false; `true` is CSV and JSON only). The spike did not download one. The first archive task confirms whether that GeoTIFF is float hours or a styled picture. If it is styled, the COG is written here from gridded JSON (`lat`, `lon`, `hours` at HIGH).
 
 ## Architecture
 
@@ -111,7 +110,7 @@ Responsibilities:
 - Record upstream `x-ratelimit-*` headers to a metric (Cloudflare analytics or a KV counter) so quota exhaustion is visible before a 24 h block.
 - Return GFW 4xx/5xx as-is with the token stripped.
 
-The report path does not use the worker for the request itself (reports are server-to-server from the overlay path) but does use the same allowlist code to build parameters. The Lambda reads the token from Secrets Manager the same way it reads `overlayEngineAccessTokenSecret` in `packages/infra/lib/OverlayWorkerLambdaStack.ts`. Add the variable to the secrets classification in [secrets-management](../dev-environment/secrets-management.md) as production-only, and update the GFW row in [service-inventory](../dev-environment/service-inventory.md).
+Sketch reports never call this proxy. The EEZ archive task in §4 does, from the API worker, with the same allowlist. The token is read from Secrets Manager the same way `overlayEngineAccessTokenSecret` is read in `packages/infra/lib/OverlayWorkerLambdaStack.ts`. Add the variable to the secrets classification in [secrets-management](../dev-environment/secrets-management.md) as production-only, and update the GFW row in [service-inventory](../dev-environment/service-inventory.md).
 
 ### 2. Source type and Data Library item
 
@@ -185,52 +184,63 @@ Other rendering details:
 - **Slider histogram.** `providesSliderStats: true`, but `stats` is worldwide-only, so compute per-frame totals from loaded tiles (`querySourceFeatures`, summed per frame key) and publish them through the same channel the Data Table `queryStepCounts` use. It is a viewport approximation and is labeled as such.
 - **Viewer filters.** gfw.org lets viewers change gear and flag live. Each change is a new tile set. Phase 1 is admin-configured only; a small viewer filter panel in the legend is phase 3.
 
-### 4. `gfw_report` metric and widget
+### 4. EEZ archive, the report source
 
-**Metric type.** Add `gfw_report` to `MetricType` in `packages/overlay-engine/src/metrics/metrics.ts` and to the `spatial_metric_type` enum. Parameters (on `MetricDependencyParameters` or a nested `gfw` object):
+Reports stay on fragments. The raster they read is built once per EEZ per year and shared by every project that uses that EEZ. A sketch edit, a new MPA, or a collection change does not call GFW and does not rebuild the file.
 
-```ts
-type GfwReportParameters = {
-  dataset: GfwSourceConfig["dataset"];
-  datasetVersion: string; // explicit
-  filters: GfwSourceConfig["filters"];
-  /** Inclusive start / exclusive end, year or month precision. */
-  dateRange: { start: TemporalIso; end: TemporalIso };
-  temporalResolution: "YEARLY" | "MONTHLY" | "ENTIRE"; // phase 1 offers YEARLY and ENTIRE
-  groupBy: "FLAG" | "GEARTYPE" | "FLAGANDGEARTYPE"; // API requires one; sum groups for a total
-  /** See subject model below. */
-  spatialMode: "gfw-aggregated" | "gridded-clipped";
-};
-```
+**Not a table-of-contents layer.** The map source in §2 is a `gfw-4wings` item in the overlay list. The report source is not. `createMetricsForDependencies` today resolves a raster only by a TOC `stableId`. This archive is resolved from the project's EEZ geography, the same way `distance_to_shore` substitutes the land FGB URL in `packages/api/src/plugins/reportsPlugin.ts` without a project layer. There is no `data_sources` row per project and no `subject_sketch_id`. The metric type is the existing `raster_stats`.
 
-Result shape: `{ series: Array<{ date: string; values: { [groupKey: string]: number }; vesselIds?: { [groupKey: string]: number } }>, unit: "hours" | "detections", datasetResolved: string, accessedAt: string, partialLastPeriod: boolean }`. `vesselIDs` on each GFW row is a count. One row is the whole sketch for one calendar year. A collection sums child sketches in the widget; where two sketches touch, the shared cell is counted twice, and the footer says so.
+**Which geography.** Only a core EEZ, using the predicate `updateProjectRegionFromEezGeographies` already applies in `packages/api/src/plugins/GeographyPlugin.ts`:
 
-**Source URL and hashing.** `resolve_spatial_metrics_batch` requires an `overlaySourceUrl` for non-`total_area` types. Use a synthetic `gfw://public-global-fishing-effort:v5.0` the way `distance_to_shore` defaults to the land FGB URL in `packages/api/src/plugins/reportsPlugin.ts`. `hashMetricDependency` then keys the metric by dataset and version, so a pipeline bump invalidates cached metrics. Date ranges are stored as explicit ISO values in parameters; relative ranges ("last 3 years") are resolved to year or month boundaries when the widget is inserted or edited, not at calculation time, so hashes are stable.
+- `project_geography.client_template = 'eez'`
+- a `geography_clipping_layers` row with `template_id = 'MARINE_REGIONS_EEZ_LAND_JOINED'`
+- no clipping layer with `template_id = 'MARINE_REGIONS_TERRITORIAL_SEA'` (offshore and nearshore composites also use `client_template = 'eez'`, and they are not archives)
 
-**Dispatch.** `calculateSpatialMetricsBatch` fans out to the overlay-worker Lambda at 128-way concurrency. GFW metrics leave that path: the batch task skips `gfw_report` rows and enqueues one `calculateGfwReportMetric` graphile-worker job per metric with `queue_name = 'gfw-report'` (the same serial `queue_name` pattern as `geostats_pii_backfill` and `tiles_acl_backfill`). Each job is **one calendar year of one sketch or geography**. It POSTs `{ geojson: <FeatureCollection object> }` with `spatial-aggregation=true`. A 429 means another job broke the queue; requeue with backoff and do not call `last-report` unless this job is the one in flight. A 524, which we did not observe, is recovered with `GET /v3/4wings/last-report` from that same job only. Completed years are immutable. The current partial year puts the UTC date it runs through into the dependency hash so it refreshes daily. If GFW grants higher concurrency, raise the limiter.
+The Marine Regions id is the `MRGID_EEZ` equality in that layer's `cql2_query` (`{"op":"=","args":[{"property":"MRGID_EEZ"}, 8325]}`). That integer is GFW's `region-id` on `region-dataset=public-eez-areas`. The spike fetched Senegal as `8371` and the Fiji regression clips on `8325`.
 
-**Subject model.** Phase 1 is `gfw-aggregated` on the **sketch union**, not on fragments. The spike showed `spatial-aggregation=true` equals the sum of whole intersecting 0.01° cells, including cells whose centers fall outside the polygon. Splitting into fragments would count each shared edge twice, and a 14-year series times the fragments of a sketch would be hundreds of serial calls. A collection sums child-sketch totals and the footer notes boundary cells. `gridded-clipped` (HIGH rows, area-weighted) stays a later option for sketches smaller than a cell; it will not match gfw.org.
+Custom geographies are ignored. A project with no core EEZ has no fishing-effort report source; the widget says so. A project with several core EEZs (a country with distant territories) asks the admin to select one or more, defaulting to all of them. Changing that selection, or changing which MRGIDs the core EEZ layers name, is the geography edit that matters. Editing a custom boundary does not enqueue anything.
 
-Geography subjects use `subject_geography_id` and POST the geography polygon. A GFW `region-id` is faster to cache on their side when we have one (Senegal EEZ `8371` returned in 2 s) but SeaSketch geographies do not carry those ids, so the polygon is the general path.
+**Archive key.** One global row, not one per project:
 
-`spatial_metrics` authorizes a row by joining `subject_fragment_id` to `sketch_fragments`. A union hash is not a fragment, so add `subject_sketch_id` and extend the exclusive-subject check and the RLS policy. The reports plugin creates one `gfw_report` row per sketch per year and does not expand it across fragments. The widget's "% of the geography" figure is a second metric on the geography subject.
+| | |
+| --- | --- |
+| Key | `(dataset_version, mrgid, year)` |
+| Object | one single-band float32 COG |
+| Pixel | fishing hours in that 0.01° cell for that calendar year |
+| Nodata | ocean cells with no effort |
+| Example key | `gfw-eez/v5.0/8325/2024.tif` |
 
-**Widget.** A block widget `GfwFishingActivity` under `src/reports/widgets/` following the README conventions:
+`combineMetricsForFragments` throws when a `raster_stats` value has more than one band, so a fifteen-year stack is not a reporting source. One file per year is. Two projects whose core EEZ is Fiji 8325 share the 2024 object. Removing the EEZ from a project does not delete it.
 
-- Time series of annual totals via `TimeSeriesChart` (line or bars; grouped series need a stacked mode, which is a small addition to that chart). A summary table with total hours, hours by group, and % of geography. Collection breakdown through `useCollectionSketchExpand` and `sketchContributionsForClassTableRow`.
-- Tooltip controls: dataset (phase 1 fixed), period (year pickers), temporal resolution (YEARLY / ENTIRE in phase 1), group-by, filters popover, linked layer (`LayerPickerDropdown` filtered to `copiedFromDataLibraryTemplateId = GFW_*`), and a `TooltipMorePopover` naming the widget type and holding `spatialMode`.
-- Slash command: "Fishing activity (Global Fishing Watch)". If the project has a GFW layer, the command prefills from its `query_parameters` and links it; otherwise it offers to add one from the Data Library the way Distance to Port offers World Ports.
-- **Show on map**: toggles the linked layer through `useReportStyleToggle` and calls `setClock` with the widget's period in window mode.
-- Footer: "Powered by Global Fishing Watch" link and the citation line (dataset, version, date range, accessed date), plus caveats: apparent fishing activity is model-derived, v5 classifies many vessels as generic `fishing`, AIS coverage gaps, 96 h latency, hours are whole intersecting 0.01° cells (a small sketch gets the full cell; adjacent sketches can share a boundary cell), and the last year is partial.
-- Inline presentation in `InlineMetric`: "1,240 fishing hours (2024)".
-- Exporter registered in `exports/registry.ts`; rows are the flat series with `scope`, `date`, group key, and value, and the citation line goes in the manifest.
-- Print mode: nothing hidden behind tabs in phase 1.
+**Fetch.** `GET /v3/4wings/report` with `region-id`, `region-dataset=public-eez-areas`, `spatial-resolution=HIGH`, `spatial-aggregation=false`, `temporal-resolution=YEARLY`, `format=TIF` (or JSON if the TIF is not raw hours), one calendar year. The 366-day cap makes 2012–2026 fifteen calls, not one. The region id avoids posting the coastline (a large custom polygon is the request that returns 413). Calls run on `queue_name = 'gfw-report'`, one at a time per token. A 429 is requeued. A 524 is recovered with `GET /v3/4wings/last-report` from the job that owns the request, and from no other job.
+
+A Fiji-scale EEZ is on the order of 1,500 × 1,500 pixels at 0.01°, a few megabytes a year. An EEZ whose bounds cover an ocean is the case to watch against the 100 s gateway timeout.
+
+**Tasks.** All three live under `packages/api/tasks/`, next to the other graphile-worker handlers.
+
+- `ensureGfwEezYear` `{ mrgid, year, datasetVersion }`. If a final row already exists for that key, it returns. Otherwise it fetches, writes the COG, and upserts `gfw_eez_archives` (`url`, `state`, `partial`, `accessed_at`, `dataset_version`).
+- `syncProjectGfwEezs` `{ projectId }`. Runs when a core EEZ geography is saved and when the admin's EEZ selection changes. Resolves the selected MRGID set and enqueues `ensureGfwEezYear` for each missing year from 2012 through the current year. Custom geographies produce an empty set.
+- `refreshGfwEezArchives`, a production crontab line in `packages/api/src/server.ts` (daily; the product lags about 96 h, so this does not need to be hourly). For every MRGID that at least one project still selects: refresh the current year (`partial = true`); if the previous year is still marked partial after 1 January UTC, fetch it once more and set `partial = false`; leave older final years alone. A dataset version bump (`v5.0` → `v6.0`) writes a new prefix. The old objects stay until nothing references that version.
+
+**How a sketch report reads it.** The fragment is still the subject. For each selected MRGID and each year, the dependency's overlay URL is that archive object. A fragment is paired with the archive of the EEZ it is tagged with (`fragment_geographies` → the core EEZ's MRGID). A fragment tagged only with a custom geography gets no row. The widget sums `raster_stats` across the sketch's fragments, and across EEZs when the sketch was split between two of them. `raster_stats` area-weights the pixel, so a cell the fragment edge cuts is split by coverage instead of added twice. A cell the EEZ outline only clips still holds hours from outside the EEZ; that is the remaining one-cell ribbon, and it sits on the outer boundary.
+
+Completed years have a stable URL and a stable dependency hash, so those fragment metrics are computed once. The partial year's hash includes the archive `accessed_at`, so the daily refresh recalculates that year only.
+
+**Widget.** A block widget under `src/reports/widgets/` that reads the per-year `raster_stats` rows. It does not call 4Wings.
+
+- Annual series via `TimeSeriesChart`, plus a total for the selected year and that total as a percent of the same stat on the EEZ geography.
+- Slash command "Fishing activity (Global Fishing Watch)". It is available when the project has a selected core EEZ. It does not require the map layer. If the layer is present, show-on-map toggles it and sets the clock to the widget's year.
+- Footer: "Powered by Global Fishing Watch", the citation line (dataset, version, year, archive access date), and the caveats: model-derived apparent fishing, v5's generic `fishing` class, AIS gaps, 96 h lag, the partial current year, and whole-cell hours along the EEZ outline.
+- Inline presentation: "1,240 fishing hours (2024)".
+- Exporter rows are year, EEZ MRGID, hours, and the citation line.
+- Flag and gear are not in this COG. A grouped export would be another archive family, keyed the same way, not a per-sketch API call. Phase 1 is the total-hours raster.
 
 ## Alternatives considered
 
 - **Port GFW's deck.gl `FourwingsLayer`** through a `MapboxOverlay`. Highest fidelity, but a second rendering system beside a deliberately centralized `MapContextManager`, a larger bundle, and a dependency on packages coupled to GFW's app state.
 - **PNG tiles via `generate-png`.** Simplest layer, but every clock tick refetches tiles (quota), there is no hover, and no client-side aggregation.
-- **Bulk ingest** of GFW's 0.1° daily effort into an annual or monthly COG/MRT stack. Reuses `RasterTimeSeries` and raster metrics with no runtime quota or token, but loses gear and flag filtering, HIGH resolution, presence and SAR datasets, and freshness, and band-level map-clock support is not implemented yet. Keep as an offline fallback story.
+- **Live 4Wings report per sketch or per fragment.** Matches gfw.org's area report, and a single polygon returns in a few seconds. It cannot be summed across fragments: whole-cell intersection double-counts every shared edge, and a collection would have to be dissolved and recomputed on every membership change. The EEZ archive exists so those reports stay on `raster_stats`.
+- **Bulk ingest** of GFW's global 0.1° daily effort into one COG stack. No per-EEZ fetch and no token at report time, but the grid is a hundred times coarser than HIGH, and a global raster is the wrong size for a project that only needs its EEZ. The archive is the scoped version of this idea.
 
 ## Phase plan
 
@@ -244,7 +254,8 @@ A throwaway script (not committed to the repo) run with a personal token.
 - [x] Time reports for a typical sketch, a large geography, and `temporal-resolution=YEARLY` over 2012–present. Note any 524.
 - [x] Fire two reports concurrently; record the 429 body and `last-report` behavior.
 - [x] Count requests from a realistic map session (pan and zoom over a region for a minute) to size the cache and quota.
-- [ ] Email `apis@globalfishingwatch.org`: confirm SeaSketch's non-commercial use and request a partner token with higher report concurrency. Cell membership is answered by the spike (whole intersecting cells).
+- [ ] Download one EEZ year as `format=TIF` at HIGH and, if that file is not float hours, as gridded JSON. Record bytes, dtype, and geotransform for Fiji `8325` or Senegal `8371`.
+- [ ] Email `apis@globalfishingwatch.org`: confirm SeaSketch's non-commercial use. Higher report concurrency is no longer required for sketch reports. The archive queue is still serial.
 
 ### Phase 1: annual layer and report
 
@@ -252,15 +263,16 @@ A throwaway script (not committed to the repo) run with a personal token.
 - [ ] `gfw-4wings` source type, `query_parameters` constraint, `create_gfw_4wings_table_of_contents_item`, Data Library card and modal, `GFW_FISHING_EFFORT` template id documented in `packages/api/src/DataLibrary/README.md`.
 - [ ] `getComputedStyle()` remote input: tile URL from config, paint from clock (instant, window, cumulative). Legend from `bins`, hover tooltip, attribution, partial-year labels.
 - [ ] Slider histogram from loaded tiles.
-- [ ] `gfw_report` metric type, `subject_sketch_id`, parameters, hashing, serialized worker task with 429/524 handling, one calendar year per row, synthetic source URL.
-- [ ] `GfwFishingActivity` widget, inline presentation, slash command, show-on-map, exporter, attribution footer and caveats.
+- [ ] `gfw_eez_archives`, `ensureGfwEezYear` on `queue_name = 'gfw-report'`, `syncProjectGfwEezs` from core-EEZ saves and from the EEZ multi-select, and the `refreshGfwEezArchives` production crontab entry.
+- [ ] Report dependencies resolved from the selected MRGIDs to archive URLs, one `raster_stats` per fragment per year. No TOC lookup, no `subject_sketch_id`.
+- [ ] Fishing-activity widget, inline presentation, slash command, show-on-map against the tile layer when it exists, exporter, attribution footer and caveats.
 - [ ] Update the GFW worked example in [Temporal Data](../temporal-data/temporal-data.md) and the GFW row in [service-inventory](../dev-environment/service-inventory.md).
 - [ ] Golden snapshot: none required. The card creates project-local items; no superuser template is seeded.
 
 ### Phase 2: monthly
 
 - [ ] Flip `supportedViewResolutions` and `intervals`. Allowlist `MONTH`, with date windows of at most 2000 days. Paint keys are `year * 12 + monthIndex`. A one-year monthly tile at z5 was 807 KB.
-- [ ] `MONTHLY` in the widget's resolution control. One report call covers a calendar year (`date` comes back as `YYYY-MM`); a longer monthly series is one call per year.
+- [ ] Monthly frames in the widget. A month is another archive object (or a band, once `raster_stats` can combine more than one), fetched per EEZ per year. It is not a live report of the sketch.
 
 ### Phase 3: closer to gfw.org
 
@@ -271,7 +283,7 @@ A throwaway script (not committed to the repo) run with a personal token.
 
 ## Open questions
 
-- Whether GFW will grant partner concurrency. Until then the queue is serial, and the widget's loading state should say it is waiting on that queue. A 14-year sketch is about 14 calls; the calls we timed were 1–4 s, so a cold sketch is on the order of a minute if nothing else is queued.
-- How `distance_from_port_km` is spelled so it actually filters. `> 3` was accepted and, on an offshore cell, changed nothing. Confirm against a nearshore polygon before defaulting the layer to 3 km.
-- Polygon complexity. The spike used simple boxes and one EEZ region id. A detailed coastline sketch was not timed, and GFW has not documented a vertex limit. Simplify with the overlay worker's tolerance if a real sketch is slow or rejected.
+- Whether `format=TIF` at HIGH is a float hours grid or a rendered picture. The archive writer depends on that first download.
+- How large a HIGH year is for a big EEZ, and whether it finishes inside the 100 s gateway. Senegal's aggregated report returned in 2 s. The gridded export was not timed.
+- How `distance_from_port_km` is spelled so it actually filters. `> 3` was accepted and, on an offshore cell, changed nothing. Confirm against a nearshore polygon before defaulting the map layer to 3 km. The EEZ archive for phase 1 is unfiltered total hours, so this filter does not apply to it.
 - Whether low-zoom tile hours are raw sums. `x-scale: 1` and `x-offset: 0`, and `bins/{z}` divides by exactly 4^z, which is what raw sums of quartered cells look like. The legend can use the derived breaks. Confirm visually against gfw.org once the layer renders.
