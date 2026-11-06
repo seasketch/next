@@ -2,7 +2,6 @@ query SelectivePublishDetails($slug: String!) {
   projectBySlug(slug: $slug) {
     id
     tableOfContentsLastPublished
-    layerStackOrderPending
     pendingPublishItems {
       stableId
       kind
@@ -45,13 +44,11 @@ query SelectivePublishDetails($slug: String!) {
 mutation PublishTableOfContentsItems(
   $projectId: Int!
   $stableIds: [String!]
-  $includeZOrder: Boolean
 ) {
   publishTableOfContentsItems(
     input: {
       projectId: $projectId
       stableIds: $stableIds
-      includeZOrder: $includeZOrder
     }
   ) {
     tableOfContentsItems {

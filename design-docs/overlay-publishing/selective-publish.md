@@ -13,7 +13,7 @@ Goals
 - An admin can publish any valid subset of pending overlay-list changes. Unselected published items keep their current public state; unselected new items stay unpublished.
 - The published tree is always structurally valid after every publish (no orphans, unique stable ids, correct paths, a usable order).
 - What a checkbox will do is legible from the list itself, without warning banners.
-- Partial publish works by inspecting the two trees and making the smallest possible edits to the published one. It does not add changelog field groups or change what existing changelog rows store. Renumbering `sort_index`/`z_index` integers on unselected rows is fine; only the visible order matters.
+- Partial publish works by inspecting the two trees and copying the selected draft items onto the published one. It does not add changelog field groups or change what existing changelog rows store. It does not change `sort_index` or `z_index`. List order and stacking order ship only with a full publish.
 
 Non-goals
 
@@ -28,8 +28,8 @@ Non-goals
 | --- | --- | --- |
 | Draft and published rows live in one table, split by `is_draft`. `id` changes on publish; `stable_id` is the identity shared by a draft row and its published counterpart. | `table_of_contents_items` | All matching between draft and published is by `(project_id, stable_id)`. |
 | `path` is an ltree of ancestor stable ids; `parent_stable_id` names the parent. Path is computed on insert from the parent's path. | `before_insert_or_update_table_of_contents_items_trigger` | A published item's `path` is derived from the **published** parent chain at publish time, never copied from draft. |
-| `sort_index integer` is per sibling group, rewritten 0..n-1 by `update_table_of_contents_item_children`. Reorders inside the same parent record **no changelog**; only `parent_stable_id` changes record `layer:parent-changed`. | `update_table_of_contents_item_*` | Placement of a published item is computed from its draft neighbours (§5.4). Pure reorders are not a pending change in the modal, as in today's review panel; the full publish ships them. |
-| `data_layers.z_index integer` is a project-wide stacking order, rewritten 1..n by `update_z_indexes`, recorded as one project-level `layers:z-order-change` row. | `update_z_indexes` | A published layer's `z_index` is likewise computed from its draft neighbours (§5.5). |
+| `sort_index integer` is per sibling group, rewritten 0..n-1 by `update_table_of_contents_item_children`. Reorders inside the same parent record **no changelog**; only `parent_stable_id` changes record `layer:parent-changed`. | `update_table_of_contents_item_*` | Partial publish does not write `sort_index`. An updated item keeps its published value. A new item is appended. Full publish copies the draft values. |
+| `data_layers.z_index integer` is a project-wide stacking order, rewritten 1..n by `update_z_indexes`, recorded as one project-level `layers:z-order-change` row. | `update_z_indexes` | Partial publish does not write `z_index`, same rule as `sort_index`. The full-publish modal still lists `layers:z-order-change` until a full publish. |
 | Deleting a folder deletes its subtree one row at a time, firing `layer:deleted` / `folder:deleted` per item with `from_summary = {title, is_folder}`. The rows are keyed by the old draft `id`; they do not carry `stable_id`. | `delete_table_of_contents_branch`, `trg_changelog_table_of_contents_items_deleted` | Removals are discovered from the **tree diff** (published `stable_id` with no draft row), not from the changelog (§5.3). |
 | Deleting a draft layer whose `stable_id` is referenced by a report card is refused. | `_delete_table_of_contents_item` | Report references are enforced at edit time, not publish time. |
 | Published rows are immutable (`Cannot alter table of contents items after they are published`) unless `seasketch.skip_library_source_side_effects` is set. | `before_insert_or_update_table_of_contents_items_trigger` | Publishing a changed item is delete-and-recopy of its published rows. The few derived-column rewrites in §6 run under a publish-time bypass. |
@@ -46,7 +46,7 @@ The checkbox list is rendered from changelog rows, but **what is published is ne
 - **Updated** — both exist, and the draft has pending changelog rows (§6.2). Includes moves.
 - **Removed** — published row exists, no draft row.
 
-The only non-item checkbox is the existing project-level **Layer stacking order** row (`layers:z-order-change`), described in §5.5.
+There is no stacking-order checkbox. `layers:z-order-change` stays on the full-publish review until a full publish (§5.5).
 
 Consequences, which answer the first two notes in the brief:
 
@@ -64,7 +64,7 @@ Consequences, which answer the first two notes in the brief:
 | `folder:created`, `layer:uploaded` on a brand-new layer, `data_source.created_at` newer than the published copy | `Item` Added | |
 | `layer:deleted`, `folder:deleted` | display only | The Removed unit comes from the tree diff; the row is matched by title for the editor avatar and timestamp when the match is unambiguous. |
 | `data_table:*` | `Item(layer)` Updated | Data tables belong to the layer via `table_of_contents_item_id`; published copies are matched by table `stable_id`. |
-| `layers:z-order-change` | Layer stacking order row | Project-level, unchanged. |
+| `layers:z-order-change` | Not a partial-publish unit | Stays in the full-publish review until a full publish. |
 | `resolvable_layer_comments:*` | none | Comments are workflow, not published state. Shown as context in the full review, never a checkbox. |
 | Sibling reorders; fields with no trigger (`bounds`, `render_under`, `source_layer`, …) | none | Not visible as pending today either. Full publish ships them; a partial publish of that item also ships them because the item is copied whole. |
 
@@ -98,21 +98,23 @@ Removed units and their bundles are computed from the **published** tree: a publ
 
 Publishing a removal deletes the published TOC row and, by cascade or explicit delete, its data layer, interactivity settings, ACL, data tables, and the data source if no remaining published layer references it. Nothing in the changelog is consulted or stored.
 
-### 5.4 Sibling order: insert the item after its draft predecessor (hard: deterministic; visible order of unselected siblings is unchanged)
+### 5.4 Sibling order is not partially published
 
-Publishing an Added or moved item must give it a position among its published siblings. The *visible* order of unselected siblings must not change; their `sort_index` integers may. Neither `sort_index` nor `z_index` is exposed to users, only the order they produce, so the server simply rewrites the integers of the affected sibling group:
+Partial publish does not change `sort_index`.
 
-1. Take the published children of X's draft parent in their published order (after this run's removals).
-2. In the draft, find the nearest preceding sibling A of X that is in that list; insert X immediately after A (or first if there is no A).
-3. Renumber the group 0..n-1.
+- An Updated item keeps the `sort_index` of the published row it replaces.
+- An Added item is appended: `max(sort_index) + 1` among the published children of its published parent.
+- A pure reorder has no checkbox. `draft_table_of_contents_has_changes` stays true so the full Publish button can still ship it.
+- Full publish copies draft `sort_index` values, as it does today.
 
-Selected siblings are processed in draft order so chains (`A, X, Y`) land correctly. An Updated item that did not move keeps its slot. Removed items are dropped before renumbering. The renumbering of unselected published rows is a derived-column write and runs under the publish-time bypass (§6.3).
+### 5.5 Z-order is not partially published
 
-### 5.5 Z-order: same rule, project-wide (hard: a published layer always has a defined z)
+Same rule as §5.4, on `data_layers.z_index`.
 
-- A published Added/Updated layer is inserted into the published stacking order immediately after its nearest draft z-predecessor that exists in the published tree, and all published `z_index` values are renumbered 1..n, mirroring `update_z_indexes`. An Updated layer whose draft z-neighbours are unchanged keeps its slot.
-- The existing **Layer stacking order** checkbox (from the `layers:z-order-change` row) is the only way to publish reorders of layers that are not otherwise changing. When selected, published layers whose `stable_id` exists in draft are renumbered to the draft stacking order. When not selected, the relative order of unselected layers is unchanged.
-- Pending state for this row is a diff, not a timestamp: it is shown while the relative stacking of layers present in both trees differs.
+- An Updated layer keeps its published `z_index`.
+- An Added layer is appended at `max(z_index) + 1` among published layers.
+- There is no stacking checkbox. `layers:z-order-change` remains in `projects_change_logs_since_last_publish` until a full publish, because partial publish does not move `projects.table_of_contents_last_published`.
+- The blue Publish button stays available while the relative stacking of layers present in both trees differs.
 
 ### 5.6 Shared data sources (hard for coherence, cheap to enforce)
 
@@ -150,7 +152,7 @@ Moving folder G changes `parent_stable_id` on G only; descendants keep their `pa
 
 ### 6.1 Shared copy helpers
 
-Extract the per-item body of `publish_table_of_contents` into `_publish_copy_toc_item(draft_id, published_parent_path ltree, sort_index, z_index)` (interactivity settings, `data_layers`, TOC row with derived path, ACL type + groups, active `overlay_data_tables`) and the per-source pass into `_publish_copy_data_source(source_id, project_id)`. The full publish keeps its current full-replace behaviour and calls the helpers with draft `sort_index`/`z_index`; the hard-coded column lists then live in one place (AGENTS.md rule).
+`_publish_copy_draft_toc_item(draft_id, sort_index, z_index)` copies one draft item (interactivity settings, `data_layers`, TOC row with derived path, ACL type + groups, active `overlay_data_tables`). Null `sort_index` / `z_index` means append. Full publish keeps its own loop and copies draft order. `published_at` is a column on that insert (`clock_timestamp()`), not a trigger.
 
 ### 6.2 Pending state per item
 
@@ -159,26 +161,28 @@ One schema addition, not on the changelog: `table_of_contents_items.published_at
 - Added = draft row without a published `stable_id` match.
 - Removed = published row without a draft match (bundles via published `path`).
 - Updated = match where a changelog row for the draft item has `last_at > published.published_at`, or where the draft layer's non-library source (url, attribution, temporal) or its style, render-under, or sublayer differs from the published copy. The structural check catches a source replacement that never recorded `layer:uploaded`.
-- Stacking order pending = relative `z_index` order of common layers differs between trees.
+- Order is not a pending unit. Sibling-order and z-order differences still keep `draft_table_of_contents_has_changes` true.
 
-`published_at` is stamped with `clock_timestamp()` at insert, not `now()`, so edits made earlier in the same transaction are not still pending after the row is written.
+`published_at` is `clock_timestamp()` on the publish insert, not `now()`, so edits made earlier in the same transaction are not still pending after the row is written. There is no insert trigger for it.
 
-`projects_change_logs_since_last_publish` is reimplemented with that per-item boundary (project-level rows keep the project timestamp) and gains the Removed set from the tree diff, so the full review panel and the modal read the same data. `projects.table_of_contents_last_published` keeps meaning "last publish run"; `draft_table_of_contents_has_changes` is recomputed as "any pending unit" after every publish.
+`projects_change_logs_since_last_publish` keeps the `last_at > table_of_contents_last_published` range, then drops rows whose item was partial-published after that changelog entry. `projects_comments_since_last_publish` uses the same per-item cutoff. Partial publish does **not** move `table_of_contents_last_published`, so that timestamp stays the last full publish. `draft_table_of_contents_has_changes` is recomputed from the tree diff after a partial publish, including order differences and the source/interactivity fields a full publish copies.
 
 No new field groups, and nothing new is written into `from_summary`, `to_summary`, blobs, or `meta`. A partial publish records the existing `layers:published` row exactly as the full publish does.
 
 ### 6.3 Mutation
 
-`publish_table_of_contents_items(project_id, stable_ids text[], include_z_order boolean)`:
+`publish_table_of_contents_items(project_id, stable_ids text[])`:
 
-1. Advisory lock; permission check.
-2. Compute units and edges (`requires`, `bound`) from the two trees; expand `stable_ids` to the closure. The UI already shows these as linked, so the server behaves identically and returns the final set.
+1. Advisory lock; permission check; `set_config('seasketch.publishing', 'true', true)` so the per-row triggers listed below return immediately.
+2. Compute units and edges (`requires`, `bound`) from the two trees; expand `stable_ids` to the closure.
 3. Removed units, deepest `path` first: delete published rows and dependents (§5.3).
-4. Added/Updated units, ancestors first: delete the stale published copy if any, `_publish_copy_toc_item` with the published parent's path and a provisional `sort_index`/`z_index`.
-5. Copy sources for the layers written in this run; repoint.
-6. Under `set local seasketch.publishing = 'true'` (honoured by the immutability trigger like the existing bypass): renumber `sort_index` for every sibling group that gained or lost members (§5.4); renumber `z_index` across published layers (§5.5), to the draft order if `include_z_order`; rewrite `path` for descendants of moved folders (§5.7).
-7. Stamp `published_at`, update project flags, record `layers:published`, return the published rows written.
-8. `publishTilesAclPlugin` rewrites the tiles ACL document; extend the wrapper to this mutation.
+4. Added/Updated units, ancestors first: remember the published `sort_index` and `z_index` if the row exists, delete the stale copy, `_publish_copy_draft_toc_item` with those values or null to append.
+5. Copy sources for the layers written in this run; repoint. `bucket_id` and `object_key` are copied because the source insert trigger is not filling them.
+6. Rewrite `path` for descendants of moved folders (§5.7). Do not renumber `sort_index` or `z_index`.
+7. Clear `seasketch.publishing`. Recompute `draft_table_of_contents_has_changes`. Do not change `table_of_contents_last_published`. Record `layers:published`. Return the published rows written.
+8. `publishTilesAclPlugin` rewrites the tiles ACL document for this mutation as well as full publish.
+
+`seasketch.publishing` bails out of: the TOC before-insert validation (published rows only), `table_of_contents_items_project_update`, the data-layer and data-source before triggers, the "draft has changes" triggers on layers, sources, and ACLs, the upload-replacement changelog on `data_source_id`, the TOC insert changelogs, `record_project_activity_on_delete`, and `after_deleted__data_upload_outputs`. Full publish sets the same flag for its copy loop and clears it before returning. The backfill of `published_at` sets the flag too, so it does not mark every project unpublished.
 
 ### 6.4 Known limitation left for a later update
 
@@ -186,7 +190,7 @@ No new field groups, and nothing new is written into `from_summary`, `to_summary
 
 ## 7. UI behaviour
 
-The modal keeps the shape of the mock (title, explanatory sentence, grouped sections, "Publish N selected"). Rows are **units**: Added, Updated, Removed, Other (stacking order).
+The modal keeps the shape of the mock (title, explanatory sentence, grouped sections, "Publish N selected"). Rows are **units**: Added, Updated, Removed. Stacking order is not a row.
 
 Row anatomy
 
@@ -202,7 +206,7 @@ Selection mechanics (bind, don't warn)
 - Unchecking a required explicit row (e.g. the new folder) while dependents are explicitly checked cascades: dependents are unchecked and briefly highlighted. The admin asked for it, so no confirmation.
 - Section "select all" selects explicit for the section and runs closure; rows pulled from another section show there as implied.
 - Footer: "Publish 4 selected" with a muted "+ 2 included" when implied rows exist.
-- The stacking row's caption: "Published layers take their draft stacking order". When unchecked and new layers are selected, the caption on those layers' hover reads "Placed next to its draft neighbours".
+- New layers are appended. The modal does not describe a stacking placement.
 
 After publishing
 
@@ -221,7 +225,7 @@ Layers
 1. Edited title, metadata, and style of a published layer → one Updated unit, three pills → §5.1 → one checkbox.
 2. Edited a layer, then deleted it → one Removed unit (from tree diff) → §3 → row shows the published title, no pills; editor avatar if the `layer:deleted` row matches by title.
 3. Created a layer, then deleted it → no unit → §3 → absent from the list; history only.
-4. Uploaded a new layer and styled it → one Added unit → §5.1 → one checkbox; placed beside its draft neighbours in sort and stacking order.
+4. Uploaded a new layer and styled it → one Added unit → §5.1 → one checkbox; appended in list order and stacking order.
 5. Replaced a layer's source and restyled → one Updated unit → §5.1 → one checkbox; the stale published source copy is dropped when unreferenced.
 6. Duplicated a layer → Added unit with a fresh `stable_id` → independent.
 7. Toggled downloads / interactivity / temporal → Updated pills; nothing special.
@@ -233,7 +237,7 @@ Layers
 
 Moves
 
-13. Moved a layer into an existing published folder → Updated (moved) → §5.2 → single checkbox; breadcrumb shows the destination; placed beside draft neighbours there.
+13. Moved a layer into an existing published folder → Updated (moved) → §5.2 → single checkbox; breadcrumb shows the destination; it is appended among that folder's published children.
 14. Moved a layer into a new folder → requires the Added folder → §5.2 → checking the layer links the folder.
 15. Moved a layer into a new folder inside another new folder → requires both, transitively.
 16. Created a folder, moved layers in, checked only the folder → folder publishes empty; layers stay where they are publicly → valid.
@@ -254,12 +258,12 @@ Folders
 
 Ordering
 
-28. Reordered siblings within a folder, nothing else → not listed (no changelog, as today) → ships with the next full publish.
-29. Added a layer and reordered its siblings; admin checks the layer → layer inserted after the published version of its draft predecessor; siblings keep their visible order (integers renumbered) → §5.4.
-30. Moved a published layer to a new position in the same folder *and* edited it → Updated; inserted after its new draft predecessor → §5.4.
-31. Changed only z-order → Layer stacking order row → §5.5.
-32. Added layers without checking the stacking row → each inserted after its draft z-predecessor and `z_index` renumbered; the row remains pending if other layers still differ.
-33. Checked the stacking row only → published layers present in draft take draft `z_index`; nothing else published.
+28. Reordered siblings within a folder, nothing else → not listed → full Publish stays available and ships the order.
+29. Added a layer and reordered its siblings; admin checks the layer → layer is appended; existing published sibling order is unchanged → §5.4.
+30. Moved a published layer within its folder *and* edited it → Updated; the edit ships and the published position does not → §5.4.
+31. Changed only z-order, or changed z-order and published some other edit → stacking is unchanged; full Publish ships it → §5.5.
+32. Added a layer while the draft stack was reordered → the new layer is appended; other published layers keep their relative stack → §5.5.
+33. An empty selection → nothing is published, including stacking order.
 
 Multi-editor and timing
 
@@ -276,6 +280,6 @@ Cross-cutting
 
 ## 9. Open questions
 
-- Should selecting an Added layer imply the stacking row when its draft z-neighbours are themselves pending? Current recommendation: no; predecessor placement is good enough and keeps the row honest.
+- Resolved: partial publish does not ship `sort_index` or `z_index`. Full publish does.
 - Published reports referencing layers: should publishing a Removed layer check published report cards, or is a dangling reference acceptable?
 - Whether the per-item pending computation lives in SQL (shared with the mutation's closure) or a plugin. One SQL implementation is preferred.

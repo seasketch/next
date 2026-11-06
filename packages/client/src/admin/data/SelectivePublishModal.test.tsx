@@ -48,7 +48,6 @@ const details = {
       projectBySlug: {
         id: 2,
         tableOfContentsLastPublished: "2026-01-01T00:00:00.000Z",
-        layerStackOrderPending: true,
         pendingPublishItems: [
           {
             stableId: "habitats",
@@ -148,23 +147,18 @@ test("selective publish binds a new folder to the layer that moved into it", asy
   await waitFor(() => {
     expect(document.body.textContent).toContain("Coral cover");
     expect(document.body.textContent).toContain("Old reef");
-    expect(document.body.textContent).toContain("Layer stacking order");
   });
 
-  const stacking = document.getElementById(
-    "selective-publish-z-order"
-  ) as HTMLInputElement;
   const habitats = document.getElementById(
     "selective-publish-habitats"
   ) as HTMLInputElement;
   const coral = document.getElementById(
     "selective-publish-coral"
   ) as HTMLInputElement;
-  expect(stacking.checked).toBe(true);
   expect(habitats.checked).toBe(true);
   expect(coral.checked).toBe(true);
+  expect(document.getElementById("selective-publish-z-order")).toBeNull();
 
-  stacking.click();
   habitats.click();
   await waitFor(() => {
     const state = document.querySelector(

@@ -81,14 +81,12 @@ async function publishAll(conn: any, projectId: number) {
 async function publishSome(
   conn: any,
   projectId: number,
-  stableIds: string[],
-  includeZOrder = false
+  stableIds: string[]
 ) {
   await conn.any(sql`
     select publish_table_of_contents_items(
       ${projectId},
-      ${sql.array(stableIds, "text")},
-      ${includeZOrder}
+      ${sql.array(stableIds, "text")}
     )
   `);
 }
@@ -260,7 +258,7 @@ describe("selective overlay publish", () => {
     });
   });
 
-  test("4. a new layer publishes whole, placed beside its draft neighbours", async () => {
+  test("4. a new layer publishes whole and is appended, leaving sibling order alone", async () => {
     await asAdmin( async (conn, projectId) => {
       const a = await addLayer(conn, projectId, "A");
       const b = await addLayer(conn, projectId, "B");
@@ -272,10 +270,11 @@ describe("selective overlay publish", () => {
       await publishSome(conn, projectId, [d.stableId]);
       expect(await siblingOrder(conn, projectId, null, false)).toEqual([
         a.stableId,
-        d.stableId,
         b.stableId,
+        d.stableId,
       ]);
       expect(await publishedTitles(conn, projectId)).toEqual(["A", "B", "D"]);
+      expect(await hasChanges(conn, projectId)).toBe(true);
     });
   });
 
@@ -853,12 +852,13 @@ describe("selective overlay publish", () => {
     });
   });
 
-  test("29. a new layer is inserted after its draft predecessor and siblings keep their order", async () => {
+  test("29. a new layer is appended and existing sibling order is unchanged", async () => {
     await asAdmin( async (conn, projectId) => {
       const a = await addLayer(conn, projectId, "A");
       const b = await addLayer(conn, projectId, "B");
       const c = await addLayer(conn, projectId, "C");
       await publishAll(conn, projectId);
+      const before = await siblingOrder(conn, projectId, null, false);
       const d = await addLayer(conn, projectId, "D");
       await move(conn, a.itemId, null, 0);
       await move(conn, d.itemId, null, 1);
@@ -866,20 +866,19 @@ describe("selective overlay publish", () => {
       await move(conn, b.itemId, null, 3);
       await publishSome(conn, projectId, [d.stableId]);
       expect(await siblingOrder(conn, projectId, null, false)).toEqual([
-        a.stableId,
+        ...before,
         d.stableId,
-        b.stableId,
-        c.stableId,
       ]);
     });
   });
 
-  test("30. an edited layer that also moved within its folder lands after its new predecessor", async () => {
+  test("30. editing a layer does not publish its new position in the folder", async () => {
     await asAdmin( async (conn, projectId) => {
       const a = await addLayer(conn, projectId, "A");
       const b = await addLayer(conn, projectId, "B");
       const c = await addLayer(conn, projectId, "C");
       await publishAll(conn, projectId);
+      const before = await siblingOrder(conn, projectId, null, false);
       await move(conn, a.itemId, null, 0);
       await move(conn, c.itemId, null, 1);
       await move(conn, b.itemId, null, 2);
@@ -887,45 +886,49 @@ describe("selective overlay publish", () => {
         update table_of_contents_items set title = 'C2' where id = ${c.itemId}
       `);
       await publishSome(conn, projectId, [c.stableId]);
-      expect(await siblingOrder(conn, projectId, null, false)).toEqual([
-        a.stableId,
-        c.stableId,
-        b.stableId,
-      ]);
+      expect(await siblingOrder(conn, projectId, null, false)).toEqual(before);
+      const title = await conn.oneFirst(sql`
+        select title from table_of_contents_items
+        where project_id = ${projectId} and not is_draft and stable_id = ${c.stableId}
+      `);
+      expect(title).toBe("C2");
+      expect(await hasChanges(conn, projectId)).toBe(true);
     });
   });
 
-  test("31. stacking order is a project-level publish", async () => {
+  test("31. stacking order is left for a full publish", async () => {
     await asAdmin( async (conn, projectId) => {
       const a = await addLayer(conn, projectId, "A");
       const b = await addLayer(conn, projectId, "B");
       const c = await addLayer(conn, projectId, "C");
       await publishAll(conn, projectId);
+      const publishedBefore = await zOrder(conn, projectId, false);
+      await conn.any(sql`
+        update table_of_contents_items set title = 'A2' where id = ${a.itemId}
+      `);
       await conn.any(sql`
         select update_z_indexes(${sql.array([c.layerId, b.layerId, a.layerId], "int4")})
       `);
-      expect(await pending(conn, projectId)).toHaveLength(0);
-      const pendingZ = await conn.oneFirst(sql`
-        select projects_layer_stack_order_pending(p)
-        from projects p where p.id = ${projectId}
-      `);
-      expect(pendingZ).toBe(true);
-      await publishSome(conn, projectId, [], true);
-      expect(await zOrder(conn, projectId, false)).toEqual([
-        c.stableId,
-        b.stableId,
-        a.stableId,
-      ]);
+      await publishSome(conn, projectId, [a.stableId]);
+      expect(await zOrder(conn, projectId, false)).toEqual(publishedBefore);
       expect(
         await conn.oneFirst(sql`
           select projects_layer_stack_order_pending(p)
           from projects p where p.id = ${projectId}
         `)
-      ).toBe(false);
+      ).toBe(true);
+      expect(await hasChanges(conn, projectId)).toBe(true);
+      await publishAll(conn, projectId);
+      expect(await zOrder(conn, projectId, false)).toEqual([
+        c.stableId,
+        b.stableId,
+        a.stableId,
+      ]);
+      expect(await hasChanges(conn, projectId)).toBe(false);
     });
   });
 
-  test("32. a new layer without the stacking checkbox keeps other layers' relative order", async () => {
+  test("32. a new layer is stacked at the end and other layers keep their order", async () => {
     await asAdmin( async (conn, projectId) => {
       const a = await addLayer(conn, projectId, "A");
       const b = await addLayer(conn, projectId, "B");
@@ -934,6 +937,7 @@ describe("selective overlay publish", () => {
         select update_z_indexes(${sql.array([a.layerId, b.layerId, c.layerId], "int4")})
       `);
       await publishAll(conn, projectId);
+      const publishedBefore = await zOrder(conn, projectId, false);
       await conn.any(sql`
         select update_z_indexes(${sql.array([c.layerId, b.layerId, a.layerId], "int4")})
       `);
@@ -944,11 +948,10 @@ describe("selective overlay publish", () => {
           "int4"
         )})
       `);
-      await publishSome(conn, projectId, [d.stableId], false);
+      await publishSome(conn, projectId, [d.stableId]);
       const order = await zOrder(conn, projectId, false);
-      expect(order.indexOf(a.stableId)).toBeLessThan(order.indexOf(b.stableId));
-      expect(order.indexOf(b.stableId)).toBeLessThan(order.indexOf(c.stableId));
-      expect(order).toContain(d.stableId);
+      expect(order.slice(0, publishedBefore.length)).toEqual(publishedBefore);
+      expect(order[order.length - 1]).toBe(d.stableId);
       expect(
         await conn.oneFirst(sql`
           select projects_layer_stack_order_pending(p)
@@ -958,21 +961,23 @@ describe("selective overlay publish", () => {
     });
   });
 
-  test("33. publishing only stacking order leaves a new layer unpublished", async () => {
+  test("33. an empty partial publish does not ship stacking order or a new layer", async () => {
     await asAdmin( async (conn, projectId) => {
       const a = await addLayer(conn, projectId, "A");
       const b = await addLayer(conn, projectId, "B");
       await publishAll(conn, projectId);
+      const publishedBefore = await zOrder(conn, projectId, false);
       await conn.any(sql`
         select update_z_indexes(${sql.array([b.layerId, a.layerId], "int4")})
       `);
       const d = await addLayer(conn, projectId, "D");
-      await publishSome(conn, projectId, [], true);
+      await publishSome(conn, projectId, []);
       expect(await publishedTitles(conn, projectId)).toEqual(["A", "B"]);
-      expect(await zOrder(conn, projectId, false)).toEqual([b.stableId, a.stableId]);
+      expect(await zOrder(conn, projectId, false)).toEqual(publishedBefore);
       expect(
         (await pending(conn, projectId)).map((row) => row.stable_id)
       ).toEqual([d.stableId]);
+      expect(await hasChanges(conn, projectId)).toBe(true);
     });
   });
 
@@ -1140,18 +1145,42 @@ describe("selective overlay publish", () => {
     });
   });
 
-  test("partial publish leaves an unselected edit pending after the project timestamp moves", async () => {
-    await asAdmin( async (conn, projectId) => {
+  test("partial publish leaves an unselected edit in the full-publish changelog", async () => {
+    await asAdmin( async (conn, projectId, adminId) => {
       const a = await addLayer(conn, projectId, "A");
       const b = await addLayer(conn, projectId, "B");
       await publishAll(conn, projectId);
+      const lastFull = await conn.oneFirst(sql`
+        select table_of_contents_last_published from projects where id = ${projectId}
+      `);
       await conn.any(sql`
         update table_of_contents_items set title = 'A2' where id = ${a.itemId}
       `);
       await conn.any(sql`
         update table_of_contents_items set title = 'B2' where id = ${b.itemId}
       `);
+      await conn.any(sql`
+        select create_resolvable_layer_comment(
+          ${projectId}, ${a.itemId}, '{"text":"on A"}'::jsonb, null, false
+        )
+      `);
+      await conn.any(sql`
+        select create_resolvable_layer_comment(
+          ${projectId}, ${b.itemId}, '{"text":"on B"}'::jsonb, null, false
+        )
+      `);
+      await conn.any(sql`set role postgres`);
+      await conn.any(sql`
+        update resolvable_layer_comments
+        set created_at = clock_timestamp()
+        where project_id = ${projectId}
+      `);
+      await createSession(conn, adminId, true, false, projectId);
       await publishSome(conn, projectId, [a.stableId]);
+      const lastAfter = await conn.oneFirst(sql`
+        select table_of_contents_last_published from projects where id = ${projectId}
+      `);
+      expect(lastAfter).toEqual(lastFull);
       const rows = await pending(conn, projectId);
       expect(rows.map((row) => row.stable_id)).toEqual([b.stableId]);
       const logs = await conn.any(sql`
@@ -1162,7 +1191,40 @@ describe("selective overlay publish", () => {
           and cl.field_group = 'layer:title'
       `);
       expect(logs.map((row) => Number(row.entity_id))).toEqual([b.itemId]);
+      const comments = await conn.any(sql`
+        select c.table_of_contents_item_id
+        from projects p
+        cross join lateral projects_comments_since_last_publish(p) c
+        where p.id = ${projectId}
+      `);
+      expect(comments.map((row) => Number(row.table_of_contents_item_id))).toEqual([
+        b.itemId,
+      ]);
       expect(await hasChanges(conn, projectId)).toBe(true);
+      expect(adminId).toBeGreaterThan(0);
+    });
+  });
+
+  test("stamping published_at does not turn the unpublished-changes flag on", async () => {
+    await asAdmin( async (conn, projectId, adminId) => {
+      const layer = await addLayer(conn, projectId, "Coral");
+      await publishAll(conn, projectId);
+      expect(await hasChanges(conn, projectId)).toBe(false);
+      const sourceType = await conn.oneFirst(sql`
+        select data_source_type from table_of_contents_items
+        where project_id = ${projectId} and not is_draft and stable_id = ${layer.stableId}
+      `);
+      expect(sourceType).toBe("geojson");
+      await conn.any(sql`set role postgres`);
+      await conn.any(sql`select set_config('seasketch.publishing', 'true', true)`);
+      await conn.any(sql`
+        update table_of_contents_items
+        set published_at = clock_timestamp()
+        where project_id = ${projectId} and not is_draft
+      `);
+      await conn.any(sql`select set_config('seasketch.publishing', 'false', true)`);
+      await createSession(conn, adminId, true, false, projectId);
+      expect(await hasChanges(conn, projectId)).toBe(false);
     });
   });
 });

@@ -7980,7 +7980,7 @@ export type Mutation = {
   publishReport?: Maybe<PublishReportPayload>;
   /** Copies draft TOC to published; sets project flags. Records change_logs (layers:published) with draft layer_count when session.user_id is set. */
   publishTableOfContents?: Maybe<PublishTableOfContentsPayload>;
-  /** Publishes the selected draft overlay items (and anything they require) without replacing the rest of the published tree. */
+  /** Publishes the selected draft overlay items (and anything they require) without replacing the rest of the published tree. Does not publish sort_index or z_index. */
   publishTableOfContentsItems?: Maybe<PublishTableOfContentsItemsPayload>;
   recalculateSpatialMetrics?: Maybe<RecalculateSpatialMetricsPayload>;
   /** Remove a group from a given access control list. Must be an administrator. */
@@ -12250,7 +12250,6 @@ export type PublishTableOfContentsItemsInput = {
    * payload verbatim. May be used to track mutations by the client.
    */
   clientMutationId?: Maybe<Scalars['String']>;
-  includeZOrder?: Maybe<Scalars['Boolean']>;
   projectId?: Maybe<Scalars['Int']>;
   stableIds?: Maybe<Array<Maybe<Scalars['String']>>>;
 };
@@ -24384,7 +24383,7 @@ export type SelectivePublishDetailsQuery = (
   { __typename?: 'Query' }
   & { projectBySlug?: Maybe<(
     { __typename?: 'Project' }
-    & Pick<Project, 'id' | 'tableOfContentsLastPublished' | 'layerStackOrderPending'>
+    & Pick<Project, 'id' | 'tableOfContentsLastPublished'>
     & { pendingPublishItems?: Maybe<Array<(
       { __typename?: 'PendingPublishItem' }
       & Pick<PendingPublishItem, 'stableId' | 'kind' | 'title' | 'isFolder' | 'parentStableId' | 'path' | 'requiresStableIds' | 'bundleId' | 'draftId' | 'includedInBundle'>
@@ -24412,7 +24411,6 @@ export type SelectivePublishDetailsQuery = (
 export type PublishTableOfContentsItemsMutationVariables = Exact<{
   projectId: Scalars['Int'];
   stableIds?: Maybe<Array<Scalars['String']> | Scalars['String']>;
-  includeZOrder?: Maybe<Scalars['Boolean']>;
 }>;
 
 
@@ -39171,7 +39169,6 @@ export const SelectivePublishDetailsDocument = gql`
   projectBySlug(slug: $slug) {
     id
     tableOfContentsLastPublished
-    layerStackOrderPending
     pendingPublishItems {
       stableId
       kind
@@ -39240,9 +39237,9 @@ export type SelectivePublishDetailsQueryHookResult = ReturnType<typeof useSelect
 export type SelectivePublishDetailsLazyQueryHookResult = ReturnType<typeof useSelectivePublishDetailsLazyQuery>;
 export type SelectivePublishDetailsQueryResult = Apollo.QueryResult<SelectivePublishDetailsQuery, SelectivePublishDetailsQueryVariables>;
 export const PublishTableOfContentsItemsDocument = gql`
-    mutation PublishTableOfContentsItems($projectId: Int!, $stableIds: [String!], $includeZOrder: Boolean) {
+    mutation PublishTableOfContentsItems($projectId: Int!, $stableIds: [String!]) {
   publishTableOfContentsItems(
-    input: {projectId: $projectId, stableIds: $stableIds, includeZOrder: $includeZOrder}
+    input: {projectId: $projectId, stableIds: $stableIds}
   ) {
     tableOfContentsItems {
       id
@@ -39268,7 +39265,6 @@ export type PublishTableOfContentsItemsMutationFn = Apollo.MutationFunction<Publ
  *   variables: {
  *      projectId: // value for 'projectId'
  *      stableIds: // value for 'stableIds'
- *      includeZOrder: // value for 'includeZOrder'
  *   },
  * });
  */

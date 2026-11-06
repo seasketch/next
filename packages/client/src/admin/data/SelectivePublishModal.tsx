@@ -1,5 +1,5 @@
 import { ChevronDownIcon, ChevronRightIcon } from "@heroicons/react/solid";
-import { FolderIcon, ViewListIcon } from "@heroicons/react/outline";
+import { FolderIcon } from "@heroicons/react/outline";
 import { Link2Icon } from "@radix-ui/react-icons";
 import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
 import * as Tooltip from "@radix-ui/react-tooltip";
@@ -32,7 +32,6 @@ import {
   buildPublishChangeSummary,
   oldestChangeLogId,
   PublishSummaryRow,
-  PublishZOrderSummary,
 } from "./publishChangelogSummary";
 import {
   ancestorCrumbs,
@@ -52,8 +51,6 @@ import {
   setSectionChecked,
   uncheckUnit,
 } from "./selectivePublishSelection";
-
-const Z_ORDER_KEY = "z-order";
 
 type PendingRow = NonNullable<
   NonNullable<
@@ -194,7 +191,6 @@ export default function SelectivePublishModal({
     ],
   });
   const [explicit, setExplicit] = useState<string[]>([]);
-  const [includeZOrder, setIncludeZOrder] = useState(false);
   const [highlighted, setHighlighted] = useState<Set<string>>(new Set());
   const [focusedId, setFocusedId] = useState<string | null>(null);
   const [collapsedBundles, setCollapsedBundles] = useState<Set<string>>(
@@ -215,7 +211,6 @@ export default function SelectivePublishModal({
     () => unitsFromPending(project?.pendingPublishItems || []),
     [project?.pendingPublishItems]
   );
-  const stackPending = Boolean(project?.layerStackOrderPending);
   const summary = useMemo(
     () =>
       buildPublishChangeSummary({
@@ -269,12 +264,11 @@ export default function SelectivePublishModal({
           `${unit.stableId}:${unit.kind}:${unit.requiresStableIds.join(".")}`
       )
       .join("|");
-    return `${ids}#${stackPending ? "z" : ""}`;
-  }, [stackPending, units]);
+    return ids;
+  }, [units]);
 
   useEffect(() => {
     setExplicit(checkableUnits(units).map((unit) => unit.stableId));
-    setIncludeZOrder(stackPending);
     setPublishError(null);
     // Reset when the pending set itself changes, not on every selection edit.
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -306,7 +300,7 @@ export default function SelectivePublishModal({
     return new Set(linkedRowIds(focusedId, explicit, units));
   }, [explicit, focusedId, units]);
 
-  const selectedCount = explicit.length + (includeZOrder ? 1 : 0);
+  const selectedCount = explicit.length;
   const includedCount = implied.length;
   const loading = detailsQuery.loading && !detailsQuery.data;
   const lastPublished = project?.tableOfContentsLastPublished
@@ -347,13 +341,12 @@ export default function SelectivePublishModal({
     }
     setPublishError(null);
     const stableIds = closureOf(explicit, units);
-    const count = stableIds.length + (includeZOrder ? 1 : 0);
+    const count = stableIds.length;
     try {
       const result = await publish({
         variables: {
           projectId,
           stableIds,
-          includeZOrder,
         },
       });
       if (!result.errors) {
@@ -425,7 +418,7 @@ export default function SelectivePublishModal({
               ) : null}
             </div>
             <div className="min-h-0 flex-1 overflow-y-auto px-6 py-5">
-              {checkableUnits(units).length === 0 && !stackPending ? (
+              {checkableUnits(units).length === 0 ? (
                 <EmptyPendingNotice />
               ) : (
                 <div className="flex flex-col gap-6 pb-1">
@@ -442,7 +435,6 @@ export default function SelectivePublishModal({
                         linkedIds={linkedIds}
                         highlighted={highlighted}
                         collapsedBundles={collapsedBundles}
-                        showPlacementNote={!includeZOrder && stackPending}
                         crumbsById={crumbsById}
                         summaryFor={summaryFor}
                         t={t}
@@ -497,26 +489,6 @@ export default function SelectivePublishModal({
                       />
                     )
                   )}
-                  {stackPending ? (
-                    <SelectableSection
-                      tone="other"
-                      title={adminT("Other Changes")}
-                      keys={[Z_ORDER_KEY]}
-                      selected={
-                        includeZOrder
-                          ? new Set([Z_ORDER_KEY])
-                          : new Set<string>()
-                      }
-                      onToggleSection={setIncludeZOrder}
-                    >
-                      <StackingRow
-                        summary={summary.zOrderSummary}
-                        checked={includeZOrder}
-                        onCheckedChange={setIncludeZOrder}
-                        t={t}
-                      />
-                    </SelectableSection>
-                  ) : null}
                 </div>
               )}
             </div>
@@ -573,7 +545,7 @@ function EmptyPendingNotice() {
             { date: CHANGE_LOG_INTRODUCTION_DATE.toLocaleDateString() }
           )
         : t(
-            "Nothing here is waiting as its own update. Reordering siblings, and fields the changelog does not record, ship with Publish."
+            "Nothing here is waiting as its own update. Reordering the list and layer stacking ship with Publish."
           )}
     </div>
   );
@@ -589,7 +561,6 @@ function UnitSection({
   linkedIds,
   highlighted,
   collapsedBundles,
-  showPlacementNote,
   crumbsById,
   summaryFor,
   t,
@@ -611,7 +582,6 @@ function UnitSection({
   linkedIds: Set<string>;
   highlighted: Set<string>;
   collapsedBundles: Set<string>;
-  showPlacementNote: boolean;
   crumbsById: Map<string, CrumbSource>;
   summaryFor: (unit: SelectiveUnit) => PublishSummaryRow | undefined;
   t: (key: string, options?: Record<string, unknown>) => string;
@@ -668,12 +638,6 @@ function UnitSection({
                 group.leader.kind === "removed" ? group.mates.length : 0
               }
               bundleCollapsed={collapsed}
-              showPlacementNote={
-                showPlacementNote &&
-                group.leader.kind === "added" &&
-                !group.leader.isFolder &&
-                checkedIds.has(group.leader.stableId)
-              }
               crumbs={ancestorCrumbs(group.leader.parentStableId, crumbsById)}
               summary={summaryFor(group.leader)}
               t={t}
@@ -715,7 +679,6 @@ function UnitRow({
   includedWith,
   insideCount,
   bundleCollapsed,
-  showPlacementNote,
   crumbs,
   summary,
   t,
@@ -735,7 +698,6 @@ function UnitRow({
   includedWith: string[];
   insideCount: number;
   bundleCollapsed: boolean;
-  showPlacementNote: boolean;
   crumbs: { stableId: string; title: string; added: boolean }[];
   summary?: PublishSummaryRow;
   t: (key: string, options?: Record<string, unknown>) => string;
@@ -759,9 +721,6 @@ function UnitRow({
           name: includedWith.join(", "),
         })
       : "";
-  const placementLabel = showPlacementNote
-    ? t("Placed next to its draft neighbours")
-    : "";
 
   return (
     <div
@@ -858,9 +817,9 @@ function UnitRow({
               ))}
             </p>
           ) : null}
-          {includedLabel || placementLabel ? (
+          {includedLabel ? (
             <p id={captionId} className="text-xs text-slate-500">
-              {includedLabel || placementLabel}
+              {includedLabel}
             </p>
           ) : (
             <span id={captionId} className="sr-only" />
@@ -959,63 +918,6 @@ function NestedMate({
         {t("Included with {{name}}", { name: leaderTitle })}
       </p>
     </div>
-  );
-}
-
-function StackingRow({
-  summary,
-  checked,
-  t,
-  onCheckedChange,
-}: {
-  summary: PublishZOrderSummary | null;
-  checked: boolean;
-  t: (key: string, options?: Record<string, unknown>) => string;
-  onCheckedChange: (checked: boolean) => void;
-}) {
-  const inputId = "selective-publish-z-order";
-  return (
-    <li className={clsx("px-4 py-4", !checked && "opacity-60")}>
-      <div className="flex items-start gap-3">
-        <input
-          id={inputId}
-          type="checkbox"
-          checked={checked}
-          onChange={(event) => onCheckedChange(event.target.checked)}
-          className="mt-1 h-4 w-4 shrink-0 rounded border-gray-300 text-primary-600 focus:ring-primary-500"
-        />
-        <div className="min-w-0 flex-1 space-y-2">
-          <label
-            htmlFor={inputId}
-            className="cursor-pointer text-base font-semibold leading-snug text-slate-900"
-          >
-            <span className="inline-flex min-w-0 items-center gap-2">
-              <ViewListIcon
-                className="h-[1.125rem] w-[1.125rem] flex-none text-indigo-500"
-                aria-hidden
-              />
-              <span className="min-w-0">
-                <Trans ns="admin:data">Layer stacking order</Trans>
-              </span>
-            </span>
-          </label>
-          <p className="text-sm text-slate-500">
-            <Trans ns="admin:data">
-              Published layers take their draft stacking order
-            </Trans>
-          </p>
-          {summary ? (
-            <SummaryMetaRow
-              editors={summary.editors}
-              primaryEditor={summary.primaryEditor}
-              changeCount={summary.changeCount}
-              lastChangeAt={summary.lastChangeAt}
-              t={t}
-            />
-          ) : null}
-        </div>
-      </div>
-    </li>
   );
 }
 

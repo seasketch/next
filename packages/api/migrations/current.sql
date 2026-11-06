@@ -1,11 +1,18 @@
 -- Selective overlay publishing.
 -- Partial publish copies a chosen set of draft TOC items onto the published
--- tree. Full publish is unchanged except for an advisory lock and a
--- published_at stamp on newly written published rows.
+-- tree. It does not publish sort_index or z_index. Full publish still replaces
+-- the tree, including order.
 --
--- published_at is the per-item "what is still unpublished" boundary. Existing
--- published rows are backfilled from projects.table_of_contents_last_published
--- so production data keeps today's pending-change behavior.
+-- published_at is the per-item "what is still unpublished" boundary. It is
+-- written by the publish INSERT statements (clock_timestamp()), not by a
+-- trigger. Existing published rows are backfilled from
+-- projects.table_of_contents_last_published so production data keeps today's
+-- pending-change behavior.
+--
+-- Publish sets seasketch.publishing so the per-row triggers that would
+-- otherwise repeat the same project update, activity job, and validation
+-- query for every copied layer return immediately. The publish statements
+-- do that work once.
 
 alter table public.table_of_contents_items
   add column if not exists published_at timestamp with time zone;
@@ -13,49 +20,75 @@ alter table public.table_of_contents_items
 comment on column public.table_of_contents_items.published_at is
   'When this published row was written. Null on draft rows. Pending edits are changelog rows newer than the published counterpart.';
 
-create or replace function public.trg_toc_stamp_published_at() returns trigger
-  language plpgsql
-as $$
-begin
-  if new.is_draft then
-    new.published_at := null;
-  elsif new.published_at is null then
-    -- clock_timestamp(), not now(): edits in this transaction already have a
-    -- later last_at than the transaction start, and must not stay pending.
-    new.published_at := clock_timestamp();
-  end if;
-  return new;
-end;
-$$;
-
 drop trigger if exists trg_toc_stamp_published_at on public.table_of_contents_items;
-create trigger trg_toc_stamp_published_at
-  before insert on public.table_of_contents_items
-  for each row
-  execute function public.trg_toc_stamp_published_at();
+drop function if exists public.trg_toc_stamp_published_at();
 
--- Allow publish to renumber sort_index / rewrite path on published rows.
+-- Skip per-row work while a publish is copying or deleting the published tree.
+do $$
+declare
+  fn text;
+  ret text;
+  src text;
+  next text;
+begin
+  for fn, ret in
+    select * from (values
+      ('public.table_of_contents_items_project_update()', 'NEW'),
+      ('public.record_project_activity_on_delete()', 'OLD'),
+      ('public.after_data_layers_update_or_delete_set_draft_table_of_contents_()', 'NEW'),
+      ('public.after_data_sources_update_or_delete_set_draft_table_of_contents()', 'NEW'),
+      ('public.acl_update_draft_toc_has_changes()', 'NEW'),
+      ('public.before_insert_or_update_data_layers_trigger()', 'NEW'),
+      ('public.before_insert_or_update_data_sources_trigger()', 'NEW'),
+      ('public.before_layer_insert_create_interactivity_settings_func()', 'NEW'),
+      ('public.trg_changelog_data_layers_data_source_layer_uploaded()', 'NEW'),
+      ('public.trg_changelog_table_of_contents_items_insert_created()', 'NEW'),
+      ('public.trg_changelog_table_of_contents_items_insert_layer_uploaded()', 'NEW'),
+      ('public.after_deleted__data_upload_outputs()', 'OLD')
+    ) as t(fn, ret)
+  loop
+    src := pg_get_functiondef(fn::regprocedure);
+    if src like '%publishing-bailout%' then
+      continue;
+    end if;
+    next := regexp_replace(
+      src,
+      '\ybegin\y',
+      format(E'begin\n  -- publishing-bailout\n  if coalesce(current_setting(''seasketch.publishing'', true), '''') = ''true'' then\n    return %s;\n  end if;', ret),
+      'i'
+    );
+    if next = src then
+      raise exception 'failed to patch % for publish bailout', fn;
+    end if;
+    execute next;
+  end loop;
+end $$;
+
+-- Published copies already carry data_source_type and original_source_upload_available.
+-- Returning here also lets publish rewrite path on published descendants.
 do $$
 declare
   src text;
   next text;
 begin
   src := pg_get_functiondef('public.before_insert_or_update_table_of_contents_items_trigger()'::regprocedure);
-  if src not like '%seasketch.publishing%' then
-    next := replace(
-      src,
-      'coalesce(current_setting(''seasketch.skip_library_source_side_effects'', true), '''') != ''true'' then',
-      'coalesce(current_setting(''seasketch.skip_library_source_side_effects'', true), '''') != ''true'' and coalesce(current_setting(''seasketch.publishing'', true), '''') != ''true'' then'
-    );
-    if next = src then
-      raise exception 'failed to patch published-row immutability trigger';
-    end if;
-    execute next;
+  if src like '%publishing-bailout%' then
+    return;
   end if;
+  next := regexp_replace(
+    src,
+    '\ybegin\y',
+    E'begin\n  -- publishing-bailout\n  if coalesce(current_setting(''seasketch.publishing'', true), '''') = ''true'' and new.is_draft = false then\n    return new;\n  end if;',
+    'i'
+  );
+  if next = src then
+    raise exception 'failed to patch toc before trigger for publish bailout';
+  end if;
+  execute next;
 end $$;
 
--- Backfill after the immutability bypass exists. published_at matches the
--- last full publish so existing projects keep the same pending window.
+-- Backfill under the bailout so this update does not mark every project unpublished
+-- and does not run the per-row immutability lookups.
 select set_config('seasketch.publishing', 'true', true);
 update public.table_of_contents_items t
 set published_at = p.table_of_contents_last_published
@@ -66,75 +99,104 @@ where p.id = t.project_id
   and p.table_of_contents_last_published is not null;
 select set_config('seasketch.publishing', 'false', true);
 
--- Serialize full and partial publishes for a project.
+-- Serialize full and partial publishes, skip per-row triggers, and stamp
+-- published_at in the insert instead of a trigger. Copy bucket_id/object_key
+-- because the source insert trigger no longer fills them during publish.
 do $$
 declare
   src text;
   next text;
 begin
   src := pg_get_functiondef('public.publish_table_of_contents(integer)'::regprocedure);
-  if src like '%publish_toc:%' then
-    return;
-  end if;
-  next := replace(
-    src,
-    'if session_is_admin("projectId") = false then',
-    'perform pg_advisory_xact_lock(hashtext(''publish_toc:'' || "projectId"::text));
+  next := src;
+  if next not like '%publish_toc:%' then
+    next := replace(
+      next,
+      'if session_is_admin("projectId") = false then',
+      'perform set_config(''seasketch.publishing'', ''true'', true);
+  perform pg_advisory_xact_lock(hashtext(''publish_toc:'' || "projectId"::text));
   if session_is_admin("projectId") = false then'
-  );
-  if next = src then
-    raise exception 'failed to inject publish advisory lock';
+    );
+  elsif next not like '%seasketch.publishing%' then
+    next := replace(
+      next,
+      'perform pg_advisory_xact_lock(hashtext(''publish_toc:'' || "projectId"::text));',
+      'perform set_config(''seasketch.publishing'', ''true'', true);
+  perform pg_advisory_xact_lock(hashtext(''publish_toc:'' || "projectId"::text));'
+    );
   end if;
-  execute next;
+  if next not like '%clock_timestamp()%' then
+    next := replace(
+      next,
+      'hide_arcgis_rest_link
+    ) values (',
+      'hide_arcgis_rest_link,
+      data_source_type,
+      original_source_upload_available,
+      published_at
+    ) values ('
+    );
+    next := replace(
+      next,
+      'item.hide_arcgis_rest_link
+    ) returning id into new_toc_id;',
+      'item.hide_arcgis_rest_link,
+      item.data_source_type,
+      item.original_source_upload_available,
+      clock_timestamp()
+    ) returning id into new_toc_id;'
+    );
+  end if;
+  if next not like '%bucket_id,%' then
+    next := replace(
+      next,
+      'temporal,
+      created_by
+    )
+      select
+        "projectId",',
+      'temporal,
+      created_by,
+      bucket_id,
+      object_key
+    )
+      select
+        "projectId",'
+    );
+    next := replace(
+      next,
+      'temporal,
+      created_by
+      from
+        data_sources',
+      'temporal,
+      created_by,
+      bucket_id,
+      object_key
+      from
+        data_sources'
+    );
+  end if;
+  if next not like '%set_config(''seasketch.publishing'', ''false''%' then
+    next := replace(
+      next,
+      '-- return items',
+      'perform set_config(''seasketch.publishing'', ''false'', true);
+  -- return items'
+    );
+  end if;
+  if next is distinct from src then
+    execute next;
+  end if;
+  if next not like '%publish_toc:%'
+     or next not like '%clock_timestamp()%'
+     or next not like '%bucket_id,%'
+     or next not like '%set_config(''seasketch.publishing'', ''false''%' then
+    raise exception 'publish_table_of_contents patch incomplete';
+  end if;
 end $$;
 
--- Insert `placing` ids into `anchored` (both ordered) using draft order.
--- Each placed id goes immediately after its nearest preceding draft sibling
--- that is already in the result. Anchored relative order is preserved.
-create or replace function public._publish_place_ids(
-  p_anchored text[],
-  p_draft_order text[],
-  p_placing text[]
-) returns text[]
-  language plpgsql
-  immutable
-as $$
-declare
-  v_result text[] := coalesce(p_anchored, '{}'::text[]);
-  v_item text;
-  v_cand text;
-  v_pred text;
-  v_idx int;
-begin
-  if p_placing is null then
-    return v_result;
-  end if;
-  foreach v_item in array p_placing loop
-    v_pred := null;
-    if p_draft_order is not null then
-      foreach v_cand in array p_draft_order loop
-        exit when v_cand = v_item;
-        if v_cand = any(v_result) then
-          v_pred := v_cand;
-        end if;
-      end loop;
-    end if;
-    v_result := array_remove(v_result, v_item);
-    if v_pred is null then
-      v_result := array_prepend(v_item, coalesce(v_result, '{}'::text[]));
-    else
-      v_idx := array_position(v_result, v_pred);
-      v_result :=
-        v_result[1:v_idx]
-        || array[v_item]
-        || v_result[v_idx + 1:cardinality(v_result)];
-    end if;
-  end loop;
-  return v_result;
-end;
-$$;
-
-comment on function public._publish_place_ids(text[], text[], text[]) is '@omit';
+drop function if exists public._publish_place_ids(text[], text[], text[]);
 
 drop function if exists public.projects_pending_publish_items(public.projects);
 drop function if exists public.pending_publish_items_for_project(integer);
@@ -598,6 +660,7 @@ as $$
          or di.long_template is distinct from pi.long_template
          or di.cursor is distinct from pi.cursor
          or di.title is distinct from pi.title
+         or di.layers is distinct from pi.layers
     )
     or exists (
       select 1
@@ -629,6 +692,22 @@ as $$
           ds.attribution is distinct from ps.attribution
           or ds.temporal is distinct from ps.temporal
           or ds.url is distinct from ps.url
+          or ds.bounds is distinct from ps.bounds
+          or ds.minzoom is distinct from ps.minzoom
+          or ds.maxzoom is distinct from ps.maxzoom
+          or ds.tiles is distinct from ps.tiles
+          or ds.geostats is distinct from ps.geostats
+          or ds.query_parameters is distinct from ps.query_parameters
+          or ds.scheme is distinct from ps.scheme
+          or ds.encoding is distinct from ps.encoding
+          or ds.tile_size is distinct from ps.tile_size
+          or ds.buffer is distinct from ps.buffer
+          or ds.cluster is distinct from ps.cluster
+          or ds.cluster_max_zoom is distinct from ps.cluster_max_zoom
+          or ds.cluster_properties is distinct from ps.cluster_properties
+          or ds.cluster_radius is distinct from ps.cluster_radius
+          or ds.coordinates is distinct from ps.coordinates
+          or ds.urls is distinct from ps.urls
         )
     )
     or exists (
@@ -688,25 +767,9 @@ begin
     where cl.project_id = project.id
       and cl.net_zero_changes = false
       and cl.field_group <> 'layers:published'
+      and cl.last_at > v_last_publish
       and (
-        (
-          cl.field_group = 'layers:z-order-change'
-          and (
-            cl.last_at > v_last_publish
-            or (
-              public.layer_stack_order_pending(project.id)
-              and cl.id = (
-                select id
-                from change_logs
-                where project_id = project.id
-                  and field_group = 'layers:z-order-change'
-                  and net_zero_changes = false
-                order by last_at desc
-                limit 1
-              )
-            )
-          )
-        )
+        cl.field_group = 'layers:z-order-change'
         or (
           cl.entity_type = 'table_of_contents_items'
           and cl.field_group not in ('layer:deleted', 'folder:deleted')
@@ -771,6 +834,45 @@ $$;
 
 comment on function public.projects_change_logs_since_last_publish(public.projects) is '@simpleCollections only';
 
+create or replace function public.projects_comments_since_last_publish(project public.projects)
+  returns setof public.resolvable_layer_comments
+  language plpgsql
+  stable
+  security definer
+  set search_path to public, pg_temp
+as $$
+declare
+  v_last_publish timestamp;
+begin
+  if session_is_admin(project.id) = false then
+    raise exception 'Access denied to project %', project.id;
+  end if;
+  select table_of_contents_last_published into v_last_publish
+  from projects where id = project.id;
+  return query
+    select c.*
+    from resolvable_layer_comments c
+    where c.project_id = project.id
+      and c.parent_comment_id is null
+      and (c.resolved_at > v_last_publish or c.created_at > v_last_publish)
+      and not exists (
+        select 1
+        from table_of_contents_items d
+        join table_of_contents_items p
+          on p.project_id = d.project_id
+         and not p.is_draft
+         and p.stable_id = d.stable_id
+        where d.id = c.table_of_contents_item_id
+          and d.is_draft
+          and p.published_at is not null
+          and c.created_at <= p.published_at
+          and (c.resolved_at is null or c.resolved_at <= p.published_at)
+      );
+end;
+$$;
+
+comment on function public.projects_comments_since_last_publish(public.projects) is '@simpleCollections only';
+
 create or replace function public._unpublish_toc_stable_id(p_project_id integer, p_stable_id text)
   returns void
   language plpgsql
@@ -822,7 +924,13 @@ $$;
 comment on function public._unpublish_toc_stable_id(integer, text) is '@omit';
 revoke all on function public._unpublish_toc_stable_id(integer, text) from public;
 
-create or replace function public._publish_copy_draft_toc_item(p_draft_id integer)
+drop function if exists public._publish_copy_draft_toc_item(integer);
+
+create or replace function public._publish_copy_draft_toc_item(
+  p_draft_id integer,
+  p_sort_index integer,
+  p_z_index integer
+)
   returns table(new_toc_id integer, new_layer_id integer, draft_source_id integer)
   language plpgsql
   security definer
@@ -844,6 +952,16 @@ begin
   select * into item from table_of_contents_items where id = p_draft_id and is_draft;
   if item.id is null then
     raise 'Draft table of contents item % not found', p_draft_id;
+  end if;
+
+  -- Partial publish does not ship list order. An existing published row keeps
+  -- its sort_index and z_index. A new row is appended.
+  if p_sort_index is null then
+    select coalesce(max(sort_index), -1) + 1 into p_sort_index
+    from table_of_contents_items
+    where project_id = item.project_id
+      and not is_draft
+      and parent_stable_id is not distinct from item.parent_stable_id;
   end if;
 
   if item.parent_stable_id is null then
@@ -872,6 +990,14 @@ begin
     from data_layers where id = item.data_layer_id;
     select data_library_template_id into v_library
     from data_sources where id = v_source_id;
+
+    if p_z_index is null then
+      select coalesce(max(dl.z_index), 0) + 1 into p_z_index
+      from data_layers dl
+      join table_of_contents_items t on t.data_layer_id = dl.id
+      where t.project_id = item.project_id
+        and not t.is_draft;
+    end if;
 
     insert into interactivity_settings (
       type, short_template, long_template, cursor, title
@@ -903,7 +1029,7 @@ begin
       render_under,
       mapbox_gl_styles,
       v_interactivity_id,
-      z_index
+      p_z_index
     from data_layers
     where id = item.data_layer_id
     returning id into v_layer_id;
@@ -930,7 +1056,10 @@ begin
     enable_data_tables,
     data_table_join_column,
     copied_from_data_library_template_id,
-    hide_arcgis_rest_link
+    hide_arcgis_rest_link,
+    data_source_type,
+    original_source_upload_available,
+    published_at
   ) values (
     false,
     item.project_id,
@@ -944,7 +1073,7 @@ begin
     item.metadata,
     item.bounds,
     coalesce(v_layer_id, item.data_layer_id),
-    item.sort_index,
+    p_sort_index,
     item.hide_children,
     item.geoprocessing_reference_id,
     item.translated_props,
@@ -952,7 +1081,10 @@ begin
     item.enable_data_tables,
     item.data_table_join_column,
     item.copied_from_data_library_template_id,
-    item.hide_arcgis_rest_link
+    item.hide_arcgis_rest_link,
+    item.data_source_type,
+    item.original_source_upload_available,
+    clock_timestamp()
   )
   returning id into new_toc_id;
 
@@ -1054,13 +1186,14 @@ begin
 end;
 $$;
 
-comment on function public._publish_copy_draft_toc_item(integer) is '@omit';
-revoke all on function public._publish_copy_draft_toc_item(integer) from public;
+comment on function public._publish_copy_draft_toc_item(integer, integer, integer) is '@omit';
+revoke all on function public._publish_copy_draft_toc_item(integer, integer, integer) from public;
+
+drop function if exists public.publish_table_of_contents_items(integer, text[], boolean);
 
 create or replace function public.publish_table_of_contents_items(
   "projectId" integer,
-  "stableIds" text[],
-  "includeZOrder" boolean default false
+  "stableIds" text[]
 ) returns setof public.table_of_contents_items
   language plpgsql
   security definer
@@ -1080,13 +1213,9 @@ declare
   v_distinct_sources int[];
   v_source int;
   v_new_source int;
-  v_parent text;
-  v_anchored text[];
-  v_draft_order text[];
-  v_placing text[];
-  v_order text[];
+  v_kept_sort int;
+  v_kept_z int;
   v_did_work boolean := false;
-  v_z_pending boolean := false;
   v_old_path ltree;
   v_new_path ltree;
   v_folder text;
@@ -1095,6 +1224,7 @@ begin
   if session_is_admin("projectId") = false then
     raise 'Permission denied. Must be a project admin';
   end if;
+  perform set_config('seasketch.publishing', 'true', true);
 
   drop table if exists _units;
   drop table if exists _pub_before;
@@ -1158,10 +1288,19 @@ begin
       and u.stable_id = any(v_sel)
     order by nlevel(d.path), d.sort_index, d.stable_id
   loop
+    v_kept_sort := null;
+    v_kept_z := null;
+    select p.sort_index, dl.z_index
+      into v_kept_sort, v_kept_z
+    from table_of_contents_items p
+    left join data_layers dl on dl.id = p.data_layer_id
+    where p.project_id = "projectId"
+      and not p.is_draft
+      and p.stable_id = v_row.stable_id;
     perform public._unpublish_toc_stable_id("projectId", v_row.stable_id);
     select new_toc_id, new_layer_id, draft_source_id
       into v_copied_toc, v_copied_layer, v_copied_source
-    from public._publish_copy_draft_toc_item(v_row.draft_id);
+    from public._publish_copy_draft_toc_item(v_row.draft_id, v_kept_sort, v_kept_z);
     if v_copied_layer is not null and v_copied_source is not null then
       v_layer_ids := v_layer_ids || v_copied_layer;
       v_source_ids := v_source_ids || v_copied_source;
@@ -1191,7 +1330,7 @@ begin
           uploaded_source_filename, uploaded_source_layername,
           normalized_source_object_key, normalized_source_bytes, geostats,
           upload_task_id, translated_props, arcgis_fetch_strategy, temporal,
-          created_by
+          created_by, bucket_id, object_key
         )
         select
           "projectId", type, attribution, bounds, maxzoom, minzoom, url, scheme,
@@ -1203,7 +1342,7 @@ begin
           uploaded_source_filename, uploaded_source_layername,
           normalized_source_object_key, normalized_source_bytes, geostats,
           upload_task_id, translated_props, arcgis_fetch_strategy, temporal,
-          created_by
+          created_by, bucket_id, object_key
         from data_sources
         where id = v_source
         returning id into v_new_source;
@@ -1226,147 +1365,6 @@ begin
           where t.source_id = v_source
         );
       end loop;
-    end if;
-  end if;
-
-  perform set_config('seasketch.publishing', 'true', true);
-
-  for v_parent in
-    select distinct parent_stable_id
-    from (
-      select parent_stable_id
-      from _pub_before
-      where stable_id = any(v_sel)
-      union
-      select parent_stable_id
-      from table_of_contents_items
-      where project_id = "projectId"
-        and is_draft
-        and stable_id = any(v_sel)
-    ) parents
-  loop
-    select coalesce(array_agg(stable_id order by sort_index, stable_id), '{}'::text[])
-      into v_anchored
-    from table_of_contents_items
-    where project_id = "projectId"
-      and not is_draft
-      and parent_stable_id is not distinct from v_parent
-      and not (stable_id = any(v_sel));
-
-    select coalesce(array_agg(stable_id order by sort_index, stable_id), '{}'::text[])
-      into v_draft_order
-    from table_of_contents_items
-    where project_id = "projectId"
-      and is_draft
-      and parent_stable_id is not distinct from v_parent;
-
-    select coalesce(array_agg(d.stable_id order by d.sort_index, d.stable_id), '{}'::text[])
-      into v_placing
-    from table_of_contents_items d
-    where d.project_id = "projectId"
-      and d.is_draft
-      and d.parent_stable_id is not distinct from v_parent
-      and d.stable_id = any(v_sel)
-      and exists (
-        select 1 from table_of_contents_items p
-        where p.project_id = "projectId"
-          and not p.is_draft
-          and p.stable_id = d.stable_id
-          and p.parent_stable_id is not distinct from v_parent
-      );
-
-    v_order := public._publish_place_ids(v_anchored, v_draft_order, v_placing);
-    if cardinality(v_order) > 0 then
-      update table_of_contents_items t
-      set sort_index = s.ord - 1
-      from unnest(v_order) with ordinality as s(stable_id, ord)
-      where t.project_id = "projectId"
-        and not t.is_draft
-        and t.stable_id = s.stable_id
-        and t.parent_stable_id is not distinct from v_parent;
-    end if;
-  end loop;
-
-  v_z_pending := public.layer_stack_order_pending("projectId");
-  if (coalesce("includeZOrder", false) and v_z_pending) or exists (
-    select 1
-    from _units u
-    where u.stable_id = any(v_sel)
-      and not u.is_folder
-  ) then
-    if coalesce("includeZOrder", false) then
-      select coalesce(array_agg(p.stable_id order by dl.z_index, p.stable_id), '{}'::text[])
-        into v_anchored
-      from table_of_contents_items p
-      join data_layers dl on dl.id = p.data_layer_id
-      where p.project_id = "projectId"
-        and not p.is_draft
-        and not p.is_folder
-        and not exists (
-          select 1 from table_of_contents_items d
-          where d.project_id = p.project_id
-            and d.is_draft
-            and d.stable_id = p.stable_id
-        );
-      select coalesce(array_agg(d.stable_id order by dl.z_index, d.stable_id), '{}'::text[])
-        into v_placing
-      from table_of_contents_items d
-      join data_layers dl on dl.id = d.data_layer_id
-      where d.project_id = "projectId"
-        and d.is_draft
-        and not d.is_folder
-        and exists (
-          select 1 from table_of_contents_items p
-          where p.project_id = d.project_id
-            and not p.is_draft
-            and p.stable_id = d.stable_id
-        );
-    else
-      select coalesce(array_agg(p.stable_id order by dl.z_index, p.stable_id), '{}'::text[])
-        into v_anchored
-      from table_of_contents_items p
-      join data_layers dl on dl.id = p.data_layer_id
-      where p.project_id = "projectId"
-        and not p.is_draft
-        and not p.is_folder
-        and not (p.stable_id = any(v_sel));
-      select coalesce(array_agg(d.stable_id order by dl.z_index, d.stable_id), '{}'::text[])
-        into v_placing
-      from table_of_contents_items d
-      join data_layers dl on dl.id = d.data_layer_id
-      where d.project_id = "projectId"
-        and d.is_draft
-        and not d.is_folder
-        and d.stable_id = any(v_sel)
-        and exists (
-          select 1 from table_of_contents_items p
-          where p.project_id = d.project_id
-            and not p.is_draft
-            and p.stable_id = d.stable_id
-        );
-    end if;
-
-    select coalesce(array_agg(d.stable_id order by dl.z_index, d.stable_id), '{}'::text[])
-      into v_draft_order
-    from table_of_contents_items d
-    join data_layers dl on dl.id = d.data_layer_id
-    where d.project_id = "projectId"
-      and d.is_draft
-      and not d.is_folder;
-
-    v_order := public._publish_place_ids(v_anchored, v_draft_order, v_placing);
-    if cardinality(v_order) > 0 then
-      update data_layers dl
-      set z_index = s.ord
-      from unnest(v_order) with ordinality as s(stable_id, ord)
-      join table_of_contents_items t
-        on t.stable_id = s.stable_id
-       and t.project_id = "projectId"
-       and not t.is_draft
-      where dl.id = t.data_layer_id;
-      if coalesce("includeZOrder", false) and v_z_pending then
-        v_did_work := true;
-      end if;
     end if;
   end if;
 
@@ -1397,10 +1395,8 @@ begin
 
   if v_did_work then
     update projects
-    set
-      draft_table_of_contents_has_changes =
-        public.overlay_list_has_unpublished_changes("projectId"),
-      table_of_contents_last_published = now()
+    set draft_table_of_contents_has_changes =
+      public.overlay_list_has_unpublished_changes("projectId")
     where id = "projectId";
 
     v_editor := nullif(current_setting('session.user_id', true), '')::int;
@@ -1434,9 +1430,9 @@ begin
 end;
 $$;
 
-comment on function public.publish_table_of_contents_items(integer, text[], boolean) is
-  'Publishes the selected draft overlay items (and anything they require) without replacing the rest of the published tree.';
+comment on function public.publish_table_of_contents_items(integer, text[]) is
+  'Publishes the selected draft overlay items (and anything they require) without replacing the rest of the published tree. Does not publish sort_index or z_index.';
 
-grant execute on function public.publish_table_of_contents_items(integer, text[], boolean) to seasketch_user;
+grant execute on function public.publish_table_of_contents_items(integer, text[]) to seasketch_user;
 grant execute on function public.projects_pending_publish_items(public.projects) to seasketch_user;
 grant execute on function public.projects_layer_stack_order_pending(public.projects) to seasketch_user;

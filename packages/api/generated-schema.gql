@@ -10354,7 +10354,7 @@ type Mutation {
   ): PublishTableOfContentsPayload
 
   """
-  Publishes the selected draft overlay items (and anything they require) without replacing the rest of the published tree.
+  Publishes the selected draft overlay items (and anything they require) without replacing the rest of the published tree. Does not publish sort_index or z_index.
   """
   publishTableOfContentsItems(
     """
@@ -13943,7 +13943,6 @@ input PublishTableOfContentsItemsInput {
   payload verbatim. May be used to track mutations by the client.
   """
   clientMutationId: String
-  includeZOrder: Boolean
   projectId: Int
   stableIds: [String]
 }
