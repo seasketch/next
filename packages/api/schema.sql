@@ -5555,6 +5555,8 @@ CREATE FUNCTION public.clipping_layer_source(clipping_layer_id integer) RETURNS 
       from data_upload_outputs duo
       where duo.type = 'FlatGeobuf'
         and duo.data_source_id = data_layers.data_source_id
+      order by duo.is_original asc, duo.id desc
+      limit 1
     ) as fgb_url
   from geography_clipping_layers
   inner join data_layers on geography_clipping_layers.data_layer_id = data_layers.id
@@ -5586,6 +5588,8 @@ CREATE FUNCTION public.clipping_layers_for_geography(gid integer) RETURNS TABLE(
       from data_upload_outputs duo
       where duo.type = 'FlatGeobuf'
         and duo.data_source_id = data_layers.data_source_id
+      order by duo.is_original asc, duo.id desc
+      limit 1
     ) as fgb_url,
     data_sources.url as url,
     gcl.operation_type
@@ -5618,6 +5622,8 @@ CREATE FUNCTION public.clipping_layers_for_sketch_class(pid integer, scid intege
       from data_upload_outputs duo
       where duo.type = 'FlatGeobuf'
         and duo.data_source_id = data_layers.data_source_id
+      order by duo.is_original asc, duo.id desc
+      limit 1
     ) as fgb_url,
     gcl.operation_type,
     gcl.cql2_query,
@@ -11166,15 +11172,18 @@ CREATE FUNCTION public.data_layers_vector_object_key(g public.data_layers) RETUR
     AS $$
   select
     regexp_replace(
-    regexp_replace(remote, '^[^:]+://[^/]+/', ''), -- Remove protocol and host
-    '^/', '' -- Remove leading slash if present
+      regexp_replace(remote, '^[^:]+://[^/]+/', ''),
+      '^/',
+      ''
     )
   from data_upload_outputs
   where type = 'FlatGeobuf'
     and data_source_id = (
-    select data_source_id from data_layers where id = g.id
-    );
-  $$;
+      select data_source_id from data_layers where id = g.id
+    )
+  order by is_original asc, id desc
+  limit 1;
+$$;
 
 
 --
@@ -13309,7 +13318,9 @@ CREATE FUNCTION public.geography_clipping_layers_fgb_url(g public.geography_clip
   where duo.type = 'FlatGeobuf'
     and duo.data_source_id = (
       select data_source_id from data_layers where id = g.data_layer_id
-    );
+    )
+  order by duo.is_original asc, duo.id desc
+  limit 1;
 $$;
 
 
@@ -13320,9 +13331,14 @@ $$;
 CREATE FUNCTION public.geography_clipping_layers_object_key(g public.geography_clipping_layers) RETURNS text
     LANGUAGE sql STABLE SECURITY DEFINER
     AS $$
-  select remote from data_upload_outputs where type = 'FlatGeobuf' and data_source_id = (
-    select data_source_id from data_layers where id = g.data_layer_id
-  );
+  select remote
+  from data_upload_outputs
+  where type = 'FlatGeobuf'
+    and data_source_id = (
+      select data_source_id from data_layers where id = g.data_layer_id
+    )
+  order by is_original asc, id desc
+  limit 1;
 $$;
 
 
