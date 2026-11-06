@@ -238,7 +238,7 @@ test("the empty state says when only ordering is left for Publish", async () => 
     expect(element).toBeTruthy();
     return element as HTMLElement;
   });
-  expect(notice.textContent).toContain("Reordering the list");
+  expect(notice.textContent).toContain("must be published as a full update");
 });
 
 test("the empty state says the lists match when nothing differs", async () => {

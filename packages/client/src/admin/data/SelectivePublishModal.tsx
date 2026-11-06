@@ -583,7 +583,7 @@ function EmptyPendingNotice({ orderPending }: { orderPending: boolean }) {
     >
       {orderPending
         ? t(
-            "Nothing here is waiting as its own update. Reordering the list and layer stacking ship with Publish."
+            "No changes are available to selectively publish. Some changes, like to z-order or ordering in the list, must be published as a full update."
           )
         : t("The published overlay list matches the draft.")}
     </div>

@@ -169,7 +169,7 @@ export default function PublishSummarizedChangesPanel({
               }
             )
           : t(
-              "No unpublished changes were found in the changelog. There may still be changes not recorded by the changelog system that need publishing."
+              "No unpublished changes were found in the changelog. There may still be changes not recorded by the changelog system, such as changes to z-order or list position."
             )}
       </div>
     );
