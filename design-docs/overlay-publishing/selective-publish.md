@@ -4,7 +4,7 @@ Admins edit a draft overlay list and publish it to end users. Today `publish_tab
 
 Partners rejected "freeze/pause" and per-item context-menu publishing. This document describes the semantics, hard constraints, dependency rules, UI behavior, and backend changes needed to make the checkbox modal coherent and data-safe.
 
-Related: [Selective Overlay Publishing plan](../../.cursor/plans/selective_overlay_publishing_d3877543.plan.md) · mock UI in `packages/client/src/admin/data/MockSelectivePublishModal.tsx`.
+Related: [Selective Overlay Publishing plan](../../.cursor/plans/selective_overlay_publishing_d3877543.plan.md) (an earlier proposal; this document supersedes it where they differ) · UI in `packages/client/src/admin/data/SelectivePublishModal.tsx` · SQL in `packages/api/migrations/current.sql`.
 
 ## 1. Goals and non-goals
 
@@ -40,10 +40,10 @@ Non-goals
 
 ## 3. Core model: the unit of publication is an item's current state
 
-The checkbox list is rendered from changelog rows, but **what is published is never a changelog row**. The unit of publication is one item, `Item(stable_id)`: publish the complete current draft state of a layer or folder (TOC row, data layer, source, interactivity, ACL, data tables), or remove its published copy if it no longer exists in draft. Every item has at most one unit:
+The checkbox list comes from comparing the draft tree with the published tree. Changelog rows only explain a row (pills, editors); they never decide whether a row exists, and **what is published is never a changelog row**. The unit of publication is one item, `Item(stable_id)`: publish the complete current draft state of a layer or folder (TOC row, data layer, source, interactivity, ACL, data tables), or remove its published copy if it no longer exists in draft. Every item has at most one unit:
 
 - **Added** — draft row exists, no published row.
-- **Updated** — both exist, and the draft has pending changelog rows (§6.2). Includes moves.
+- **Updated** — both exist, and the published copy no longer matches the draft (§6.2). Includes moves.
 - **Removed** — published row exists, no draft row.
 
 There is no stacking-order checkbox. `layers:z-order-change` stays on the full-publish review until a full publish (§5.5).
@@ -66,7 +66,8 @@ Consequences, which answer the first two notes in the brief:
 | `data_table:*` | `Item(layer)` Updated | Data tables belong to the layer via `table_of_contents_item_id`; published copies are matched by table `stable_id`. |
 | `layers:z-order-change` | Not a partial-publish unit | Stays in the full-publish review until a full publish. |
 | `resolvable_layer_comments:*` | none | Comments are workflow, not published state. Shown as context in the full review, never a checkbox. |
-| Sibling reorders; fields with no trigger (`bounds`, `render_under`, `source_layer`, …) | none | Not visible as pending today either. Full publish ships them; a partial publish of that item also ships them because the item is copied whole. |
+| Fields with no changelog trigger (`bounds`, `render_under`, `source_layer`, `translated_props`, source `geostats`, …) | `Item` Updated | Found by the tree comparison. The row has no pills, so it shows an "Other changes" pill. |
+| Sibling reorders | none | Full publish ships them (§5.4). |
 
 ## 5. Hard constraints vs. UI conveniences
 
@@ -86,12 +87,15 @@ Rule: every item in the target tree must have its draft `parent_stable_id` prese
 - Updated item moved into an Added folder ⇒ **requires** `Item(parent)`.
 - Updated item moved into a *published* folder ⇒ no dependency. Whether that folder is itself Updated (renamed, moved, re-ACL'd) is irrelevant; the child only needs it to exist.
 - An item can never be moved into a Removed folder in draft (the folder no longer exists there), so that conflict cannot occur.
+- Updated item moved into a folder that is still inside it on the published tree (A contained B; in draft B moved out and A moved into B) ⇒ **requires** the moved items on the published chain between them. Publishing A alone would make A and B each other's parent and drop both from the public list.
+
+Only the unbroken run of Added folders directly above an item is required. A published folder in between already exists on the target tree, so the Added folders above it are not needed.
 
 Convenience: checking the child auto-checks the required folder(s) and shows them as linked (§7).
 
 ### 5.3 Removing a folder empties it (hard)
 
-Removed units and their bundles are computed from the **published** tree: a published folder F with no draft counterpart is Removed, and its published descendants are found by `path <@ F.path`. Each descendant D is in one of two states in draft:
+Removed units and their bundles are computed from the **published** tree: a published folder F with no draft counterpart is Removed, and its published descendants are found through the published parent chain. Each descendant D is in one of two states in draft:
 
 - D has no draft row (deleted with the folder, the normal case) ⇒ D is its own Removed unit, **bound** to F. The UI shows one row with a nested count.
 - D has a draft row elsewhere (moved out before F was deleted) ⇒ `Item(D)` is Updated (moved). `Removed(F)` **requires** `Item(D)`, otherwise D would be orphaned in the published tree.
@@ -102,7 +106,7 @@ Publishing a removal deletes the published TOC row and, by cascade or explicit d
 
 Partial publish does not change `sort_index`.
 
-- An Updated item keeps the `sort_index` of the published row it replaces.
+- An Updated item keeps the `sort_index` of the published row it replaces, unless it moved to another folder; then it is appended there.
 - An Added item is appended: `max(sort_index) + 1` among the published children of its published parent.
 - A pure reorder has no checkbox. `draft_table_of_contents_has_changes` stays true so the full Publish button can still ship it.
 - Full publish copies draft `sort_index` values, as it does today.
@@ -126,12 +130,16 @@ Layer-only changes (style, title, metadata, interactivity, ACL) on layers sharin
 
 Data-library sources are shared and never copied, so library-source edits are already live and never appear as pending.
 
+When a partial publish writes a layer whose source has no pending change, it points the layer at the published copy that the other published layers on that source already use. A new copy is made only when no matching copy exists, so a shared source is not duplicated on the public map.
+
 ### 5.7 Moving a folder moves its subtree (hard, but no selection dependency)
 
 Moving folder G changes `parent_stable_id` on G only; descendants keep their `parent_stable_id` and only their `path` changes. Publishing `Item(G)`:
 
 - requires nothing from descendants,
-- rewrites `path` on every published descendant of G (selected or not) to the new ancestor chain. This is derived-column maintenance under the bypass, not a state change, so descendants are not Updated.
+- changes `path` on every published descendant of G (selected or not). After every partial publish, all published paths are rebuilt from the published parent chain under the bypass, so moves at any depth and in any order stay consistent. This is derived-column maintenance, not a state change, so descendants are not Updated.
+
+After rebuilding paths the mutation checks that every published item is reachable from the root. A missing parent or a parent cycle raises an error naming the item and rolls the publish back. The closure rules above should make this unreachable; the check is a last line of defence.
 
 ### 5.8 Folder ACL and behaviour inherit (not a constraint)
 
@@ -159,13 +167,15 @@ Moving folder G changes `parent_stable_id` on G only; descendants keep their `pa
 One schema addition, not on the changelog: `table_of_contents_items.published_at timestamptz`, set on published rows when they are written (full or partial). Then:
 
 - Added = draft row without a published `stable_id` match.
-- Removed = published row without a draft match (bundles via published `path`).
-- Updated = match where a changelog row for the draft item has `last_at > published.published_at`, or where the draft layer's non-library source (url, attribution, temporal) or its style, render-under, or sublayer differs from the published copy. The structural check catches a source replacement that never recorded `layer:uploaded`.
+- Removed = published row without a draft match (bundles via the published parent chain).
+- Updated = match whose published copy differs from the draft in anything publish copies: the TOC row (including `parent_stable_id`, `translated_props`, `bounds`), the layer (style, source layer, sublayer, render-under), interactivity settings (not the `layers` list, which publish does not copy), ACL type and groups, active data tables, or the source. `sort_index` and `z_index` are not compared. Sources are compared column by column, `geostats` included, because XML metadata uploads and the PII backfill change `geostats` alone. `_overlay_changed_stable_ids` holds this comparison and the full and partial publish column lists name it in their TODO comments.
 - Order is not a pending unit. Sibling-order and z-order differences still keep `draft_table_of_contents_has_changes` true.
+
+Because pending is structural, an edit that is reverted before publishing is not pending, and the modal and the blue Publish button agree. After a partial publish the flag is the units left unselected, plus any order difference. The API tests check that against a full recomputation after every partial publish.
 
 `published_at` is `clock_timestamp()` on the publish insert, not `now()`, so edits made earlier in the same transaction are not still pending after the row is written. There is no insert trigger for it.
 
-`projects_change_logs_since_last_publish` keeps the `last_at > table_of_contents_last_published` range, then drops rows whose item was partial-published after that changelog entry. `projects_comments_since_last_publish` uses the same per-item cutoff. Partial publish does **not** move `table_of_contents_last_published`, so that timestamp stays the last full publish. `draft_table_of_contents_has_changes` is recomputed from the tree diff after a partial publish, including order differences and the source/interactivity fields a full publish copies.
+`projects_change_logs_since_last_publish` keeps the `last_at > table_of_contents_last_published` range (`-infinity` when the project was never fully published), then drops rows whose item was partial-published after that changelog entry. `projects_comments_since_last_publish` uses the same per-item cutoff. Partial publish does **not** move `table_of_contents_last_published`, so that timestamp stays the last full publish.
 
 No new field groups, and nothing new is written into `from_summary`, `to_summary`, blobs, or `meta`. A partial publish records the existing `layers:published` row exactly as the full publish does.
 
@@ -177,14 +187,30 @@ No new field groups, and nothing new is written into `from_summary`, `to_summary
 2. Compute units and edges (`requires`, `bound`) from the two trees; expand `stable_ids` to the closure.
 3. Removed units, deepest `path` first: delete published rows and dependents (§5.3).
 4. Added/Updated units, ancestors first: remember the published `sort_index` and `z_index` if the row exists, delete the stale copy, `_publish_copy_draft_toc_item` with those values or null to append.
-5. Copy sources for the layers written in this run; repoint. `bucket_id` and `object_key` are copied because the source insert trigger is not filling them.
-6. Rewrite `path` for descendants of moved folders (§5.7). Do not renumber `sort_index` or `z_index`.
-7. Clear `seasketch.publishing`. Recompute `draft_table_of_contents_has_changes`. Do not change `table_of_contents_last_published`. Record `layers:published`. Return the published rows written.
+5. Point the layers written in this run at a published source: reuse a matching copy (§5.6) or copy the draft source with its upload outputs. `bucket_id` and `object_key` are copied because the source insert trigger is not filling them.
+6. Rebuild published paths and check reachability (§5.7). Do not renumber `sort_index` or `z_index`.
+7. Clear `seasketch.publishing`. Set `draft_table_of_contents_has_changes` (§6.2). Do not change `table_of_contents_last_published`. Queue one `recordProjectActivity` job. Record `layers:published` with `layer_count` = the layers this run published or removed. Return the published rows written.
+
+An empty selection, or one with no pending ids, returns before any of this and records nothing.
 8. `publishTilesAclPlugin` rewrites the tiles ACL document for this mutation as well as full publish.
 
-`seasketch.publishing` bails out of: the TOC before-insert validation (published rows only), `table_of_contents_items_project_update`, the data-layer and data-source before triggers, the "draft has changes" triggers on layers, sources, and ACLs, the upload-replacement changelog on `data_source_id`, the TOC insert changelogs, `record_project_activity_on_delete`, and `after_deleted__data_upload_outputs`. Full publish sets the same flag for its copy loop and clears it before returning. The backfill of `published_at` sets the flag too, so it does not mark every project unpublished.
+`seasketch.publishing` bails out of: the TOC before-insert validation (published rows only), `table_of_contents_items_project_update`, the data-layer and data-source before triggers, the "draft has changes" triggers on layers, sources, and ACLs, the upload-replacement changelog on `data_source_id`, the TOC insert changelogs, and `record_project_activity_on_delete` (each publish queues that job once instead). `after_deleted__data_upload_outputs` keeps running: it queues the S3 object for cleanup when the last row that references it is deleted, and an index on `data_upload_outputs.remote` keeps that lookup cheap. Full publish sets the same flag for its copy loop and clears it before returning. The backfill of `published_at` sets the flag too, so it does not mark every project unpublished.
 
-### 6.4 Known limitation left for a later update
+### 6.4 Performance
+
+Measured on a synthetic project with 3,000 layers in nested folders and about 82 KB of compressed `geostats` per source (246 MB in total), after `ANALYZE`:
+
+| Operation | Time |
+| --- | --- |
+| Pending list (modal query) | 1.3–1.5 s |
+| Partial publish, 1 item | 1.7 s |
+| Partial publish, 29 items | 1.8 s |
+| Full publish, this branch | 17–27 s |
+| Full publish, `master` function on the same data | 22–28 s |
+
+Comparing `geostats` dominates the pending list, because both copies are detoasted. Projects of typical size take a fraction of this. Nothing on the editing path runs the comparison; only the modal and the partial publish do.
+
+### 6.5 Known limitation left for a later update
 
 `table_of_contents_items_related_publish_change_logs` attributes publishes to layers by time window. Without storing membership it may list a partial publish in the history of a layer it did not include. Fixing that needs a record of what each run shipped, which is out of scope for this update.
 
@@ -211,6 +237,10 @@ Selection mechanics (bind, don't warn)
 After publishing
 
 - Modal closes; toast "Published 6 changes". Remaining pending units stay listed; the header indicator stays on while any remain.
+- The modal always loads the pending list from the server, and Publish is disabled until it arrives. After a partial publish the cached full-publish review lists are evicted.
+- If the server refuses the publish, the modal shows its reason under "Could not publish these changes".
+- An Updated row with no changelog pills shows "Other changes".
+- With nothing pending, the modal says either that the published list matches the draft, or that only reordering and stacking are left for Publish.
 
 Full publish
 
@@ -229,7 +259,7 @@ Layers
 5. Replaced a layer's source and restyled → one Updated unit → §5.1 → one checkbox; the stale published source copy is dropped when unreferenced.
 6. Duplicated a layer → Added unit with a fresh `stable_id` → independent.
 7. Toggled downloads / interactivity / temporal → Updated pills; nothing special.
-8. Changed a field with no changelog trigger (bounds, render_under) and nothing else → not listed (as today) → ships with the next full publish, or with this item when it is selected for another reason.
+8. Changed a field with no changelog trigger (bounds, render_under) and nothing else → Updated unit with an "Other changes" pill → §6.2 → one checkbox. Changing it back before publishing removes the row.
 9. Edited a source-level field (attribution/temporal) on a shared source → all layers on that source bound → §5.6 → grouped under "Shared source", one checkbox.
 10. Edited only the style of one layer sharing a source → single unit → no binding.
 11. Data-library layer whose library source was updated → no pending unit → already live.
@@ -238,12 +268,14 @@ Layers
 Moves
 
 13. Moved a layer into an existing published folder → Updated (moved) → §5.2 → single checkbox; breadcrumb shows the destination; it is appended among that folder's published children.
+13a. Moved folder B out of folder A, then moved A into B → `Item(A)` requires `Item(B)` → §5.2 → checking A links B.
+13b. Moved a published folder into a new folder and added a layer to it → the layer needs nothing; the moved folder requires the new one → §5.2.
 14. Moved a layer into a new folder → requires the Added folder → §5.2 → checking the layer links the folder.
 15. Moved a layer into a new folder inside another new folder → requires both, transitively.
 16. Created a folder, moved layers in, checked only the folder → folder publishes empty; layers stay where they are publicly → valid.
 17. Moved a layer out of folder A, then deleted A → `Removed(A)` requires the layer's Updated unit → §5.3 → checking A links the layer; checking only the layer is fine.
 18. Moved a layer from new folder A to new folder B before publishing → requires only B.
-19. Moved a folder with contents → one Updated unit on the folder → §5.7 → descendants not listed; their published `path` is rewritten.
+19. Moved a folder with contents → one Updated unit on the folder → §5.7 → descendants not listed; their published `path` is rebuilt.
 20. Moved a folder *and* edited a child → two independent units; any combination is valid.
 
 Folders
@@ -275,11 +307,11 @@ Multi-editor and timing
 Cross-cutting
 
 38. Any publish → tiles ACL document rewritten from the resulting published tree.
-39. Partial publish → one `layers:published` row with the existing shape; per-layer history may over-attribute it (§6.4).
+39. Partial publish → one `layers:published` row with the existing shape, counting the layers it published; per-layer history may over-attribute it (§6.5).
 40. Full publish → unchanged full replace; also ships reorders and untracked field changes.
 
 ## 9. Open questions
 
 - Resolved: partial publish does not ship `sort_index` or `z_index`. Full publish does.
 - Published reports referencing layers: should publishing a Removed layer check published report cards, or is a dangling reference acceptable?
-- Whether the per-item pending computation lives in SQL (shared with the mutation's closure) or a plugin. One SQL implementation is preferred.
+- Resolved: the pending computation lives in SQL and is shared by the modal query, the mutation's closure, and the flag.
