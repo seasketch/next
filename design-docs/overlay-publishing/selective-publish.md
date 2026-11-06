@@ -156,6 +156,13 @@ After rebuilding paths the mutation checks that every published item is reachabl
 - Deleting a draft layer referenced by a report card is refused.
 - `is_folder` cannot change, so no Updated unit changes kind.
 
+### 5.11 Reports
+
+- Report cards reference layers by `stable_id`. A published report resolves them against the published list and a draft report against the draft list (`report_overlay_source_refs_by_stable_ids`). Publishing a layer, fully or selectively, moves end users to its new version, including on reports published earlier. Draft reports switch as soon as the new version is preprocessed.
+- `publish_report_snapshot` refuses while any referenced layer's draft source url differs from its published source url. The admin client answers that error by publishing the layer list and then the report.
+- Known gap: if a new version is published before its preprocessing finishes, the published copy has no reporting output and no processing job, and published reports fail to resolve that layer until a later publish. Once the draft output lands the item is Updated in the modal, because upload outputs are compared, but output inserts do not set `draft_table_of_contents_has_changes`.
+- Covered by `packages/e2e/tests/report-overlay-versions.spec.ts` (version upload through publish, on local workers) and `packages/api/tests/reportPublishVersionGuard.test.ts`.
+
 ## 6. Backend design
 
 ### 6.1 Shared copy helpers
