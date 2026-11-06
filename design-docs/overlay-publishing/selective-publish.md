@@ -20,7 +20,7 @@ Non-goals
 - Publishing a *past* state of an item (rollback). Publishing always means "publish the current draft state of X".
 - Publishing individual field edits of one item (e.g. only the title but not the cartography). See §3.
 - Pausing or excluding layers from future full publishes.
-- Changing the full publish. It stays a full replace and continues to ship everything, including changes the changelog does not track.
+- Changing what a full publish ships. It still makes the published list match the draft, including order and changes the changelog does not track. It now does that by copying only the items that differ (§6.3).
 
 ## 2. How publishing works today (facts the design depends on)
 
@@ -28,7 +28,7 @@ Non-goals
 | --- | --- | --- |
 | Draft and published rows live in one table, split by `is_draft`. `id` changes on publish; `stable_id` is the identity shared by a draft row and its published counterpart. | `table_of_contents_items` | All matching between draft and published is by `(project_id, stable_id)`. |
 | `path` is an ltree of ancestor stable ids; `parent_stable_id` names the parent. Path is computed on insert from the parent's path. | `before_insert_or_update_table_of_contents_items_trigger` | A published item's `path` is derived from the **published** parent chain at publish time, never copied from draft. |
-| `sort_index integer` is per sibling group, rewritten 0..n-1 by `update_table_of_contents_item_children`. Reorders inside the same parent record **no changelog**; only `parent_stable_id` changes record `layer:parent-changed`. | `update_table_of_contents_item_*` | Partial publish does not write `sort_index`. An updated item keeps its published value. A new item is appended. Full publish copies the draft values. |
+| `sort_index integer` is per sibling group, rewritten 0..n-1 by `update_table_of_contents_item_children`. Reorders inside the same parent record **no changelog**; only `parent_stable_id` changes record `layer:parent-changed`. | `update_table_of_contents_item_*` | Partial publish does not write `sort_index`. An updated item keeps its published value. A new item is appended. Full publish writes the draft values onto every published row. |
 | `data_layers.z_index integer` is a project-wide stacking order, rewritten 1..n by `update_z_indexes`, recorded as one project-level `layers:z-order-change` row. | `update_z_indexes` | Partial publish does not write `z_index`, same rule as `sort_index`. The full-publish modal still lists `layers:z-order-change` until a full publish. |
 | Deleting a folder deletes its subtree one row at a time, firing `layer:deleted` / `folder:deleted` per item with `from_summary = {title, is_folder}`. The rows are keyed by the old draft `id`; they do not carry `stable_id`. | `delete_table_of_contents_branch`, `trg_changelog_table_of_contents_items_deleted` | Removals are discovered from the **tree diff** (published `stable_id` with no draft row), not from the changelog (§5.3). |
 | Deleting a draft layer whose `stable_id` is referenced by a report card is refused. | `_delete_table_of_contents_item` | Report references are enforced at edit time, not publish time. |
@@ -160,7 +160,9 @@ After rebuilding paths the mutation checks that every published item is reachabl
 
 ### 6.1 Shared copy helpers
 
-`_publish_copy_draft_toc_item(draft_id, sort_index, z_index)` copies one draft item (interactivity settings, `data_layers`, TOC row with derived path, ACL type + groups, active `overlay_data_tables`). Null `sort_index` / `z_index` means append. Full publish keeps its own loop and copies draft order. `published_at` is a column on that insert (`clock_timestamp()`), not a trigger.
+`_publish_copy_draft_toc_item(draft_id, sort_index, z_index, path)` copies one draft item (interactivity settings, `data_layers`, TOC row, ACL type + groups, active `overlay_data_tables`). Null `sort_index` / `z_index` means append; a null path is built from the published parent. It is the only TOC copy column list; full publish no longer has its own loop. `published_at` is a column on that insert (`clock_timestamp()`), not a trigger.
+
+`_publish_units(project_id, stable_ids, full)` applies a set of units: removals deepest first, then copies parents first, then source repointing (§5.6). Both mutations call it. `_unpublish_toc_stable_id` returns the published source copy it detached instead of deleting it, so a layer whose source did not change is repointed at the copy it already had, and its `geostats` are not copied again. Detached copies that no layer uses are deleted at the end.
 
 ### 6.2 Pending state per item
 
@@ -168,10 +170,10 @@ One schema addition, not on the changelog: `table_of_contents_items.published_at
 
 - Added = draft row without a published `stable_id` match.
 - Removed = published row without a draft match (bundles via the published parent chain).
-- Updated = match whose published copy differs from the draft in anything publish copies: the TOC row (including `parent_stable_id`, `translated_props`, `bounds`), the layer (style, source layer, sublayer, render-under), interactivity settings (not the `layers` list, which publish does not copy), ACL type and groups, active data tables, or the source. `sort_index` and `z_index` are not compared. Sources are compared column by column, `geostats` included, because XML metadata uploads and the PII backfill change `geostats` alone. `_overlay_changed_stable_ids` holds this comparison and the full and partial publish column lists name it in their TODO comments.
-- Order is not a pending unit. Sibling-order and z-order differences still keep `draft_table_of_contents_has_changes` true.
+- Updated = match whose published copy differs from the draft in anything publish copies: the TOC row (including `parent_stable_id`, `translated_props`, `bounds`, and the derived `data_source_type` and `original_source_upload_available`), the layer (style, source layer, sublayer, render-under), interactivity settings (not the `layers` list, which publish does not copy), ACL type and groups, active data tables, or the source. `sort_index`, `path`, and `z_index` are not compared. Sources are compared column by column, `geostats` included, because XML metadata uploads and the PII backfill change `geostats` alone, and so are their upload outputs, because reporting jobs and PMTiles replacement add outputs to an existing source. `_overlay_changed_stable_ids` and `_publishable_source_differs` hold this comparison and the copy helpers name them in their TODO comments.
+- Order is not a pending unit. Sibling-order and z-order differences still keep `draft_table_of_contents_has_changes` true. `Project.overlayOrderPending` exposes that comparison to the modal.
 
-Because pending is structural, an edit that is reverted before publishing is not pending, and the modal and the blue Publish button agree. After a partial publish the flag is the units left unselected, plus any order difference. The API tests check that against a full recomputation after every partial publish.
+Because pending is structural, an edit that is reverted before publishing is not pending. The blue Publish button still reads the stored `draft_table_of_contents_has_changes` flag: draft edit triggers set it, a `projects` trigger sends `pg_notify` to the admin subscription when it flips, and nothing on the editing path runs the structural comparison. A reverted edit therefore leaves the button blue until the next publish, and the modal says the lists match. After a partial publish the flag is the units left unselected, plus any order difference. After a full publish it is false. The API tests check both against a full recomputation after every publish.
 
 `published_at` is `clock_timestamp()` on the publish insert, not `now()`, so edits made earlier in the same transaction are not still pending after the row is written. There is no insert trigger for it.
 
@@ -179,7 +181,15 @@ Because pending is structural, an edit that is reverted before publishing is not
 
 No new field groups, and nothing new is written into `from_summary`, `to_summary`, blobs, or `meta`. A partial publish records the existing `layers:published` row exactly as the full publish does.
 
-### 6.3 Mutation
+### 6.3 Mutations
+
+`publish_table_of_contents(project_id)` (full publish):
+
+1. Advisory lock; permission check; set `seasketch.publishing`.
+2. Remove every published row of a `stable_id` that has more than one published row (left by concurrent publishes before the lock existed), so the draft item is copied again.
+3. Compute all units and apply them with `_publish_units(..., full => true)`: copied items take the draft `sort_index`, `z_index`, and `path`.
+4. Write the draft `sort_index` and `path` onto published TOC rows, and the draft `z_index` onto published layers, where they differ. Unchanged rows keep their ids, layers, source copies, and `published_at`.
+5. Clear the flag, set `table_of_contents_last_published`, queue one `recordProjectActivity` job, record `layers:published`, and return all published rows.
 
 `publish_table_of_contents_items(project_id, stable_ids text[])`:
 
@@ -202,13 +212,18 @@ Measured on a synthetic project with 3,000 layers in nested folders and about 82
 
 | Operation | Time |
 | --- | --- |
-| Pending list (modal query) | 1.3–1.5 s |
+| Publish button state (stored flag) | constant |
+| Pending list (modal query) | 1.4–2.0 s |
 | Partial publish, 1 item | 1.7 s |
 | Partial publish, 29 items | 1.8 s |
-| Full publish, this branch | 17–27 s |
-| Full publish, `master` function on the same data | 22–28 s |
+| Full publish, `master` function, any change | 21–28 s |
+| Full publish, nothing changed | 1.5 s |
+| Full publish, 20 titles and 10 source attributions changed | 1.6 s |
+| Full publish, stacking order of every layer reversed | 1.6 s |
+| Full publish, every title changed | 13.9 s |
+| Full publish, every source changed | 18.5 s |
 
-Comparing `geostats` dominates the pending list, because both copies are detoasted. Projects of typical size take a fraction of this. Nothing on the editing path runs the comparison; only the modal and the partial publish do.
+Comparing `geostats` takes about 1.2 s of the pending list, because both copies are decompressed; the rest of the comparison is under 0.2 s. Projects of typical size take a fraction of this. A full publish costs that comparison plus the items that changed. Copying an item is dominated by the 16 generated full-text columns on `table_of_contents_items` and by rewriting `geostats`, so a publish that changes every item is still slow, but no longer slower than before.
 
 ### 6.5 Known limitation left for a later update
 
@@ -244,7 +259,8 @@ After publishing
 
 Full publish
 
-- The primary Publish button keeps the existing review panel, now fed by the same per-item pending data, and calls the existing `publish_table_of_contents`.
+- The primary Publish button keeps the existing review panel, now fed by the same per-item pending data, and calls `publish_table_of_contents`.
+- When the changelog is empty, the review panel says that changes the changelog does not record may still need publishing. Reorders, untracked edits such as bounds, and a flag left on by a reverted edit all show that message.
 
 ## 8. Scenario catalog
 
@@ -308,7 +324,7 @@ Cross-cutting
 
 38. Any publish → tiles ACL document rewritten from the resulting published tree.
 39. Partial publish → one `layers:published` row with the existing shape, counting the layers it published; per-layer history may over-attribute it (§6.5).
-40. Full publish → unchanged full replace; also ships reorders and untracked field changes.
+40. Full publish → the published list matches the draft, including reorders, stacking, and untracked field changes. Only differing items are copied; unchanged published rows keep their ids and source copies.
 
 ## 9. Open questions
 
