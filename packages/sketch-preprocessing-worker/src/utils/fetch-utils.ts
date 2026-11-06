@@ -11,10 +11,10 @@ function getRequestKey(key: string, range: [number, number | null]): string {
 }
 
 /**
- * Objects on this deployment's uploads host are in the bound bucket, so they
- * are read through the R2 binding and ACL does not apply. `wrangler dev`
- * sets UPLOADS_HOST to the local uploads port. A production EEZ or land URL
- * is not in that local bucket, and is fetched over HTTP.
+ * Objects whose host is listed in UPLOADS_HOST are in the bound bucket, so
+ * they are read through the R2 binding and ACL does not apply. The variable
+ * is required. `npm run dev` sets it to the local uploads host. A URL on
+ * any other host is fetched over HTTP.
  */
 async function readRange(
   key: string,

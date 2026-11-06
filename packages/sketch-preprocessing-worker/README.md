@@ -77,20 +77,14 @@ npm run cf-typegen
 
 ## Deployment
 
-```bash
-# Deploy to Cloudflare
-npm run deploy
-```
+From this package, `npm run deploy`. The command stops before uploading when `SSN_TILES_BUCKET` is unset. Wrangler stops the upload when the `UPLOADS_HOST` secret is missing on the Worker. Set the secret first, then deploy.
 
-### Required Bindings
+### Required configuration
 
-The worker requires the following Cloudflare bindings:
+- `SSN_TILES`: R2 binding for the geographic FlatGeobuf files. Reads of this deployment's own bucket go through the binding and bypass ACL. Local development uses the preview bucket named in `wrangler.jsonc`. A production deploy attaches the bucket named by the `SSN_TILES_BUCKET` environment variable.
+- `UPLOADS_HOST`: required Worker secret. Comma-separated hosts whose objects live in that bucket. `npm run dev` sets it to the local uploads host. A URL on any other host is downloaded over HTTP.
 
-- `SSN_TILES`: R2 bucket containing geographic data in FlatGeobuf format. Reads of this deployment's own bucket go through the binding and bypass ACL.
-
-### Environment Variables
-
-- `UPLOADS_HOST`: Comma-separated hosts whose objects live in `SSN_TILES`. Production is `uploads.seasketch.org,tiles.seasketch.org`. When the variable is unset, the Worker uses those same hosts. Local `npm run dev` overrides it with the local uploads host. A production EEZ or land URL is not in that local bucket, so the local Worker fetches it over HTTP.
+Store `UPLOADS_HOST` with `wrangler secret put` from this package. Pass `SSN_TILES_BUCKET` in the environment of `npm run deploy`. Neither value is written in this repository.
 
 ## API Reference
 

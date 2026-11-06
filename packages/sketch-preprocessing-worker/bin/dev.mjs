@@ -48,7 +48,11 @@ console.log(
 const child = spawn(process.execPath, args, {
   cwd: packageDir,
   stdio: "inherit",
-  env: { ...process.env, WRANGLER_SEND_METRICS: "false" },
+  env: {
+    ...process.env,
+    UPLOADS_HOST: uploadsHost,
+    WRANGLER_SEND_METRICS: "false",
+  },
 });
 for (const signal of ["SIGINT", "SIGTERM"]) {
   process.on(signal, () => {

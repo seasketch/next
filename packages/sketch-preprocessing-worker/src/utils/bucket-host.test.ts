@@ -1,35 +1,39 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import { resolveStorageUrl } from "overlay-engine";
-import {
-  PRODUCTION_BUCKET_HOSTS,
-  bucketHosts,
-  isBoundBucket,
-} from "./bucket-host.ts";
+import { bucketHosts, isBoundBucket } from "./bucket-host.ts";
 
-test("an unset UPLOADS_HOST is the production bucket", () => {
-  const hosts = bucketHosts({});
-  for (const host of PRODUCTION_BUCKET_HOSTS) {
-    assert.equal(isBoundBucket(new URL(`https://${host}/a.fgb`), hosts), true);
-  }
+test("UPLOADS_HOST is required", () => {
+  assert.throws(() => bucketHosts({}), /UPLOADS_HOST is required/);
+  assert.throws(() => bucketHosts({ UPLOADS_HOST: "  , " }), /UPLOADS_HOST is required/);
+});
+
+test("a configured host list is the bound bucket", () => {
+  const hosts = bucketHosts({
+    UPLOADS_HOST: "uploads.example, tiles.example",
+  });
+  assert.equal(isBoundBucket(new URL("https://uploads.example/a.fgb"), hosts), true);
   assert.equal(
-    isBoundBucket(new URL("https://uploads.seasketch.org:443/a.fgb"), hosts),
+    isBoundBucket(new URL("https://uploads.example:443/a.fgb"), hosts),
+    true
+  );
+  assert.equal(isBoundBucket(new URL("https://other.example/a.fgb"), hosts), false);
+});
+
+test("a bare key is bound only when its resolved host is configured", () => {
+  const target = resolveStorageUrl("projects/demo/layer.fgb");
+  assert.equal(target.host, "uploads.seasketch.org");
+  assert.equal(
+    isBoundBucket(target, bucketHosts({ UPLOADS_HOST: "uploads.seasketch.org" })),
     true
   );
   assert.equal(
-    isBoundBucket(new URL("https://example.com/a.fgb"), hosts),
+    isBoundBucket(target, bucketHosts({ UPLOADS_HOST: "localhost:8788" })),
     false
   );
 });
 
-test("a bare key resolves onto the bound production bucket", () => {
-  const hosts = bucketHosts({});
-  const target = resolveStorageUrl("projects/demo/layer.fgb");
-  assert.equal(target.host, "uploads.seasketch.org");
-  assert.equal(isBoundBucket(target, hosts), true);
-});
-
-test("a configured UPLOADS_HOST replaces the production hosts", () => {
+test("a local uploads host does not include other origins", () => {
   const hosts = bucketHosts({
     UPLOADS_HOST: " localhost:8788, 127.0.0.1:8788 ",
   });
@@ -38,10 +42,7 @@ test("a configured UPLOADS_HOST replaces the production hosts", () => {
     true
   );
   assert.equal(
-    isBoundBucket(
-      new URL("https://uploads.seasketch.org/projects/a.fgb"),
-      hosts
-    ),
+    isBoundBucket(new URL("https://uploads.seasketch.org/projects/a.fgb"), hosts),
     false
   );
 });
