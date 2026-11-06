@@ -44,6 +44,7 @@ import {
   shouldAttemptMapboxStyleFallback,
   styleReferencesMapbox,
 } from "../useMapboxStyle";
+import { buildEncStyle, encBounds, isEncBasemapType } from "../enc/buildEncStyle";
 import LayerInteractivityManager from "./LayerInteractivityManager";
 import bytes from "bytes";
 import bbox from "@turf/bbox";
@@ -334,6 +335,8 @@ class MapContextManager extends EventEmitter {
   private basemapsWereSet = false;
   private userAccessToken?: string | null;
   private mapAccessToken?: string | null;
+  /** Last ENC basemap the camera flew to, so style rebuilds do not yank the view. */
+  private lastEncFitBasemapId?: number;
   /**
    * Authoritative list from Project.hostedTileUuidsRequiringAuth.
    * `null` until ProjectMetadata arrives — fall back conservatively (attach
@@ -1478,6 +1481,30 @@ class MapContextManager extends EventEmitter {
     }
   }
 
+  /**
+   * Fly to a chart the first time it is selected. Style rebuilds keep the
+   * camera where the user left it.
+   */
+  private fitSelectedEncBasemap() {
+    const selected = this.basemapState?.getSelectedBasemap();
+    const bounds =
+      selected && isEncBasemapType(selected.type) ? encBounds(selected) : null;
+    if (!this.map || !selected || !bounds || selected.id === this.lastEncFitBasemapId) {
+      return;
+    }
+    this.lastEncFitBasemapId = selected.id;
+    const [west, south, east, north] = bounds;
+    this.map.once("idle", () => {
+      this.map?.fitBounds(
+        [
+          [west, south],
+          [east, north],
+        ],
+        { padding: 48, duration: 700, maxZoom: 13 }
+      );
+    });
+  }
+
   /** Bare URL, plus access_token when this hosted source is private. */
   private styleSourceUrl(url: string): string {
     return hostedStyleUrl(
@@ -1649,6 +1676,7 @@ class MapContextManager extends EventEmitter {
       throw new Error("Both initialBounds and initialCameraOptions are empty");
     }
     this.map = new Map(mapOptions);
+    this.fitSelectedEncBasemap();
     this.dataTableQueryManager.setMap(this.map);
 
     this.addSprites(sprites, this.map);
@@ -2043,6 +2071,7 @@ class MapContextManager extends EventEmitter {
         // Style is unchanged, but catalog / token / sources may have become
         // ready since the last settle — still retry feature-state apply.
         this.scheduleDataTableFeatureStateSync();
+        this.fitSelectedEncBasemap();
         return;
       }
       this.addSprites(sprites, this.map);
@@ -2051,6 +2080,7 @@ class MapContextManager extends EventEmitter {
           return;
         }
         this.map.setStyle(style);
+        this.fitSelectedEncBasemap();
         for (const id in this.customSources) {
           const { visible, listenersAdded, customSource } =
             this.customSources[id];
@@ -2417,7 +2447,9 @@ class MapContextManager extends EventEmitter {
       basemap?.url ||
       "mapbox://styles/underbluewaters/cklb3vusx2dvs17pay6jp5q7e";
     let baseStyle: Style;
-    if (basemap?.type === BasemapType.RasterUrlTemplate) {
+    if (basemap && isEncBasemapType(basemap.type)) {
+      baseStyle = buildEncStyle(basemap, (url) => this.styleSourceUrl(url));
+    } else if (basemap?.type === BasemapType.RasterUrlTemplate) {
       let url = basemap.url;
       if (
         url.indexOf("services.arcgisonline.com") > -1 &&
