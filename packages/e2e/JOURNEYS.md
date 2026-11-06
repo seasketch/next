@@ -73,6 +73,13 @@ Geography layers, their metadata, the Marine Protected Area sketch class, the de
 - Following Projects opens `/projects`, which lists Demo Samoa.
 - Opening Demo Samoa from that list lands on the project, with the map loaded and Sign In still available.
 
+## Selective publish
+
+`tests/selective-publish.spec.ts`. Each journey creates its own public project and hard-deletes it.
+
+- `e2e|admin` renames two published layers, publishes only one from Selective publish, and an anonymous visitor sees that new title beside the other layer's published title. Publish Overlays then lists the remaining rename and omits the one already published.
+- A new layer inside a new folder starts checked with that folder. Unchecking the folder clears the layer. Checking the layer again includes the folder. Publishing ships both, and an anonymous visitor finds the layer inside the folder.
+
 # Left for later
 
 Zoom to bounds waits until a later set of layers has bounds that match the project region. End-user Sketching Tools wait as well. Report calculation and downloads stay out of this set. They need more fixture data, or a service the e2e profile does not run. The access gates are `tests/access.spec.ts`. The Maldives ocean-use respondent journey is `tests/survey.spec.ts`, against the survey seeded on `demo-maldives`. It selects two sectors before drawing, finishes each with "Finish Sector", and moves between them with "Next sector". The Coral Restoration Survey on `demo-palawan` is the single-sector case in the same file: the first visit starts drawing without a sector picker, the feature list says "Finish", and coming back shows the sector list with the area count. Authoring, data, and reports stay with Phase 5.
