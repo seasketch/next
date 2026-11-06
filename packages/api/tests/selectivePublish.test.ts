@@ -74,8 +74,48 @@ async function addLayer(
   return { itemId, stableId, layerId, sourceId: source, title };
 }
 
+async function unreferencedSources(conn: any, projectId: number) {
+  return asPostgres(conn, async () =>
+    Number(
+      await conn.oneFirst(sql`
+        select count(*) from data_sources s
+        where s.project_id = ${projectId}
+          and not exists (
+            select 1 from data_layers dl where dl.data_source_id = s.id
+          )
+      `)
+    )
+  );
+}
+
+// After a full publish the published tree mirrors the draft: nothing is
+// pending, and every item has the draft's path, sort_index, and z_index.
 async function publishAll(conn: any, projectId: number) {
+  const unreferencedBefore = await unreferencedSources(conn, projectId);
   await conn.any(sql`select publish_table_of_contents(${projectId})`);
+  expect(await hasChanges(conn, projectId)).toBe(false);
+  await asPostgres(conn, async () => {
+    expect(
+      await conn.oneFirst(
+        sql`select overlay_list_has_unpublished_changes(${projectId})`
+      )
+    ).toBe(false);
+    const placement = (draft: boolean) =>
+      conn.any(sql`
+        select t.stable_id, t.parent_stable_id, t.path::text as path,
+          t.sort_index, dl.z_index
+        from table_of_contents_items t
+        left join data_layers dl on dl.id = t.data_layer_id
+        where t.project_id = ${projectId} and t.is_draft = ${draft}
+        order by t.stable_id
+      `);
+    expect((await placement(false)).map((r: any) => ({ ...r }))).toEqual(
+      (await placement(true)).map((r: any) => ({ ...r }))
+    );
+  });
+  expect(await unreferencedSources(conn, projectId)).toBeLessThanOrEqual(
+    unreferencedBefore
+  );
 }
 
 async function publishSome(
@@ -1177,7 +1217,7 @@ describe("selective overlay publish", () => {
     });
   });
 
-  test("40. full publish still replaces the tree, including reorders", async () => {
+  test("40. full publish ships edits and reorders", async () => {
     await asAdmin( async (conn, projectId) => {
       const a = await addLayer(conn, projectId, "A");
       const b = await addLayer(conn, projectId, "B");
@@ -1603,6 +1643,222 @@ describe("selective overlay publish", () => {
       expect(await hasChanges(conn, projectId)).toBe(orderPending);
       await publishAll(conn, projectId);
       expect(await hasChanges(conn, projectId)).toBe(false);
+    });
+  });
+
+  test("full publish leaves unchanged items in place and copies only edited ones", async () => {
+    await asAdmin(async (conn, projectId) => {
+      const folder = await addFolder(conn, projectId, "Habitats");
+      const coral = await addLayer(conn, projectId, "Coral", folder.stableId);
+      const kelp = await addLayer(conn, projectId, "Kelp", folder.stableId);
+      await publishAll(conn, projectId);
+      const published = async () =>
+        Object.fromEntries(
+          (
+            await conn.any(sql`
+              select t.stable_id, t.id, t.data_layer_id, dl.data_source_id,
+                t.published_at::text as published_at
+              from table_of_contents_items t
+              left join data_layers dl on dl.id = t.data_layer_id
+              where t.project_id = ${projectId} and not t.is_draft
+            `)
+          ).map((row: any) => [row.stable_id, { ...row }])
+        );
+      const before = await published();
+
+      await conn.any(sql`
+        update table_of_contents_items set title = 'Coral reefs' where id = ${coral.itemId}
+      `);
+      await publishAll(conn, projectId);
+      const after = await published();
+
+      expect(after[folder.stableId]).toEqual(before[folder.stableId]);
+      expect(after[kelp.stableId]).toEqual(before[kelp.stableId]);
+      expect(after[coral.stableId].id).not.toBe(before[coral.stableId].id);
+      // The title edit does not copy the unchanged source again.
+      expect(after[coral.stableId].data_source_id).toBe(
+        before[coral.stableId].data_source_id
+      );
+      expect(await publishedTitles(conn, projectId)).toEqual([
+        "Coral reefs",
+        "Habitats",
+        "Kelp",
+      ]);
+    });
+  });
+
+  test("full publish ships stacking and list order without copying items", async () => {
+    await asAdmin(async (conn, projectId) => {
+      const a = await addLayer(conn, projectId, "A");
+      const b = await addLayer(conn, projectId, "B");
+      const c = await addLayer(conn, projectId, "C");
+      await publishAll(conn, projectId);
+      const ids = async () =>
+        (
+          await conn.any(sql`
+            select id from table_of_contents_items
+            where project_id = ${projectId} and not is_draft
+            order by id
+          `)
+        ).map((row: any) => row.id);
+      const before = await ids();
+
+      await conn.any(sql`
+        select update_z_indexes(${sql.array([c.layerId, a.layerId, b.layerId], "int4")})
+      `);
+      await move(conn, c.itemId, null, 0);
+      expect(await pending(conn, projectId)).toHaveLength(0);
+      expect(await hasChanges(conn, projectId)).toBe(true);
+
+      await publishAll(conn, projectId);
+      expect(await ids()).toEqual(before);
+      expect(await zOrder(conn, projectId, false)).toEqual(
+        await zOrder(conn, projectId, true)
+      );
+      expect(await siblingOrder(conn, projectId, null, false)).toEqual(
+        await siblingOrder(conn, projectId, null, true)
+      );
+    });
+  });
+
+  test("full publish of a folder move rewrites paths of unchanged items inside it", async () => {
+    await asAdmin(async (conn, projectId) => {
+      const outer = await addFolder(conn, projectId, "Outer");
+      const target = await addFolder(conn, projectId, "Target");
+      const inner = await addFolder(conn, projectId, "Inner", outer.stableId);
+      const layer = await addLayer(conn, projectId, "Layer", inner.stableId);
+      await publishAll(conn, projectId);
+      const layerId = await conn.oneFirst(sql`
+        select id from table_of_contents_items
+        where project_id = ${projectId} and not is_draft and stable_id = ${layer.stableId}
+      `);
+
+      await move(conn, inner.id, target.stableId, 0);
+      expect(
+        (await pending(conn, projectId)).map((row) => row.stable_id)
+      ).toEqual([inner.stableId]);
+      await publishAll(conn, projectId);
+
+      expect(await publishedPath(conn, projectId, layer.stableId)).toEqual([
+        target.stableId,
+        inner.stableId,
+        layer.stableId,
+      ]);
+      expect(
+        await conn.oneFirst(sql`
+          select id from table_of_contents_items
+          where project_id = ${projectId} and not is_draft and stable_id = ${layer.stableId}
+        `)
+      ).toBe(layerId);
+    });
+  });
+
+  test("an upload output added to a draft source makes its layer pending", async () => {
+    await asAdmin(async (conn, projectId) => {
+      const layer = await addLayer(conn, projectId, "Coral");
+      await publishAll(conn, projectId);
+      const addOutput = (remote: string) =>
+        asPostgres(conn, () =>
+          conn.any(sql`
+            insert into data_upload_outputs
+              (data_source_id, project_id, type, url, remote, is_original, size, filename, original_filename)
+            values (
+              ${layer.sourceId}, ${projectId}, 'PMTiles',
+              ${"https://example.com/" + remote}, ${remote}, false, 10, 'coral.pmtiles', 'coral.zip'
+            )
+          `)
+        );
+      const publishedRemotes = () =>
+        asPostgres(conn, async () =>
+          (
+            await conn.any(sql`
+              select o.remote from data_upload_outputs o
+              where o.data_source_id = ${await publishedSourceId(
+                conn,
+                projectId,
+                layer.stableId
+              )}
+              order by o.remote
+            `)
+          ).map((row: any) => row.remote)
+        );
+
+      await addOutput("r2://tiles/a.pmtiles");
+      expect(
+        (await pending(conn, projectId)).map((row) => [row.stable_id, row.kind])
+      ).toEqual([[layer.stableId, "updated"]]);
+      await publishSome(conn, projectId, [layer.stableId]);
+      expect(await publishedRemotes()).toEqual(["r2://tiles/a.pmtiles"]);
+
+      await addOutput("r2://tiles/b.pmtiles");
+      await publishAll(conn, projectId);
+      expect(await publishedRemotes()).toEqual([
+        "r2://tiles/a.pmtiles",
+        "r2://tiles/b.pmtiles",
+      ]);
+    });
+  });
+
+  test("a partial publish of a layer edit reuses its published source copy", async () => {
+    await asAdmin(async (conn, projectId) => {
+      const layer = await addLayer(conn, projectId, "Coral");
+      await publishAll(conn, projectId);
+      const sourceBefore = await publishedSourceId(conn, projectId, layer.stableId);
+      const sourceCount = () =>
+        asPostgres(conn, async () =>
+          Number(
+            await conn.oneFirst(
+              sql`select count(*) from data_sources where project_id = ${projectId}`
+            )
+          )
+        );
+      const countBefore = await sourceCount();
+
+      await conn.any(sql`
+        update data_layers set mapbox_gl_styles = '{"layers":[{"type":"line"}]}'::jsonb
+        where id = ${layer.layerId}
+      `);
+      await publishSome(conn, projectId, [layer.stableId]);
+      expect(await publishedSourceId(conn, projectId, layer.stableId)).toBe(
+        sourceBefore
+      );
+      expect(await sourceCount()).toBe(countBefore);
+
+      await conn.any(sql`
+        update data_sources set attribution = 'new' where id = ${layer.sourceId}
+      `);
+      await publishSome(conn, projectId, [layer.stableId]);
+      expect(
+        await publishedSourceId(conn, projectId, layer.stableId)
+      ).not.toBe(sourceBefore);
+      expect(await sourceCount()).toBe(countBefore);
+    });
+  });
+
+  test("full publish replaces duplicate published rows for one item", async () => {
+    await asAdmin(async (conn, projectId) => {
+      const folder = await addFolder(conn, projectId, "Habitats");
+      await publishAll(conn, projectId);
+      await asPostgres(conn, async () => {
+        await conn.any(sql`select set_config('seasketch.publishing', 'true', true)`);
+        await conn.any(sql`
+          insert into table_of_contents_items
+            (project_id, is_draft, title, is_folder, stable_id, path, sort_index)
+          select project_id, false, title, true, stable_id, path, sort_index
+          from table_of_contents_items
+          where project_id = ${projectId} and not is_draft and stable_id = ${folder.stableId}
+        `);
+        await conn.any(sql`select set_config('seasketch.publishing', 'false', true)`);
+      });
+      await publishAll(conn, projectId);
+      expect(
+        Number(
+          await conn.oneFirst(sql`
+            select count(*) from table_of_contents_items
+            where project_id = ${projectId} and not is_draft and stable_id = ${folder.stableId}
+          `)
+        )
+      ).toBe(1);
     });
   });
 });

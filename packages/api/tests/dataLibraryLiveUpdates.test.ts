@@ -542,19 +542,28 @@ describe("Live data library updates", () => {
       const pubSourceId = await layerSourceId(conn, pubLayerId);
       expect(pubSourceId).not.toBe(sourceId);
 
-      // republish creates a fresh clone; the old one is orphaned (no layers
-      // reference it) and left for the cleanup worker
+      // an unchanged source keeps its published clone
+      await publish(conn, projectId, adminId);
+      expect(await publishedLayerId(conn, projectId, stableId)).toBe(pubLayerId);
+      expect(await layerSourceId(conn, pubLayerId)).toBe(pubSourceId);
+
+      // a changed source is cloned again and the old clone is deleted
+      await asPostgres(conn, () =>
+        conn.any(
+          sql`update data_sources set attribution = 'changed' where id = ${sourceId}`
+        )
+      );
       await publish(conn, projectId, adminId);
       const newPubLayerId = await publishedLayerId(conn, projectId, stableId);
       const newPubSourceId = await layerSourceId(conn, newPubLayerId);
       expect(newPubSourceId).not.toBe(sourceId);
       expect(newPubSourceId).not.toBe(pubSourceId);
-      const oldCloneRefs = await asPostgres(conn, () =>
+      const oldClones = await asPostgres(conn, () =>
         conn.oneFirst(
-          sql`select count(*)::int from data_layers where data_source_id = ${pubSourceId}`
+          sql`select count(*)::int from data_sources where id = ${pubSourceId}`
         )
       );
-      expect(Number(oldCloneRefs)).toBe(0);
+      expect(Number(oldClones)).toBe(0);
 
       // published TOC items are still immutable outside library fan-out
       await asPostgres(conn, async () => {

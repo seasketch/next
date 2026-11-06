@@ -3,8 +3,9 @@
 -- publish_table_of_contents_items copies a chosen set of draft TOC items onto
 -- the published tree and leaves every other published item alone. It does not
 -- publish sort_index or z_index: an updated item keeps its published position
--- and a new item is appended. Full publish (publish_table_of_contents) still
--- replaces the whole tree, including order.
+-- and a new item is appended. Full publish (publish_table_of_contents) makes
+-- the published tree match the draft, including order, but copies only the
+-- items that differ.
 --
 -- An item is pending when its draft state differs from its published copy
 -- (_overlay_changed_stable_ids), or when only one side exists. The changelog
@@ -609,353 +610,77 @@ select set_config('seasketch.publishing', 'false', true);
 -- Full publish
 --
 
+-- Full publish makes the published tree match the draft, including list order
+-- and stacking order. It copies only the items whose published copy differs
+-- from the draft (pending_publish_items_for_project), deletes removed items,
+-- and writes sort_index, path, and z_index onto the published rows that are
+-- already current. Published rows that match the draft are left in place.
+--
+-- Columns are copied by _publish_copy_draft_toc_item and
+-- _publish_copy_data_source, and compared by _overlay_changed_stable_ids and
+-- _publishable_source_differs. A new column must be added to all of them.
 create or replace function public.publish_table_of_contents("projectId" integer)
   returns setof public.table_of_contents_items
   language plpgsql
   security definer
+  set search_path to public, pg_temp
 as $$
 declare
   v_editor int;
   v_layer_count int;
-  lid int;
-  item table_of_contents_items;
-  source_id int;
-  copied_source_id int;
-  acl_type access_control_list_type;
-  acl_id int;
-  orig_acl_id int;
-  new_toc_id int;
-  new_interactivity_settings_id int;
+  v_dup text;
+  v_detached int;
+  v_detached_ids int[] := '{}'::int[];
 begin
   perform pg_advisory_xact_lock(hashtext('publish_toc:' || "projectId"::text));
-  -- check permissions
   if session_is_admin("projectId") = false then
     raise 'Permission denied. Must be a project admin';
   end if;
   perform set_config('seasketch.publishing', 'true', true);
 
-  -- delete existing published table of contents items, layers, sources, and interactivity settings
-  -- (published overlay_data_tables cascade-delete with their TOC rows)
-  delete from
-    interactivity_settings
-  where
-    id in (
-      select
-        data_layers.interactivity_settings_id
-      from
-        data_layers
-      inner join
-        table_of_contents_items
-      on
-        data_layers.id = table_of_contents_items.data_layer_id
-      where
-        table_of_contents_items.project_id = "projectId" and
-        is_draft = false
-    );
-
-  -- Never delete shared data library sources; they are referenced by the
-  -- canonical template and by draft/published copies in other projects.
-  delete from data_sources where data_sources.data_library_template_id is null and data_sources.id in (
-    select
-      data_source_id
-    from
-      data_layers
-    inner join
-      table_of_contents_items
-    on
-      data_layers.id = table_of_contents_items.data_layer_id
-    where
-      table_of_contents_items.project_id = "projectId" and
-      is_draft = false
-  );
-  delete from data_layers where id in (
-    select
-      data_layer_id
-    from
-      table_of_contents_items
-    where
-      project_id = "projectId" and
-      is_draft = false
-  );
-  delete from
-    table_of_contents_items
-  where
-    project_id = "projectId" and
-    is_draft = false;
-
-  -- one-by-one, copy related layers and link table of contents items
-  for item in
-    select
-      *
-    from
-      table_of_contents_items
-    where
-      is_draft = true and
-      project_id = "projectId"
+  -- Publishes that ran concurrently before the publish lock existed could
+  -- leave two published rows with one stable_id. Remove them all so the
+  -- draft item is copied again.
+  for v_dup in
+    select stable_id
+    from table_of_contents_items
+    where project_id = "projectId" and not is_draft
+    group by stable_id
+    having count(*) > 1
   loop
-    if item.is_folder = false then
-      -- copy interactivity settings first
-      insert into interactivity_settings (
-        type,
-        short_template,
-        long_template,
-        cursor,
-        title
-      ) select
-          type,
-          short_template,
-          long_template,
-          cursor,
-          title
-        from
-          interactivity_settings
-        where
-          interactivity_settings.id = (
-            select interactivity_settings_id from data_layers where data_layers.id = item.data_layer_id
-          )
-        returning
-          id
-        into
-          new_interactivity_settings_id;
-
-      insert into data_layers (
-        project_id,
-        data_source_id,
-        source_layer,
-        sublayer,
-        sublayer_type,
-        render_under,
-        mapbox_gl_styles,
-        interactivity_settings_id,
-        z_index
-      )
-      select "projectId",
-        data_source_id,
-        source_layer,
-        sublayer,
-        sublayer_type,
-        render_under,
-        mapbox_gl_styles,
-        new_interactivity_settings_id,
-        z_index
-      from
-        data_layers
-      where
-        id = item.data_layer_id
-      returning id into lid;
-    else
-      lid = item.data_layer_id;
-    end if;
-    -- TODO: this will have to be modified with the addition of any columns.
-    -- Also update _publish_copy_draft_toc_item and _overlay_changed_stable_ids.
-    insert into table_of_contents_items (
-      is_draft,
-      project_id,
-      path,
-      stable_id,
-      parent_stable_id,
-      title,
-      is_folder,
-      show_radio_children,
-      is_click_off_only,
-      metadata,
-      bounds,
-      data_layer_id,
-      sort_index,
-      hide_children,
-      geoprocessing_reference_id,
-      translated_props,
-      enable_download,
-      enable_data_tables,
-      data_table_join_column,
-      copied_from_data_library_template_id,
-      hide_arcgis_rest_link,
-      data_source_type,
-      original_source_upload_available,
-      published_at
-    ) values (
-      false,
-      "projectId",
-      item.path,
-      item.stable_id,
-      item.parent_stable_id,
-      item.title,
-      item.is_folder,
-      item.show_radio_children,
-      item.is_click_off_only,
-      item.metadata,
-      item.bounds,
-      lid,
-      item.sort_index,
-      item.hide_children,
-      item.geoprocessing_reference_id,
-      item.translated_props,
-      item.enable_download,
-      item.enable_data_tables,
-      item.data_table_join_column,
-      item.copied_from_data_library_template_id,
-      item.hide_arcgis_rest_link,
-      item.data_source_type,
-      item.original_source_upload_available,
-      clock_timestamp()
-    ) returning id into new_toc_id;
-    select
-      type, id into acl_type, orig_acl_id
-    from
-      access_control_lists
-    where
-      table_of_contents_item_id = item.id;
-    -- copy access control list settings
-    if acl_type != 'public' then
-      update
-        access_control_lists
-      set type = acl_type
-      where table_of_contents_item_id = new_toc_id
-      returning id into acl_id;
-      if acl_type = 'group' then
-        insert into
-          access_control_list_groups (
-            access_control_list_id,
-            group_id
-          )
-        select
-          acl_id,
-          group_id
-        from
-          access_control_list_groups
-        where
-          access_control_list_id = orig_acl_id;
+    while exists (
+      select 1 from table_of_contents_items
+      where project_id = "projectId" and not is_draft and stable_id = v_dup
+    ) loop
+      v_detached := public._unpublish_toc_stable_id("projectId", v_dup);
+      if v_detached is not null then
+        v_detached_ids := v_detached_ids || v_detached;
       end if;
-    end if;
+    end loop;
   end loop;
+  delete from data_sources s
+  where s.id = any(v_detached_ids)
+    and not exists (select 1 from data_layers dl where dl.data_source_id = s.id);
 
-  -- Copy active draft overlay data tables onto newly published TOC items in one
-  -- statement (matched by TOC stable_id). Soft-deleted draft history is skipped.
-  -- Data table stable_id is preserved so bookmarks/prefs survive publish.
-  insert into overlay_data_tables (
-    table_of_contents_item_id,
-    project_id,
-    name,
-    join_column,
-    overlay_join_column,
-    row_count,
-    created_by,
-    version,
-    parquet_remote,
-    parquet_url,
-    column_stats_remote,
-    visualization_columns,
-    visualization_ops,
-    calculation_mode,
-    additional_replicate_identifiers,
-    replicate_label,
-    replicate_label_custom,
-    within_replicate_operations,
-    across_replicate_operations,
-    subject_column,
-    observation_detail_columns,
-    coverage_mode,
-    coverage_remote,
-    effort_marker_values,
-    excluded_values,
-    required_filter_columns,
-    hidden_filter_columns,
-    filter_column_labels,
-    temporal,
-    organism,
-    nodata_values,
-    source_parquet_remote,
-    stable_id,
-    description
-  )
-  select
-    published_toc.id,
-    odt.project_id,
-    odt.name,
-    odt.join_column,
-    odt.overlay_join_column,
-    odt.row_count,
-    odt.created_by,
-    odt.version,
-    odt.parquet_remote,
-    odt.parquet_url,
-    odt.column_stats_remote,
-    odt.visualization_columns,
-    odt.visualization_ops,
-    odt.calculation_mode,
-    odt.additional_replicate_identifiers,
-    odt.replicate_label,
-    odt.replicate_label_custom,
-    odt.within_replicate_operations,
-    odt.across_replicate_operations,
-    odt.subject_column,
-    odt.observation_detail_columns,
-    odt.coverage_mode,
-    odt.coverage_remote,
-    odt.effort_marker_values,
-    odt.excluded_values,
-    odt.required_filter_columns,
-    odt.hidden_filter_columns,
-    odt.filter_column_labels,
-    odt.temporal,
-    odt.organism,
-    odt.nodata_values,
-    odt.source_parquet_remote,
-    odt.stable_id,
-    odt.description
-  from overlay_data_tables odt
-  inner join table_of_contents_items draft_toc
-    on draft_toc.id = odt.table_of_contents_item_id
-  inner join table_of_contents_items published_toc
-    on published_toc.project_id = draft_toc.project_id
-    and published_toc.stable_id = draft_toc.stable_id
-    and published_toc.is_draft = false
-  where draft_toc.project_id = "projectId"
-    and draft_toc.is_draft = true
-    and draft_toc.is_folder = false
-    and odt.deleted_at is null;
+  if to_regclass('pg_temp._units') is not null then
+    drop table pg_temp._units;
+  end if;
+  create temp table _units on commit drop as
+    select * from public.pending_publish_items_for_project("projectId");
 
-  -- one-by-one, copy related sources and update foreign keys of layers.
-  -- Data library sources are skipped: published layers keep referencing the
-  -- shared source so library updates are visible to end-users immediately
-  -- ("live" layers), without requiring a republish.
-  for source_id in
-    select distinct(data_layers.data_source_id) from data_layers
-    inner join data_sources
-      on data_sources.id = data_layers.data_source_id
-    where data_sources.data_library_template_id is null and data_layers.id in (
-      select
-        data_layer_id
-      from
-        table_of_contents_items
-      where
-        is_draft = false and
-        project_id = "projectId" and
-        is_folder = false
-    )
-  loop
-    copied_source_id := public._publish_copy_data_source(source_id, "projectId");
-    -- update data_layers that should now reference the copy
-    update
-      data_layers
-    set data_source_id = copied_source_id
-    where
-      data_source_id = source_id and
-      data_layers.id in ((
-        select distinct(data_layer_id) from table_of_contents_items where is_draft = false and
-        project_id = "projectId" and
-        is_folder = false
-      ));
-  end loop;
+  perform public._publish_units(
+    "projectId",
+    (select coalesce(array_agg(stable_id), '{}'::text[]) from _units),
+    true
+  );
+
   perform set_config('seasketch.publishing', 'false', true);
 
-  update
-    projects
+  update projects
   set
     draft_table_of_contents_has_changes = false,
     table_of_contents_last_published = now()
-  where
-    id = "projectId";
+  where id = "projectId";
 
   perform public._publish_record_project_activity("projectId");
 
@@ -980,7 +705,7 @@ begin
       null
     );
   end if;
-  -- return items
+
   return query select * from table_of_contents_items
     where project_id = "projectId" and is_draft = false;
 end;
@@ -1152,15 +877,42 @@ $$;
 comment on function public._publish_copy_data_source(integer, integer) is '@omit';
 revoke all on function public._publish_copy_data_source(integer, integer) from public;
 
+-- Upload outputs publish copies with a source, as one comparable value.
+-- Reporting jobs and PMTiles replacement add outputs to an existing source.
+create or replace function public._publishable_upload_outputs(p_source_id integer)
+  returns jsonb
+  language sql
+  stable
+  security definer
+  set search_path to public, pg_temp
+as $$
+  select coalesce(
+    jsonb_agg(
+      jsonb_build_array(
+        o.type, o.url, o.remote, o.is_original, o.size, o.filename,
+        o.original_filename, o.source_processing_job_key, o.epsg
+      )
+      order by o.type, o.remote, o.url, o.filename
+    ),
+    '[]'::jsonb
+  )
+  from data_upload_outputs o
+  where o.data_source_id = p_source_id;
+$$;
+
+comment on function public._publishable_upload_outputs(integer) is '@omit';
+revoke all on function public._publishable_upload_outputs(integer) from public;
+
 -- True when a published copy of a source would not match the draft source.
--- Covers every column _publish_copy_data_source writes except created_by.
+-- Covers every column _publish_copy_data_source writes except created_by and
+-- the upload outputs' created_at.
 create or replace function public._publishable_source_differs(
   a public.data_sources,
   b public.data_sources
 )
   returns boolean
   language sql
-  immutable
+  stable
 as $$
   select (
     a.type, a.attribution, a.bounds, a.maxzoom, a.minzoom, a.url, a.scheme,
@@ -1184,7 +936,9 @@ as $$
     b.normalized_source_object_key, b.normalized_source_bytes, b.upload_task_id,
     b.translated_props, b.arcgis_fetch_strategy, b.temporal, b.bucket_id,
     b.object_key, b.geostats
-  );
+  )
+  or public._publishable_upload_outputs(a.id)
+    is distinct from public._publishable_upload_outputs(b.id);
 $$;
 
 comment on function public._publishable_source_differs(public.data_sources, public.data_sources) is '@omit';
@@ -1277,13 +1031,15 @@ as $$
         d.is_click_off_only, d.metadata, d.bounds, d.hide_children,
         d.geoprocessing_reference_id, d.translated_props, d.enable_download,
         d.enable_data_tables, d.data_table_join_column,
-        d.copied_from_data_library_template_id, d.hide_arcgis_rest_link
+        d.copied_from_data_library_template_id, d.hide_arcgis_rest_link,
+        d.data_source_type, d.original_source_upload_available
       ) is distinct from (
         p.parent_stable_id, p.title, p.is_folder, p.show_radio_children,
         p.is_click_off_only, p.metadata, p.bounds, p.hide_children,
         p.geoprocessing_reference_id, p.translated_props, p.enable_download,
         p.enable_data_tables, p.data_table_join_column,
-        p.copied_from_data_library_template_id, p.hide_arcgis_rest_link
+        p.copied_from_data_library_template_id, p.hide_arcgis_rest_link,
+        p.data_source_type, p.original_source_upload_available
       )
       or (
         dd.source_layer, dd.sublayer, dd.sublayer_type, dd.render_under,
@@ -1826,11 +1582,13 @@ comment on function public.projects_comments_since_last_publish(public.projects)
 -- Partial publish
 --
 
--- Deletes one published item with its layer, interactivity settings, and
--- source copy once no published layer uses it. ACL rows and data tables
--- cascade. Children are not touched.
-create or replace function public._unpublish_toc_stable_id(p_project_id integer, p_stable_id text)
-  returns void
+-- Deletes one published item with its layer and interactivity settings. ACL
+-- rows and data tables cascade. Children are not touched. Returns the
+-- non-library source the published layer used, which the caller reuses or
+-- deletes once no published layer references it.
+drop function if exists public._unpublish_toc_stable_id(integer, text);
+create function public._unpublish_toc_stable_id(p_project_id integer, p_stable_id text)
+  returns integer
   language plpgsql
   security definer
   set search_path to public, pg_temp
@@ -1840,22 +1598,25 @@ declare
   v_layer_id int;
   v_source_id int;
   v_interactivity_id int;
-  v_library text;
 begin
   select id, data_layer_id
     into v_toc_id, v_layer_id
   from table_of_contents_items
   where project_id = p_project_id
     and not is_draft
-    and stable_id = p_stable_id;
+    and stable_id = p_stable_id
+  limit 1;
   if v_toc_id is null then
-    return;
+    return null;
   end if;
   if v_layer_id is not null then
-    select data_source_id, interactivity_settings_id
+    select
+      case when ds.data_library_template_id is null then dl.data_source_id end,
+      dl.interactivity_settings_id
       into v_source_id, v_interactivity_id
-    from data_layers
-    where id = v_layer_id;
+    from data_layers dl
+    left join data_sources ds on ds.id = dl.data_source_id
+    where dl.id = v_layer_id;
   end if;
   delete from table_of_contents_items where id = v_toc_id;
   if v_layer_id is not null then
@@ -1863,17 +1624,8 @@ begin
     if v_interactivity_id is not null then
       delete from interactivity_settings where id = v_interactivity_id;
     end if;
-    if v_source_id is not null then
-      select data_library_template_id into v_library
-      from data_sources where id = v_source_id;
-      if v_library is null
-         and not exists (
-           select 1 from data_layers where data_source_id = v_source_id
-         ) then
-        delete from data_sources where id = v_source_id;
-      end if;
-    end if;
   end if;
+  return v_source_id;
 end;
 $$;
 
@@ -1881,14 +1633,19 @@ comment on function public._unpublish_toc_stable_id(integer, text) is '@omit';
 revoke all on function public._unpublish_toc_stable_id(integer, text) from public;
 
 drop function if exists public._publish_copy_draft_toc_item(integer);
+drop function if exists public._publish_copy_draft_toc_item(integer, integer, integer);
 
 -- Copies one draft item onto the published tree. The published layer still
 -- references the draft source; the caller repoints it. A null sort_index or
--- z_index appends the item.
+-- z_index appends the item. A null path is built from the published parent.
+--
+-- TODO: this will have to be modified with the addition of any columns.
+-- Also update _overlay_changed_stable_ids.
 create or replace function public._publish_copy_draft_toc_item(
   p_draft_id integer,
   p_sort_index integer,
-  p_z_index integer
+  p_z_index integer,
+  p_path ltree
 )
   returns table(new_toc_id integer, new_layer_id integer, draft_source_id integer)
   language plpgsql
@@ -1920,7 +1677,9 @@ begin
       and parent_stable_id is not distinct from item.parent_stable_id;
   end if;
 
-  if item.parent_stable_id is null then
+  if p_path is not null then
+    v_path := p_path;
+  elsif item.parent_stable_id is null then
     v_path := text2ltree(item.stable_id);
   else
     select path into v_parent_path
@@ -1986,8 +1745,6 @@ begin
     returning id into v_layer_id;
   end if;
 
-  -- TODO: this will have to be modified with the addition of any columns.
-  -- Keep in step with publish_table_of_contents.
   insert into table_of_contents_items (
     is_draft,
     project_id,
@@ -2139,8 +1896,8 @@ begin
 end;
 $$;
 
-comment on function public._publish_copy_draft_toc_item(integer, integer, integer) is '@omit';
-revoke all on function public._publish_copy_draft_toc_item(integer, integer, integer) from public;
+comment on function public._publish_copy_draft_toc_item(integer, integer, integer, ltree) is '@omit';
+revoke all on function public._publish_copy_draft_toc_item(integer, integer, integer, ltree) from public;
 
 -- Rewrites path on published rows from the published parent chain. Run after
 -- a partial publish moves folders, in any nesting or order.
@@ -2174,6 +1931,203 @@ $$;
 comment on function public._publish_rebuild_published_paths(integer) is '@omit';
 revoke all on function public._publish_rebuild_published_paths(integer) from public;
 
+-- Applies the units named in p_sel to the published tree. The caller fills
+-- the _units temp table from pending_publish_items_for_project and holds the
+-- publish lock with seasketch.publishing set.
+--
+-- With p_full, copied items take the draft sort_index, z_index, and path, and
+-- every published row that is already current gets the draft sort_index,
+-- path, and z_index. Without it, an updated item keeps its published z_index,
+-- and its sort_index unless it moved to another folder; a new item is
+-- appended; and paths are rebuilt from the published parent chain.
+--
+-- A copied layer reuses a published source copy that still matches its draft
+-- source, including the copy it used before, so an edit to a layer does not
+-- copy the source's geostats again.
+create or replace function public._publish_units(
+  p_project_id integer,
+  p_sel text[],
+  p_full boolean
+)
+  returns void
+  language plpgsql
+  security definer
+  set search_path to public, pg_temp
+as $$
+declare
+  v_row record;
+  v_detached int;
+  v_copied_toc int;
+  v_copied_layer int;
+  v_copied_source int;
+  v_layer_ids int[] := '{}'::int[];
+  v_source_ids int[] := '{}'::int[];
+  v_source int;
+  v_target int;
+  v_sort int;
+  v_z int;
+begin
+  if to_regclass('pg_temp._detached_sources') is not null then
+    drop table pg_temp._detached_sources;
+  end if;
+  create temp table _detached_sources (
+    draft_source_id int,
+    published_source_id int not null
+  ) on commit drop;
+
+  -- Removals, deepest first.
+  for v_row in
+    select u.stable_id
+    from _units u
+    join table_of_contents_items p
+      on p.project_id = p_project_id
+     and not p.is_draft
+     and p.stable_id = u.stable_id
+    where u.kind = 'removed'
+      and u.stable_id = any(p_sel)
+    order by nlevel(p.path) desc
+  loop
+    v_detached := public._unpublish_toc_stable_id(p_project_id, v_row.stable_id);
+    if v_detached is not null then
+      insert into _detached_sources values (null, v_detached);
+    end if;
+  end loop;
+
+  -- New and updated items, parents first.
+  for v_row in
+    select
+      d.id as draft_id,
+      d.stable_id,
+      d.parent_stable_id,
+      d.sort_index,
+      d.path,
+      dl.z_index,
+      dl.data_source_id
+    from _units u
+    join table_of_contents_items d
+      on d.project_id = p_project_id
+     and d.is_draft
+     and d.stable_id = u.stable_id
+    left join data_layers dl on dl.id = d.data_layer_id
+    where u.kind in ('added', 'updated')
+      and u.stable_id = any(p_sel)
+    order by nlevel(d.path), d.sort_index, d.stable_id
+  loop
+    if p_full then
+      v_sort := v_row.sort_index;
+      v_z := v_row.z_index;
+    else
+      v_sort := null;
+      v_z := null;
+      select
+        case
+          when p.parent_stable_id is not distinct from v_row.parent_stable_id
+          then p.sort_index
+        end,
+        pl.z_index
+        into v_sort, v_z
+      from table_of_contents_items p
+      left join data_layers pl on pl.id = p.data_layer_id
+      where p.project_id = p_project_id
+        and not p.is_draft
+        and p.stable_id = v_row.stable_id;
+    end if;
+    v_detached := public._unpublish_toc_stable_id(p_project_id, v_row.stable_id);
+    if v_detached is not null then
+      insert into _detached_sources values (v_row.data_source_id, v_detached);
+    end if;
+    select new_toc_id, new_layer_id, draft_source_id
+      into v_copied_toc, v_copied_layer, v_copied_source
+    from public._publish_copy_draft_toc_item(
+      v_row.draft_id,
+      v_sort,
+      v_z,
+      case when p_full then v_row.path end
+    );
+    if v_copied_layer is not null and v_copied_source is not null then
+      v_layer_ids := v_layer_ids || v_copied_layer;
+      v_source_ids := v_source_ids || v_copied_source;
+    end if;
+  end loop;
+
+  -- Point the new published layers at a published copy of their draft source.
+  for v_source in
+    select distinct s from unnest(v_source_ids) s
+  loop
+    select ps.id into v_target
+    from (
+      select pl.data_source_id as id
+      from data_layers dl
+      join table_of_contents_items dt
+        on dt.data_layer_id = dl.id
+       and dt.is_draft
+      join table_of_contents_items pt
+        on pt.project_id = dt.project_id
+       and pt.stable_id = dt.stable_id
+       and not pt.is_draft
+      join data_layers pl on pl.id = pt.data_layer_id
+      where dl.data_source_id = v_source
+      union
+      select published_source_id
+      from _detached_sources
+      where draft_source_id = v_source
+    ) candidate
+    join data_sources ps on ps.id = candidate.id
+    join data_sources ds on ds.id = v_source
+    where ps.id <> v_source
+      and ps.data_library_template_id is null
+      and not public._publishable_source_differs(ds, ps)
+    order by ps.id
+    limit 1;
+    if v_target is null then
+      v_target := public._publish_copy_data_source(v_source, p_project_id);
+    end if;
+    update data_layers dl
+    set data_source_id = v_target
+    where dl.id in (
+      select t.layer_id
+      from unnest(v_layer_ids, v_source_ids) as t(layer_id, source_id)
+      where t.source_id = v_source
+    );
+    v_target := null;
+  end loop;
+
+  delete from data_sources s
+  where s.id in (select published_source_id from _detached_sources)
+    and not exists (select 1 from data_layers dl where dl.data_source_id = s.id);
+
+  if p_full then
+    update table_of_contents_items p
+    set sort_index = d.sort_index, path = d.path
+    from table_of_contents_items d
+    where d.project_id = p_project_id
+      and d.is_draft
+      and p.project_id = p_project_id
+      and not p.is_draft
+      and p.stable_id = d.stable_id
+      and (p.sort_index, p.path) is distinct from (d.sort_index, d.path);
+
+    update data_layers pl
+    set z_index = dl.z_index
+    from table_of_contents_items d
+    join data_layers dl on dl.id = d.data_layer_id
+    join table_of_contents_items p
+      on p.project_id = d.project_id
+     and p.stable_id = d.stable_id
+     and not p.is_draft
+    where d.project_id = p_project_id
+      and d.is_draft
+      and pl.id = p.data_layer_id
+      and pl.z_index is distinct from dl.z_index;
+  else
+    perform public._publish_rebuild_published_paths(p_project_id);
+  end if;
+end;
+$$;
+
+comment on function public._publish_units(integer, text[], boolean) is '@omit';
+revoke all on function public._publish_units(integer, text[], boolean) from public;
+
 drop function if exists public.publish_table_of_contents_items(integer, text[], boolean);
 
 create or replace function public.publish_table_of_contents_items(
@@ -2189,16 +2143,6 @@ declare
   v_layer_count int;
   v_sel text[];
   v_next text[];
-  v_row record;
-  v_copied_toc int;
-  v_copied_layer int;
-  v_copied_source int;
-  v_layer_ids int[] := '{}'::int[];
-  v_source_ids int[] := '{}'::int[];
-  v_source int;
-  v_target int;
-  v_kept_sort int;
-  v_kept_z int;
   v_orphan text;
 begin
   perform pg_advisory_xact_lock(hashtext('publish_toc:' || "projectId"::text));
@@ -2206,7 +2150,9 @@ begin
     raise 'Permission denied. Must be a project admin';
   end if;
 
-  drop table if exists _units;
+  if to_regclass('pg_temp._units') is not null then
+    drop table pg_temp._units;
+  end if;
   create temp table _units on commit drop as
     select * from public.pending_publish_items_for_project("projectId");
 
@@ -2243,97 +2189,7 @@ begin
 
   perform set_config('seasketch.publishing', 'true', true);
 
-  -- Removals, deepest first.
-  for v_row in
-    select u.stable_id
-    from _units u
-    join table_of_contents_items p
-      on p.project_id = "projectId"
-     and not p.is_draft
-     and p.stable_id = u.stable_id
-    where u.kind = 'removed'
-      and u.stable_id = any(v_sel)
-    order by nlevel(p.path) desc
-  loop
-    perform public._unpublish_toc_stable_id("projectId", v_row.stable_id);
-  end loop;
-
-  -- New and updated items, parents first. An updated item keeps its published
-  -- z_index, and its sort_index unless it moved to another folder, where it
-  -- is appended.
-  for v_row in
-    select d.id as draft_id, d.stable_id, d.parent_stable_id
-    from _units u
-    join table_of_contents_items d
-      on d.project_id = "projectId"
-     and d.is_draft
-     and d.stable_id = u.stable_id
-    where u.kind in ('added', 'updated')
-      and u.stable_id = any(v_sel)
-    order by nlevel(d.path), d.sort_index, d.stable_id
-  loop
-    v_kept_sort := null;
-    v_kept_z := null;
-    select
-      case
-        when p.parent_stable_id is not distinct from v_row.parent_stable_id
-        then p.sort_index
-      end,
-      dl.z_index
-      into v_kept_sort, v_kept_z
-    from table_of_contents_items p
-    left join data_layers dl on dl.id = p.data_layer_id
-    where p.project_id = "projectId"
-      and not p.is_draft
-      and p.stable_id = v_row.stable_id;
-    perform public._unpublish_toc_stable_id("projectId", v_row.stable_id);
-    select new_toc_id, new_layer_id, draft_source_id
-      into v_copied_toc, v_copied_layer, v_copied_source
-    from public._publish_copy_draft_toc_item(v_row.draft_id, v_kept_sort, v_kept_z);
-    if v_copied_layer is not null and v_copied_source is not null then
-      v_layer_ids := v_layer_ids || v_copied_layer;
-      v_source_ids := v_source_ids || v_copied_source;
-    end if;
-  end loop;
-
-  -- Point the new published layers at a published copy of their draft source.
-  -- Reuse a copy that other published layers already share when it still
-  -- matches the draft source, so one source is not published twice.
-  for v_source in
-    select distinct s from unnest(v_source_ids) s
-  loop
-    select ps.id into v_target
-    from data_sources ds
-    join data_layers dl on dl.data_source_id = ds.id
-    join table_of_contents_items dt
-      on dt.data_layer_id = dl.id
-     and dt.is_draft
-    join table_of_contents_items pt
-      on pt.stable_id = dt.stable_id
-     and pt.project_id = dt.project_id
-     and not pt.is_draft
-    join data_layers pl on pl.id = pt.data_layer_id
-    join data_sources ps on ps.id = pl.data_source_id
-    where ds.id = v_source
-      and ps.id <> v_source
-      and ps.data_library_template_id is null
-      and not public._publishable_source_differs(ds, ps)
-    order by ps.id
-    limit 1;
-    if v_target is null then
-      v_target := public._publish_copy_data_source(v_source, "projectId");
-    end if;
-    update data_layers dl
-    set data_source_id = v_target
-    where dl.id in (
-      select t.layer_id
-      from unnest(v_layer_ids, v_source_ids) as t(layer_id, source_id)
-      where t.source_id = v_source
-    );
-    v_target := null;
-  end loop;
-
-  perform public._publish_rebuild_published_paths("projectId");
+  perform public._publish_units("projectId", v_sel, false);
 
   -- Every published item must hang off a root. A missing parent or a parent
   -- cycle would hide items from end users.
