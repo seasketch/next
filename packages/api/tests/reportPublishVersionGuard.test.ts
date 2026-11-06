@@ -139,8 +139,11 @@ async function publishLayerList(
   await clearSession(conn);
 }
 
+/** Runs in a savepoint, so a refused publish leaves the test transaction usable. */
 function publishReport(conn: DatabaseTransactionConnectionType, reportId: number) {
-  return conn.any(sql`select publish_report_snapshot(${reportId})`);
+  return conn.transaction((t) =>
+    t.any(sql`select publish_report_snapshot(${reportId})`)
+  );
 }
 
 describe("publish_report_snapshot and unpublished layer versions", () => {
@@ -225,6 +228,61 @@ describe("publish_report_snapshot and unpublished layer versions", () => {
         sql`select url from data_sources where id = ${newSourceId}`
       );
       expect(publishedUrl).toBe(newUrl);
+    });
+  });
+
+  test("publishes once only the new version is selectively published", async () => {
+    await projectTransaction(pool, "public", async (conn, projectId, adminId) => {
+      await clearSession(conn);
+      const ebsa = await createReportingLayer(conn, projectId, "EBSAs");
+      const seamounts = await createReportingLayer(conn, projectId, "Seamounts");
+      const reportId = await createDraftReport(conn, projectId, [
+        ebsa.stableId,
+        seamounts.stableId,
+      ]);
+      await publishLayerList(conn, projectId, adminId);
+      await publishReport(conn, reportId);
+
+      const newSourceId = await uploadNewVersion(conn, projectId, ebsa);
+      await uploadNewVersion(conn, projectId, seamounts);
+      await createSession(conn, adminId, true, false, projectId);
+      await conn.any(
+        sql`select publish_table_of_contents_items(${projectId}, ${sql.array(
+          [ebsa.stableId],
+          "text"
+        )})`
+      );
+      await clearSession(conn);
+      await expect(publishReport(conn, reportId)).rejects.toThrow(
+        UNPUBLISHED_VERSION
+      );
+
+      const publishedEbsa = await conn.one<{ url: string; output: string }>(
+        sql`select ds.url, out.url as output
+            from table_of_contents_items i
+            join data_layers l on l.id = i.data_layer_id
+            join data_sources ds on ds.id = l.data_source_id
+            left join lateral table_of_contents_items_reporting_output(i.*) out on true
+            where i.stable_id = ${ebsa.stableId} and not i.is_draft`
+      );
+      const draftEbsa = await conn.one<{ url: string; output: string }>(
+        sql`select ds.url, out.url as output
+            from data_sources ds
+            left join data_upload_outputs out
+              on out.data_source_id = ds.id and is_reporting_type(out.type)
+            where ds.id = ${newSourceId}`
+      );
+      expect(publishedEbsa).toEqual(draftEbsa);
+
+      await createSession(conn, adminId, true, false, projectId);
+      await conn.any(
+        sql`select publish_table_of_contents_items(${projectId}, ${sql.array(
+          [seamounts.stableId],
+          "text"
+        )})`
+      );
+      await clearSession(conn);
+      await publishReport(conn, reportId);
     });
   });
 });
