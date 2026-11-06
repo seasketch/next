@@ -4,7 +4,10 @@
 declare namespace Cloudflare {
 	interface Env {
 		SSN_TILES: R2Bucket;
-		/** Comma-separated hosts whose objects are in the bound bucket. */
+		/**
+		 * Comma-separated hosts whose objects are in the bound bucket.
+		 * Unset, the Worker uses the production uploads and tiles hosts.
+		 */
 		UPLOADS_HOST?: string;
 	}
 }

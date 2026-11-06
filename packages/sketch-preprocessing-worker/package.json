@@ -2,6 +2,7 @@
 	"name": "sketch-preprocessing-worker",
 	"scripts": {
 		"dev": "node bin/dev.mjs",
+		"test": "node --experimental-strip-types --test src/utils/bucket-host.test.ts",
 		"deploy": "wrangler deploy --minify",
 		"cf-typegen": "wrangler types --env-interface CloudflareBindings"
 	},

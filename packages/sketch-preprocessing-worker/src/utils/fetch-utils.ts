@@ -1,6 +1,7 @@
 import { Context } from "hono";
 import type { R2Bucket, R2ObjectBody } from "@cloudflare/workers-types";
 import { resolveStorageUrl } from "overlay-engine";
+import { bucketHosts, isBoundBucket } from "./bucket-host";
 
 // Track in-flight requests to prevent duplicates
 const inFlightRequests = new Map<string, Promise<ArrayBuffer>>();
@@ -9,19 +10,11 @@ function getRequestKey(key: string, range: [number, number | null]): string {
   return `${key}:${range[0]}-${range[1] ?? ""}`;
 }
 
-function ownHosts(ctx: Context): Set<string> {
-  const raw = ctx.env.UPLOADS_HOST || "";
-  const hosts = String(raw)
-    .split(",")
-    .map((host) => host.trim())
-    .filter((host) => host.length > 0);
-  return new Set(hosts);
-}
-
 /**
- * Objects on this Worker's own uploads host are in the bound bucket. Every
- * other URL, including production EEZ and land fixtures, is fetched over HTTP.
- * A bare key resolves to the production uploads origin and is fetched.
+ * Objects on this deployment's uploads host are in the bound bucket, so they
+ * are read through the R2 binding and ACL does not apply. `wrangler dev`
+ * sets UPLOADS_HOST to the local uploads port. A production EEZ or land URL
+ * is not in that local bucket, and is fetched over HTTP.
  */
 async function readRange(
   key: string,
@@ -40,12 +33,18 @@ async function readRange(
   }
 
   let buffer: ArrayBuffer;
-  if (ownHosts(ctx).has(target.host)) {
+  const bound = isBoundBucket(target, bucketHosts(ctx.env));
+  console.log(
+    bound
+      ? `r2 ${objectKey} ${rangeHeader}`
+      : `http ${target.host} ${rangeHeader}`
+  );
+  if (bound) {
     const object: R2ObjectBody | null = await bucket.get(objectKey, {
       range: new Headers({ Range: rangeHeader }),
     });
     if (!object) {
-      throw new Error(`Local bucket has no object ${objectKey}`);
+      throw new Error(`Bound bucket has no object ${objectKey}`);
     }
     buffer = await object.arrayBuffer();
   } else {

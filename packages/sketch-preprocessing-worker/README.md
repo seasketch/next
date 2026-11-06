@@ -86,11 +86,11 @@ npm run deploy
 
 The worker requires the following Cloudflare bindings:
 
-- `SSN_TILES`: R2 bucket containing geographic data in FlatGeobuf format
+- `SSN_TILES`: R2 bucket containing geographic data in FlatGeobuf format. Reads of this deployment's own bucket go through the binding and bypass ACL.
 
 ### Environment Variables
 
-- `DEV`: Set to true for local development (uses HTTPS instead of R2)
+- `UPLOADS_HOST`: Comma-separated hosts whose objects live in `SSN_TILES`. Production is `uploads.seasketch.org,tiles.seasketch.org`. When the variable is unset, the Worker uses those same hosts. Local `npm run dev` overrides it with the local uploads host. A production EEZ or land URL is not in that local bucket, so the local Worker fetches it over HTTP.
 
 ## API Reference
 

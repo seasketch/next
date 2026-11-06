@@ -14,6 +14,11 @@
       "preview_bucket_name": "ssn-tiles-local"
     }
   ],
+  // Hosts whose objects live in the bound bucket. The binding read bypasses
+  // ACL. `npm run dev` overrides this with the local uploads host.
+  "vars": {
+    "UPLOADS_HOST": "uploads.seasketch.org,tiles.seasketch.org"
+  },
   "observability": {
     "enabled": true
   }
