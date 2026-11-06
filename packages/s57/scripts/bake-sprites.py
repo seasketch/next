@@ -78,6 +78,7 @@ NAMES = [
     "slope",
     "sand-waves",
     "sand-waves-pattern",
+    "traffic-arrow",
     "topmark-cone-up",
     "topmark-cone-down",
     "topmark-sphere",
@@ -416,6 +417,20 @@ def draw_sand_waves(draw):
         wave(draw, 48, 208, y, 14, 10)
 
 
+def draw_traffic_arrow(draw):
+    # Open arrow pointing north, the S-52 lane arrow. Outline only, so depths show through it.
+    shape = [
+        (112, 236),
+        (144, 236),
+        (144, 112),
+        (184, 112),
+        (128, 28),
+        (72, 112),
+        (112, 112),
+    ]
+    draw.line(shape + [shape[0]], fill=MAGENTA, width=12, joint="miter")
+
+
 # Pattern tiles are 2S square. Marks sit on a diagonal so rows do not line up.
 def draw_sand_waves_pattern(draw):
     wave(draw, 48, 208, 128, 14, 9, FAINT)
@@ -493,6 +508,7 @@ PAINTERS = {
     "slope": lambda im, dr: draw_slope(dr),
     "sand-waves": lambda im, dr: draw_sand_waves(dr),
     "sand-waves-pattern": lambda im, dr: draw_sand_waves_pattern(dr),
+    "traffic-arrow": lambda im, dr: draw_traffic_arrow(dr),
 }
 for _shape, _paint in TOPMARKS.items():
     PAINTERS[f"topmark-{_shape}"] = lambda im, dr, paint=_paint: paint(dr)

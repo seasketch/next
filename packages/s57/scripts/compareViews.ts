@@ -12,6 +12,7 @@ export type CompareView = {
 
 const places: Array<{ name: string; lat: number; lng: number; zooms: number[]; note: string }> = [
   { name: "channel", lat: 34.2, lng: -119.8, zooms: [9, 10], note: "coastal and approach overview" },
+  { name: "tss", lat: 34.2014, lng: -119.7671, zooms: [10, 11], note: "traffic lanes and separation zone" },
   { name: "sb-harbor", lat: 34.405, lng: -119.69, zooms: [11, 12, 13, 14, 15], note: "harbour cell US5CA2HS" },
   { name: "sb-light", lat: 34.395, lng: -119.722, zooms: [13, 14], note: "Santa Barbara Light sector" },
   { name: "goleta", lat: 34.413, lng: -119.83, zooms: [12, 13], note: "approach cell only, landward detail" },

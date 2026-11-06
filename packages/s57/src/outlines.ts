@@ -20,6 +20,13 @@ export const OUTLINED_LAYERS = new Set([
 /** Classes in `depth_area` that are stroked. Depth areas themselves are only filled. */
 const OUTLINED_DEPTH_AREAS = new Set(["DRGARE"]);
 
+/**
+ * A traffic lane is not stroked. Its outer edge is the TSSBND line and its
+ * inner edge is the separation zone, so the lane's own ring would draw every
+ * boundary a second time.
+ */
+const NOT_OUTLINED = new Set(["TSSLPT"]);
+
 /** Slack for coordinates GDAL writes on the cell edge. About 10 cm. */
 const ON_EDGE = 1e-6;
 
@@ -77,7 +84,7 @@ function isOutlined(properties: Record<string, unknown>): boolean {
   if (typeof layer !== "string" || !OUTLINED_LAYERS.has(layer)) return false;
   if (layer === "depth_area")
     return OUTLINED_DEPTH_AREAS.has(String(properties.obj));
-  return true;
+  return !NOT_OUTLINED.has(String(properties.obj));
 }
 
 /**

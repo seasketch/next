@@ -186,6 +186,18 @@ describe("outlineFeatures", () => {
     assert.ok(Math.abs(length(outlines[0].geometry) - 0.8) < 1e-6);
   });
 
+  it("strokes the separation zone and not the traffic lane", () => {
+    const outlines = outlineFeatures(
+      [
+        area("separation", "TSEZNE", square(0.2, 0.2, 0.8, 0.4)),
+        area("separation", "TSSLPT", square(0.2, 0.4, 0.8, 0.7)),
+      ],
+      cellEdge(coverage)
+    );
+    assert.equal(outlines.length, 1);
+    assert.equal(outlines[0].properties.obj, "TSEZNE");
+  });
+
   it("strokes the whole ring when the cell has no coverage", () => {
     const [outline] = outlineFeatures(
       [area("route", "FAIRWY", square(0, 0, 1, 1))],

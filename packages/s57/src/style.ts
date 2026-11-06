@@ -15,6 +15,8 @@ const CHBLK = "#121212";
 const CHGRD = "#5c686b";
 const DEPSC = "#3e4749";
 const CHMGD = "#c545c3";
+/** Faint magenta, the S-52 area colour for a separation zone. Drawn translucent so the depths stay readable. */
+const CHMGF = "#e7a8e4";
 const PAPER = "#f4f7f4";
 const CHBRN = "#a39480";
 const LANDF = "#8c7a55";
@@ -413,12 +415,13 @@ function singleSourceStyle(
         paint: { "fill-color": LANDA },
       },
       {
+        // The separation zone only. The lanes stay the water colour; an arrow shows which way traffic goes.
         id: "s57-separation-fill",
         type: "fill",
         source: id,
         "source-layer": "separation",
-        filter: ["==", ["geometry-type"], "Polygon"],
-        paint: { "fill-color": CHMGD, "fill-opacity": 0.1 },
+        filter: ["all", polygon, ["==", obj, "TSEZNE"]],
+        paint: { "fill-color": CHMGF, "fill-opacity": 0.55 },
       },
       {
         id: "s57-dredged",
@@ -527,6 +530,25 @@ function singleSourceStyle(
         filter: stroke,
         layout: { "line-join": "round", "line-cap": "butt" },
         paint: { "line-color": CHMGD, "line-width": 1.35, "line-dasharray": [5, 2] },
+      },
+      {
+        // Open arrow, turned by ORIENT. The sprite points north.
+        id: "s57-traffic-arrow",
+        type: "symbol",
+        source: id,
+        "source-layer": "separation",
+        minzoom: 8,
+        filter: ["all", point, ["==", obj, "TSSLPT"], ["==", ["get", "flow"], 1]],
+        layout: {
+          "icon-image": "traffic-arrow",
+          "icon-size": ["interpolate", ["linear"], ["zoom"], 8, 0.55, 11, 0.85, 14, 1.15],
+          "icon-rotate": ["to-number", ["get", "ORIENT"]],
+          "icon-rotation-alignment": "map",
+          "icon-pitch-alignment": "map",
+          // Overlapping cells each place an arrow. The second one, on the same spot, gives way.
+          "icon-allow-overlap": false,
+          "icon-padding": 1,
+        },
       },
       {
         id: "s57-regulated",
