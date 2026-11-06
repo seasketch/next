@@ -190,8 +190,8 @@ export default function TableOfContentsItemAdminMenuItems({
                         id: cache.identify(projectMetadataQuery.data.project),
                         fields: {
                           draftTableOfContentsItems(
-                            existingRefs: readonly any[] = [],
-                            { readField }: any
+                            existingRefs = [],
+                            { readField }
                           ) {
                             return existingRefs.filter(
                               (ref: any) => item.id !== readField("id", ref)
@@ -200,7 +200,7 @@ export default function TableOfContentsItemAdminMenuItems({
                           draftTableOfContentsHasChanges() {
                             return true;
                           },
-                        } as any,
+                        },
                       });
                     }
                   },

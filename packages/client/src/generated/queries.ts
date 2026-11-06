@@ -24380,7 +24380,7 @@ export type SelectivePublishDetailsQuery = (
   { __typename?: 'Query' }
   & { projectBySlug?: Maybe<(
     { __typename?: 'Project' }
-    & Pick<Project, 'id' | 'tableOfContentsLastPublished'>
+    & Pick<Project, 'id' | 'tableOfContentsLastPublished' | 'draftTableOfContentsHasChanges'>
     & { pendingPublishItems?: Maybe<Array<(
       { __typename?: 'PendingPublishItem' }
       & Pick<PendingPublishItem, 'stableId' | 'kind' | 'title' | 'isFolder' | 'parentStableId' | 'path' | 'requiresStableIds' | 'bundleId' | 'draftId' | 'includedInBundle'>
@@ -33226,6 +33226,7 @@ export const SelectivePublishDetailsDocument = /*#__PURE__*/ gql`
   projectBySlug(slug: $slug) {
     id
     tableOfContentsLastPublished
+    draftTableOfContentsHasChanges
     pendingPublishItems {
       stableId
       kind

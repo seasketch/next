@@ -292,13 +292,11 @@ export default function PublishTableOfContentsModal(props: {
                 <Spinner />
               </div>
             ) : (
-              <>
-                <PublishSummarizedChangesPanel
-                  changeLogs={changeLogs}
-                  draftItems={draftTableOfContentsItems}
-                  tableOfContentsLastPublished={tableOfContentsLastPublished}
-                />
-              </>
+              <PublishSummarizedChangesPanel
+                changeLogs={changeLogs}
+                draftItems={draftTableOfContentsItems}
+                tableOfContentsLastPublished={tableOfContentsLastPublished}
+              />
             )}
           </div>
         </Tabs.Content>

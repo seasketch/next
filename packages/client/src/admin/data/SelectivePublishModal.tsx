@@ -21,7 +21,6 @@ import {
   useSelectivePublishDetailsQuery,
 } from "../../generated/graphql";
 import useProjectId from "../../useProjectId";
-import { CHANGE_LOG_INTRODUCTION_DATE } from "../changelogs/constants";
 import LayerCartographyRevisionModal from "./LayerCartographyRevisionModal";
 import LayerMetadataRevisionModal from "./LayerMetadataRevisionModal";
 import {
@@ -178,9 +177,11 @@ export default function SelectivePublishModal({
   const { toast } = useToast();
   const { slug } = useParams<{ slug: string }>();
   const projectId = useProjectId();
+  // A cached list could offer changes that were published since, so the
+  // modal always waits for the current pending items.
   const detailsQuery = useSelectivePublishDetailsQuery({
     variables: { slug },
-    fetchPolicy: "cache-and-network",
+    fetchPolicy: "network-only",
   });
   const [publish, publishState] = usePublishTableOfContentsItemsMutation({
     refetchQueries: [
@@ -189,6 +190,20 @@ export default function SelectivePublishModal({
       ProjectMetadataDocument,
       DraftTableOfContentsDocument,
     ],
+    update: (cache) => {
+      if (projectId == null) {
+        return;
+      }
+      const id = cache.identify({ __typename: "Project", id: projectId });
+      for (const fieldName of [
+        "changeLogsSinceLastPublish",
+        "commentsSinceLastPublish",
+        "pendingPublishItems",
+      ]) {
+        cache.evict({ id, fieldName });
+      }
+      cache.gc();
+    },
   });
   const [explicit, setExplicit] = useState<string[]>([]);
   const [highlighted, setHighlighted] = useState<Set<string>>(new Set());
@@ -196,7 +211,9 @@ export default function SelectivePublishModal({
   const [collapsedBundles, setCollapsedBundles] = useState<Set<string>>(
     new Set()
   );
-  const [publishError, setPublishError] = useState<string | null>(null);
+  const [publishError, setPublishError] = useState<{
+    detail?: string;
+  } | null>(null);
   const [metadataModal, setMetadataModal] = useState<{
     tocId: number;
     initialId?: string;
@@ -302,7 +319,7 @@ export default function SelectivePublishModal({
 
   const selectedCount = explicit.length;
   const includedCount = implied.length;
-  const loading = detailsQuery.loading && !detailsQuery.data;
+  const loading = detailsQuery.loading || !project;
   const lastPublished = project?.tableOfContentsLastPublished
     ? new Date(project.tableOfContentsLastPublished)
     : null;
@@ -314,13 +331,25 @@ export default function SelectivePublishModal({
     setHighlighted(new Set(ids));
   };
 
+  const summaryByEntityId = useMemo(() => {
+    const rows = new Map<number, PublishSummaryRow>();
+    for (const row of [...summary.added, ...summary.updated, ...summary.removed]) {
+      if (!rows.has(row.entityId)) {
+        rows.set(row.entityId, row);
+      }
+    }
+    return rows;
+  }, [summary]);
+
   const summaryFor = (unit: SelectiveUnit): PublishSummaryRow | undefined => {
-    const rows = [...summary.added, ...summary.updated, ...summary.removed];
     if (unit.draftId != null) {
-      const match = rows.find((row) => row.entityId === unit.draftId);
+      const match = summaryByEntityId.get(unit.draftId);
       if (match) {
         return match;
       }
+    }
+    if (unit.kind !== "removed") {
+      return undefined;
     }
     return summary.removed.find(
       (row) => row.title === unit.title && row.isFolder === unit.isFolder
@@ -355,7 +384,9 @@ export default function SelectivePublishModal({
       }
     } catch (error) {
       console.error(error);
-      setPublishError(t("Could not publish these changes"));
+      setPublishError({
+        detail: error instanceof Error ? error.message : undefined,
+      });
     }
   };
 
@@ -412,14 +443,28 @@ export default function SelectivePublishModal({
                 </p>
               ) : null}
               {publishError ? (
-                <p className="text-sm text-rose-700" role="alert">
-                  {publishError}
-                </p>
+                <div
+                  className="rounded-md border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-800"
+                  role="alert"
+                >
+                  <p className="font-medium">
+                    {t("Could not publish these changes")}
+                  </p>
+                  {publishError.detail ? (
+                    <p className="mt-0.5 text-rose-700">
+                      {publishError.detail}
+                    </p>
+                  ) : null}
+                </div>
               ) : null}
             </div>
             <div className="min-h-0 flex-1 overflow-y-auto px-6 py-5">
               {checkableUnits(units).length === 0 ? (
-                <EmptyPendingNotice />
+                <EmptyPendingNotice
+                  hasOtherChanges={Boolean(
+                    project?.draftTableOfContentsHasChanges
+                  )}
+                />
               ) : (
                 <div className="flex flex-col gap-6 pb-1">
                   {(["added", "updated", "removed"] as PublishKind[]).map(
@@ -531,22 +576,18 @@ function sectionTitle(
   return adminT("Updated");
 }
 
-function EmptyPendingNotice() {
+function EmptyPendingNotice({ hasOtherChanges }: { hasOtherChanges: boolean }) {
   const { t } = useTranslation("admin:data");
-  const daysSinceIntroduction = Math.floor(
-    (Date.now() - CHANGE_LOG_INTRODUCTION_DATE.getTime()) /
-      (1000 * 60 * 60 * 24)
-  );
   return (
-    <div className="rounded-lg border border-gray-200 bg-gray-50 px-4 py-6 text-center text-sm text-gray-500">
-      {daysSinceIntroduction < 90
+    <div
+      className="rounded-lg border border-gray-200 bg-gray-50 px-4 py-6 text-center text-sm text-gray-500"
+      data-testid="selective-publish-empty"
+    >
+      {hasOtherChanges
         ? t(
-            "No unpublished changes were found. Change logging was introduced on {{date}}, so any changes made before that date were not logged. In the future, you can look forward to seeing detailed change history for layer list updates.",
-            { date: CHANGE_LOG_INTRODUCTION_DATE.toLocaleDateString() }
-          )
-        : t(
             "Nothing here is waiting as its own update. Reordering the list and layer stacking ship with Publish."
-          )}
+          )
+        : t("The published overlay list matches the draft.")}
     </div>
   );
 }
@@ -865,6 +906,17 @@ function UnitRow({
                   }
                 />
               ))}
+            </div>
+          ) : unit.kind === "updated" ? (
+            <div className="flex flex-wrap gap-1.5 pt-1">
+              <span
+                className="inline-flex items-center rounded-full bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-600"
+                title={t(
+                  "This item differs from its published copy in a way the change history does not describe."
+                )}
+              >
+                {t("Other changes")}
+              </span>
             </div>
           ) : null}
         </div>

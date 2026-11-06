@@ -16,6 +16,7 @@ import {
   LAYER_SETTINGS_CHANGE_LOG_EXPANDED_FIRST,
   LAYER_SETTINGS_CHANGE_LOG_PAGE_SIZE,
 } from "./layerSettingsChangeLogRefetch";
+
 function findScrollParent(from: HTMLElement | null): HTMLElement | null {
   if (!from) return null;
   let el: HTMLElement | null = from.parentElement;
