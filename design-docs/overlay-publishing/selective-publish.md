@@ -158,8 +158,10 @@ One schema addition, not on the changelog: `table_of_contents_items.published_at
 
 - Added = draft row without a published `stable_id` match.
 - Removed = published row without a draft match (bundles via published `path`).
-- Updated = match where a changelog row for the draft item has `last_at > published.published_at`.
+- Updated = match where a changelog row for the draft item has `last_at > published.published_at`, or where the draft layer's non-library source (url, attribution, temporal) or its style, render-under, or sublayer differs from the published copy. The structural check catches a source replacement that never recorded `layer:uploaded`.
 - Stacking order pending = relative `z_index` order of common layers differs between trees.
+
+`published_at` is stamped with `clock_timestamp()` at insert, not `now()`, so edits made earlier in the same transaction are not still pending after the row is written.
 
 `projects_change_logs_since_last_publish` is reimplemented with that per-item boundary (project-level rows keep the project timestamp) and gains the Removed set from the tree diff, so the full review panel and the modal read the same data. `projects.table_of_contents_last_published` keeps meaning "last publish run"; `draft_table_of_contents_has_changes` is recomputed as "any pending unit" after every publish.
 

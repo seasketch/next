@@ -10352,6 +10352,16 @@ type Mutation {
     """
     input: PublishTableOfContentsInput!
   ): PublishTableOfContentsPayload
+
+  """
+  Publishes the selected draft overlay items (and anything they require) without replacing the rest of the published tree.
+  """
+  publishTableOfContentsItems(
+    """
+    The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
+    """
+    input: PublishTableOfContentsItemsInput!
+  ): PublishTableOfContentsItemsPayload
   recalculateSpatialMetrics(
     """
     The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
@@ -12130,6 +12140,19 @@ enum ParticipationStatus {
   PENDING_APPROVAL
 }
 
+type PendingPublishItem {
+  bundleId: String
+  draftId: Int
+  includedInBundle: Boolean
+  isFolder: Boolean
+  kind: String
+  parentStableId: String
+  path: String
+  requiresStableIds: [String]
+  stableId: String
+  title: String
+}
+
 type Post implements Node {
   authorId: Int!
 
@@ -12784,6 +12807,7 @@ type Project implements Node {
     """
     offset: Int
   ): PostsConnection!
+  layerStackOrderPending: Boolean
 
   """
   If a logoUrl is provided, it will link to this url in a new window if provided.
@@ -12952,6 +12976,15 @@ type Project implements Node {
     offset: Int
     orderBy: ParticipantSortBy
   ): [User!]
+
+  """Reads and enables pagination through a set of `PendingPublishItem`."""
+  pendingPublishItems(
+    """Only read the first `n` values of the set."""
+    first: Int
+
+    """Skip the first `n` values."""
+    offset: Int
+  ): [PendingPublishItem!]
 
   """
   Draft polygon overlays that can be used as a Geography base or clipping layer.
@@ -13901,6 +13934,33 @@ input PublishTableOfContentsInput {
   """
   clientMutationId: String
   projectId: Int
+}
+
+"""All input for the `publishTableOfContentsItems` mutation."""
+input PublishTableOfContentsItemsInput {
+  """
+  An arbitrary string value with no semantic meaning. Will be included in the
+  payload verbatim. May be used to track mutations by the client.
+  """
+  clientMutationId: String
+  includeZOrder: Boolean
+  projectId: Int
+  stableIds: [String]
+}
+
+"""The output of our `publishTableOfContentsItems` mutation."""
+type PublishTableOfContentsItemsPayload {
+  """
+  The exact same `clientMutationId` that was provided in the mutation input,
+  unchanged and unused. May be used by a client to track mutations.
+  """
+  clientMutationId: String
+
+  """
+  Our root query field type. Allows us to run any query from our mutation payload.
+  """
+  query: Query
+  tableOfContentsItems: [TableOfContentsItem!]
 }
 
 """The output of our `publishTableOfContents` mutation."""
@@ -18324,6 +18384,11 @@ type TableOfContentsItem implements Node {
     offset: Int
   ): [ProjectBackgroundJob!]
   projectId: Int!
+
+  """
+  When this published row was written. Null on draft rows. Pending edits are changelog rows newer than the published counterpart.
+  """
+  publishedAt: Datetime
 
   """Reads and enables pagination through a set of `QuotaDetail`."""
   quotaUsed(
