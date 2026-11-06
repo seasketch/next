@@ -205,11 +205,14 @@ function arrowsAlong(
   return arrows;
 }
 
-/** Arrow points along each recommended track. The line itself is unchanged. */
+/** Centreline classes whose S-52 portrayal is a complex line of arrows. */
+const TRACK_CLASSES = new Set(["RECTRC", "DWRTCL", "RCRTCL"]);
+
+/** Arrow points along each recommended or deep-water track. The line itself is unchanged. */
 export function trackArrows(features: ChartFeature[]): ChartFeature[] {
   const arrows: ChartFeature[] = [];
   for (const feature of features) {
-    if (!feature || feature.properties?.obj !== "RECTRC") continue;
+    if (!feature || !TRACK_CLASSES.has(String(feature.properties?.obj ?? ""))) continue;
     const orient = feature.properties.ORIENT;
     for (const path of linePaths(feature.geometry)) {
       if (path.length < 2) continue;

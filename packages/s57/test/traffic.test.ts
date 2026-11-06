@@ -135,6 +135,18 @@ describe("recommended track arrows", () => {
     for (const arrow of arrows) assert.ok(Math.abs((arrow.properties.ORIENT as number) - 270) < 1);
   });
 
+  it("arrows a deep-water route centreline the same way", () => {
+    const arrows = trackArrows([
+      {
+        type: "Feature",
+        properties: { obj: "DWRTCL", ORIENT: 90 },
+        geometry: { type: "LineString", coordinates: [[0, 0], [0.3, 0]] },
+        tippecanoe: { layer: "route", minzoom: 11, maxzoom: 16 },
+      },
+    ]);
+    assert.ok(arrowsAt(arrows, 12).length >= 2);
+  });
+
   it("gives a short track one arrow and ignores other classes and bad geometry", () => {
     const short = trackArrows([
       track([

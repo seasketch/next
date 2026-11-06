@@ -1,102 +1,15 @@
 import { codes, lightDescription, markLabel, seabedLabel } from "./labels.js";
-import { areaCenterSymbol } from "./portrayal.js";
+import { areaCenterSymbol, PORTRAYAL } from "./portrayal.js";
 
 /**
  * S-57 object classes the chart tiles, grouped the way the style draws them.
- * Classes not listed are left out of the tiles.
+ * This is every drawn class in the S-52 lookup, so a global chart is not
+ * limited to the classes one coast happens to contain.
  */
-export const ENC_LAYER_BY_CLASS: Record<string, string> = {
-  DEPARE: "depth_area",
-  DRGARE: "depth_area",
-  UNSARE: "depth_area",
-  LNDARE: "land",
-  BUAARE: "land",
-  LNDELV: "land_detail",
-  LNDMRK: "land_detail",
-  BUISGL: "land_detail",
-  SILTNK: "land_detail",
-  CGUSTA: "land_detail",
-  DYKCON: "land_detail",
-  FNCLNE: "land_detail",
-  SLOGRD: "land_detail",
-  SLOTOP: "land_detail",
-  PRDARE: "land_detail",
-  RDOSTA: "land_detail",
-  SBDARE: "seabed",
-  WEDKLP: "seabed",
-  SNDWAV: "seabed",
-  WATTUR: "seabed",
-  // Lakes and rivers sit inside the land polygon. They are drawn after land
-  // so they read as water rather than as another tan fill.
-  LAKARE: "inland_water",
-  LOKBSN: "inland_water",
-  RIVERS: "inland_water",
-  CANALS: "inland_water",
-  COALNE: "coast",
-  SLCONS: "coast",
-  DEPCNT: "depth_contour",
-  SOUNDG: "sounding",
-  LIGHTS: "aid",
-  LITFLT: "aid",
-  LITVES: "aid",
-  BOYSPP: "aid",
-  BOYCAR: "aid",
-  BOYISD: "aid",
-  BOYLAT: "aid",
-  BOYSAW: "aid",
-  BOYINB: "aid",
-  BCNSPP: "aid",
-  BCNCAR: "aid",
-  BCNISD: "aid",
-  BCNLAT: "aid",
-  BCNSAW: "aid",
-  DAYMAR: "aid",
-  TOPMAR: "aid",
-  FOGSIG: "aid",
-  RTPBCN: "aid",
-  OBSTRN: "hazard",
-  WRECKS: "hazard",
-  UWTROC: "hazard",
-  PILPNT: "pile",
-  OFSPLF: "platform",
-  MORFAC: "mooring",
-  BERTHS: "mooring",
-  CBLSUB: "cable",
-  CBLARE: "cable",
-  PIPSOL: "cable",
-  TSSLPT: "separation",
-  TSSBND: "separation",
-  TSELNE: "separation",
-  DWRTPT: "separation",
-  TSEZNE: "separation",
-  BRIDGE: "structure",
-  SEAARE: "place",
-  LNDRGN: "place",
-  RESARE: "regulated",
-  ACHARE: "regulated",
-  CTNARE: "regulated",
-  MIPARE: "regulated",
-  DMPGRD: "regulated",
-  PRCARE: "regulated",
-  MARCUL: "regulated",
-  PILBOP: "regulated",
-  FAIRWY: "route",
-  RECTRC: "route",
-  NAVLNE: "route",
-  // Group-1 skin that is not land or depth. Drawn with the land so the
-  // chart does not leave a hole where a dock or hulk sits.
-  FLODOC: "land",
-  HULKES: "land",
-  PONTON: "land",
-  SMCFAC: "land",
-  // Jurisdictional limits. Dashed, and cut at the cell edge, so a limit that
-  // is the cell itself draws nothing.
-  ADMARE: "limit",
-  CONZNE: "limit",
-  COSARE: "limit",
-  EXEZNE: "limit",
-  TESARE: "limit",
-};
+export const ENC_LAYER_BY_CLASS: Record<string, string> = {};
+for (const [objectClass, portrayal] of Object.entries(PORTRAYAL)) {
+  if (portrayal.layer) ENC_LAYER_BY_CLASS[objectClass] = portrayal.layer;
+}
 
 /**
  * Skin-of-the-earth classes. They tessellate each cell, so a scale minimum
@@ -317,6 +230,9 @@ export function aidMark(
     LITVES: "light",
     FOGSIG: "fog",
     DAYMAR: "daymark",
+    // An installation buoy and a generic navigation mark read as special marks.
+    BOYINB: "special",
+    GENNAV: "special",
   };
   return fixed[objectClass] || null;
 }

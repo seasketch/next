@@ -91,6 +91,15 @@ NAMES = [
     "radio",
     "facility",
     "two-way",
+    "airport",
+    "current",
+    "ferry",
+    "magnet",
+    "question",
+    "rescue",
+    "signal",
+    "spring",
+    "vegetation",
     "topmark-cone-up",
     "topmark-cone-down",
     "topmark-sphere",
@@ -501,6 +510,62 @@ def draw_facility(draw):
     draw.rectangle([112, 168, 144, 220], fill=WHITE, outline=BLACK, width=6)
 
 
+def draw_airport(draw):
+    ring(draw, [48, 48, 208, 208], NONE, BLACK, 12)
+    draw.line([(64, 168), (192, 88)], fill=BLACK, width=14)
+    draw.line([(72, 96), (184, 176)], fill=BLACK, width=10)
+
+
+def draw_current(draw):
+    # Open arrow pointing north. A current or tidal stream, turned by ORIENT.
+    draw.line([(128, 220), (128, 48)], fill=(30, 90, 160, 255), width=14)
+    draw.line([(128, 40), (78, 110)], fill=(30, 90, 160, 255), width=14)
+    draw.line([(128, 40), (178, 110)], fill=(30, 90, 160, 255), width=14)
+
+
+def draw_ferry(draw):
+    draw.polygon([(48, 150), (208, 150), (184, 196), (72, 196)], fill=BLACK)
+    draw.polygon([(96, 150), (160, 150), (148, 112), (108, 112)], fill=BLACK)
+    draw.rectangle([118, 88, 138, 112], fill=BLACK)
+
+
+def draw_magnet(draw):
+    ring(draw, [48, 48, 208, 208], NONE, MAGENTA, 14)
+    draw.arc([88, 88, 168, 176], start=200, end=340, fill=MAGENTA, width=16)
+    draw.line([(96, 132), (96, 176)], fill=MAGENTA, width=16)
+    draw.line([(160, 132), (160, 176)], fill=MAGENTA, width=16)
+
+
+def draw_question(draw):
+    ring(draw, [44, 44, 212, 212], NONE, MAGENTA, 14)
+    draw.arc([96, 72, 168, 144], start=200, end=60, fill=MAGENTA, width=16)
+    draw.line([(132, 144), (132, 168)], fill=MAGENTA, width=14)
+    draw.ellipse([120, 180, 144, 204], fill=MAGENTA)
+
+
+def draw_rescue(draw):
+    ring(draw, [40, 40, 216, 216], NONE, (196, 48, 48, 255), 16)
+    ring(draw, [78, 78, 178, 178], NONE, (196, 48, 48, 255), 12)
+    draw.line([(128, 52), (128, 204)], fill=(196, 48, 48, 255), width=10)
+    draw.line([(52, 128), (204, 128)], fill=(196, 48, 48, 255), width=10)
+
+
+def draw_signal(draw):
+    draw.line([(108, 220), (108, 56)], fill=BLACK, width=12)
+    draw.polygon([(108, 56), (196, 84), (108, 116)], fill=MAGENTA)
+
+
+def draw_spring(draw):
+    ring(draw, [56, 56, 200, 200], (120, 186, 220, 255), BLACK, 10)
+    ring(draw, [96, 96, 160, 160], (40, 120, 180, 255), None, 0)
+
+
+def draw_vegetation(draw):
+    draw.polygon([(128, 36), (196, 150), (60, 150)], fill=(70, 120, 60, 255))
+    draw.polygon([(128, 96), (208, 200), (48, 200)], fill=(55, 100, 48, 255))
+    draw.rectangle([116, 196, 140, 236], fill=(110, 78, 40, 255))
+
+
 def draw_two_way(draw):
     draw.line([(128, 40), (128, 216)], fill=MAGENTA, width=12)
     draw.line([(128, 40), (84, 96)], fill=MAGENTA, width=12)
@@ -599,6 +664,15 @@ PAINTERS = {
     "radio": lambda im, dr: draw_radio(dr),
     "facility": lambda im, dr: draw_facility(dr),
     "two-way": lambda im, dr: draw_two_way(dr),
+    "airport": lambda im, dr: draw_airport(dr),
+    "current": lambda im, dr: draw_current(dr),
+    "ferry": lambda im, dr: draw_ferry(dr),
+    "magnet": lambda im, dr: draw_magnet(dr),
+    "question": lambda im, dr: draw_question(dr),
+    "rescue": lambda im, dr: draw_rescue(dr),
+    "signal": lambda im, dr: draw_signal(dr),
+    "spring": lambda im, dr: draw_spring(dr),
+    "vegetation": lambda im, dr: draw_vegetation(dr),
 }
 for _shape, _paint in TOPMARKS.items():
     PAINTERS[f"topmark-{_shape}"] = lambda im, dr, paint=_paint: paint(dr)

@@ -24,6 +24,7 @@ import { LightFeature, lightSectorFeatures, sectorRings } from "./sectors.js";
 import { labelLightsFromStructures, placeTopmarks } from "./labels.js";
 import { writeAreaLabels } from "./areaLabels.js";
 import { cellEdge, outlineFeatures } from "./outlines.js";
+import { isCellSizedMeta } from "./portrayal.js";
 import { trackArrows, trafficArrows } from "./traffic.js";
 
 const READ_CONCURRENCY = Math.max(1, Math.min(8, cpus().length));
@@ -426,7 +427,10 @@ export async function processEncFiles(
           objectClass,
           ignoreScaleMinimum: ignoresScaleMinimum(objectClass),
         };
-        await readFeatures(exportPath, meta, (feature) => pending.push(feature as ChartFeature), bounds);
+        await readFeatures(exportPath, meta, (feature) => {
+          // A variation that fills the cell is the compass rose, not a symbol in the water.
+          if (!isCellSizedMeta(feature)) pending.push(feature as ChartFeature);
+        }, bounds);
         // A national upload exports tens of gigabytes. Keep one cell at a time on disk.
         await rm(exportPath, { force: true });
       }

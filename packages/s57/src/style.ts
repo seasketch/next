@@ -46,7 +46,7 @@ function depthColor(): Expr {
   const depth = depthMetres();
   return [
     "case",
-    ["==", ["get", "obj"], "UNSARE"],
+    ["any", ["==", ["get", "obj"], "UNSARE"], ["==", ["get", "obj"], "ICEARE"]],
     NODTA,
     ["<", depth, 0],
     DEPIT,
@@ -365,8 +365,33 @@ function singleSourceStyle(
         type: "line",
         source: id,
         "source-layer": "land",
-        filter: ["all", ["in", obj, ["literal", ["FLODOC", "HULKES", "PONTON", "SMCFAC"]]], polygon],
+        filter: ["all", ["in", obj, ["literal", ["FLODOC", "HULKES", "PONTON", "SMCFAC", "DRYDOC"]]], polygon],
         paint: { "line-color": CSTLN, "line-width": 1.1 },
+      },
+      {
+        // Airfields, dams, causeways, cranes, pylons, runways: brown, not the land tan.
+        id: "s57-works",
+        type: "fill",
+        source: id,
+        "source-layer": "land",
+        filter: [
+          "all",
+          ["in", obj, ["literal", ["AIRARE", "CAUSWY", "CRANES", "DAMCON", "FORSTC", "GATCON", "PYLONS", "RUNWAY", "CONVYR"]]],
+          polygon,
+        ],
+        paint: { "fill-color": CHBRN },
+      },
+      {
+        id: "s57-works-edge",
+        type: "line",
+        source: id,
+        "source-layer": "land",
+        filter: [
+          "all",
+          ["in", obj, ["literal", ["AIRARE", "CAUSWY", "CRANES", "DAMCON", "FORSTC", "GATCON", "PYLONS", "RUNWAY", "CONVYR"]]],
+          polygon,
+        ],
+        paint: { "line-color": LANDF, "line-width": 0.8 },
       },
       {
         id: "s57-building-area",
@@ -392,7 +417,7 @@ function singleSourceStyle(
         source: id,
         "source-layer": "land_detail",
         minzoom: 13,
-        filter: ["all", ["in", obj, ["literal", ["DYKCON", "FNCLNE"]]], ["in", ["geometry-type"], ["literal", ["LineString", "MultiLineString"]]]],
+        filter: ["all", ["in", obj, ["literal", ["DYKCON", "FNCLNE", "RAILWY", "ROADWY"]]], ["in", ["geometry-type"], ["literal", ["LineString", "MultiLineString"]]]],
         paint: { "line-color": CHBLK, "line-width": 0.9 },
       },
       {
@@ -410,7 +435,7 @@ function singleSourceStyle(
         source: id,
         "source-layer": "land_detail",
         minzoom: 12,
-        filter: ["all", ["==", obj, "PRDARE"], stroke],
+        filter: ["all", ["in", obj, ["literal", ["PRDARE", "VEGATN", "TUNNEL"]]], stroke],
         paint: { "line-color": LANDF, "line-width": 1, "line-dasharray": [4, 2] },
       },
       {
@@ -420,6 +445,14 @@ function singleSourceStyle(
         "source-layer": "inland_water",
         filter: ["in", ["geometry-type"], ["literal", ["Polygon", "MultiPolygon"]]],
         paint: { "fill-color": DEPMS },
+      },
+      {
+        id: "s57-rapids",
+        type: "fill",
+        source: id,
+        "source-layer": "inland_water",
+        filter: ["all", polygon, ["==", obj, "RAPIDS"]],
+        paint: { "fill-color": CHGRD },
       },
       {
         // River and canal centerlines. A fill layer never draws a line.
@@ -458,6 +491,14 @@ function singleSourceStyle(
         "source-layer": "depth_area",
         filter: ["all", stroke, ["==", obj, "DRGARE"]],
         paint: { "line-color": CHBLK, "line-width": 0.7, "line-dasharray": [2, 1] },
+      },
+      {
+        id: "s57-ice",
+        type: "line",
+        source: id,
+        "source-layer": "depth_area",
+        filter: ["all", stroke, ["==", obj, "ICEARE"]],
+        paint: { "line-color": CHGRD, "line-width": 1, "line-dasharray": [4, 2] },
       },
       {
         // One kelp symbol in the area, plus this dashed limit. Not a fill pattern.
@@ -653,7 +694,7 @@ function singleSourceStyle(
         source: id,
         "source-layer": "cable",
         minzoom: 8,
-        filter: ["all", stroke, ["==", obj, "PIPSOL"]],
+        filter: ["all", stroke, ["in", obj, ["literal", ["PIPSOL", "OILBAR", "CHNWIR"]]]],
         paint: { "line-color": CHBLK, "line-width": 1.15, "line-dasharray": [2, 2] },
       },
       {
@@ -662,7 +703,7 @@ function singleSourceStyle(
         source: id,
         "source-layer": "cable",
         minzoom: 8,
-        filter: ["all", stroke, ["==", obj, "CBLARE"]],
+        filter: ["all", stroke, ["!", ["in", obj, ["literal", ["CBLSUB", "PIPSOL", "OILBAR", "CHNWIR"]]]]],
         paint: { "line-color": CHMGD, "line-width": 1.15, "line-dasharray": [3, 2] },
       },
       {
@@ -689,7 +730,7 @@ function singleSourceStyle(
         source: id,
         "source-layer": "route",
         minzoom: 8,
-        filter: ["all", point, ["==", obj, "RECTRC"], ["==", ["get", "flow"], 1]],
+        filter: ["all", point, ["in", obj, ["literal", ["RECTRC", "DWRTCL", "RCRTCL"]]], ["==", ["get", "flow"], 1]],
         layout: {
           "icon-image": "track-arrow",
           "icon-size": ["interpolate", ["linear"], ["zoom"], 11, 0.4, 14, 0.62],
@@ -755,9 +796,18 @@ function singleSourceStyle(
         source: id,
         "source-layer": "place",
         minzoom: 7,
-        filter: ["all", point, named, ["in", obj, ["literal", ["SEAARE", "LNDRGN"]]]],
+        filter: [
+          "all",
+          point,
+          ["in", obj, ["literal", ["SEAARE", "LNDRGN", "ANNOTA", "TIDEWY"]]],
+          [
+            "any",
+            ["all", ["!=", obj, "ANNOTA"], named],
+            ["all", ["==", obj, "ANNOTA"], ["any", named, ["has", "INFORM"]]],
+          ],
+        ],
         layout: {
-          "text-field": ["get", "OBJNAM"],
+          "text-field": ["case", ["==", obj, "ANNOTA"], ["coalesce", ["get", "OBJNAM"], ["get", "INFORM"], ""], ["get", "OBJNAM"]],
           "text-font": ITALIC,
           "text-size": [
             "interpolate",
@@ -885,19 +935,46 @@ function singleSourceStyle(
         },
         paint: { "text-color": CHMGD, "text-halo-color": PAPER, "text-halo-width": 1.2 },
       },
-      ...["regulated", "seabed", "cable", "land", "separation"].map((sourceLayer) => ({
-        id: `s57-mark-${sourceLayer}`,
+      ...["regulated", "seabed", "cable", "land", "separation", "route", "limit", "inland_water", "structure", "mooring", "hazard", "aid"].map(
+        (sourceLayer) => ({
+          id: `s57-mark-${sourceLayer}`,
+          type: "symbol",
+          source: id,
+          "source-layer": sourceLayer,
+          minzoom: sourceLayer === "separation" || sourceLayer === "aid" ? 8 : 9,
+          filter: ["all", point, ["has", "symbol"], ["!", ["has", "mark"]]],
+          layout: {
+            "icon-image": ["get", "symbol"],
+            "icon-size": ["interpolate", ["linear"], ["zoom"], 11, 0.42, 15, 0.6],
+            "icon-rotate": [
+              "case",
+              ["in", ["get", "symbol"], ["literal", ["current", "traffic-arrow"]]],
+              ["to-number", ["coalesce", ["get", "ORIENT"], 0]],
+              0,
+            ],
+            "icon-rotation-alignment": "map",
+            "icon-padding": 2,
+            "icon-allow-overlap": false,
+          },
+        })
+      ),
+      ...["inland_water", "limit", "route"].map((sourceLayer) => ({
+        id: `s57-area-name-${sourceLayer}`,
         type: "symbol",
         source: id,
         "source-layer": sourceLayer,
-        minzoom: sourceLayer === "separation" ? 8 : 9,
-        filter: ["all", point, ["has", "symbol"]],
+        minzoom: 11,
+        filter: ["all", point, named, ["!=", ["to-number", ["get", "flow"]], 1]],
         layout: {
-          "icon-image": ["get", "symbol"],
-          "icon-size": ["interpolate", ["linear"], ["zoom"], 11, 0.42, 15, 0.6],
-          "icon-padding": 2,
-          "icon-allow-overlap": false,
+          "text-field": ["get", "OBJNAM"],
+          "text-font": ITALIC,
+          "text-size": 11,
+          "text-max-width": 9,
+          "text-padding": 8,
+          "text-offset": ["case", ["has", "symbol"], ["literal", [0, 1.2]], ["literal", [0, 0]]],
+          "text-anchor": ["case", ["has", "symbol"], "top", "center"],
         },
+        paint: { "text-color": CHBLK, "text-halo-color": PAPER, "text-halo-width": 1.1 },
       })),
       {
         id: "s57-elevation",

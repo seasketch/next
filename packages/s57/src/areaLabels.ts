@@ -26,6 +26,12 @@ export const LABELLED_AREAS = new Set([
   "SMCFAC",
   "SEAARE",
   "LNDRGN",
+  "ANNOTA",
+  "TIDEWY",
+  "DOCARE",
+  "HRBARE",
+  "AIRARE",
+  "RUNWAY",
 ]);
 
 /** Square degrees. Smaller slivers are what peeling leaves on a cell edge. */
@@ -64,10 +70,11 @@ function interiorPoint(geometry: gdal.Geometry): { x: number; y: number } | null
 export function wantsAreaLabel(properties: Record<string, unknown> | null | undefined): boolean {
   if (!properties || typeof properties !== "object") return false;
   const objectClass = properties.obj;
-  if (typeof objectClass !== "string" || !LABELLED_AREAS.has(objectClass)) return false;
+  if (typeof objectClass !== "string") return false;
+  if (areaCenterSymbol(objectClass)) return true;
+  if (!LABELLED_AREAS.has(objectClass)) return false;
   if (objectClass === "ACHARE") return true;
   if (objectClass === "SBDARE") return typeof properties.seabed === "string";
-  if (areaCenterSymbol(objectClass)) return true;
   return typeof properties.OBJNAM === "string" && properties.OBJNAM.length > 0;
 }
 

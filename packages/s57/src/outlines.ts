@@ -21,13 +21,13 @@ export const OUTLINED_LAYERS = new Set([
 ]);
 
 /** Classes in `depth_area` that are stroked. Depth areas themselves are only filled. */
-const OUTLINED_DEPTH_AREAS = new Set(["DRGARE"]);
+const OUTLINED_DEPTH_AREAS = new Set(["DRGARE", "ICEARE"]);
 
 /** Seabed areas S-52 outlines. A sand or rock area is a letter, not a limit. */
 const OUTLINED_SEABED = new Set(["WEDKLP", "SNDWAV", "WATTUR"]);
 
 /** Land detail S-52 outlines. Buildings are filled, not stroked as limits. */
-const OUTLINED_LAND_DETAIL = new Set(["PRDARE"]);
+const OUTLINED_LAND_DETAIL = new Set(["PRDARE", "VEGATN", "TUNNEL", "ROADWY"]);
 
 /**
  * A traffic lane is not stroked. Its outer edge is the TSSBND line and its
