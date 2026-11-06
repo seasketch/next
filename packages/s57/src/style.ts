@@ -1,3 +1,5 @@
+import { fadeStart, REVEAL_LAYERS, revealExpression } from "./reveal.js";
+
 /**
  * S-52 DAY_BRIGHT colours from the OpenCPN chart symbol library
  * (chartsymbols.xml colour table). Shallow water is the saturated blue.
@@ -255,6 +257,38 @@ export type S57SourceSet = Array<{
 }>;
 
 /**
+ * Ease a layer in across the short fade, ending at its minzoom. Soundings and
+ * light sectors stay crisp. A number already in the paint (the separation
+ * zone's 0.25, a faint land contour) is the solid opacity.
+ */
+function withReveal(layer: Record<string, unknown>): Record<string, unknown> {
+  const sourceLayer = layer["source-layer"];
+  if (typeof sourceLayer !== "string" || !REVEAL_LAYERS.has(sourceLayer)) return layer;
+  const minzoom = typeof layer.minzoom === "number" ? layer.minzoom : undefined;
+  const paint = { ...((layer.paint as Record<string, unknown> | undefined) ?? {}) };
+  const layout = (layer.layout as Record<string, unknown> | undefined) ?? {};
+  // Fills and lines dissolve in over the chart they replace. Points crossfade.
+  const holdOutgoing = layer.type === "fill" || layer.type === "line";
+  const fade = (key: string, fallback: number) => {
+    const current = paint[key];
+    const base = typeof current === "number" ? current : fallback;
+    paint[key] = revealExpression(base, minzoom, holdOutgoing);
+  };
+  if (layer.type === "fill") fade("fill-opacity", 1);
+  else if (layer.type === "line") fade("line-opacity", 1);
+  else if (layer.type === "circle") {
+    fade("circle-opacity", 1);
+    fade("circle-stroke-opacity", 1);
+  } else if (layer.type === "symbol") {
+    if (layout["icon-image"]) fade("icon-opacity", 1);
+    if (layout["text-field"] || paint["text-color"]) fade("text-opacity", 1);
+  }
+  const next: Record<string, unknown> = { ...layer, paint };
+  if (minzoom != null && minzoom > 0) next.minzoom = fadeStart(minzoom);
+  return next;
+}
+
+/**
  * A small-scale archive stops short of zoom 16 and is overzoomed. Ranges the
  * tiles can no longer express travel as `zmin` / `zmax`. Filters see integer
  * zooms, as tippecanoe's tile ranges do.
@@ -284,7 +318,8 @@ export function buildS57Style(
   for (const entry of set) {
     sources[sourceId(entry)] = (singleSourceStyle(entry.source, options).sources as Record<string, unknown>).s57;
   }
-  for (const layer of style.layers as Array<Record<string, unknown>>) {
+  for (const raw of style.layers as Array<Record<string, unknown>>) {
+    const layer = raw.source ? withReveal(raw) : raw;
     if (!layer.source) {
       layers.push(layer);
       continue;

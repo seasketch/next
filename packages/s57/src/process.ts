@@ -18,6 +18,7 @@ import {
   extendBounds,
   rewriteEncFeature,
 } from "./layers.js";
+import { prepareReveal } from "./reveal.js";
 import { ChartFeature, clipDepthCoveredByLand } from "./landCover.js";
 import { peelFeatures } from "./peel.js";
 import { LightFeature, lightSectorFeatures, sectorRings } from "./sectors.js";
@@ -234,6 +235,7 @@ async function splitBySource(
           tippecanoe: { minzoom: number; maxzoom: number };
         };
         const source = sourceForBand(feature.properties?.band);
+        prepareReveal(feature);
         fitToSource(feature, source);
         const target = files.get(source.id)![kind];
         const stream = streams.get(target.path)!;

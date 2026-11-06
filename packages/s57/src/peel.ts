@@ -117,17 +117,23 @@ function emit(
   geom: Geometry,
   maxzoom: number,
   family: string,
-  write: (line: string) => void
+  write: (line: string) => void,
+  retireAt?: number
 ): number {
   const minzoom = feature.tippecanoe.minzoom;
   if (minzoom > maxzoom) return 0;
+  // The piece that hands over stays through the zoom before the replacement,
+  // and fades out across the last fraction of that zoom. A copy of the
+  // properties keeps the retire zoom off the part that continues.
+  const properties =
+    retireAt == null ? feature.properties : { ...feature.properties, retire: retireAt };
   let written = 0;
   for (const part of pieces(geom)) {
     if (part.isEmpty() || !sameFamily(family, part)) continue;
     write(
       JSON.stringify({
         type: "Feature",
-        properties: feature.properties,
+        properties,
         geometry: part.toObject(),
         tippecanoe: { ...feature.tippecanoe, maxzoom },
       }) + "\n"
@@ -304,7 +310,7 @@ function cut(
       if (!inside || inside.isEmpty()) continue;
       const start = handover(starts, `${mask.cell}\0${layer}`, layer, inside);
       if (start == null) continue;
-      written += emit(feature, inside, start - 1, family, write);
+      written += emit(feature, inside, start - 1, family, write, start);
       remaining = clean(remaining.difference(mask.geom));
     }
   }

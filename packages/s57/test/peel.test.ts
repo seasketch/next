@@ -64,7 +64,13 @@ async function run(
     return text
       .split("\n")
       .filter((line) => line.trim().length > 0)
-      .map((line) => JSON.parse(line) as { properties: { cell: string; cls: string }; tippecanoe: { maxzoom: number } });
+      .map(
+        (line) =>
+          JSON.parse(line) as {
+            properties: { cell: string; cls: string; retire?: number };
+            tippecanoe: { maxzoom: number };
+          }
+      );
   } finally {
     await rm(work, { recursive: true, force: true });
   }
@@ -82,7 +88,9 @@ describe("coverage peel", () => {
     const approach = out.filter((item) => item.properties.cell === "US4");
     assert.equal(coastal.length, 1);
     assert.equal(coastal[0].tippecanoe.maxzoom, 11);
+    assert.equal(coastal[0].properties.retire, 12);
     assert.equal(approach[0].tippecanoe.maxzoom, 16);
+    assert.equal(approach[0].properties.retire, undefined);
   });
 
   it("drops a feature once the covering cell already draws that layer", async () => {
@@ -118,6 +126,7 @@ describe("coverage peel", () => {
     const approach = out.filter((item) => item.properties.cell === "US4");
     assert.equal(approach.length, 1);
     assert.equal(approach[0].tippecanoe.maxzoom, 13);
+    assert.equal(approach[0].properties.retire, 14);
   });
 
   it("hands a buoy over when the covering cell's copy of that buoy appears", async () => {
@@ -135,6 +144,7 @@ describe("coverage peel", () => {
     const coastal = out.filter((item) => item.properties.cell === "US3");
     assert.equal(coastal.length, 1);
     assert.equal(coastal[0].tippecanoe.maxzoom, 11);
+    assert.equal(coastal[0].properties.retire, 12);
   });
 
   it("hands over to the closest copy, not a neighbouring rock that appears earlier", async () => {
@@ -151,6 +161,7 @@ describe("coverage peel", () => {
     );
     const coastal = out.filter((item) => item.properties.cell === "US3");
     assert.equal(coastal[0].tippecanoe.maxzoom, 10);
+    assert.equal(coastal[0].properties.retire, 11);
   });
 
   it("keeps a buoy the covering cell does not carry", async () => {

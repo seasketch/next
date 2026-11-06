@@ -145,7 +145,10 @@ describe("stylesheet matches the lookup", () => {
   it("tints only the separation zone, at the S-52 transparency", () => {
     const zone = paint("s57-separation-fill");
     assert.equal(zone.paint?.["fill-color"], "#d3a6e9");
-    assert.equal(zone.paint?.["fill-opacity"], 0.25);
+    // The 0.25 is the solid end of a short fade, not a flat opacity.
+    const opacity = JSON.stringify(zone.paint?.["fill-opacity"]);
+    assert.equal(opacity.includes("0.25"), true);
+    assert.equal(opacity.includes('"interpolate"'), true);
   });
 
   it("draws kelp as a dashed limit and fairways in chart grey", () => {
