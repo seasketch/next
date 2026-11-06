@@ -212,19 +212,15 @@ Custom geographies are ignored. A project with no core EEZ has no fishing-effort
 
 `combineMetricsForFragments` throws when a `raster_stats` value has more than one band, so a fifteen-year stack is not a reporting source. One file per year is. Two projects whose core EEZ is Fiji 8325 share the 2024 object. Removing the EEZ from a project does not delete it.
 
-**Fetch.** `GET /v3/4wings/report` with `region-id`, `region-dataset=public-eez-areas`, `spatial-resolution=HIGH`, `spatial-aggregation=false`, `temporal-resolution=YEARLY`, `format=TIF` (or JSON if the TIF is not raw hours), one calendar year. The 366-day cap makes 2012–2026 fifteen calls, not one. The region id avoids posting the coastline (a large custom polygon is the request that returns 413). Calls run on `queue_name = 'gfw-report'`, one at a time per token. A 429 is requeued. A 524 is recovered with `GET /v3/4wings/last-report` from the job that owns the request, and from no other job.
+**Fetch.** `GET /v3/4wings/report` with `region-id`, `region-dataset=public-eez-areas`, `spatial-resolution=HIGH`, `spatial-aggregation=false`, `temporal-resolution=YEARLY`, `format=TIF` (or JSON if the TIF is not raw hours), one calendar year. The 366-day cap makes 2012–2026 fifteen calls, not one. The region id avoids posting the coastline (a large custom polygon is the request that returns 413). The token allows one report at a time.
 
 A Fiji-scale EEZ is on the order of 1,500 × 1,500 pixels at 0.01°, a few megabytes a year. An EEZ whose bounds cover an ocean is the case to watch against the 100 s gateway timeout.
 
-**Tasks.** All three live under `packages/api/tasks/`, next to the other graphile-worker handlers.
-
-- `ensureGfwEezYear` `{ mrgid, year, datasetVersion }`. If a final row already exists for that key, it returns. Otherwise it fetches, writes the COG, and upserts `gfw_eez_archives` (`url`, `state`, `partial`, `accessed_at`, `dataset_version`).
-- `syncProjectGfwEezs` `{ projectId }`. Runs when a core EEZ geography is saved and when the admin's EEZ selection changes. Resolves the selected MRGID set and enqueues `ensureGfwEezYear` for each missing year from 2012 through the current year. Custom geographies produce an empty set.
-- `refreshGfwEezArchives`, a production crontab line in `packages/api/src/server.ts` (daily; the product lags about 96 h, so this does not need to be hourly). For every MRGID that at least one project still selects: refresh the current year (`partial = true`); if the previous year is still marked partial after 1 January UTC, fetch it once more and set `partial = false`; leave older final years alone. A dataset version bump (`v5.0` → `v6.0`) writes a new prefix. The old objects stay until nothing references that version.
+**When a file exists.** Selecting an EEZ, or saving a core EEZ whose MRGID changed, builds any year from 2012 through the current year that is not already stored. A finished year is left alone. The current year is replaced as Global Fishing Watch updates it, and once that year has closed it is fetched a last time and then left alone. A new dataset version is a new set of files; the previous version stays until nothing points at it. Custom geographies never start a build.
 
 **How a sketch report reads it.** The fragment is still the subject. For each selected MRGID and each year, the dependency's overlay URL is that archive object. A fragment is paired with the archive of the EEZ it is tagged with (`fragment_geographies` → the core EEZ's MRGID). A fragment tagged only with a custom geography gets no row. The widget sums `raster_stats` across the sketch's fragments, and across EEZs when the sketch was split between two of them. `raster_stats` area-weights the pixel, so a cell the fragment edge cuts is split by coverage instead of added twice. A cell the EEZ outline only clips still holds hours from outside the EEZ; that is the remaining one-cell ribbon, and it sits on the outer boundary.
 
-Completed years have a stable URL and a stable dependency hash, so those fragment metrics are computed once. The partial year's hash includes the archive `accessed_at`, so the daily refresh recalculates that year only.
+A finished year does not change, so fragment metrics for that year are computed once. Replacing the current year's file recalculates only the metrics that read it.
 
 **Widget.** A block widget under `src/reports/widgets/` that reads the per-year `raster_stats` rows. It does not call 4Wings.
 
@@ -255,7 +251,7 @@ A throwaway script (not committed to the repo) run with a personal token.
 - [x] Fire two reports concurrently; record the 429 body and `last-report` behavior.
 - [x] Count requests from a realistic map session (pan and zoom over a region for a minute) to size the cache and quota.
 - [ ] Download one EEZ year as `format=TIF` at HIGH and, if that file is not float hours, as gridded JSON. Record bytes, dtype, and geotransform for Fiji `8325` or Senegal `8371`.
-- [ ] Email `apis@globalfishingwatch.org`: confirm SeaSketch's non-commercial use. Higher report concurrency is no longer required for sketch reports. The archive queue is still serial.
+- [ ] Email `apis@globalfishingwatch.org`: confirm SeaSketch's non-commercial use. Sketch reports no longer need higher report concurrency.
 
 ### Phase 1: annual layer and report
 
@@ -263,7 +259,7 @@ A throwaway script (not committed to the repo) run with a personal token.
 - [ ] `gfw-4wings` source type, `query_parameters` constraint, `create_gfw_4wings_table_of_contents_item`, Data Library card and modal, `GFW_FISHING_EFFORT` template id documented in `packages/api/src/DataLibrary/README.md`.
 - [ ] `getComputedStyle()` remote input: tile URL from config, paint from clock (instant, window, cumulative). Legend from `bins`, hover tooltip, attribution, partial-year labels.
 - [ ] Slider histogram from loaded tiles.
-- [ ] `gfw_eez_archives`, `ensureGfwEezYear` on `queue_name = 'gfw-report'`, `syncProjectGfwEezs` from core-EEZ saves and from the EEZ multi-select, and the `refreshGfwEezArchives` production crontab entry.
+- [ ] EEZ archive: one COG per core EEZ per year, shared by MRGID, built when an EEZ is selected, current year kept up to date, finished years left alone.
 - [ ] Report dependencies resolved from the selected MRGIDs to archive URLs, one `raster_stats` per fragment per year. No TOC lookup, no `subject_sketch_id`.
 - [ ] Fishing-activity widget, inline presentation, slash command, show-on-map against the tile layer when it exists, exporter, attribution footer and caveats.
 - [ ] Update the GFW worked example in [Temporal Data](../temporal-data/temporal-data.md) and the GFW row in [service-inventory](../dev-environment/service-inventory.md).
