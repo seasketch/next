@@ -10354,7 +10354,7 @@ type Mutation {
   ): PublishTableOfContentsPayload
 
   """
-  Publishes the selected draft overlay items (and anything they require) without replacing the rest of the published tree. Does not publish sort_index or z_index.
+  Publishes the selected draft overlay items, and anything they require, without replacing the rest of the published tree. Does not publish sort_index or z_index.
   """
   publishTableOfContentsItems(
     """
@@ -12807,7 +12807,6 @@ type Project implements Node {
     """
     offset: Int
   ): PostsConnection!
-  layerStackOrderPending: Boolean
 
   """
   If a logoUrl is provided, it will link to this url in a new window if provided.
@@ -18384,9 +18383,7 @@ type TableOfContentsItem implements Node {
   ): [ProjectBackgroundJob!]
   projectId: Int!
 
-  """
-  When this published row was written. Null on draft rows. Pending edits are changelog rows newer than the published counterpart.
-  """
+  """When a publish wrote this row. Null on draft rows."""
   publishedAt: Datetime
 
   """Reads and enables pagination through a set of `QuotaDetail`."""

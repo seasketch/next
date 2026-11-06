@@ -7978,7 +7978,7 @@ export type Mutation = {
   publishReport?: Maybe<PublishReportPayload>;
   /** Copies draft TOC to published; sets project flags. Records change_logs (layers:published) with draft layer_count when session.user_id is set. */
   publishTableOfContents?: Maybe<PublishTableOfContentsPayload>;
-  /** Publishes the selected draft overlay items (and anything they require) without replacing the rest of the published tree. Does not publish sort_index or z_index. */
+  /** Publishes the selected draft overlay items, and anything they require, without replacing the rest of the published tree. Does not publish sort_index or z_index. */
   publishTableOfContentsItems?: Maybe<PublishTableOfContentsItemsPayload>;
   recalculateSpatialMetrics?: Maybe<RecalculateSpatialMetricsPayload>;
   /** Remove a group from a given access control list. Must be an administrator. */
@@ -11011,7 +11011,6 @@ export type Project = Node & {
   isOfflineEnabled?: Maybe<Scalars['Boolean']>;
   /** Reads and enables pagination through a set of `Post`. */
   latestPostsConnection: PostsConnection;
-  layerStackOrderPending?: Maybe<Scalars['Boolean']>;
   /** If a logoUrl is provided, it will link to this url in a new window if provided. */
   logoLink?: Maybe<Scalars['String']>;
   /** URL referencing an image that will be used to represent the project. Will be displayed at 48x48 pixels and must be a public url. */
@@ -16466,7 +16465,7 @@ export type TableOfContentsItem = Node & {
   /** Reads and enables pagination through a set of `ProjectBackgroundJob`. */
   projectBackgroundJobs?: Maybe<Array<ProjectBackgroundJob>>;
   projectId: Scalars['Int'];
-  /** When this published row was written. Null on draft rows. Pending edits are changelog rows newer than the published counterpart. */
+  /** When a publish wrote this row. Null on draft rows. */
   publishedAt?: Maybe<Scalars['Datetime']>;
   /** Reads and enables pagination through a set of `QuotaDetail`. */
   quotaUsed?: Maybe<Array<QuotaDetail>>;
