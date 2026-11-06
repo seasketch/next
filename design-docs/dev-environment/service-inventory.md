@@ -6,6 +6,8 @@
 
 What a development laptop and the e2e job call, and whether a local stand-in already exists. Taken from the code, from `npm run dev` and `npm run e2e`, and from a working development `.env` in October 2026.
 
+*(November 2026)* The tables below are that October baseline. The data profile has since stood these in locally, so they are no longer "none": object storage (`ssn-tiles-local`), tiles and uploads under `pmtiles-server`, subdivision, the overlay worker on port 3007, the fragment worker on port 3008 (`packages/fragment-worker` `server.ts`), sketch preprocessing on port 8789, and data-table files on the local uploads host. `--local-data` and the e2e profile point the API at those processes even when `packages/api/.env` names the production ARNs. Details are in [local data services](local-data-services.md).
+
 Two callers:
 
 - **Development** is `npm run dev`. It loads `packages/api/.env`.
@@ -52,7 +54,7 @@ These processes run on the laptop during `npm run dev`. The work they do still r
 
 | Service | What development calls | E2E |
 | --- | --- | --- |
-| Sketch fragment worker | `FRAGMENT_WORKER_LAMBDA_ARN`, the deployed `FragmentWorker` function. Unset, the feature throws. The package has no local server | Template leaves the ARN unset |
+| Sketch fragment worker | *(November 2026, superseded)* The data profile starts `packages/fragment-worker` on port 3008. See the note at the top of this file. The October baseline was `FRAGMENT_WORKER_LAMBDA_ARN` with no local server | The e2e profile points `FRAGMENT_WORKER_DEV_HANDLER` at that server |
 | Object storage | R2 bucket `ssn-tiles` (tiles and upload outputs) and `ssn-file-uploads` (forum and survey files). S3 data-uploads bucket and `seasketch-next-public-uploads` (CloudFront `d17krkm4g5m2af.cloudfront.net`). Offline tile packages use the bucket named `TILE_PACKAGES_BUCKET` | CI has no write keys. Fixture reads use the public hosts below |
 | Cloudflare Images | Account API and `imagedelivery.net`, for forum and survey images. Bookmark captures in test mode do not use it | Bookmark journey uses the API. Other image uploads are not in the current journeys |
 | Mapbox | Styles and tiles from `api.mapbox.com`. The map is blank without the token | Same. CI supplies `REACT_APP_MAPBOX_ACCESS_TOKEN`. The screenshotter also needs it to draw the captured map |

@@ -16,6 +16,7 @@ import Spinner from "../../components/Spinner";
 import Warning from "../../components/Warning";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import getSlug from "../../getSlug";
+import { sketchPreprocessingUrl } from "../../sketchPreprocessingUrl";
 import mapboxgl from "mapbox-gl";
 import Button from "../../components/Button";
 import useMapboxGLDraw, {
@@ -538,7 +539,7 @@ export default function GeographyAdmin() {
       setDrawFeature(feature);
     },
     undefined,
-    "https://sketch-preprocessing-worker.underbluewaters.workers.dev/clip",
+    sketchPreprocessingUrl("clip"),
     (geom, performance) => {
       // console.log("geom", geom, performance);
     },
@@ -546,7 +547,7 @@ export default function GeographyAdmin() {
     (feature) => {
       if (feature.geometry.coordinates[0].length > 3) {
         fetch(
-          "https://sketch-preprocessing-worker.underbluewaters.workers.dev/warm-cache",
+          sketchPreprocessingUrl("warm-cache"),
           {
             method: "POST",
             body: JSON.stringify({

@@ -7,7 +7,24 @@ import {
 } from "./types";
 import { SendMessageCommand, SQSClient } from "@aws-sdk/client-sqs";
 
-const sqs = new SQSClient({ region: process.env.AWS_REGION });
+let sqs: SQSClient | undefined;
+
+function sqsClient(): SQSClient {
+  if (sqs) {
+    return sqs;
+  }
+  const endpoint = process.env.SQS_ENDPOINT;
+  // ElasticMQ does not check signatures. The SDK still refuses to sign
+  // without a key pair, so the local endpoint gets a placeholder pair.
+  sqs = endpoint
+    ? new SQSClient({
+        region: process.env.AWS_REGION || "us-west-2",
+        endpoint,
+        credentials: { accessKeyId: "local", secretAccessKey: "local" },
+      })
+    : new SQSClient({ region: process.env.AWS_REGION || "us-west-2" });
+  return sqs;
+}
 
 // Tracks in-flight SQS send operations so they can be flushed later
 const pendingSendOperations = new Set<Promise<unknown>>();
@@ -21,7 +38,7 @@ export function sendMessage(msg: OverlayEngineWorkerMessage) {
     QueueUrl: queueUrl,
     MessageBody: JSON.stringify(msg),
   });
-  const sendPromise = sqs.send(command);
+  const sendPromise = sqsClient().send(command);
   pendingSendOperations.add(sendPromise);
   sendPromise
     .then((v) => {

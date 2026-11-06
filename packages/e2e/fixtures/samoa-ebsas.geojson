@@ -1,0 +1,21 @@
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "properties": { "name": "Samoa Basin" },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [-173.5, -14.6],
+            [-171.4, -14.6],
+            [-171.4, -12.4],
+            [-173.5, -12.4],
+            [-173.5, -14.6]
+          ]
+        ]
+      }
+    }
+  ]
+}

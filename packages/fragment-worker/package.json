@@ -17,6 +17,7 @@
   "scripts": {
     "build": "tsc -b",
     "watch": "tsc -b --watch",
+    "dev": "tsx watch src/server.ts",
     "test": "cd ../.. && npx vitest run packages/fragment-worker/__tests__"
   },
   "dependencies": {

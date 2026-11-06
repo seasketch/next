@@ -34,6 +34,77 @@ function getLambdaClient() {
   return lambdaClient;
 }
 
+function fragmentWorkerMisconfigured(): Error {
+  return new Error(
+    "Neither FRAGMENT_WORKER_DEV_HANDLER nor FRAGMENT_WORKER_LAMBDA_ARN is configured",
+  );
+}
+
+function lambdaErrorMessage(response: {
+  FunctionError?: string;
+  Payload?: Uint8Array;
+}): string {
+  const errorPayload = response.Payload
+    ? JSON.parse(Buffer.from(response.Payload).toString())
+    : null;
+  return errorPayload?.errorMessage || response.FunctionError || "Unknown error";
+}
+
+/**
+ * Local dev posts the Lambda event JSON to FRAGMENT_WORKER_DEV_HANDLER and
+ * reads the JSON body back. Production invokes the Lambda. Event invocations
+ * (cache warming) do not wait for a body.
+ */
+async function invokeFragmentWorker(
+  payload: unknown,
+  invocation: "RequestResponse" | "Event",
+): Promise<unknown> {
+  const devHandler = process.env.FRAGMENT_WORKER_DEV_HANDLER;
+  if (devHandler) {
+    const response = await fetch(devHandler, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+    if (invocation === "Event") {
+      void response.arrayBuffer().catch(() => undefined);
+      return undefined;
+    }
+    const text = await response.text();
+    if (!response.ok) {
+      throw new Error(
+        `Fragment worker dev handler HTTP ${response.status}: ${text}`,
+      );
+    }
+    return text ? JSON.parse(text) : null;
+  }
+  if (!process.env.FRAGMENT_WORKER_LAMBDA_ARN) {
+    if (invocation === "Event") {
+      return undefined;
+    }
+    throw fragmentWorkerMisconfigured();
+  }
+  const response = await getLambdaClient().send(
+    new InvokeCommand({
+      FunctionName: process.env.FRAGMENT_WORKER_LAMBDA_ARN,
+      InvocationType: invocation,
+      Payload: Buffer.from(JSON.stringify(payload)),
+    }),
+  );
+  if (invocation === "Event") {
+    return undefined;
+  }
+  if (response.FunctionError) {
+    throw new Error(
+      `Fragment worker Lambda error: ${lambdaErrorMessage(response)}`,
+    );
+  }
+  if (!response.Payload) {
+    throw new Error("Fragment worker Lambda returned no payload");
+  }
+  return JSON.parse(Buffer.from(response.Payload).toString());
+}
+
 type CreateFragmentsResult = {
   success: boolean;
   clipped?: Feature<MultiPolygon> | null;
@@ -66,10 +137,6 @@ async function callFragmentWorkerLambda(
   clipped: Feature<MultiPolygon> | null;
   fragments: FragmentResult[];
 }> {
-  if (!process.env.FRAGMENT_WORKER_LAMBDA_ARN) {
-    throw new Error("FRAGMENT_WORKER_LAMBDA_ARN is not configured");
-  }
-
   const payload = {
     feature: userGeom,
     geographies,
@@ -78,34 +145,12 @@ async function callFragmentWorkerLambda(
     existingSketchId,
   };
 
-  const client = getLambdaClient();
-  console.time("invoke lambda");
-  const command = new InvokeCommand({
-    FunctionName: process.env.FRAGMENT_WORKER_LAMBDA_ARN,
-    InvocationType: "RequestResponse",
-    Payload: Buffer.from(JSON.stringify(payload)),
-  });
-  const response = await client.send(command);
-  console.timeEnd("invoke lambda");
-
-  if (response.FunctionError) {
-    const errorPayload = response.Payload
-      ? JSON.parse(Buffer.from(response.Payload).toString())
-      : null;
-    throw new Error(
-      `Fragment worker Lambda error: ${
-        errorPayload?.errorMessage || response.FunctionError
-      }`,
-    );
-  }
-
-  if (!response.Payload) {
-    throw new Error("Fragment worker Lambda returned no payload");
-  }
-
-  const result: CreateFragmentsResult = JSON.parse(
-    Buffer.from(response.Payload).toString(),
-  );
+  console.time("invoke fragment worker");
+  const result = (await invokeFragmentWorker(
+    payload,
+    "RequestResponse",
+  )) as CreateFragmentsResult;
+  console.timeEnd("invoke fragment worker");
 
   if (!result.success) {
     throw new Error(
@@ -124,38 +169,16 @@ async function callFragmentWorkerCollectionLambda(
   geographies: GeographySettings[],
   geographiesForClipping: number[],
 ): Promise<Record<number, FragmentResult[]>> {
-  if (!process.env.FRAGMENT_WORKER_LAMBDA_ARN) {
-    throw new Error("FRAGMENT_WORKER_LAMBDA_ARN is not configured");
-  }
   const payload = {
     operation: "create-collection-fragments",
     sketches,
     geographies,
     geographiesForClipping,
   };
-  const client = getLambdaClient();
-  const command = new InvokeCommand({
-    FunctionName: process.env.FRAGMENT_WORKER_LAMBDA_ARN,
-    InvocationType: "RequestResponse",
-    Payload: Buffer.from(JSON.stringify(payload)),
-  });
-  const response = await client.send(command);
-  if (response.FunctionError) {
-    const errorPayload = response.Payload
-      ? JSON.parse(Buffer.from(response.Payload).toString())
-      : null;
-    throw new Error(
-      `Fragment worker Lambda error: ${
-        errorPayload?.errorMessage || response.FunctionError
-      }`,
-    );
-  }
-  if (!response.Payload) {
-    throw new Error("Fragment worker Lambda returned no payload");
-  }
-  const result: CreateCollectionFragmentsResult = JSON.parse(
-    Buffer.from(response.Payload).toString(),
-  );
+  const result = (await invokeFragmentWorker(
+    payload,
+    "RequestResponse",
+  )) as CreateCollectionFragmentsResult;
   if (!result.success) {
     throw new Error(
       `Fragment worker Lambda error: ${result.error || "Unknown error"}`,
@@ -172,54 +195,27 @@ async function callFragmentWorkerReconcileOverlap(
   newFragments: SketchFragment[],
   existingFragments: SketchFragment[],
 ): Promise<SketchFragment[]> {
-  if (!process.env.FRAGMENT_WORKER_LAMBDA_ARN) {
-    throw new Error("FRAGMENT_WORKER_LAMBDA_ARN is not configured");
-  }
-
   const payload = {
     operation: "reconcile-overlap" as const,
     newFragments,
     existingFragments,
   };
 
-  const payloadJson = JSON.stringify(payload);
-  const payloadBytes = Buffer.byteLength(payloadJson, "utf8");
+  const payloadBytes = Buffer.byteLength(JSON.stringify(payload), "utf8");
   const fragmentCount = newFragments.length + existingFragments.length;
   if (fragmentCount > 2000 || payloadBytes > 5 * 1024 * 1024) {
     console.warn(
-      `reconcile-overlap Lambda payload is large: ${fragmentCount} fragments, ${(
+      `reconcile-overlap payload is large: ${fragmentCount} fragments, ${(
         payloadBytes /
         (1024 * 1024)
       ).toFixed(2)} MB (Lambda sync invoke limit is 6 MB)`,
     );
   }
 
-  const client = getLambdaClient();
-  const command = new InvokeCommand({
-    FunctionName: process.env.FRAGMENT_WORKER_LAMBDA_ARN,
-    InvocationType: "RequestResponse",
-    Payload: Buffer.from(payloadJson),
-  });
-  const response = await client.send(command);
-
-  if (response.FunctionError) {
-    const errorPayload = response.Payload
-      ? JSON.parse(Buffer.from(response.Payload).toString())
-      : null;
-    throw new Error(
-      `Fragment worker Lambda error: ${
-        errorPayload?.errorMessage || response.FunctionError
-      }`,
-    );
-  }
-
-  if (!response.Payload) {
-    throw new Error("Fragment worker Lambda returned no payload");
-  }
-
-  const result: ReconcileOverlapResult = JSON.parse(
-    Buffer.from(response.Payload).toString(),
-  );
+  const result = (await invokeFragmentWorker(
+    payload,
+    "RequestResponse",
+  )) as ReconcileOverlapResult;
 
   if (!result.success) {
     throw new Error(
@@ -239,23 +235,21 @@ export async function warmFragmentWorkerCache(
   userGeom: Feature<any>,
   geographies: GeographySettings[],
 ): Promise<void> {
-  if (!process.env.FRAGMENT_WORKER_LAMBDA_ARN) {
+  if (
+    !process.env.FRAGMENT_WORKER_DEV_HANDLER &&
+    !process.env.FRAGMENT_WORKER_LAMBDA_ARN
+  ) {
     return;
   }
 
-  const client = getLambdaClient();
-  const command = new InvokeCommand({
-    FunctionName: process.env.FRAGMENT_WORKER_LAMBDA_ARN,
-    InvocationType: "Event",
-    Payload: Buffer.from(
-      JSON.stringify({
-        operation: "warm-cache",
-        feature: userGeom,
-        geographies,
-      }),
-    ),
-  });
-  await client.send(command);
+  await invokeFragmentWorker(
+    {
+      operation: "warm-cache",
+      feature: userGeom,
+      geographies,
+    },
+    "Event",
+  );
 }
 
 export async function getFeatureCollection(

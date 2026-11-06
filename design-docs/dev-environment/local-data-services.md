@@ -116,7 +116,7 @@ Two changes, each its own pull request. Both are implemented and exercised from 
 
 **Work.** The overlay worker on its new port with the queue endpoint and the worker-authentication rule. The API's queue consumer on the local queue by default. The data-tables handler against local storage. The fragment worker's dev server and its dev-handler variable. The sketch-preprocessing Worker under `wrangler dev`, and a client variable for its URL in place of the two hardcoded calls. Optionally, a local mode with tile access control enabled.
 
-**Exit.** The data-table, report-card, and sketch-clipping journeys run in CI without cloud credentials, including a clipping journey that mixes a production EEZ with a local layer. The data-profile exit criterion in [local services](local-services.md) is met. No in-scope row in [service inventory](service-inventory.md) reads "none" for its local stand-in.
+**Exit.** The data-table, report-card, and sketch-clipping journeys run in CI without cloud credentials, including a clipping journey that mixes a production EEZ with a local layer. The data-profile exit criterion in [local services](local-services.md) is met. No in-scope row in [service inventory](service-inventory.md) reads "none" for its local stand-in. *Done, November 2026.* See [Phase 2 as built](#phase-2-as-built).
 
 ---
 
@@ -354,6 +354,18 @@ Phase 1 landed as one pull request, not the five the sketch first proposed, beca
 
 **Parallel Playwright workers were tried and dropped.** Two workers (files in parallel, order kept inside each file) cut the test phase from 3 m 28 s to 2 m 23 s on a four-core VM, but on the GitHub runner every journey ran about twice as long, since its four vCPUs are shared by the whole stack and two software-rendered Chromiums, and the test phase (4 m 38 s and 4 m 56 s) landed inside the 4 m 07 s to 6 m 07 s that one worker already spans across runners of varying speed. The suite stays at `workers: 1`. Running it faster in CI means more runners, not more browsers on one. What the attempt left behind is worth keeping: the forum journey joined `demo-samoa` as `e2e|member` and expected an empty profile form, while the access journeys filled in that account's profile and an `afterEach` cleared it again. Journeys that join a project or fill in a profile now create an account for themselves (`disposableUser` in `packages/e2e/src/db.ts`) and delete it, with any posts it wrote, when they finish, so no journey depends on another's clean-up.
 
+## Phase 2 as built
+
+The data profile starts three more processes, on the same two-control rule as phase 1. `--local-data` and the e2e profile drop `OVERLAY_WORKER_LAMBDA_ARN`, `FRAGMENT_WORKER_LAMBDA_ARN`, and the production results-queue URL before that rule runs, then inject `OVERLAY_WORKER_DEV_HANDLER` (port 3007), `FRAGMENT_WORKER_DEV_HANDLER` (port 3008), and `REACT_APP_SKETCH_PREPROCESSING_URL` (port 8789). A developer's `.env` can keep the production ARNs; those processes still run locally while the flag or the e2e profile is on.
+
+**Sketch preprocessing reads its own bucket through the binding.** `UPLOADS_HOST` is a required Worker secret listing the hosts whose objects are in the bound bucket. Those reads use the `SSN_TILES` binding and do not consult ACL. A bare key resolves to `uploads.seasketch.org`, so that host has to be in the secret for the key to take the binding. `npm run dev` sets the variable to the local uploads host (`preview_bucket_name` `ssn-tiles-local`). A production EEZ or land URL is not in that local bucket, so the local Worker fetches it over HTTP. The production bucket name is `SSN_TILES_BUCKET` on the deploy command, and the deploy stops when that variable or the `UPLOADS_HOST` secret is missing. The `DEV` branch that always used HTTPS is gone. The client calls `sketchPreprocessingUrl` instead of the hardcoded workers.dev origin.
+
+**Workers follow the token rule.** With no `OVERLAY_ENGINE_ACCESS_TOKEN_SECRET_ARN` outside production, the overlay worker and the fragment worker send no `Authorization` header and log that once. Results go to the local ElasticMQ queue. The overlay worker's clipping pool defaults to the built `clipBatch.standalone.js`; a bare `worker.js` is not a valid Node worker path.
+
+**The Lambda emulator accepts one invoke at a time.** Two subdivision invokes together panic the runtime (`ReserveFailed: AlreadyReserved`). The report journey queues `preprocess_source` for one data source, waits for its `ReportingFlatgeobufV1` output, then queues the next. An uploaded GeoJSON is not itself a reporting output.
+
+**What the journeys cover.** `packages/e2e/tests/local-reports.spec.ts` uploads two small polygons as seamounts and EBSAs, preprocesses them, and inserts the overlay cards with SQL on demo-samoa's existing Marine Protected Area report. It does not open the report authoring UI. It then draws a sketch in the public project, clipped to the production EEZ by the local preprocessing worker, and waits until the report shows the size sentence and both overlay sentences. A second test turns on the data-tables flag, joins a CSV to the EEZ on `UNION`, and checks that `parquet_remote` is on `ssn-tiles-local`. Numeric accuracy stays with the overlay-engine unit tests. The geography is the one already in demo-samoa; the journey does not author a new one.
+
 ## Fidelity
 
 | Difference from production in the default local profile | Why it is acceptable |
@@ -406,7 +418,7 @@ The production workflow already runs migrations, then the API, then the client, 
 
 ## Decisions
 
-Accepted October 2026. Phase 0 is deployed and phase 1 is built; what implementation overturned is corrected in place and explained in [Phase 1 as built](#phase-1-as-built).
+Accepted October 2026. Phase 0 is deployed and phases 1 and 2 are built; what implementation overturned is corrected in place and explained in [Phase 1 as built](#phase-1-as-built) and [Phase 2 as built](#phase-2-as-built).
 
 - Rows that reference objects are self-contained: a complete `url` and a bucket-qualified `remote`, with `overlay_data_tables.parquet_url` added to complete the set. There is no registry table. Code reads stored URLs and never reconstructs them. Hostnames written into data-path code are removed, which narrows the "hostnames are later debt" stance in [second install](second-install.md) to the hostnames this plan does not touch.
 - A process may write, delete, or inspect only buckets named in its own environment. Every other remote is read-only by URL. Nothing about storage authorization lives in the database or in request payloads. Bucket names are unique across every store a database can refer to.
@@ -430,14 +442,14 @@ Accepted October 2026. Phase 0 is deployed and phase 1 is built; what implementa
 - *(Phase 1, decided)* Workers get their local bucket names from `preview_bucket_name`. Verified October 2026 against wrangler 4.151: under `wrangler dev` a binding with `bucket_name = "ssn-tiles"` and `preview_bucket_name = "ssn-tiles-local"` reads the objects `packages/local-r2` wrote to `ssn-tiles-local` in the shared persistence directory. `pmtiles-server` and the sketch-preprocessing Worker change that one line in their configuration and nothing in their deployed settings. The cost is that `wrangler dev --remote` would also target the preview name, which does not exist in the account; nobody uses remote mode for those Workers.
 - *(Phase 1, decided)* The GDAL stages are served from a BuildKit registry cache rather than a pinned prebuilt image, so any checkout builds and deploys without a publish step; see [Phase 1 as built](#phase-1-as-built).
 - *(Phase 1)* Whether to file the `aws-chunked` unframing request against Miniflare, and whether to keep `WHEN_REQUIRED` if it lands.
-- *(Phase 2)* Whether a local mode with tile access control enabled is built in this phase or deferred until the multi-level admin journeys need it.
-- *(Phase 2)* Whether the overlay, fragment, and data-table processors should also get container forms under the Lambda emulator for closer parity. The default position is that host Node processes are sufficient until a discrepancy is observed.
+- *(Phase 2, decided)* Tile access control stays off in the local profile. A mode that turns it on waits until the multi-level admin journeys need it.
+- *(Phase 2, decided)* The overlay worker, the fragment worker, and the data-tables handler stay host Node processes. The report and data-table journeys passed that way. A container under the Lambda emulator waits until a discrepancy shows up.
 
 ## Exit criteria
 
 - **Phase 0:** Raw uploads land in R2 on production. No data-path code holds a storage hostname or reconstructs a URL from a key. `parquet_url` is populated for every data table. The production probe is green after each deploy.
 - **Phase 1:** A clean machine with Docker, Node, and a `.env` containing a Mapbox token runs `setup` then `dev`, uploads a layer, and renders it from local storage beside production-hosted fixture layers. The layer survives `dev` restarts and is removed by `setup --reset`. CI runs the upload journey without cloud credentials.
-- **Phase 2:** The same machine builds a geography from a local layer and a production EEZ, clips a sketch, creates its fragments, and renders a report with overlay metrics, with every SeaSketch process local. CI runs the data-table, report-card, and sketch-clipping journeys without cloud credentials. The data-profile exit criterion in [local services](local-services.md) is met and marked.
+- **Phase 2:** The same machine builds a geography from a local layer and a production EEZ, clips a sketch, creates its fragments, and renders a report with overlay metrics, with every SeaSketch process local. CI runs the data-table, report-card, and sketch-clipping journeys without cloud credentials. The data-profile exit criterion in [local services](local-services.md) is met and marked. *Done, November 2026.* demo-samoa's existing geography supplies the production EEZ and land; the journey uploads the local overlay layers.
 - **Throughout:** For each processor, the variable that points at production is documented beside its local default, and the CI configuration check rejects it. No pull request adds a storage hostname to the data path or reconstructs a URL from a key.
 
 ## Glossary

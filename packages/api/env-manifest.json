@@ -127,6 +127,34 @@
       "description": "Deployed data tables function. Setting it in .env leaves the local data-tables handler stopped."
     },
     {
+      "name": "OVERLAY_WORKER_DEV_HANDLER",
+      "class": "public-config",
+      "packages": ["api"],
+      "requiredBy": [],
+      "description": "Local overlay worker URL. npm run dev injects http://localhost:3007 while it runs that worker. Not needed in .env."
+    },
+    {
+      "name": "OVERLAY_WORKER_LAMBDA_ARN",
+      "class": "production-secret",
+      "packages": ["api"],
+      "requiredBy": [],
+      "description": "Deployed overlay worker. Setting it in .env leaves the local overlay worker stopped. npm run dev -- --local-data ignores it."
+    },
+    {
+      "name": "FRAGMENT_WORKER_DEV_HANDLER",
+      "class": "public-config",
+      "packages": ["api"],
+      "requiredBy": [],
+      "description": "Local fragment worker URL. npm run dev injects http://localhost:3008 while it runs that worker. Not needed in .env."
+    },
+    {
+      "name": "FRAGMENT_WORKER_LAMBDA_ARN",
+      "class": "production-secret",
+      "packages": ["api"],
+      "requiredBy": [],
+      "description": "Deployed fragment worker. Setting it in .env leaves the local fragment worker stopped. npm run dev -- --local-data ignores it."
+    },
+    {
       "name": "OVERLAY_ENGINE_WORKER_SQS_QUEUE_URL",
       "class": "per-environment-name",
       "packages": ["api"],
@@ -181,6 +209,13 @@
       "packages": ["client"],
       "requiredBy": ["core"],
       "description": "ACL namespace the client sends when requesting hosted tiles. Never prod."
+    },
+    {
+      "name": "REACT_APP_SKETCH_PREPROCESSING_URL",
+      "class": "public-config",
+      "packages": ["client"],
+      "requiredBy": [],
+      "description": "Sketch clipping Worker origin. npm run dev injects http://localhost:8789 while that Worker is running. Unset, the client uses the deployed Worker."
     },
     {
       "name": "MAPBOX_ACCESS_TOKEN",

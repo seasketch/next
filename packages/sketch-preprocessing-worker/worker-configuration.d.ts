@@ -4,6 +4,10 @@
 declare namespace Cloudflare {
 	interface Env {
 		SSN_TILES: R2Bucket;
+		/**
+		 * Required secret. Comma-separated hosts whose objects are in the bound bucket.
+		 */
+		UPLOADS_HOST: string;
 	}
 }
 interface CloudflareBindings extends Cloudflare.Env {}

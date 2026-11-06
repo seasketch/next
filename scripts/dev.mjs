@@ -323,7 +323,11 @@ if (unbuilt.length > 0) {
 }
 
 let apiEnv = readApiDotenv();
-if (localData) {
+// --local-data and the e2e profile both ignore production processor settings
+// in packages/api/.env. A Playwright run must not call production Lambdas,
+// and --local-data is how a developer with those values set still runs the
+// local clipping and overlay workers.
+if (localData || profile === "e2e") {
   const forced = withoutProductionValues(apiEnv);
   apiEnv = forced.env;
   ignoredProductionVariables = forced.ignored;
@@ -378,11 +382,12 @@ if (only) {
     process.exit(1);
   }
 
-  if (localData) {
+  if (localData || profile === "e2e") {
+    const why = profile === "e2e" ? "e2e profile" : "--local-data";
     report(
       ignoredProductionVariables.length > 0
-        ? `--local-data: ${ignoredProductionVariables.join(", ")} in packages/api/.env ignored; the local data services run instead.`
-        : "--local-data: packages/api/.env has no production values; nothing to ignore."
+        ? `${why}: ${ignoredProductionVariables.join(", ")} in packages/api/.env ignored; the local data services run instead.`
+        : `${why}: packages/api/.env has no production values; nothing to ignore.`
     );
   }
   for (const line of dataNotices(profile, started, apiEnv)) {

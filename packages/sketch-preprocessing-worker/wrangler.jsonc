@@ -10,9 +10,17 @@
   "r2_buckets": [
     {
       "binding": "SSN_TILES",
-      "bucket_name": "ssn-tiles"
+      // Local Miniflare bucket. `npm run deploy` sets the production bucket
+      // from SSN_TILES_BUCKET. That name is not stored in this file.
+      "preview_bucket_name": "ssn-tiles-local"
     }
   ],
+  // Hosts whose objects live in the bound bucket. Set with
+  // `wrangler secret put UPLOADS_HOST`. Deploy fails when it is missing.
+  // `npm run dev` supplies the local uploads host.
+  "secrets": {
+    "required": ["UPLOADS_HOST"]
+  },
   "observability": {
     "enabled": true
   }

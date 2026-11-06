@@ -48,6 +48,7 @@ import { useTranslatedProps } from "../../components/TranslatedPropControl";
 import { FormElementLayoutContext } from "../../surveys/SurveyAppLayout";
 import { defaultStyle } from "../../surveys/appearance";
 import { FilterInputServiceContextProvider } from "../../formElements/FilterInputContext";
+import { sketchPreprocessingUrl } from "../../sketchPreprocessingUrl";
 import FilteredPlanningUnitCountHeader from "./FilteredPlanningUnitCountHeader";
 
 function clippingLayerDataset(layer: {
@@ -278,7 +279,7 @@ function SketchEditorModal({
     },
     undefined,
     sketchClass.useGeographyClipping
-      ? "https://sketch-preprocessing-worker.underbluewaters.workers.dev/clip"
+      ? sketchPreprocessingUrl("clip")
       : sketchClass.preprocessingEndpoint || undefined,
     setPreprocessedGeometry,
     extraRequestParams,
@@ -288,7 +289,7 @@ function SketchEditorModal({
         sketchClass.useGeographyClipping
       ) {
         fetch(
-          "https://sketch-preprocessing-worker.underbluewaters.workers.dev/warm-cache",
+          sketchPreprocessingUrl("warm-cache"),
           {
             method: "POST",
             body: JSON.stringify({

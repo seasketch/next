@@ -17,15 +17,22 @@ type CachedToken = {
 };
 
 const REFRESH_WHEN_REMAINING_MS = 24 * 60 * 60 * 1000;
-const DEFAULT_SECRET_NAME = "seasketch/overlay-engine/access-token";
-
 let cache: CachedToken | null = null;
 let inFlight: Promise<CachedToken> | null = null;
+let warnedUnavailable = false;
 
-function secretId(): string {
+function configuredSecretId(): string | null {
   const arn = process.env.OVERLAY_ENGINE_ACCESS_TOKEN_SECRET_ARN;
   if (arn && arn.trim()) return arn.trim();
-  return DEFAULT_SECRET_NAME;
+  return null;
+}
+
+function warnUnavailable(reason: string): void {
+  if (warnedUnavailable) return;
+  warnedUnavailable = true;
+  console.warn(
+    `overlay-engine access token unavailable (${reason}); continuing without Authorization`,
+  );
 }
 
 function parseSecretString(raw: string): CachedToken {
@@ -51,7 +58,7 @@ function parseSecretString(raw: string): CachedToken {
   return { token, exp };
 }
 
-async function fetchFromSecretsManager(): Promise<CachedToken> {
+async function fetchFromSecretsManager(secretId: string): Promise<CachedToken> {
   const client = new SecretsManagerClient({
     region:
       process.env.AWS_REGION || process.env.AWS_DEFAULT_REGION || "us-west-2",
@@ -59,7 +66,7 @@ async function fetchFromSecretsManager(): Promise<CachedToken> {
   let response;
   try {
     response = await client.send(
-      new GetSecretValueCommand({ SecretId: secretId() }),
+      new GetSecretValueCommand({ SecretId: secretId }),
     );
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e);
@@ -85,18 +92,29 @@ export function bustOverlayEngineAccessTokenCache(): void {
 }
 
 /**
- * Return a valid overlay-engine JWT for uploads fetches.
- * Loads from Secrets Manager on cold start / first use; refreshes when within
- * 24h of expiry.
+ * JWT for private hosted data. An unset secret ARN outside production means
+ * no header. Production still requires the ARN.
  */
-export async function getOverlayEngineAccessToken(): Promise<string> {
+export async function getOverlayEngineAccessToken(): Promise<string | null> {
+  const secretId = configuredSecretId();
+  if (!secretId) {
+    cache = null;
+    if (process.env.NODE_ENV === "production") {
+      throw new OverlayEngineAccessTokenError(
+        "missing:OVERLAY_ENGINE_ACCESS_TOKEN_SECRET_ARN",
+      );
+    }
+    warnUnavailable("not configured");
+    return null;
+  }
+
   if (cache && !isExpired(cache) && !needsRefresh(cache)) {
     return cache.token;
   }
 
   if (!inFlight) {
     inFlight = (async () => {
-      const fetched = await fetchFromSecretsManager();
+      const fetched = await fetchFromSecretsManager(secretId);
       if (isExpired(fetched, 60_000)) {
         throw new OverlayEngineAccessTokenError("expired");
       }
