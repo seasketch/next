@@ -1,30 +1,42 @@
 import { copyFile, mkdir, rm, writeFile } from "fs/promises";
 import path from "path";
 import { processEncFiles } from "../src/process.js";
-import { CHANNEL_CLIP, ChartManifest, channelChartDir } from "./channel.js";
-import { fetchChannelCells } from "./fetch-chart.js";
+import { ChartManifest } from "./channel.js";
+import { fetchRegionCells } from "./fetch-chart.js";
+import { chartRegion, regionChartDir } from "./regions.js";
 
 async function main(): Promise<void> {
-  const cells = await fetchChannelCells();
+  const region = chartRegion(process.argv[2]);
+  const cells = await fetchRegionCells(region);
   const started = Date.now();
   const result = await processEncFiles(cells, {
-    clip: CHANNEL_CLIP,
+    clip: region.clip,
     onProgress: (message) => console.log(`[${Math.round((Date.now() - started) / 1000)}s] ${message}`),
   });
-  await rm(channelChartDir, { recursive: true, force: true });
-  await mkdir(channelChartDir, { recursive: true });
+  const chartDir = regionChartDir(region.id);
+  await rm(chartDir, { recursive: true, force: true });
+  await mkdir(chartDir, { recursive: true });
   const manifest: ChartManifest = [];
   for (const archive of result.archives) {
     const file = `${archive.source}.pmtiles`;
-    await copyFile(archive.pmtilesPath, path.join(channelChartDir, file));
+    await copyFile(archive.pmtilesPath, path.join(chartDir, file));
     await rm(archive.pmtilesPath, { force: true });
     manifest.push({ source: archive.source, maxzoom: archive.maxzoom, file });
   }
-  await writeFile(path.join(channelChartDir, "manifest.json"), JSON.stringify(manifest, null, 2));
+  await writeFile(path.join(chartDir, "manifest.json"), JSON.stringify(manifest, null, 2));
+  await writeFile(
+    path.join(chartDir, "region.json"),
+    JSON.stringify(
+      { id: region.id, title: region.title, note: region.note, clip: region.clip, views: region.views },
+      null,
+      2
+    )
+  );
   console.log(
     JSON.stringify(
       {
-        dir: channelChartDir,
+        region: region.id,
+        dir: chartDir,
         archives: manifest,
         features: result.featureCount,
         bounds: result.bounds,

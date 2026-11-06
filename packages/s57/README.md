@@ -11,7 +11,15 @@ npm run chart --workspace @seasketch/s57
 npm run demo --workspace @seasketch/s57
 ```
 
-`npm run fetch --workspace @seasketch/s57` downloads the cells and stops. The chart command does that itself when the zips are missing. Cells already the size NOAA published are kept. The catalog is [charts.noaa.gov/ENCs/ENCProdCat.xml](https://charts.noaa.gov/ENCs/ENCProdCat.xml).
+The same commands take a region. `california` is the state coast out to 200 nautical miles. `hawaii` is the main islands. `florida-east` is the Atlantic coast from the St. Marys River to Biscayne Bay, also out to 200 nautical miles. With no region, the chart is the Santa Barbara Channel. The demo serves every region that has been built and switches among them.
+
+```bash
+npm run chart --workspace @seasketch/s57 -- california
+npm run chart --workspace @seasketch/s57 -- hawaii
+npm run chart --workspace @seasketch/s57 -- florida-east
+```
+
+`npm run fetch --workspace @seasketch/s57 -- hawaii` downloads that region's cells and stops. The chart command does that itself when the zips are missing. Cells already the size NOAA published are kept, including a copy already downloaded for another region. The catalog is [charts.noaa.gov/ENCs/ENCProdCat.xml](https://charts.noaa.gov/ENCs/ENCProdCat.xml).
 
 The build needs `ogr2ogr` and `tippecanoe` on `PATH`. Coverage peeling uses the `gdal-async` package, which brings its own GDAL, so Python and the `osgeo` module are not required. Run `npm install` at the repo root after pulling so that package is linked.
 
