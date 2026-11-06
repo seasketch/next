@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import gdal from "gdal-async";
 import { describe, it } from "node:test";
-import { trafficArrows } from "../src/traffic.js";
+import { trackArrows, trafficArrows } from "../src/traffic.js";
 
 function lane(
   ring: number[][],
@@ -82,5 +82,79 @@ describe("traffic lane arrows", () => {
     assert.ok(shown.length > 0);
     assert.ok(arrowsAt(shown, 12).length === 0);
     assert.ok(arrowsAt(shown, 10).length > 0);
+  });
+});
+
+describe("recommended track arrows", () => {
+  function track(
+    coordinates: number[][],
+    orient: number | undefined = 90,
+    zooms = { minzoom: 11, maxzoom: 16 }
+  ) {
+    return {
+      type: "Feature",
+      properties: { obj: "RECTRC", cls: "route", ORIENT: orient },
+      geometry: { type: "LineString", coordinates },
+      tippecanoe: { layer: "route", ...zooms },
+    };
+  }
+
+  it("spaces arrows along an eastbound track, pointing east", () => {
+    const arrows = trackArrows([
+      track([
+        [0, 0],
+        [0.3, 0],
+      ]),
+    ]);
+    const shown = arrowsAt(arrows, 12);
+    assert.ok(shown.length >= 2);
+    for (const arrow of shown) {
+      const [x, y] = (arrow.geometry as { coordinates: number[] }).coordinates;
+      assert.ok(x > 0 && x < 0.3);
+      assert.ok(Math.abs(y) < 1e-6);
+      assert.ok(Math.abs((arrow.properties.ORIENT as number) - 90) < 1);
+      assert.equal((arrow as { tippecanoe: { layer: string } }).tippecanoe.layer, "route");
+    }
+    assert.ok(arrowsAt(arrows, 15).length > shown.length);
+  });
+
+  it("turns the arrows around when the stored direction faces the other way", () => {
+    const arrows = arrowsAt(
+      trackArrows([
+        track(
+          [
+            [0, 0],
+            [0.3, 0],
+          ],
+          270
+        ),
+      ]),
+      12
+    );
+    assert.ok(arrows.length >= 1);
+    for (const arrow of arrows) assert.ok(Math.abs((arrow.properties.ORIENT as number) - 270) < 1);
+  });
+
+  it("gives a short track one arrow and ignores other classes and bad geometry", () => {
+    const short = trackArrows([
+      track([
+        [0, 0],
+        [0.02, 0],
+      ]),
+    ]);
+    assert.equal(arrowsAt(short, 12).length, 1);
+    assert.equal(arrowsAt(short, 15).length, 1);
+    const good = track([
+      [0, 0],
+      [0.3, 0],
+    ]);
+    const junk = [
+      good,
+      { type: "Feature", properties: { obj: "NAVLNE" }, geometry: { type: "LineString", coordinates: [[0, 0], [1, 0]] } },
+      { type: "Feature", properties: { obj: "RECTRC" }, geometry: null },
+      { type: "Feature", properties: null, geometry: { type: "LineString", coordinates: [[0, 0], [1, 0]] } },
+      { type: "Feature", properties: { obj: "RECTRC", ORIENT: 90 }, geometry: { type: "LineString", coordinates: [[Number.NaN, 0], [1, 0]] } },
+    ];
+    assert.equal(trackArrows(junk as unknown as Parameters<typeof trackArrows>[0]).length, trackArrows([good]).length);
   });
 });

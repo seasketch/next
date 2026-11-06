@@ -1,4 +1,5 @@
 import { codes, lightDescription, markLabel, seabedLabel } from "./labels.js";
+import { areaCenterSymbol } from "./portrayal.js";
 
 /**
  * S-57 object classes the chart tiles, grouped the way the style draws them.
@@ -18,9 +19,13 @@ export const ENC_LAYER_BY_CLASS: Record<string, string> = {
   DYKCON: "land_detail",
   FNCLNE: "land_detail",
   SLOGRD: "land_detail",
+  SLOTOP: "land_detail",
+  PRDARE: "land_detail",
+  RDOSTA: "land_detail",
   SBDARE: "seabed",
   WEDKLP: "seabed",
   SNDWAV: "seabed",
+  WATTUR: "seabed",
   // Lakes and rivers sit inside the land polygon. They are drawn after land
   // so they read as water rather than as another tan fill.
   LAKARE: "inland_water",
@@ -83,6 +88,14 @@ export const ENC_LAYER_BY_CLASS: Record<string, string> = {
   FLODOC: "land",
   HULKES: "land",
   PONTON: "land",
+  SMCFAC: "land",
+  // Jurisdictional limits. Dashed, and cut at the cell edge, so a limit that
+  // is the cell itself draws nothing.
+  ADMARE: "limit",
+  CONZNE: "limit",
+  COSARE: "limit",
+  EXEZNE: "limit",
+  TESARE: "limit",
 };
 
 /**
@@ -425,7 +438,7 @@ export function rewriteEncFeature(
       if (seabed) properties.seabed = seabed;
     }
     if (objectClass === "TOPMAR") properties.topmark = topmarkSymbol(properties.TOPSHP);
-    const symbol = landmarkSymbol(objectClass, properties);
+    const symbol = landmarkSymbol(objectClass, properties) || areaCenterSymbol(objectClass);
     if (symbol) properties.symbol = symbol;
   }
   const range = zoomRangeForFeature(meta.band, scamin, firstLatitude(feature.geometry));

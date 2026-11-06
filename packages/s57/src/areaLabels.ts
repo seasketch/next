@@ -1,6 +1,7 @@
 import { createReadStream, createWriteStream } from "fs";
 import readline from "readline";
 import gdal from "gdal-async";
+import { areaCenterSymbol } from "./portrayal.js";
 
 /**
  * Areas whose name or symbol the chart prints once, inside the area. Mapbox
@@ -16,7 +17,13 @@ export const LABELLED_AREAS = new Set([
   "DMPGRD",
   "PRCARE",
   "MARCUL",
+  "CTNARE",
   "SBDARE",
+  "WEDKLP",
+  "WATTUR",
+  "CBLARE",
+  "DWRTPT",
+  "SMCFAC",
   "SEAARE",
   "LNDRGN",
 ]);
@@ -54,11 +61,13 @@ function interiorPoint(geometry: gdal.Geometry): { x: number; y: number } | null
   return best;
 }
 
-function wantsLabel(properties: Record<string, unknown>): boolean {
+export function wantsAreaLabel(properties: Record<string, unknown> | null | undefined): boolean {
+  if (!properties || typeof properties !== "object") return false;
   const objectClass = properties.obj;
   if (typeof objectClass !== "string" || !LABELLED_AREAS.has(objectClass)) return false;
   if (objectClass === "ACHARE") return true;
   if (objectClass === "SBDARE") return typeof properties.seabed === "string";
+  if (areaCenterSymbol(objectClass)) return true;
   return typeof properties.OBJNAM === "string" && properties.OBJNAM.length > 0;
 }
 
@@ -85,6 +94,9 @@ function labelKey(properties: Record<string, unknown>): string | null {
   const objectClass = String(properties.obj);
   if (objectClass === "SBDARE") return null;
   const name = typeof properties.OBJNAM === "string" ? properties.OBJNAM : "";
+  // Unnamed symbol areas are each their own mark. Named ones still collapse
+  // when the same area is split across cells.
+  if (!name && areaCenterSymbol(objectClass)) return null;
   return `${objectClass}\0${name}`;
 }
 
@@ -139,7 +151,7 @@ export async function writeAreaLabels(peeledAreas: string, out: string): Promise
       tippecanoe: Record<string, unknown>;
     };
     if (feature.geometry?.type !== "Polygon" && feature.geometry?.type !== "MultiPolygon") continue;
-    if (!wantsLabel(feature.properties)) continue;
+    if (!wantsAreaLabel(feature.properties)) continue;
     let point: { x: number; y: number } | null = null;
     let area = 0;
     try {

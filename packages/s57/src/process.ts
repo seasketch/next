@@ -24,7 +24,7 @@ import { LightFeature, lightSectorFeatures, sectorRings } from "./sectors.js";
 import { labelLightsFromStructures, placeTopmarks } from "./labels.js";
 import { writeAreaLabels } from "./areaLabels.js";
 import { cellEdge, outlineFeatures } from "./outlines.js";
-import { trafficArrows } from "./traffic.js";
+import { trackArrows, trafficArrows } from "./traffic.js";
 
 const READ_CONCURRENCY = Math.max(1, Math.min(8, cpus().length));
 
@@ -437,6 +437,7 @@ export async function processEncFiles(
       const edge = cellEdge(cellCoverage as Array<{ geometry?: unknown }>, pending, clipped);
       clipped.push(...outlineFeatures(clipped, edge));
       clipped.push(...trafficArrows(clipped));
+      clipped.push(...trackArrows(clipped));
       for (const feature of clipped) write(feature as Record<string, unknown>);
       await Promise.all([drained(areas), drained(points)]);
       const cellFeatures = clipped.length;

@@ -1,7 +1,8 @@
 /**
- * S-52 DAY_BRIGHT colours from the OpenCPN chart symbol library.
- * Shallow water is the saturated blue. Deep water is the pale wash.
- * Marks are original drawings of the IALA-B shapes, served as a sprite.
+ * S-52 DAY_BRIGHT colours from the OpenCPN chart symbol library
+ * (chartsymbols.xml colour table). Shallow water is the saturated blue.
+ * Deep water is the pale wash. Marks are original drawings of the IALA-B
+ * shapes, served as a sprite.
  */
 const DEPDW = "#d4eaee";
 const DEPMD = "#bad5e1";
@@ -10,16 +11,17 @@ const DEPVS = "#73b6ef";
 const DEPIT = "#83b295";
 const NODTA = "#a3b4b7";
 const LANDA = "#c9b97a";
-const CSTLN = "#3e4749";
-const CHBLK = "#121212";
-const CHGRD = "#5c686b";
+const CSTLN = "#525a5c";
+const CHBLK = "#070707";
+const CHGRD = "#7d898c";
+const CHGRF = "#a3b4b7";
 const DEPSC = "#3e4749";
 const CHMGD = "#c545c3";
-/** Faint magenta, the S-52 area colour for a separation zone. Drawn translucent so the depths stay readable. */
-const CHMGF = "#e7a8e4";
+/** TRFCF, the same RGB as CHMGF. AC(TRFCF,3) is this colour at 75% transparency. */
+const CHMGF = "#d3a6e9";
 const PAPER = "#f4f7f4";
-const CHBRN = "#a39480";
-const LANDF = "#8c7a55";
+const CHBRN = "#b19139";
+const LANDF = "#8b661f";
 const LITRD = "#e8505b";
 const LITGN = "#3cb44b";
 const LITYW = "#f2c230";
@@ -347,7 +349,24 @@ function singleSourceStyle(
         source: id,
         "source-layer": "land",
         filter: ["all", ["==", obj, "BUAARE"], ["!=", ["geometry-type"], "Point"]],
-        paint: { "fill-color": CHBRN, "fill-opacity": 0.45 },
+        paint: { "fill-color": CHBRN },
+      },
+      {
+        // Docks, hulks, and pontoons are brown with a coastline edge, not the land tan.
+        id: "s57-afloat",
+        type: "fill",
+        source: id,
+        "source-layer": "land",
+        filter: ["all", ["in", obj, ["literal", ["FLODOC", "HULKES", "PONTON", "SMCFAC"]]], polygon],
+        paint: { "fill-color": CHBRN },
+      },
+      {
+        id: "s57-afloat-edge",
+        type: "line",
+        source: id,
+        "source-layer": "land",
+        filter: ["all", ["in", obj, ["literal", ["FLODOC", "HULKES", "PONTON", "SMCFAC"]]], polygon],
+        paint: { "line-color": CSTLN, "line-width": 1.1 },
       },
       {
         id: "s57-building-area",
@@ -356,7 +375,7 @@ function singleSourceStyle(
         "source-layer": "land_detail",
         minzoom: 12,
         filter: ["all", ["in", obj, ["literal", ["BUISGL", "SILTNK"]]], polygon],
-        paint: { "fill-color": "#8f7f5c", "fill-outline-color": CHBLK },
+        paint: { "fill-color": CHBRN, "fill-outline-color": CHBLK },
       },
       {
         id: "s57-land-contour",
@@ -382,8 +401,17 @@ function singleSourceStyle(
         source: id,
         "source-layer": "land_detail",
         minzoom: 12,
-        filter: ["all", ["==", obj, "SLOGRD"], ["!", point]],
-        paint: { "line-color": LANDF, "line-width": 0.8, "line-dasharray": [3, 2] },
+        filter: ["all", ["in", obj, ["literal", ["SLOGRD", "SLOTOP"]]], ["!", point]],
+        paint: { "line-color": LANDF, "line-width": 0.8 },
+      },
+      {
+        id: "s57-production",
+        type: "line",
+        source: id,
+        "source-layer": "land_detail",
+        minzoom: 12,
+        filter: ["all", ["==", obj, "PRDARE"], stroke],
+        paint: { "line-color": LANDF, "line-width": 1, "line-dasharray": [4, 2] },
       },
       {
         id: "s57-inland",
@@ -421,7 +449,7 @@ function singleSourceStyle(
         source: id,
         "source-layer": "separation",
         filter: ["all", polygon, ["==", obj, "TSEZNE"]],
-        paint: { "fill-color": CHMGF, "fill-opacity": 0.55 },
+        paint: { "fill-color": CHMGF, "fill-opacity": 0.25 },
       },
       {
         id: "s57-dredged",
@@ -432,20 +460,21 @@ function singleSourceStyle(
         paint: { "line-color": CHBLK, "line-width": 0.7, "line-dasharray": [2, 1] },
       },
       {
+        // One kelp symbol in the area, plus this dashed limit. Not a fill pattern.
         id: "s57-kelp",
-        type: "fill",
+        type: "line",
         source: id,
         "source-layer": "seabed",
-        minzoom: 11,
-        filter: ["all", ["==", obj, "WEDKLP"], polygon],
-        paint: { "fill-pattern": "kelp-pattern" },
+        minzoom: 8,
+        filter: ["all", ["==", obj, "WEDKLP"], stroke],
+        paint: { "line-color": CHGRF, "line-width": 1, "line-dasharray": [4, 2] },
       },
       {
         id: "s57-sand-wave-area",
         type: "fill",
         source: id,
         "source-layer": "seabed",
-        minzoom: 11,
+        minzoom: 10,
         filter: ["all", ["==", obj, "SNDWAV"], polygon],
         paint: { "fill-pattern": "sand-waves-pattern" },
       },
@@ -527,9 +556,29 @@ function singleSourceStyle(
         type: "line",
         source: id,
         "source-layer": "separation",
-        filter: stroke,
+        filter: ["all", stroke, ["!=", obj, "TSELNE"]],
         layout: { "line-join": "round", "line-cap": "butt" },
         paint: { "line-color": CHMGD, "line-width": 1.35, "line-dasharray": [5, 2] },
+      },
+      {
+        // The inshore traffic zone's outer limit is a thick solid line, not the lane dash.
+        id: "s57-inshore-zone",
+        type: "line",
+        source: id,
+        "source-layer": "separation",
+        filter: ["all", stroke, ["==", obj, "TSELNE"]],
+        layout: { "line-join": "round", "line-cap": "butt" },
+        paint: { "line-color": CHMGF, "line-width": 2.4 },
+      },
+      {
+        id: "s57-limit",
+        type: "line",
+        source: id,
+        "source-layer": "limit",
+        minzoom: 5,
+        filter: stroke,
+        layout: { "line-join": "round", "line-cap": "butt" },
+        paint: { "line-color": CHGRF, "line-width": 1.05, "line-dasharray": [6, 3] },
       },
       {
         // Open arrow, turned by ORIENT. The sprite points north.
@@ -557,7 +606,11 @@ function singleSourceStyle(
         "source-layer": "regulated",
         minzoom: 9,
         filter: stroke,
-        paint: { "line-color": CHMGD, "line-width": 1.25, "line-dasharray": [3, 2] },
+        paint: {
+          "line-color": ["case", ["==", obj, "MARCUL"], CHGRD, CHMGD],
+          "line-width": 1.25,
+          "line-dasharray": [3, 2],
+        },
       },
       {
         id: "s57-light-sector-leg",
@@ -590,9 +643,27 @@ function singleSourceStyle(
         type: "line",
         source: id,
         "source-layer": "cable",
-        minzoom: 11,
-        filter: stroke,
-        paint: { "line-color": CHMGD, "line-width": 1.15, "line-dasharray": [8, 3] },
+        minzoom: 8,
+        filter: ["all", stroke, ["==", obj, "CBLSUB"]],
+        paint: { "line-color": CHMGD, "line-width": 4, "line-pattern": "cable-wave" },
+      },
+      {
+        id: "s57-pipeline",
+        type: "line",
+        source: id,
+        "source-layer": "cable",
+        minzoom: 8,
+        filter: ["all", stroke, ["==", obj, "PIPSOL"]],
+        paint: { "line-color": CHBLK, "line-width": 1.15, "line-dasharray": [2, 2] },
+      },
+      {
+        id: "s57-cable-area",
+        type: "line",
+        source: id,
+        "source-layer": "cable",
+        minzoom: 8,
+        filter: ["all", stroke, ["==", obj, "CBLARE"]],
+        paint: { "line-color": CHMGD, "line-width": 1.15, "line-dasharray": [3, 2] },
       },
       {
         id: "s57-mooring-line",
@@ -608,9 +679,26 @@ function singleSourceStyle(
         type: "line",
         source: id,
         "source-layer": "route",
-        minzoom: 11,
+        minzoom: 8,
         filter: stroke,
-        paint: { "line-color": CHBLK, "line-width": 1.05, "line-dasharray": [6, 3] },
+        paint: { "line-color": CHGRD, "line-width": 1.05, "line-dasharray": [6, 3] },
+      },
+      {
+        id: "s57-track-arrow",
+        type: "symbol",
+        source: id,
+        "source-layer": "route",
+        minzoom: 8,
+        filter: ["all", point, ["==", obj, "RECTRC"], ["==", ["get", "flow"], 1]],
+        layout: {
+          "icon-image": "track-arrow",
+          "icon-size": ["interpolate", ["linear"], ["zoom"], 11, 0.4, 14, 0.62],
+          "icon-rotate": ["to-number", ["get", "ORIENT"]],
+          "icon-rotation-alignment": "map",
+          "icon-pitch-alignment": "map",
+          "icon-allow-overlap": false,
+          "icon-padding": 1,
+        },
       },
       {
         id: "s57-hazard-area",
@@ -722,15 +810,6 @@ function singleSourceStyle(
         paint: { "text-color": CHGRD, "text-halo-color": "#e7f3f5", "text-halo-width": 0.7 },
       },
       {
-        id: "s57-kelp-point",
-        type: "symbol",
-        source: id,
-        "source-layer": "seabed",
-        minzoom: 12,
-        filter: ["all", point, ["==", obj, "WEDKLP"]],
-        layout: { "icon-image": "kelp", "icon-size": 0.4, "icon-padding": 2 },
-      },
-      {
         id: "s57-sand-waves",
         type: "symbol",
         source: id,
@@ -744,9 +823,9 @@ function singleSourceStyle(
         type: "line",
         source: id,
         "source-layer": "seabed",
-        minzoom: 12,
-        filter: ["all", ["==", obj, "SNDWAV"], ["in", ["geometry-type"], ["literal", ["LineString", "MultiLineString"]]]],
-        paint: { "line-color": CHGRD, "line-width": 0.8, "line-dasharray": [1, 2] },
+        minzoom: 10,
+        filter: ["all", ["in", obj, ["literal", ["SNDWAV", "WATTUR"]]], stroke],
+        paint: { "line-color": CHGRD, "line-width": 1, "line-dasharray": [4, 2] },
       },
       {
         id: "s57-regulated-name",
@@ -758,7 +837,7 @@ function singleSourceStyle(
           "all",
           point,
           named,
-          ["in", obj, ["literal", ["RESARE", "MIPARE", "DMPGRD", "PRCARE", "MARCUL"]]],
+          ["in", obj, ["literal", ["RESARE", "MIPARE", "DMPGRD", "PRCARE", "MARCUL", "CTNARE"]]],
         ],
         layout: {
           "text-field": ["get", "OBJNAM"],
@@ -766,6 +845,8 @@ function singleSourceStyle(
           "text-size": 11,
           "text-max-width": 9,
           "text-padding": 12,
+          "text-offset": ["case", ["has", "symbol"], ["literal", [0, 1.3]], ["literal", [0, 0]]],
+          "text-anchor": ["case", ["has", "symbol"], "top", "center"],
         },
         paint: { "text-color": CHMGD, "text-halo-color": PAPER, "text-halo-width": 1.2 },
       },
@@ -804,6 +885,20 @@ function singleSourceStyle(
         },
         paint: { "text-color": CHMGD, "text-halo-color": PAPER, "text-halo-width": 1.2 },
       },
+      ...["regulated", "seabed", "cable", "land", "separation"].map((sourceLayer) => ({
+        id: `s57-mark-${sourceLayer}`,
+        type: "symbol",
+        source: id,
+        "source-layer": sourceLayer,
+        minzoom: sourceLayer === "separation" ? 8 : 9,
+        filter: ["all", point, ["has", "symbol"]],
+        layout: {
+          "icon-image": ["get", "symbol"],
+          "icon-size": ["interpolate", ["linear"], ["zoom"], 11, 0.42, 15, 0.6],
+          "icon-padding": 2,
+          "icon-allow-overlap": false,
+        },
+      })),
       {
         id: "s57-elevation",
         type: "symbol",
@@ -875,7 +970,7 @@ function singleSourceStyle(
         source: id,
         "source-layer": "land_detail",
         minzoom: 12,
-        filter: ["all", point, ["==", obj, "SLOGRD"]],
+        filter: ["all", point, ["in", obj, ["literal", ["SLOGRD", "SLOTOP"]]]],
         layout: { "icon-image": "slope", "icon-size": ["interpolate", ["linear"], ["zoom"], 12, 0.45, 15, 0.7], "icon-padding": 2 },
       },
       {

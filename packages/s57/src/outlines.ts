@@ -15,10 +15,19 @@ export const OUTLINED_LAYERS = new Set([
   "route",
   "hazard",
   "depth_area",
+  "seabed",
+  "limit",
+  "land_detail",
 ]);
 
 /** Classes in `depth_area` that are stroked. Depth areas themselves are only filled. */
 const OUTLINED_DEPTH_AREAS = new Set(["DRGARE"]);
+
+/** Seabed areas S-52 outlines. A sand or rock area is a letter, not a limit. */
+const OUTLINED_SEABED = new Set(["WEDKLP", "SNDWAV", "WATTUR"]);
+
+/** Land detail S-52 outlines. Buildings are filled, not stroked as limits. */
+const OUTLINED_LAND_DETAIL = new Set(["PRDARE"]);
 
 /**
  * A traffic lane is not stroked. Its outer edge is the TSSBND line and its
@@ -82,9 +91,11 @@ export function cellEdge(
 function isOutlined(properties: Record<string, unknown>): boolean {
   const layer = properties.cls;
   if (typeof layer !== "string" || !OUTLINED_LAYERS.has(layer)) return false;
-  if (layer === "depth_area")
-    return OUTLINED_DEPTH_AREAS.has(String(properties.obj));
-  return !NOT_OUTLINED.has(String(properties.obj));
+  const objectClass = String(properties.obj);
+  if (layer === "depth_area") return OUTLINED_DEPTH_AREAS.has(objectClass);
+  if (layer === "seabed") return OUTLINED_SEABED.has(objectClass);
+  if (layer === "land_detail") return OUTLINED_LAND_DETAIL.has(objectClass);
+  return !NOT_OUTLINED.has(objectClass);
 }
 
 /**

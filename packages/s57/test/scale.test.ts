@@ -198,6 +198,23 @@ describe("outlineFeatures", () => {
     assert.equal(outlines[0].properties.obj, "TSEZNE");
   });
 
+  it("outlines kelp and a jurisdictional limit, and not a seabed area", () => {
+    const outlines = outlineFeatures(
+      [
+        area("seabed", "WEDKLP", square(0.2, 0.2, 0.4, 0.4)),
+        area("seabed", "SBDARE", square(0.5, 0.2, 0.7, 0.4)),
+        area("limit", "ADMARE", square(0.2, 0.5, 0.4, 0.7)),
+        area("land_detail", "PRDARE", square(0.5, 0.5, 0.7, 0.7)),
+        area("land_detail", "BUISGL", square(0.6, 0.6, 0.65, 0.65)),
+      ],
+      cellEdge(coverage)
+    );
+    assert.deepEqual(
+      outlines.map((outline) => outline.properties.obj).sort(),
+      ["ADMARE", "PRDARE", "WEDKLP"]
+    );
+  });
+
   it("strokes the whole ring when the cell has no coverage", () => {
     const [outline] = outlineFeatures(
       [area("route", "FAIRWY", square(0, 0, 1, 1))],

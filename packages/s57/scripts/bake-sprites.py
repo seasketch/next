@@ -79,6 +79,18 @@ NAMES = [
     "sand-waves",
     "sand-waves-pattern",
     "traffic-arrow",
+    "track-arrow",
+    "cable-wave",
+    "caution",
+    "military",
+    "info-area",
+    "precaution",
+    "farm",
+    "turbulence",
+    "cable-area",
+    "radio",
+    "facility",
+    "two-way",
     "topmark-cone-up",
     "topmark-cone-down",
     "topmark-sphere",
@@ -417,7 +429,7 @@ def draw_sand_waves(draw):
         wave(draw, 48, 208, y, 14, 10)
 
 
-def draw_traffic_arrow(draw):
+def draw_traffic_arrow(draw, fill=MAGENTA):
     # Open arrow pointing north, the S-52 lane arrow. Outline only, so depths show through it.
     shape = [
         (112, 236),
@@ -428,7 +440,73 @@ def draw_traffic_arrow(draw):
         (72, 112),
         (112, 112),
     ]
-    draw.line(shape + [shape[0]], fill=MAGENTA, width=12, joint="miter")
+    draw.line(shape + [shape[0]], fill=fill, width=12, joint="miter")
+
+
+def draw_cable_wave(draw):
+    # A sine that meets itself at the cell edges, so it repeats as a cable line.
+    wave(draw, 0, S - 1, S / 2, 36, 16, MAGENTA)
+
+
+def draw_caution(draw):
+    ring(draw, [48, 48, 208, 208], NONE, MAGENTA, 16)
+    draw.line([(128, 78), (128, 148)], fill=MAGENTA, width=18)
+    draw.ellipse([114, 166, 142, 194], fill=MAGENTA)
+
+
+def draw_military(draw):
+    draw.rectangle([56, 56, 200, 200], outline=MAGENTA, width=14)
+    draw.line([(72, 72), (184, 184)], fill=MAGENTA, width=12)
+    draw.line([(184, 72), (72, 184)], fill=MAGENTA, width=12)
+
+
+def draw_info_area(draw):
+    ring(draw, [48, 48, 208, 208], NONE, MAGENTA, 16)
+    draw.ellipse([114, 78, 142, 106], fill=MAGENTA)
+    draw.line([(128, 122), (128, 186)], fill=MAGENTA, width=16)
+
+
+def draw_precaution(draw):
+    draw.polygon([(128, 40), (216, 128), (128, 216), (40, 128)], outline=MAGENTA)
+    draw.line([(128, 40), (216, 128), (128, 216), (40, 128), (128, 40)], fill=MAGENTA, width=14, joint="miter")
+
+
+def draw_farm(draw):
+    draw.rectangle([52, 52, 204, 204], outline=GREY, width=10)
+    for x in (80, 128, 176):
+        for y in (80, 128, 176):
+            draw.ellipse([x - 12, y - 12, x + 12, y + 12], fill=GREY)
+
+
+def draw_turbulence(draw):
+    for y in (88, 128, 168):
+        wave(draw, 40, 216, y, 16, 12, GREY)
+
+
+def draw_cable_area(draw):
+    ring(draw, [36, 36, 220, 220], NONE, MAGENTA, 10)
+    wave(draw, 56, 200, 128, 22, 12, MAGENTA)
+
+
+def draw_radio(draw):
+    draw.line([(128, 220), (128, 70)], fill=BLACK, width=12)
+    draw.polygon([(128, 48), (108, 78), (148, 78)], fill=BLACK)
+    draw.arc([78, 78, 178, 178], start=200, end=340, fill=BLACK, width=10)
+    draw.arc([96, 96, 160, 160], start=200, end=340, fill=BLACK, width=10)
+
+
+def draw_facility(draw):
+    draw.polygon([(48, 140), (128, 72), (208, 140)], fill=BROWN)
+    draw.rectangle([64, 140, 192, 220], fill=BROWN, outline=BLACK, width=8)
+    draw.rectangle([112, 168, 144, 220], fill=WHITE, outline=BLACK, width=6)
+
+
+def draw_two_way(draw):
+    draw.line([(128, 40), (128, 216)], fill=MAGENTA, width=12)
+    draw.line([(128, 40), (84, 96)], fill=MAGENTA, width=12)
+    draw.line([(128, 40), (172, 96)], fill=MAGENTA, width=12)
+    draw.line([(128, 216), (84, 160)], fill=MAGENTA, width=12)
+    draw.line([(128, 216), (172, 160)], fill=MAGENTA, width=12)
 
 
 # Pattern tiles are 2S square. Marks sit on a diagonal so rows do not line up.
@@ -509,6 +587,18 @@ PAINTERS = {
     "sand-waves": lambda im, dr: draw_sand_waves(dr),
     "sand-waves-pattern": lambda im, dr: draw_sand_waves_pattern(dr),
     "traffic-arrow": lambda im, dr: draw_traffic_arrow(dr),
+    "track-arrow": lambda im, dr: draw_traffic_arrow(dr, (125, 137, 140, 255)),
+    "cable-wave": lambda im, dr: draw_cable_wave(dr),
+    "caution": lambda im, dr: draw_caution(dr),
+    "military": lambda im, dr: draw_military(dr),
+    "info-area": lambda im, dr: draw_info_area(dr),
+    "precaution": lambda im, dr: draw_precaution(dr),
+    "farm": lambda im, dr: draw_farm(dr),
+    "turbulence": lambda im, dr: draw_turbulence(dr),
+    "cable-area": lambda im, dr: draw_cable_area(dr),
+    "radio": lambda im, dr: draw_radio(dr),
+    "facility": lambda im, dr: draw_facility(dr),
+    "two-way": lambda im, dr: draw_two_way(dr),
 }
 for _shape, _paint in TOPMARKS.items():
     PAINTERS[f"topmark-{_shape}"] = lambda im, dr, paint=_paint: paint(dr)

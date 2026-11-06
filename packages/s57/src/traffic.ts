@@ -123,8 +123,108 @@ function arrowsIn(
 export function trafficArrows(features: ChartFeature[]): ChartFeature[] {
   const arrows: ChartFeature[] = [];
   for (const feature of features) {
-    if (feature.properties.obj !== "TSSLPT") continue;
+    if (feature.properties?.obj !== "TSSLPT") continue;
     for (const ring of RINGS) arrows.push(...arrowsIn(feature, ring));
+  }
+  return arrows;
+}
+
+/**
+ * A recommended track is a complex line of arrows (S-52 LC(RECTRC)), not a
+ * plain dash. Arrows follow the line. When ORIENT disagrees with the way the
+ * line was digitized, they are turned to match ORIENT.
+ */
+const TRACK_RINGS: ArrowRing[] = [
+  { spacing: 0.12, minzoom: 11, maxzoom: 13 },
+  { spacing: 0.04, minzoom: 14, maxzoom: 16 },
+];
+
+function linePaths(geometry: ChartFeature["geometry"]): number[][][] {
+  if (!geometry || !Array.isArray(geometry.coordinates)) return [];
+  if (geometry.type === "LineString") return [geometry.coordinates as number[][]];
+  if (geometry.type === "MultiLineString") return geometry.coordinates as number[][][];
+  return [];
+}
+
+function segmentBearing(x0: number, y0: number, x1: number, y1: number): number {
+  return (Math.atan2(x1 - x0, y1 - y0) * 180) / Math.PI;
+}
+
+/** True when the two bearings are more than a right angle apart. */
+function turnedAway(bearing: number, orient: number): boolean {
+  const delta = Math.abs((((bearing - orient) % 360) + 540) % 360 - 180);
+  return delta > 90;
+}
+
+function arrowsAlong(
+  feature: ChartFeature,
+  path: number[][],
+  ring: ArrowRing,
+  flip: boolean
+): ChartFeature[] {
+  const tip = (feature as { tippecanoe?: { layer?: string; minzoom?: number; maxzoom?: number } }).tippecanoe;
+  const minzoom = Math.max(ring.minzoom, tip?.minzoom ?? ring.minzoom);
+  const maxzoom = Math.min(ring.maxzoom, tip?.maxzoom ?? ring.maxzoom);
+  if (minzoom > maxzoom) return [];
+  const spans: Array<{ x0: number; y0: number; x1: number; y1: number; length: number }> = [];
+  let total = 0;
+  for (let index = 1; index < path.length; index += 1) {
+    const [x0, y0] = path[index - 1];
+    const [x1, y1] = path[index];
+    if (![x0, y0, x1, y1].every((value) => typeof value === "number" && Number.isFinite(value))) continue;
+    const length = Math.hypot(x1 - x0, y1 - y0);
+    if (length <= 0) continue;
+    spans.push({ x0, y0, x1, y1, length });
+    total += length;
+  }
+  if (spans.length === 0 || total <= 0) return [];
+  const at = total < ring.spacing ? [total / 2] : stations(0, total, ring.spacing);
+  const arrows: ChartFeature[] = [];
+  for (const distance of at) {
+    let walked = 0;
+    for (const span of spans) {
+      if (walked + span.length < distance) {
+        walked += span.length;
+        continue;
+      }
+      const t = (distance - walked) / span.length;
+      let orient = segmentBearing(span.x0, span.y0, span.x1, span.y1);
+      if (flip) orient += 180;
+      arrows.push({
+        ...feature,
+        properties: { ...feature.properties, flow: 1, ORIENT: (orient + 360) % 360 },
+        geometry: {
+          type: "Point",
+          coordinates: [span.x0 + (span.x1 - span.x0) * t, span.y0 + (span.y1 - span.y0) * t],
+        },
+        tippecanoe: { layer: tip?.layer ?? "route", minzoom, maxzoom },
+      } as ChartFeature);
+      break;
+    }
+  }
+  return arrows;
+}
+
+/** Arrow points along each recommended track. The line itself is unchanged. */
+export function trackArrows(features: ChartFeature[]): ChartFeature[] {
+  const arrows: ChartFeature[] = [];
+  for (const feature of features) {
+    if (!feature || feature.properties?.obj !== "RECTRC") continue;
+    const orient = feature.properties.ORIENT;
+    for (const path of linePaths(feature.geometry)) {
+      if (path.length < 2) continue;
+      const [x0, y0] = path[0];
+      const [x1, y1] = path[path.length - 1];
+      const flip =
+        typeof orient === "number" &&
+        Number.isFinite(orient) &&
+        typeof x0 === "number" &&
+        typeof y0 === "number" &&
+        typeof x1 === "number" &&
+        typeof y1 === "number" &&
+        turnedAway(segmentBearing(x0, y0, x1, y1), orient);
+      for (const ring of TRACK_RINGS) arrows.push(...arrowsAlong(feature, path, ring, flip));
+    }
   }
   return arrows;
 }
