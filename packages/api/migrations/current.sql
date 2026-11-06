@@ -1408,6 +1408,26 @@ $$;
 comment on function public.overlay_order_pending(integer) is '@omit';
 revoke all on function public.overlay_order_pending(integer) from public;
 
+-- Lets the selective publish modal tell reorder-only changes apart from a
+-- draft_table_of_contents_has_changes flag that no longer matches anything.
+-- Null for non-admins.
+create or replace function public.projects_overlay_order_pending(project public.projects)
+  returns boolean
+  language sql
+  stable
+  security definer
+  set search_path to public, pg_temp
+as $$
+  select case
+    when session_is_admin(project.id)
+    then public.overlay_order_pending(project.id)
+  end;
+$$;
+
+comment on function public.projects_overlay_order_pending(public.projects) is
+  'Whether list order or layer stacking order differs between the draft and published overlay lists. Only a full publish ships either.';
+grant execute on function public.projects_overlay_order_pending(public.projects) to seasketch_user;
+
 -- Whether a full publish would change anything that end users see.
 create or replace function public.overlay_list_has_unpublished_changes(p_project_id integer)
   returns boolean

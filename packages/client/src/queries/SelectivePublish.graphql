@@ -2,7 +2,7 @@ query SelectivePublishDetails($slug: String!) {
   projectBySlug(slug: $slug) {
     id
     tableOfContentsLastPublished
-    draftTableOfContentsHasChanges
+    overlayOrderPending
     pendingPublishItems {
       stableId
       kind

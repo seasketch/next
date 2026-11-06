@@ -461,9 +461,7 @@ export default function SelectivePublishModal({
             <div className="min-h-0 flex-1 overflow-y-auto px-6 py-5">
               {checkableUnits(units).length === 0 ? (
                 <EmptyPendingNotice
-                  hasOtherChanges={Boolean(
-                    project?.draftTableOfContentsHasChanges
-                  )}
+                  orderPending={Boolean(project?.overlayOrderPending)}
                 />
               ) : (
                 <div className="flex flex-col gap-6 pb-1">
@@ -576,14 +574,14 @@ function sectionTitle(
   return adminT("Updated");
 }
 
-function EmptyPendingNotice({ hasOtherChanges }: { hasOtherChanges: boolean }) {
+function EmptyPendingNotice({ orderPending }: { orderPending: boolean }) {
   const { t } = useTranslation("admin:data");
   return (
     <div
       className="rounded-lg border border-gray-200 bg-gray-50 px-4 py-6 text-center text-sm text-gray-500"
       data-testid="selective-publish-empty"
     >
-      {hasOtherChanges
+      {orderPending
         ? t(
             "Nothing here is waiting as its own update. Reordering the list and layer stacking ship with Publish."
           )

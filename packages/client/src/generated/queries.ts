@@ -11040,6 +11040,8 @@ export type Project = Node & {
   offlineTileSettings: Array<OfflineTileSetting>;
   /** Reads and enables pagination through a set of `OverlayDataTable`. */
   overlayDataTablesConnection: OverlayDataTablesConnection;
+  /** Whether list order or layer stacking order differs between the draft and published overlay lists. Only a full publish ships either. */
+  overlayOrderPending?: Maybe<Scalars['Boolean']>;
   /** Count of all users who have opted into participating in the project, sharing their profile with project administrators. */
   participantCount?: Maybe<Scalars['Int']>;
   /**
@@ -24380,7 +24382,7 @@ export type SelectivePublishDetailsQuery = (
   { __typename?: 'Query' }
   & { projectBySlug?: Maybe<(
     { __typename?: 'Project' }
-    & Pick<Project, 'id' | 'tableOfContentsLastPublished' | 'draftTableOfContentsHasChanges'>
+    & Pick<Project, 'id' | 'tableOfContentsLastPublished' | 'overlayOrderPending'>
     & { pendingPublishItems?: Maybe<Array<(
       { __typename?: 'PendingPublishItem' }
       & Pick<PendingPublishItem, 'stableId' | 'kind' | 'title' | 'isFolder' | 'parentStableId' | 'path' | 'requiresStableIds' | 'bundleId' | 'draftId' | 'includedInBundle'>
@@ -33226,7 +33228,7 @@ export const SelectivePublishDetailsDocument = /*#__PURE__*/ gql`
   projectBySlug(slug: $slug) {
     id
     tableOfContentsLastPublished
-    draftTableOfContentsHasChanges
+    overlayOrderPending
     pendingPublishItems {
       stableId
       kind

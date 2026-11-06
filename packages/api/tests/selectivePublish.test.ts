@@ -1861,4 +1861,25 @@ describe("selective overlay publish", () => {
       ).toBe(1);
     });
   });
+
+  test("overlayOrderPending reports reorders to admins only", async () => {
+    await asAdmin(async (conn, projectId, adminId, [userA]) => {
+      const a = await addLayer(conn, projectId, "A");
+      const b = await addLayer(conn, projectId, "B");
+      await publishAll(conn, projectId);
+      const [first] = await siblingOrder(conn, projectId, null, true);
+      const orderPending = () =>
+        conn.oneFirst(sql`
+          select projects_overlay_order_pending(p) from projects p where p.id = ${projectId}
+        `);
+      expect(await orderPending()).toBe(false);
+      await move(conn, first === a.stableId ? a.itemId : b.itemId, null, 5);
+      expect(await orderPending()).toBe(true);
+      await createSession(conn, userA, true, false, projectId);
+      expect(await orderPending()).toBeNull();
+      await createSession(conn, adminId, true, false, projectId);
+      await publishAll(conn, projectId);
+      expect(await orderPending()).toBe(false);
+    });
+  });
 });

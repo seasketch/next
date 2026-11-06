@@ -60,7 +60,7 @@ const details = {
       projectBySlug: {
         id: 2,
         tableOfContentsLastPublished: "2026-01-01T00:00:00.000Z",
-        draftTableOfContentsHasChanges: true,
+        overlayOrderPending: false,
         pendingPublishItems: [
           {
             stableId: "habitats",
@@ -206,14 +206,14 @@ test("selective publish binds a new folder to the layer that moved into it", asy
   });
 });
 
-function emptyDetails(draftTableOfContentsHasChanges: boolean) {
+function emptyDetails(overlayOrderPending: boolean) {
   return {
     ...details,
     result: {
       data: {
         projectBySlug: {
           ...details.result.data.projectBySlug,
-          draftTableOfContentsHasChanges,
+          overlayOrderPending,
           pendingPublishItems: [],
         },
       },
@@ -241,7 +241,7 @@ test("the empty state says when only ordering is left for Publish", async () => 
   expect(notice.textContent).toContain("Reordering the list");
 });
 
-test("the empty state says when nothing is left to publish", async () => {
+test("the empty state says the lists match when nothing differs", async () => {
   renderModal([emptyDetails(false), metadata]);
   const notice = await waitFor(() => {
     const element = document.querySelector(

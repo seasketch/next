@@ -12953,6 +12953,11 @@ type Project implements Node {
   ): OverlayDataTablesConnection!
 
   """
+  Whether list order or layer stacking order differs between the draft and published overlay lists. Only a full publish ships either.
+  """
+  overlayOrderPending: Boolean
+
+  """
   Count of all users who have opted into participating in the project, sharing their profile with project administrators.
   """
   participantCount: Int
