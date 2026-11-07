@@ -181,6 +181,23 @@ describe("dataTableQueryClockParams", () => {
     });
     expect(params.whenStep).toBeUndefined();
   });
+
+  it("aggregates a cumulative clock from coverage start through the selected step", () => {
+    const params = dataTableQueryClockParams(
+      {
+        mode: "cumulative",
+        start: "2018",
+        end: "2019",
+        viewResolution: "year",
+      },
+      temporal
+    );
+    expect(params.when).toEqual({
+      start: Date.UTC(1999, 0, 1) / 1000,
+      end: Date.UTC(2019, 0, 1) / 1000,
+    });
+    expect(params.whenStep).toBeUndefined();
+  });
 });
 
 describe("parseDataTableQuerySeries", () => {

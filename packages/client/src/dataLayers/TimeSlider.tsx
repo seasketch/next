@@ -146,10 +146,22 @@ function singleModeTooltip(
 
 function displayedClockTooltip(
   resolution: TemporalPrecision,
-  windowMode: boolean,
+  mode: "instant" | "window" | "cumulative",
   t: (key: string) => string
 ) {
-  if (windowMode) {
+  if (mode === "cumulative") {
+    switch (resolution) {
+      case "year":
+        return t("Running total through the selected year");
+      case "month":
+        return t("Running total through the selected month");
+      case "day":
+        return t("Running total through the selected day");
+      default:
+        return t("Running total through the selected time");
+    }
+  }
+  if (mode === "window") {
     switch (resolution) {
       case "year":
         return t("Displayed years");
@@ -170,6 +182,22 @@ function displayedClockTooltip(
       return t("Displayed date");
     default:
       return t("Displayed time");
+  }
+}
+
+function totalModeTooltip(
+  resolution: TemporalPrecision,
+  t: (key: string) => string
+) {
+  switch (resolution) {
+    case "year":
+      return t("Add every year from the start through the selected year");
+    case "month":
+      return t("Add every month from the start through the selected month");
+    case "day":
+      return t("Add every day from the start through the selected day");
+    default:
+      return t("Add every step from the start through the selected time");
   }
 }
 
@@ -250,6 +278,34 @@ function SingleModeGlyph() {
         opacity="0.45"
       />
       <circle cx="8" cy="8" r="3" fill="currentColor" />
+    </svg>
+  );
+}
+
+/** A filled span ending in one thumb — the running-total mode glyph. */
+function TotalModeGlyph() {
+  return (
+    <svg
+      viewBox="0 0 16 16"
+      className="h-[var(--ts-glyph)] w-[var(--ts-glyph)]"
+      aria-hidden
+      fill="none"
+    >
+      <path
+        d="M1.5 8h13"
+        stroke="currentColor"
+        strokeWidth="1.5"
+        strokeLinecap="round"
+        opacity="0.45"
+      />
+      <path
+        d="M1.5 8h9"
+        stroke="currentColor"
+        strokeWidth="3"
+        strokeLinecap="round"
+        opacity="0.35"
+      />
+      <circle cx="11" cy="8" r="3" fill="currentColor" />
     </svg>
   );
 }
@@ -343,13 +399,30 @@ export default function TimeSlider() {
     ? windowStepIndexes(layouts, clock, resolution || clock.viewResolution)
     : { startIndex: -1, endIndex: -1 };
   const windowMode = clock?.mode === "window";
+  const cumulativeMode = clock?.mode === "cumulative";
+  const clockMode = windowMode
+    ? "window"
+    : cumulativeMode
+    ? "cumulative"
+    : "instant";
   const instantThumbPct =
     startIndex >= 0
       ? layouts[startIndex]?.midPct ?? 0
       : layouts[0]?.midPct ?? 0;
-  const { startPct: rangeStartPct, endPct: rangeEndPct } =
-    timeSliderWindowExtents(layouts, startIndex, endIndex);
+  const windowExtents = timeSliderWindowExtents(layouts, startIndex, endIndex);
+  const cumulativeExtents = timeSliderWindowExtents(
+    layouts,
+    0,
+    Math.max(0, startIndex)
+  );
+  const rangeStartPct = cumulativeMode
+    ? cumulativeExtents.startPct
+    : windowExtents.startPct;
+  const rangeEndPct = cumulativeMode
+    ? cumulativeExtents.endPct
+    : windowExtents.endPct;
   const rangeWidth = Math.max(0, rangeEndPct - rangeStartPct);
+  const showSpan = windowMode || cumulativeMode;
   const prevThumbPctRef = useRef(instantThumbPct);
   const prevRangeRef = useRef({ start: rangeStartPct, end: rangeEndPct });
   const thumbJumped = Math.abs(instantThumbPct - prevThumbPctRef.current) > 40;
@@ -477,10 +550,10 @@ export default function TimeSlider() {
       : queryErrors[0]
     : null;
 
-  const applyMode = (mode: "instant" | "window") => {
+  const applyMode = (mode: "instant" | "window" | "cumulative") => {
     clearDrag(trackRef.current);
     setPlaying(false);
-    if ((mode === "window") === windowMode) return;
+    if (clockMode === mode) return;
     const next = clockForSliderMode(mode, clock, steps, resolution);
     if (next) setClock(next);
   };
@@ -492,7 +565,9 @@ export default function TimeSlider() {
     const clamped = Math.max(0, Math.min(steps.length - 1, nextIndex));
     if (handle === "instant" || !windowMode) {
       const next = instantClockForStep(steps[clamped], resolution);
-      if (next) setClock(next);
+      if (next) {
+        setClock(cumulativeMode ? { ...next, mode: "cumulative" } : next);
+      }
       return;
     }
     let nextStart =
@@ -705,22 +780,41 @@ export default function TimeSlider() {
               <span
                 aria-hidden
                 className={`pointer-events-none absolute inset-y-0.5 left-0.5 w-[var(--ts-btn-w)] rounded-[5px] bg-white/15 shadow-sm ring-1 ring-inset ring-white/10 transition-transform duration-200 ease-out ${
-                  windowMode ? "translate-x-full" : ""
+                  windowMode
+                    ? "translate-x-[200%]"
+                    : cumulativeMode
+                    ? "translate-x-full"
+                    : ""
                 }`}
               />
               <ControlTip label={singleModeTooltip(resolution, t)}>
                 <button
                   type="button"
                   aria-label={t("Single")}
-                  aria-pressed={!windowMode}
+                  aria-pressed={clockMode === "instant"}
                   className={`${MODE_SWITCH_BUTTON} ${
-                    !windowMode
+                    clockMode === "instant"
                       ? "text-sky-100"
                       : "text-white/40 hover:text-white/70"
                   }`}
                   onClick={() => applyMode("instant")}
                 >
                   <SingleModeGlyph />
+                </button>
+              </ControlTip>
+              <ControlTip label={totalModeTooltip(resolution, t)}>
+                <button
+                  type="button"
+                  aria-label={t("Total")}
+                  aria-pressed={cumulativeMode}
+                  className={`${MODE_SWITCH_BUTTON} ${
+                    cumulativeMode
+                      ? "text-sky-100"
+                      : "text-white/40 hover:text-white/70"
+                  }`}
+                  onClick={() => applyMode("cumulative")}
+                >
+                  <TotalModeGlyph />
                 </button>
               </ControlTip>
               <ControlTip label={rangeModeTooltip(resolution, t)}>
@@ -740,11 +834,11 @@ export default function TimeSlider() {
               </ControlTip>
             </div>
             <ControlTip
-              label={displayedClockTooltip(resolution, windowMode, t)}
+              label={displayedClockTooltip(resolution, clockMode, t)}
             >
               <div
                 className="timeslider-watch flex h-[var(--ts-btn-h)] w-max shrink-0 items-center overflow-hidden whitespace-nowrap rounded-md px-[var(--ts-watch-px)] text-center font-mono text-[length:var(--ts-watch-text)] font-medium leading-none tracking-wide text-lime-200"
-                aria-label={displayedClockTooltip(resolution, windowMode, t)}
+                aria-label={displayedClockTooltip(resolution, clockMode, t)}
                 aria-live="polite"
               >
                 {label}
@@ -793,7 +887,7 @@ export default function TimeSlider() {
             }}
           >
             <TrackAxis ticks={axisTicks} />
-            {windowMode && (
+            {showSpan && (
               <span
                 className={`pointer-events-none absolute inset-y-0 bg-sky-300/10 ${
                   animateRange
@@ -824,7 +918,7 @@ export default function TimeSlider() {
                   />
                 ))
               )}
-              {windowMode && (
+              {showSpan && (
                 <span
                   className={`absolute inset-y-0 bg-sky-200/55 ${
                     animateRange

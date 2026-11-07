@@ -68,6 +68,7 @@ preview_bucket_name = 'ssn-tiles-local'
 
 # Run `echo <VALUE> | wrangler secret put <NAME>` for each of these
 # Optional: SLACK_WEBHOOK_URL — Incoming Webhook for ACL-deny rollout alerts
+# GFW_API_TOKEN — Global Fishing Watch bearer token. Never put it in the client.
 
 [secrets]
-required = ["JWKS_URL", "MAPBOX_ACCESS_TOKEN", "PUBLIC_HOSTNAME"]
+required = ["JWKS_URL", "MAPBOX_ACCESS_TOKEN", "PUBLIC_HOSTNAME", "GFW_API_TOKEN"]

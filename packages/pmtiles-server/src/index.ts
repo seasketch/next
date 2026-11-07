@@ -13,6 +13,8 @@ import { isTilePresentationKey } from "./presentationRoutes";
 import { TilesBackend } from "./tilesBackend";
 import { TaxonomyBackend } from "./taxonomyBackend";
 import { authorizeTaxonomyProxy } from "./auth/taxonomyAuth";
+import { authorizeGfwProxy } from "./auth/gfwAuth";
+import { gfwError, handleGfwRequest, isGfwPath } from "./gfwProxy";
 import {
   isOrgQueryPath,
   parseOrgQueryParams,
@@ -31,15 +33,24 @@ export {
  * Default entrypoint: authorize (using `?ns=` / `?access_token=`), then route
  * to TilesBackend, ObjectBackend, PropertiesBackend, overlay-data-tables
  * (service binding), or TaxonomyBackend. `/orgQuery` authorizes each table
- * prefix. `/taxonomy` routes require the overlay-engine JWT.
+ * prefix. `/taxonomy` routes require the overlay-engine JWT. `/gfw` accepts a
+ * map-access or overlay-engine token and proxies one pinned 4Wings dataset.
  */
 export default class extends WorkerEntrypoint<Env> {
   async fetch(request: Request): Promise<Response> {
     const url = new URL(request.url);
 
     if (request.method === "OPTIONS") {
-      if (isTaxonomyPath(url.pathname)) {
-        return new Response(null, { status: 204 });
+      if (isTaxonomyPath(url.pathname) || isGfwPath(url.pathname)) {
+        return new Response(null, {
+          status: 204,
+          headers: {
+            "Access-Control-Allow-Origin": "*",
+            "Access-Control-Allow-Headers": "Authorization, Content-Type",
+            "Access-Control-Allow-Methods": "GET, OPTIONS",
+            "Access-Control-Max-Age": "86400",
+          },
+        });
       }
       if (
         url.pathname === "/properties" ||
@@ -66,6 +77,10 @@ export default class extends WorkerEntrypoint<Env> {
 
     if (isTaxonomyPath(url.pathname)) {
       return this.routeTaxonomy(request);
+    }
+
+    if (isGfwPath(url.pathname)) {
+      return this.routeGfw(request);
     }
 
     if (url.pathname === "/properties" || url.pathname === "/properties/") {
@@ -180,6 +195,23 @@ export default class extends WorkerEntrypoint<Env> {
     return this.dataTables().fetch(
       new Request(forwardUrl.toString(), { method: "GET", headers })
     );
+  }
+
+  /**
+   * Allowlisted Global Fishing Watch tile and bins proxy. The bearer token
+   * stays on this worker. Cache keys are the upstream URL, without the
+   * SeaSketch access token.
+   */
+  private async routeGfw(request: Request): Promise<Response> {
+    const auth = await authorizeGfwProxy(request, this.env);
+    if (!auth.ok) return auth.response;
+    const token = this.env.GFW_API_TOKEN;
+    if (!token) {
+      return gfwError(500, "gfw_token_not_configured");
+    }
+    return handleGfwRequest(request, token, (promise) => {
+      this.ctx.waitUntil(promise);
+    });
   }
 
   /**

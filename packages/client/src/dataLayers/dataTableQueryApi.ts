@@ -360,8 +360,9 @@ export interface DataTableQuerySettings {
  *
  * Instant: one `when.step` series over the table's full coverage so the
  * slider can scrub from cache. Window (range): a single aggregate over the
- * selected `[start, end)` — means/sums must be recalculated by the engine,
- * not combined from per-step bins (rows can overlap multiple steps).
+ * selected `[start, end)`. Cumulative: the same aggregate from the table's
+ * coverage start through the selected step. Means and sums must be
+ * recalculated by the engine, not combined from per-step bins.
  */
 export function dataTableQueryClockParams(
   clock: TemporalClock | null,
@@ -377,14 +378,19 @@ export function dataTableQueryClockParams(
   if (!clock) {
     return {};
   }
-  if (clock.mode === "window") {
+  if (clock.mode === "window" || clock.mode === "cumulative") {
     const expanded = expandTemporalClock(clock);
     if (!expanded || !(expanded.end > expanded.start)) {
       return {};
     }
+    let startMs = expanded.start;
+    if (clock.mode === "cumulative") {
+      const coverage = expandTemporalValue(temporal.coverage);
+      if (coverage) startMs = coverage.start;
+    }
     return {
       when: {
-        start: Math.floor(expanded.start / 1000),
+        start: Math.floor(startMs / 1000),
         end: Math.floor(expanded.end / 1000),
       },
     };

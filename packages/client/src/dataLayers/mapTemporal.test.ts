@@ -691,6 +691,40 @@ describe("view resolution and window clocks", () => {
     });
   });
 
+  it("keeps a cumulative clock on the selected step", () => {
+    const instant = instantClockForStep("2020", "year")!;
+    expect(
+      clockForSliderMode(
+        "cumulative",
+        instant,
+        ["2018", "2019", "2020"],
+        "year"
+      )
+    ).toEqual({
+      mode: "cumulative",
+      start: "2020",
+      end: "2021",
+      viewResolution: "year",
+    });
+    expect(
+      advanceClock(
+        {
+          mode: "cumulative",
+          start: "2019",
+          end: "2020",
+          viewResolution: "year",
+        },
+        ["2018", "2019", "2020"],
+        "year"
+      )
+    ).toEqual({
+      mode: "cumulative",
+      start: "2020",
+      end: "2021",
+      viewResolution: "year",
+    });
+  });
+
   it("returns to instant on the last included window step", () => {
     const window = windowClockForRange("2018", "2021", "year")!;
     expect(

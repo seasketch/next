@@ -15,6 +15,7 @@ const PRELOADABLE_SOURCE_TYPES = [
   "GEOJSON",
   "RASTER",
   "INATURALIST",
+  "GFW_4WINGS",
 ];
 
 /**

@@ -197,6 +197,17 @@ describe("TimeSlider Single / Range mode", () => {
     );
   });
 
+  it("sets a cumulative clock on the current step when Total is chosen", () => {
+    const { setClock } = renderSlider(false);
+    fireEvent.click(screen.getByRole("button", { name: "Total" }));
+    expect(setClock).toHaveBeenCalledWith({
+      mode: "cumulative",
+      start: "2018",
+      end: "2019",
+      viewResolution: "year",
+    });
+  });
+
   it("opens a full-domain window when Range is chosen", () => {
     const { setClock } = renderSlider(false);
     fireEvent.click(screen.getByRole("button", { name: "Range" }));
