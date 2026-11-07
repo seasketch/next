@@ -345,6 +345,39 @@ export default function ReportDependenciesContextProvider({
     depsData?.report?.dependencies?.dependencyResolutionErrors,
   ]);
 
+  const refetchedCompletedJobKeysRef = useRef(new Set<string>());
+
+  // Metric hashes include each layer's overlay URL. When a layer gains or
+  // changes its URL (preprocessing finished), the metrics already fetched no
+  // longer match, and polling may have stopped, so fetch them again.
+  const overlaySourceUrlFingerprint = useMemo(() => {
+    if (!overlayData?.report) {
+      return null;
+    }
+    const urls = buildOverlayStableIdToSourceUrlMap(overlaySources);
+    return Object.keys(urls)
+      .sort()
+      .map((stableId) => `${stableId}=${urls[stableId]}`)
+      .join("\n");
+  }, [overlayData?.report, overlaySources]);
+  const previousOverlaySourceUrlFingerprintRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (overlaySourceUrlFingerprint === null) {
+      return;
+    }
+    const previous = previousOverlaySourceUrlFingerprintRef.current;
+    previousOverlaySourceUrlFingerprintRef.current =
+      overlaySourceUrlFingerprint;
+    if (
+      previous !== null &&
+      previous !== overlaySourceUrlFingerprint &&
+      reportId &&
+      sketchId
+    ) {
+      void refetchDeps();
+    }
+  }, [overlaySourceUrlFingerprint, refetchDeps, reportId, sketchId]);
+
   useEffect(() => {
     const anyMetricsLoading = pollingRelevantSlimMetrics.some(
       (metric) =>
@@ -357,6 +390,25 @@ export default function ReportDependenciesContextProvider({
         source.sourceProcessingJob.state !== SpatialMetricState.Complete &&
         source.sourceProcessingJob.state !== SpatialMetricState.Error
     );
+
+    // The job is read in a separate statement from the source's output, so a
+    // response can show a completed job before the output URL it wrote.
+    const completedWithoutUrl = contextValue.overlaySources.filter(
+      (source) =>
+        source.sourceProcessingJob?.state === SpatialMetricState.Complete &&
+        !source.sourceUrl &&
+        !refetchedCompletedJobKeysRef.current.has(
+          source.sourceProcessingJob.jobKey
+        )
+    );
+    if (completedWithoutUrl.length > 0) {
+      for (const source of completedWithoutUrl) {
+        refetchedCompletedJobKeysRef.current.add(
+          source.sourceProcessingJob!.jobKey
+        );
+      }
+      void refetchOverlaySources();
+    }
 
     let metricInterval: ReturnType<typeof setInterval> | null = null;
     let overlayInterval: ReturnType<typeof setInterval> | null = null;

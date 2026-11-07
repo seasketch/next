@@ -1420,16 +1420,20 @@ function groupMetricsBySourceAndOperation(
   overlaySources: Array<{
     tableOfContentsItem?: { title?: string | null } | null;
     output?: { url?: string | null } | null;
+    sourceProcessingJob?: { jobKey: string } | null;
   }>,
   t: (key: string) => string
 ) {
   const sourceNameByUrl = new Map<string, string>();
+  const sourceNameByJobKey = new Map<string, string>();
   for (const source of overlaySources) {
-    if (!source.output?.url) continue;
-    sourceNameByUrl.set(
-      source.output.url,
-      source.tableOfContentsItem?.title || t("Untitled overlay")
-    );
+    const name = source.tableOfContentsItem?.title || t("Untitled overlay");
+    if (source.output?.url) {
+      sourceNameByUrl.set(source.output.url, name);
+    }
+    if (source.sourceProcessingJob?.jobKey) {
+      sourceNameByJobKey.set(source.sourceProcessingJob.jobKey, name);
+    }
   }
 
   const groups = new Map<
@@ -1444,7 +1448,12 @@ function groupMetricsBySourceAndOperation(
 
   for (const metric of metrics) {
     const operationLabel = metricTypeLabel(metric.type, t);
-    const overlayName = sourceLabelForMetric(metric, sourceNameByUrl, t);
+    const overlayName = sourceLabelForMetric(
+      metric,
+      sourceNameByUrl,
+      sourceNameByJobKey,
+      t
+    );
     const key = `${overlayName}::${operationLabel}`;
     if (!groups.has(key)) {
       groups.set(key, {
@@ -1467,13 +1476,18 @@ function groupMetricsBySourceAndOperation(
 function sourceLabelForMetric(
   metric: CompatibleSpatialMetricDetailsFragment,
   sourceNameByUrl: Map<string, string>,
+  sourceNameByJobKey: Map<string, string>,
   t: (key: string) => string
 ) {
   if (metric.type === "total_area") {
     return t("Sketch geometry");
   }
   if (!metric.sourceUrl) {
-    return t("Unknown source");
+    // Still waiting on its layer to be preprocessed.
+    const waitingOn = metric.sourceProcessingJobDependency
+      ? sourceNameByJobKey.get(metric.sourceProcessingJobDependency)
+      : undefined;
+    return waitingOn || t("Unknown source");
   }
   const direct = sourceNameByUrl.get(metric.sourceUrl);
   if (direct) return direct;

@@ -2,7 +2,6 @@ import {
   AuthorProfileFragment,
   ChangeLogDetailsFragment,
   ChangeLogFieldGroup,
-  ChangeLogsSinceLastPublishQuery,
 } from "../../generated/graphql";
 import { summary } from "../changelogs/fieldGroups/FieldGroupListItemBase";
 import { tocItemIdFromMeta } from "../changelogs/fieldGroups/dataTableSummary";
@@ -74,12 +73,18 @@ const FIELD_GROUP_TO_BADGE: Partial<
   [ChangeLogFieldGroup.ResolvableLayerCommentsReopened]: "comments",
 };
 
-/** Draft TOC rows from {@link ChangeLogsSinceLastPublishQuery} (shape must match that query). */
-export type DraftTocItemForPublishSummary = NonNullable<
-  NonNullable<
-    NonNullable<ChangeLogsSinceLastPublishQuery["projectBySlug"]>["draftTableOfContentsItems"]
-  >[number]
->;
+/** Draft TOC fields the publish summary reads. Wider query results are fine. */
+export type DraftTocItemForPublishSummary = {
+  id: number;
+  title: string;
+  isFolder: boolean;
+  dataLayer?: {
+    dataSource?: {
+      createdAt?: string | null;
+      dataLibraryTemplateId?: string | null;
+    } | null;
+  } | null;
+};
 
 export type PublishSummaryRow = {
   entityId: number;
