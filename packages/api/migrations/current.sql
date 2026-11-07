@@ -329,10 +329,13 @@ CREATE OR REPLACE FUNCTION public.report_overlay_source_refs_by_stable_ids(p_pro
     ORDER BY spj.created_at DESC
     LIMIT 1
   ) jobs ON true
+  -- OFFSET 0 keeps the gate a one-time filter, so the lookup only runs for
+  -- items with neither an output nor a job.
   LEFT JOIN LATERAL (
     SELECT *
     FROM reporting_ref_from_same_url_source(sources.id)
     WHERE reporting_output.id IS NULL AND jobs.job_key IS NULL
+    OFFSET 0
   ) upstream ON true
   WHERE
     items.stable_id = ANY(p_stable_ids)

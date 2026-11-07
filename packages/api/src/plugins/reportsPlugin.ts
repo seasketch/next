@@ -1306,10 +1306,13 @@ async function getOverlaySourcesByStableIds(
         join data_sources sources on sources.id = layers.data_source_id
         left join lateral table_of_contents_items_reporting_output(items.*) as reporting_output on true
         left join source_processing_jobs jobs on jobs.data_source_id = sources.id
+        -- offset 0 keeps the gate a one-time filter, so the lookup only runs
+        -- for items with neither an output nor a job.
         left join lateral (
           select *
           from reporting_ref_from_same_url_source(sources.id)
           where reporting_output.id is null and jobs.job_key is null
+          offset 0
         ) upstream on true
         left join ai_data_analyst_notes ai on ai.data_source_id = sources.id
       where
@@ -1473,10 +1476,13 @@ async function getOverlaySourceRefsByStableIds(
           order by spj.created_at desc
           limit 1
         ) jobs on true
+        -- offset 0 keeps the gate a one-time filter, so the lookup only runs
+        -- for items with neither an output nor a job.
         left join lateral (
           select *
           from reporting_ref_from_same_url_source(sources.id)
           where reporting_output.id is null and jobs.job_key is null
+          offset 0
         ) upstream on true
       where
         items.stable_id = ANY($1::text[]) and items.is_draft = $2
