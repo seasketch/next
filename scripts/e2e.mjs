@@ -1,5 +1,6 @@
 #!/usr/bin/env node
-// Restore seasketch_e2e from the golden snapshot, then run Playwright.
+// Restore seasketch_e2e from the golden snapshot, apply current.sql, then run
+// Playwright.
 // The dev database is not touched. Playwright starts its own API and client.
 import { spawn } from "node:child_process";
 import path from "node:path";
@@ -48,6 +49,14 @@ const databaseEnv = {
 try {
   await run("npm", ["run", "build", "--silent"]);
   await run("npm", ["run", "setup", "--", "--reset"], databaseEnv);
+  // setup applies committed migrations only. The API suite also runs the
+  // in-progress migrations/current.sql, so the e2e stack matches it.
+  await run(
+    "npm",
+    ["run", "db:watch", "--silent", "--", "--once"],
+    databaseEnv,
+    path.join(root, "packages/api")
+  );
   const playwrightArgs = process.argv.slice(2);
   const npmArgs = ["test", "--workspace", "@seasketch/e2e"];
   if (playwrightArgs.length > 0) {
