@@ -1287,13 +1287,13 @@ async function getOverlaySourcesByStableIds(
       select
         items.id as "tableOfContentsItemId",
         items.stable_id as "stableId",
-        reporting_output.url as "sourceUrl",
-        coalesce(reporting_output.source_processing_job_key, jobs.job_key) as "sourceProcessingJobId",
-        reporting_output.id as "outputId",
+        coalesce(reporting_output.url, upstream.url) as "sourceUrl",
+        coalesce(reporting_output.source_processing_job_key, jobs.job_key, upstream.job_key) as "sourceProcessingJobId",
+        coalesce(reporting_output.id, upstream.output_id) as "outputId",
         sources.geostats as "geostats",
         sources.temporal as "temporal",
         layers.mapbox_gl_styles as "mapboxGlStyles",
-        reporting_output.contains_overlapping_features as "containsOverlappingFeatures",
+        coalesce(reporting_output.contains_overlapping_features, upstream.contains_overlapping_features) as "containsOverlappingFeatures",
         sources.raster_band_count as "rasterBandCount",
         sources.vector_geometry_type as "vectorGeometryType",
         sources.feature_count as "featureCount",
@@ -1306,6 +1306,11 @@ async function getOverlaySourcesByStableIds(
         join data_sources sources on sources.id = layers.data_source_id
         left join lateral table_of_contents_items_reporting_output(items.*) as reporting_output on true
         left join source_processing_jobs jobs on jobs.data_source_id = sources.id
+        left join lateral (
+          select *
+          from reporting_ref_from_same_url_source(sources.id)
+          where reporting_output.id is null and jobs.job_key is null
+        ) upstream on true
         left join ai_data_analyst_notes ai on ai.data_source_id = sources.id
       where
         items.stable_id = ANY($1::text[]) and items.is_draft = $2
@@ -1450,10 +1455,10 @@ async function getOverlaySourceRefsByStableIds(
       select distinct on (items.stable_id)
         items.id as "tableOfContentsItemId",
         items.stable_id as "stableId",
-        reporting_output.url as "sourceUrl",
-        coalesce(reporting_output.source_processing_job_key, jobs.job_key) as "sourceProcessingJobId",
-        reporting_output.id as "outputId",
-        reporting_output.contains_overlapping_features as "containsOverlappingFeatures",
+        coalesce(reporting_output.url, upstream.url) as "sourceUrl",
+        coalesce(reporting_output.source_processing_job_key, jobs.job_key, upstream.job_key) as "sourceProcessingJobId",
+        coalesce(reporting_output.id, upstream.output_id) as "outputId",
+        coalesce(reporting_output.contains_overlapping_features, upstream.contains_overlapping_features) as "containsOverlappingFeatures",
         sources.raster_band_count as "rasterBandCount",
         sources.vector_geometry_type as "vectorGeometryType"
       from
@@ -1468,12 +1473,17 @@ async function getOverlaySourceRefsByStableIds(
           order by spj.created_at desc
           limit 1
         ) jobs on true
+        left join lateral (
+          select *
+          from reporting_ref_from_same_url_source(sources.id)
+          where reporting_output.id is null and jobs.job_key is null
+        ) upstream on true
       where
         items.stable_id = ANY($1::text[]) and items.is_draft = $2
         ${projectFilter}
       order by
         items.stable_id,
-        coalesce(reporting_output.id, 0) desc
+        coalesce(reporting_output.id, upstream.output_id, 0) desc
     `,
       params,
     );
