@@ -711,9 +711,10 @@ test.describe("report overlay versions", () => {
       await expect(details.getByText("Optimized Overlay Layers")).toBeVisible();
       await expect(layerRow).toBeVisible();
       await expect(details.getByText("Unknown source")).toHaveCount(0);
+      // The modal fades in from script, which screenshot's animation option can't skip.
+      await memberPage.waitForTimeout(1_000);
       await memberPage.screenshot({
         path: testInfo.outputPath("preprocessing-calculation-details.png"),
-        animations: "disabled",
       });
       await memberPage.keyboard.press("Escape");
 
