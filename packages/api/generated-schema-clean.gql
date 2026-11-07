@@ -2029,6 +2029,45 @@ type CreateGeographyClippingLayerPayload {
   query: Query
 }
 
+"""All input for the `createGfw4WingsTableOfContentsItem` mutation."""
+input CreateGfw4WingsTableOfContentsItemInput {
+  """
+  An arbitrary string value with no semantic meaning. Will be included in the
+  payload verbatim. May be used to track mutations by the client.
+  """
+  clientMutationId: String
+  metadata: JSON
+  params: JSON
+  slug: String
+  title: String
+}
+
+"""The output of our `createGfw4WingsTableOfContentsItem` mutation."""
+type CreateGfw4WingsTableOfContentsItemPayload {
+  """
+  The exact same `clientMutationId` that was provided in the mutation input,
+  unchanged and unused. May be used by a client to track mutations.
+  """
+  clientMutationId: String
+
+  """
+  Reads a single `DataLayer` that is related to this `TableOfContentsItem`.
+  """
+  dataLayer: DataLayer
+
+  """
+  Our root query field type. Allows us to run any query from our mutation payload.
+  """
+  query: Query
+  tableOfContentsItem: TableOfContentsItem
+
+  """An edge for our `TableOfContentsItem`. May be used by Relay 1."""
+  tableOfContentsItemEdge(
+    """The method to use when ordering `TableOfContentsItem`."""
+    orderBy: [TableOfContentsItemsOrderBy!] = [PRIMARY_KEY_ASC]
+  ): TableOfContentsItemsEdge
+}
+
 """All input for the create `Group` mutation."""
 input CreateGroupInput {
   """
@@ -4078,6 +4117,11 @@ enum DataSourceTypes {
 
   """MapBox GL Style "geojson" source"""
   GEOJSON
+
+  """
+  Global Fishing Watch 4Wings annual fishing effort. Tiles are proxied; query_parameters names the pinned dataset.
+  """
+  GFW_4WINGS
 
   """MapBox GL Style "image" source"""
   IMAGE
@@ -9320,6 +9364,12 @@ type Mutation {
     """
     input: CreateGeographyClippingLayerInput!
   ): CreateGeographyClippingLayerPayload
+  createGfw4WingsTableOfContentsItem(
+    """
+    The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
+    """
+    input: CreateGfw4WingsTableOfContentsItemInput!
+  ): CreateGfw4WingsTableOfContentsItemPayload
 
   """Creates a single `Group`."""
   createGroup(
