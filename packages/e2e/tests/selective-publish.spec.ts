@@ -90,8 +90,13 @@ test.describe("selective overlay publish", () => {
     const full = page.getByRole("dialog", { name: "Publish Overlays" });
     await expect(full.getByText("Deep Reef", { exact: true })).toBeVisible();
     await expect(full.getByText("Coral Reefs", { exact: true })).toHaveCount(0);
-    await full.getByRole("tab", { name: "All Changes" }).click();
-    await expect(full.getByText("changed title from")).toBeVisible();
+    // A click during the dialog's enter transition can be dropped.
+    await expect(async () => {
+      await full.getByRole("tab", { name: "All Changes" }).click();
+      await expect(full.getByText("changed title from")).toBeVisible({
+        timeout: 2000,
+      });
+    }).toPass();
     // The new title is both the row heading and the "to" chip.
     await expect(full.getByText("Deep Reef", { exact: true }).first()).toBeVisible();
     await expect(full.getByText("Coral Reefs", { exact: true })).toHaveCount(0);
