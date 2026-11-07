@@ -15,9 +15,11 @@ import useCurrentProjectMetadata from "../../useCurrentProjectMetadata";
 export default function DataLibraryModal({
   onRequestClose,
   onOpenINaturalistModal,
+  onOpenGfwModal,
 }: {
   onRequestClose: () => void;
   onOpenINaturalistModal?: () => void;
+  onOpenGfwModal?: () => void;
 }) {
   const metadata = useCurrentProjectMetadata();
   const { t } = useTranslation("admin:data");
@@ -66,6 +68,31 @@ export default function DataLibraryModal({
             <DataLibraryActionButton
               templateId="CRW_ROOT"
               onRequestClose={onRequestClose}
+            />
+          </DataLibraryEntry>
+
+          <DataLibraryEntry
+            title={t("Global Fishing Watch")}
+            href="https://globalfishingwatch.org"
+          >
+            <DataLibraryEntryDescription>
+              <p>
+                {t(
+                  "Annual fishing effort, in hours, from 2012 through the current year. Scrub the time slider without reloading tiles."
+                )}
+              </p>
+            </DataLibraryEntryDescription>
+            <DataLibraryEntryImage
+              alt={t("Fishing effort color ramp")}
+              src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='128' height='80'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' x2='1'%3E%3Cstop stop-color='%23ffffcc'/%3E%3Cstop offset='.5' stop-color='%23fd8d3c'/%3E%3Cstop offset='1' stop-color='%23800026'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='128' height='80' fill='url(%23g)'/%3E%3C/svg%3E"
+            />
+            <DataLibraryCustomActionButton
+              onClick={() => {
+                onRequestClose();
+                if (onOpenGfwModal) {
+                  onOpenGfwModal();
+                }
+              }}
             />
           </DataLibraryEntry>
 

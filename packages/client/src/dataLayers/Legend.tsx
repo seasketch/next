@@ -15,6 +15,7 @@ import {
 } from "@radix-ui/react-icons";
 import { ClockIcon } from "@heroicons/react/outline";
 import { Trans, useTranslation } from "react-i18next";
+import { GFW_RAMP, gfwBreaksForZoom } from "./gfwEffort";
 import Spinner from "../components/Spinner";
 import SimpleSymbol from "./legends/SimpleSymbol";
 import { Map } from "mapbox-gl";
@@ -78,6 +79,13 @@ interface GLStyleLegendItem extends BaseLegendItem {
   legend?: LegendForGLLayers;
 }
 
+export type GfwLegendItem = BaseLegendItem & {
+  type: "GfwLegendItem";
+  bins: number[];
+  years: number[];
+  partialYear: number | null;
+};
+
 export type InaturalistLegendItem = BaseLegendItem & {
   type: "InaturalistLegendItem";
   modes:
@@ -110,6 +118,7 @@ export type LegendItem =
   | GLStyleLegendItem
   | CustomGLSourceSymbolLegend
   | InaturalistLegendItem
+  | GfwLegendItem
   | DataTableLegendItem;
 
 const PANEL_WIDTH = 180;
@@ -462,6 +471,11 @@ const LegendListItem = memo(function LegendListItem({
                   </li>
                 );
               })}
+            {item.type === "GfwLegendItem" && (
+              <li>
+                <GfwLegendPanel item={item} map={map} />
+              </li>
+            )}
             {item.type === "InaturalistLegendItem" && inatLegendType && (
               <li>
                 <InaturalistLegendPanel type={inatLegendType} />
@@ -587,4 +601,67 @@ function LegendImage({
       }
     />
   );
+}
+
+function GfwLegendPanel({ item, map }: { item: GfwLegendItem; map?: Map }) {
+  const { t } = useTranslation("homepage");
+  const [zoom, setZoom] = useState(() => map?.getZoom() ?? 0);
+  useEffect(() => {
+    if (!map) return;
+    const sync = () => setZoom(map.getZoom());
+    sync();
+    map.on("zoom", sync);
+    return () => {
+      map.off("zoom", sync);
+    };
+  }, [map]);
+  const breaks = gfwBreaksForZoom(item.bins, zoom);
+  const firstYear = item.years[0];
+  const lastYear = item.years[item.years.length - 1];
+  const through = new Date().toLocaleDateString(undefined, {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+    timeZone: "UTC",
+  });
+  const frame =
+    firstYear == null
+      ? ""
+      : item.years.length > 1
+      ? t("{{start}}–{{end}}", { start: firstYear, end: lastYear })
+      : String(firstYear);
+  const caption =
+    item.partialYear != null
+      ? t("{{year}}, through {{date}}", {
+          year: item.partialYear,
+          date: through,
+        })
+      : frame;
+  const low = breaks[0];
+  const high = breaks[breaks.length - 1];
+  return (
+    <div className="space-y-1 px-1 py-0.5">
+      <div
+        className="h-2 w-full rounded-sm"
+        style={{
+          background: `linear-gradient(to right, ${GFW_RAMP.join(", ")})`,
+        }}
+      />
+      <div className="flex justify-between font-mono text-[10px] text-gray-600">
+        <span>{low != null ? formatHours(low) : ""}</span>
+        <span>{high != null ? formatHours(high) : ""}</span>
+      </div>
+      <div className="text-xs text-gray-700">
+        {caption
+          ? t("{{frame}}, hours fished", { frame: caption })
+          : t("hours fished")}
+      </div>
+    </div>
+  );
+}
+
+function formatHours(value: number): string {
+  if (value >= 100) return Math.round(value).toLocaleString();
+  if (value >= 10) return value.toFixed(0);
+  return value.toFixed(1);
 }

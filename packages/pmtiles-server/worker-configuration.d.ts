@@ -9,6 +9,8 @@ interface __BaseEnv_Env {
 	JWKS_URL: string;
 	MAPBOX_ACCESS_TOKEN: string;
 	PUBLIC_HOSTNAME: string;
+	/** wrangler secret. Bearer token for gateway.api.globalfishingwatch.org. */
+	GFW_API_TOKEN?: string;
 }
 declare namespace Cloudflare {
 	interface GlobalProps {

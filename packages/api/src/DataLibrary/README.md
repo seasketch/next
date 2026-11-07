@@ -80,6 +80,8 @@ Create-project and the geography wizard copy these templates. They are not Data 
 
 iNaturalist is not a template. The Data Library modal creates a project layer for it.
 
+Global Fishing Watch annual fishing effort is also not a template. `create_gfw_4wings_table_of_contents_item` writes `copied_from_data_library_template_id = 'GFW_FISHING_EFFORT'` on the project item. There is no superuser row and no golden-snapshot stamp for that string.
+
 ## A new template
 
 1. Put the layer in the `superuser` project.

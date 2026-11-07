@@ -13,6 +13,11 @@ import {
   layerIdFromStyleLayerId,
   Tooltip,
 } from "./MapContextManager";
+import {
+  getGfwHoverFrame,
+  gfwHoursFromProperties,
+  isGfwSourceType,
+} from "./gfwEffort";
 import Mustache from "mustache";
 import {
   BasemapDetailsFragment,
@@ -148,6 +153,7 @@ export default class LayerInteractivityManager extends EventEmitter {
   private basemap: BasemapDetailsFragment | undefined;
   private sketchLayerIds: string[] = [];
   private focusedSketchId?: number;
+  private gfwLayerIds: string[] = [];
   private inaturalistConfigs: {
     params: ReturnType<typeof normalizeInaturalistParams>;
     sourceId: string;
@@ -283,6 +289,7 @@ export default class LayerInteractivityManager extends EventEmitter {
       this.interactiveRasterLayers.length > 0 ||
       this.sketchLayerIds.length > 0 ||
       this.inaturalistConfigs.length > 0 ||
+      this.gfwLayerIds.length > 0 ||
       Object.keys(this.dataTableLayersByGlId).length > 0
     ) {
       this.map.on("mousemove", this.debouncedMouseMoveListener);
@@ -328,6 +335,7 @@ export default class LayerInteractivityManager extends EventEmitter {
     const newInteractiveImageLayerIds: string[] = [];
     let newInteractiveVectorLayerIds: string[] = [];
     const newInteractiveRasterLayers: InteractiveRasterLayer[] = [];
+    const newGfwLayerIds: string[] = [];
     const newInaturalistConfigs: {
       params: ReturnType<typeof normalizeInaturalistParams>;
       sourceId: string;
@@ -337,6 +345,9 @@ export default class LayerInteractivityManager extends EventEmitter {
       if (layer && layer.dataSourceId) {
         const source = dataSources[layer.dataSourceId];
         if (source) {
+          if (isGfwSourceType(source.type)) {
+            newGfwLayerIds.push(idForLayer(layer, 0));
+          }
           if (source.type === DataSourceTypes.Inaturalist) {
             newInaturalistConfigs.push({
               params: normalizeInaturalistParams(
@@ -446,7 +457,8 @@ export default class LayerInteractivityManager extends EventEmitter {
       !sameStringSet(
         this.inaturalistConfigs.map((c) => c.sourceId),
         newInaturalistConfigs.map((c) => c.sourceId)
-      )
+      ) ||
+      !sameStringSet(this.gfwLayerIds, newGfwLayerIds)
     ) {
       this.dismissOpenPopup();
     }
@@ -454,6 +466,7 @@ export default class LayerInteractivityManager extends EventEmitter {
     this.interactiveVectorLayerIds = newInteractiveVectorLayerIds;
     this.interactiveRasterLayers = newInteractiveRasterLayers;
     this.inaturalistConfigs = newInaturalistConfigs;
+    this.gfwLayerIds = newGfwLayerIds;
     this.layers = newActiveLayers;
     this.imageSources = newActiveImageSources;
     this.syncMouseMoveListener();
@@ -1159,6 +1172,7 @@ export default class LayerInteractivityManager extends EventEmitter {
     const layerIds = this.existingLayerIds([
       ...dataTableLayerIds,
       ...this.interactiveVectorLayerIds,
+      ...this.gfwLayerIds,
     ]);
     // Deduplicate while preserving order (data-table ids first for lookup).
     const seen = new Set<string>();
@@ -1195,6 +1209,33 @@ export default class LayerInteractivityManager extends EventEmitter {
 
     if (features.length && uniqueLayerIds.indexOf(features[0].layer.id) > -1) {
       const top = features[0];
+      if (this.gfwLayerIds.indexOf(top.layer.id) !== -1) {
+        const frame = getGfwHoverFrame();
+        const hours = gfwHoursFromProperties(top.properties, frame.years);
+        const rounded =
+          Math.abs(hours) >= 100
+            ? Math.round(hours).toLocaleString()
+            : (Math.round(hours * 10) / 10).toLocaleString();
+        const yearLabel =
+          frame.years.length > 1
+            ? `${frame.years[0]}–${frame.years[frame.years.length - 1]}`
+            : String(frame.years[0] ?? "");
+        const partial =
+          frame.partialYear != null ? `, through ${new Date().toISOString().slice(0, 10)}` : "";
+        this.setHoveredFeature(undefined);
+        this.map!.getCanvas().style.cursor = "default";
+        this.previousInteractionTarget = `${top.id}-gfw`;
+        this.updateUI({
+          bannerMessages: [],
+          fixedBlocks: [],
+          tooltip: {
+            x: e.originalEvent.x,
+            y: e.originalEvent.y,
+            messages: [`${rounded} hours`, `${yearLabel}${partial}`],
+          },
+        });
+        return;
+      }
       const dataTableConfig = this.dataTableLayersByGlId[top.layer.id];
       const dataTableTooltip = dataTableConfig
         ? this.buildDataTableValueTooltip(top, dataTableConfig, e)

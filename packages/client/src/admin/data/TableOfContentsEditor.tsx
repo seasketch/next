@@ -100,6 +100,10 @@ const LazyINaturalistModal = React.lazy(
     )
 );
 
+const LazyGfwModal = React.lazy(
+  () => import(/* webpackChunkName: "GfwLayer" */ "./AddGfwLayerModal")
+);
+
 export default function TableOfContentsEditor() {
   const history = useHistory();
   const { slug } = useParams<{ slug: string }>();
@@ -860,6 +864,7 @@ function Header({
   const projectId = useProjectId();
   const [showDataLibrary, setShowDataLibrary] = useState(false);
   const [showINaturalistModal, setShowINaturalistModal] = useState(false);
+  const [showGfwModal, setShowGfwModal] = useState(false);
 
   const { confirm } = useDialog();
   return (
@@ -1137,6 +1142,7 @@ function Header({
           <LazyDataLibraryModal
             onRequestClose={() => setShowDataLibrary(false)}
             onOpenINaturalistModal={() => setShowINaturalistModal(true)}
+            onOpenGfwModal={() => setShowGfwModal(true)}
           />
         </Suspense>
       )}
@@ -1145,6 +1151,11 @@ function Header({
           <LazyINaturalistModal
             onRequestClose={() => setShowINaturalistModal(false)}
           />
+        </Suspense>
+      )}
+      {showGfwModal && (
+        <Suspense fallback={<FullScreenLoadingSpinner />}>
+          <LazyGfwModal onRequestClose={() => setShowGfwModal(false)} />
         </Suspense>
       )}
     </header>

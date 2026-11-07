@@ -717,11 +717,16 @@ export function windowClockForRange(
  * of silently staying instant.
  */
 export function clockForSliderMode(
-  mode: "instant" | "window",
+  mode: "instant" | "window" | "cumulative",
   clock: TemporalClock,
   steps: TemporalIso[],
   resolution: TemporalPrecision
 ): TemporalClock | null {
+  if (mode === "cumulative") {
+    const last = lastIncludedStep(clock, steps, resolution);
+    const instant = instantClockForStep(last || clock.start, resolution);
+    return instant ? { ...instant, mode: "cumulative" } : null;
+  }
   if (mode === "window") {
     const first = steps[0];
     if (!first) return null;
@@ -847,6 +852,11 @@ export function advanceClock(
 ): TemporalClock | null {
   if (steps.length === 0) return null;
   const startIdx = steps.indexOf(clock.start);
+  if (clock.mode === "cumulative") {
+    const nextIndex = startIdx < 0 ? 0 : (startIdx + 1) % steps.length;
+    const next = instantClockForStep(steps[nextIndex], resolution);
+    return next ? { ...next, mode: "cumulative" } : null;
+  }
   if (clock.mode === "window") {
     const last = lastIncludedStep(clock, steps, resolution);
     const lastIdx = last ? steps.indexOf(last) : startIdx;

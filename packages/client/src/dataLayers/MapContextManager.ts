@@ -38,6 +38,18 @@ import {
   withHostedAuthParams,
 } from "./tilesAuth";
 import {
+  fetchGfwBins,
+  GFW_FALLBACK_BINS,
+  GFW_SOURCE_LAYER,
+  gfwColorExpression,
+  gfwFrameForClock,
+  gfwHoursExpression,
+  gfwOpacityExpression,
+  gfwTileUrl,
+  isGfwSourceType,
+  setGfwHoverFrame,
+} from "./gfwEffort";
+import {
   fetchGlStyle,
   hasMapboxAccessToken,
   MissingMapboxAccessTokenError,
@@ -387,6 +399,11 @@ class MapContextManager extends EventEmitter {
   /** Dedupes stacked `idle` listeners for data-table feature-state sync. */
   private dataTableFeatureStateSyncIdleQueued = false;
   private dataTableClockRaf: number | null = null;
+  /** Clock used to repaint Global Fishing Watch cells without changing the tile URL. */
+  private gfwClock: TemporalClock | null = null;
+  private gfwBins: number[] | null = null;
+  private gfwBinsRequested = false;
+  private gfwLayers: { glLayerId: string; opacity: number }[] = [];
 
   constructor(
     initialState: MapContextInterface,
@@ -2647,6 +2664,10 @@ class MapContextManager extends EventEmitter {
     const inaturalistGeneratedLayers: {
       [layerId: string]: AnyLayer[];
     } = {};
+    const gfwGeneratedLayers: {
+      [layerId: string]: AnyLayer[];
+    } = {};
+    this.gfwLayers = [];
     let underLabels: any[] = baseStyle.layers.slice(0, labelsLayerIndex);
     let overLabels: any[] = baseStyle.layers.slice(labelsLayerIndex);
     let isUnderLabels = true;
@@ -2781,6 +2802,52 @@ class MapContextManager extends EventEmitter {
                       throw new Error("Not implemented");
                     }
                     break;
+                  case DataSourceTypes.Gfw_4Wings: {
+                    const frame = gfwFrameForClock(this.gfwClock);
+                    setGfwHoverFrame(frame);
+                    const hours = gfwHoursExpression(frame.years);
+                    const bins =
+                      this.gfwBins && this.gfwBins.length
+                        ? this.gfwBins
+                        : GFW_FALLBACK_BINS;
+                    const overlayOpacity =
+                      this.overlayStates.getRaw(layerId)?.opacity;
+                    const opacity =
+                      typeof overlayOpacity === "number" ? overlayOpacity : 1;
+                    const glLayerId = idForLayer(layer, 0);
+                    baseStyle.sources[overlaySourceKey] = {
+                      type: "vector",
+                      attribution: source.attribution || "",
+                      tiles: [
+                        withHostedAuthParams(gfwTileUrl(), {
+                          accessToken: this.mapAccessToken,
+                        }),
+                      ],
+                      promoteId: "id",
+                      minzoom: 0,
+                      maxzoom: 12,
+                      // 4Wings tiles are 256px. Mapbox otherwise assumes 512.
+                      tileSize: 256,
+                      ...(source.bounds
+                        ? { bounds: source.bounds.map((b) => parseFloat(b)) }
+                        : {}),
+                    } as AnySourceData;
+                    gfwGeneratedLayers[layerId] = [
+                      {
+                        id: glLayerId,
+                        type: "fill",
+                        source: overlaySourceKey,
+                        "source-layer": GFW_SOURCE_LAYER,
+                        paint: {
+                          "fill-color": gfwColorExpression(hours, bins),
+                          "fill-opacity": gfwOpacityExpression(hours, opacity),
+                        },
+                      },
+                    ];
+                    this.gfwLayers.push({ glLayerId, opacity });
+                    this.ensureGfwBins();
+                    break;
+                  }
                   case DataSourceTypes.Inaturalist: {
                     const { sources: inatSources, layers: inatLayers } =
                       buildInaturalistSourcesAndLayers(
@@ -3002,6 +3069,16 @@ class MapContextManager extends EventEmitter {
                     ) as AnyLayer[];
                   }
                   layers.push(...glLayers);
+                }
+              } else if (isGfwSourceType(source.type)) {
+                const gfwLayers = gfwGeneratedLayers[layerId];
+                if (gfwLayers && !this.isLegendEyeHidden(layerId)) {
+                  const targetLayers = isUnderLabels ? underLabels : overLabels;
+                  targetLayers.push(
+                    ...(isTemporalInfo(source.temporal)
+                      ? (snapClockOpacityTransitions(gfwLayers) as AnyLayer[])
+                      : gfwLayers)
+                  );
                 }
               } else if (source.type === DataSourceTypes.Inaturalist) {
                 const inatLayers = inaturalistGeneratedLayers[layerId];
@@ -3457,7 +3534,48 @@ class MapContextManager extends EventEmitter {
    * one cached `when.step` series; window clocks query the selected range.
    * Painting coalesces to one animation frame so dragging can scrub live.
    */
+  private ensureGfwBins() {
+    if (this.gfwBinsRequested) return;
+    this.gfwBinsRequested = true;
+    fetchGfwBins(this.mapAccessToken)
+      .then((bins) => {
+        if (!bins) return;
+        this.gfwBins = bins;
+        this.applyGfwPaint();
+        this.updateLegends();
+        this.debouncedUpdateStyle();
+      })
+      .catch(() => {
+        // The fallback ramp stays in place when bins cannot be loaded.
+      });
+  }
+
+  /** Repaint fishing-effort cells for the current clock. The tile URL stays put. */
+  private applyGfwPaint() {
+    const map = this.map;
+    if (!map || this.gfwLayers.length === 0) return;
+    const frame = gfwFrameForClock(this.gfwClock);
+    setGfwHoverFrame(frame);
+    const hours = gfwHoursExpression(frame.years);
+    const bins =
+      this.gfwBins && this.gfwBins.length ? this.gfwBins : GFW_FALLBACK_BINS;
+    const color = gfwColorExpression(hours, bins);
+    for (const layer of this.gfwLayers) {
+      if (!map.getLayer(layer.glLayerId)) continue;
+      map.setPaintProperty(layer.glLayerId, "fill-color", color);
+      map.setPaintProperty(
+        layer.glLayerId,
+        "fill-opacity",
+        gfwOpacityExpression(hours, layer.opacity)
+      );
+    }
+  }
+
   setTemporalClock(clock: TemporalClock | null) {
+    this.gfwClock = clock;
+    setGfwHoverFrame(gfwFrameForClock(clock));
+    this.applyGfwPaint();
+    this.updateLegends();
     this.dataTableQueryManager.setTemporalClock(clock);
     if (this.dataTableClockRaf != null) {
       return;
@@ -4384,6 +4502,22 @@ class MapContextManager extends EventEmitter {
                 changes = true;
               }
             }
+          } else if (source && isGfwSourceType(source.type)) {
+            const frame = gfwFrameForClock(this.gfwClock);
+            newLegendState[id] = {
+              id,
+              type: "GfwLegendItem",
+              label: this.tocItems[layer.tocId]?.label || "",
+              bins:
+                this.gfwBins && this.gfwBins.length
+                  ? this.gfwBins
+                  : GFW_FALLBACK_BINS,
+              years: frame.years,
+              partialYear: frame.partialYear,
+              tableOfContentsItemDetails,
+              overlayDataTables,
+            };
+            changes = true;
           } else if (source && source.type === DataSourceTypes.Inaturalist) {
             const params = normalizeInaturalistParams(
               (source.queryParameters as any) || {}

@@ -1266,6 +1266,26 @@ query DraftTableOfContentsItemsForPicker($slug: String!) {
   }
 }
 
+mutation createGfwTableOfContentsItem(
+  $slug: String!
+  $params: JSON!
+  $title: String!
+  $metadata: JSON
+) {
+  createGfw4WingsTableOfContentsItem(
+    input: {
+      slug: $slug
+      params: $params
+      title: $title
+      metadata: $metadata
+    }
+  ) {
+    tableOfContentsItem {
+      ...FullAdminOverlay
+    }
+  }
+}
+
 mutation createINaturalistTableOfContentsItem(
   $slug: String!
   $params: JSON!

@@ -1755,6 +1755,42 @@ export type CreateGeographyClippingLayerPayloadGeographyClippingLayerEdgeArgs = 
   orderBy?: Maybe<Array<GeographyClippingLayersOrderBy>>;
 };
 
+/** All input for the `createGfw4WingsTableOfContentsItem` mutation. */
+export type CreateGfw4WingsTableOfContentsItemInput = {
+  /**
+   * An arbitrary string value with no semantic meaning. Will be included in the
+   * payload verbatim. May be used to track mutations by the client.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  metadata?: Maybe<Scalars['JSON']>;
+  params?: Maybe<Scalars['JSON']>;
+  slug?: Maybe<Scalars['String']>;
+  title?: Maybe<Scalars['String']>;
+};
+
+/** The output of our `createGfw4WingsTableOfContentsItem` mutation. */
+export type CreateGfw4WingsTableOfContentsItemPayload = {
+  __typename?: 'CreateGfw4WingsTableOfContentsItemPayload';
+  /**
+   * The exact same `clientMutationId` that was provided in the mutation input,
+   * unchanged and unused. May be used by a client to track mutations.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  /** Reads a single `DataLayer` that is related to this `TableOfContentsItem`. */
+  dataLayer?: Maybe<DataLayer>;
+  /** Our root query field type. Allows us to run any query from our mutation payload. */
+  query?: Maybe<Query>;
+  tableOfContentsItem?: Maybe<TableOfContentsItem>;
+  /** An edge for our `TableOfContentsItem`. May be used by Relay 1. */
+  tableOfContentsItemEdge?: Maybe<TableOfContentsItemsEdge>;
+};
+
+
+/** The output of our `createGfw4WingsTableOfContentsItem` mutation. */
+export type CreateGfw4WingsTableOfContentsItemPayloadTableOfContentsItemEdgeArgs = {
+  orderBy?: Maybe<Array<TableOfContentsItemsOrderBy>>;
+};
+
 /** All input for the create `Group` mutation. */
 export type CreateGroupInput = {
   /**
@@ -3356,6 +3392,8 @@ export enum DataSourceTypes {
   ArcgisVector = 'ARCGIS_VECTOR',
   /** MapBox GL Style "geojson" source */
   Geojson = 'GEOJSON',
+  /** Global Fishing Watch 4Wings annual fishing effort. Tiles are proxied; query_parameters names the pinned dataset. */
+  Gfw_4Wings = 'GFW_4WINGS',
   /** MapBox GL Style "image" source */
   Image = 'IMAGE',
   /** Data source is iNaturalist data, available via their map services api. Refer to query_parameters for request parameters. */
@@ -7704,6 +7742,7 @@ export type Mutation = {
   createGeographies?: Maybe<CreateGeographiesPayload>;
   /** Creates a single `GeographyClippingLayer`. */
   createGeographyClippingLayer?: Maybe<CreateGeographyClippingLayerPayload>;
+  createGfw4WingsTableOfContentsItem?: Maybe<CreateGfw4WingsTableOfContentsItemPayload>;
   /** Creates a single `Group`. */
   createGroup?: Maybe<CreateGroupPayload>;
   createInaturalistTableOfContentsItem?: Maybe<CreateInaturalistTableOfContentsItemPayload>;
@@ -8500,6 +8539,12 @@ export type MutationCreateGeographiesArgs = {
 /** The root mutation type which contains root level fields which mutate data. */
 export type MutationCreateGeographyClippingLayerArgs = {
   input: CreateGeographyClippingLayerInput;
+};
+
+
+/** The root mutation type which contains root level fields which mutate data. */
+export type MutationCreateGfw4WingsTableOfContentsItemArgs = {
+  input: CreateGfw4WingsTableOfContentsItemInput;
 };
 
 
@@ -22228,6 +22273,25 @@ export type DraftTableOfContentsItemsForPickerQuery = (
   )> }
 );
 
+export type CreateGfwTableOfContentsItemMutationVariables = Exact<{
+  slug: Scalars['String'];
+  params: Scalars['JSON'];
+  title: Scalars['String'];
+  metadata?: Maybe<Scalars['JSON']>;
+}>;
+
+
+export type CreateGfwTableOfContentsItemMutation = (
+  { __typename?: 'Mutation' }
+  & { createGfw4WingsTableOfContentsItem?: Maybe<(
+    { __typename?: 'CreateGfw4WingsTableOfContentsItemPayload' }
+    & { tableOfContentsItem?: Maybe<(
+      { __typename?: 'TableOfContentsItem' }
+      & FullAdminOverlayFragment
+    )> }
+  )> }
+);
+
 export type CreateINaturalistTableOfContentsItemMutationVariables = Exact<{
   slug: Scalars['String'];
   params: Scalars['JSON'];
@@ -35359,6 +35423,46 @@ export function useDraftTableOfContentsItemsForPickerLazyQuery(baseOptions?: Apo
 export type DraftTableOfContentsItemsForPickerQueryHookResult = ReturnType<typeof useDraftTableOfContentsItemsForPickerQuery>;
 export type DraftTableOfContentsItemsForPickerLazyQueryHookResult = ReturnType<typeof useDraftTableOfContentsItemsForPickerLazyQuery>;
 export type DraftTableOfContentsItemsForPickerQueryResult = Apollo.QueryResult<DraftTableOfContentsItemsForPickerQuery, DraftTableOfContentsItemsForPickerQueryVariables>;
+export const CreateGfwTableOfContentsItemDocument = gql`
+    mutation createGfwTableOfContentsItem($slug: String!, $params: JSON!, $title: String!, $metadata: JSON) {
+  createGfw4WingsTableOfContentsItem(
+    input: {slug: $slug, params: $params, title: $title, metadata: $metadata}
+  ) {
+    tableOfContentsItem {
+      ...FullAdminOverlay
+    }
+  }
+}
+    ${FullAdminOverlayFragmentDoc}`;
+export type CreateGfwTableOfContentsItemMutationFn = Apollo.MutationFunction<CreateGfwTableOfContentsItemMutation, CreateGfwTableOfContentsItemMutationVariables>;
+
+/**
+ * __useCreateGfwTableOfContentsItemMutation__
+ *
+ * To run a mutation, you first call `useCreateGfwTableOfContentsItemMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useCreateGfwTableOfContentsItemMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [createGfwTableOfContentsItemMutation, { data, loading, error }] = useCreateGfwTableOfContentsItemMutation({
+ *   variables: {
+ *      slug: // value for 'slug'
+ *      params: // value for 'params'
+ *      title: // value for 'title'
+ *      metadata: // value for 'metadata'
+ *   },
+ * });
+ */
+export function useCreateGfwTableOfContentsItemMutation(baseOptions?: Apollo.MutationHookOptions<CreateGfwTableOfContentsItemMutation, CreateGfwTableOfContentsItemMutationVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useMutation<CreateGfwTableOfContentsItemMutation, CreateGfwTableOfContentsItemMutationVariables>(CreateGfwTableOfContentsItemDocument, options);
+      }
+export type CreateGfwTableOfContentsItemMutationHookResult = ReturnType<typeof useCreateGfwTableOfContentsItemMutation>;
+export type CreateGfwTableOfContentsItemMutationResult = Apollo.MutationResult<CreateGfwTableOfContentsItemMutation>;
+export type CreateGfwTableOfContentsItemMutationOptions = Apollo.BaseMutationOptions<CreateGfwTableOfContentsItemMutation, CreateGfwTableOfContentsItemMutationVariables>;
 export const CreateINaturalistTableOfContentsItemDocument = gql`
     mutation createINaturalistTableOfContentsItem($slug: String!, $params: JSON!, $bounds: [BigFloat]!, $title: String!, $metadata: JSON) {
   createInaturalistTableOfContentsItem(
@@ -45448,6 +45552,7 @@ export const namedOperations = {
     SetProjectDataHostingRetentionPeriod: 'SetProjectDataHostingRetentionPeriod',
     CopyDataLibraryTemplate: 'CopyDataLibraryTemplate',
     DuplicateTableOfContentsItem: 'DuplicateTableOfContentsItem',
+    createGfwTableOfContentsItem: 'createGfwTableOfContentsItem',
     createINaturalistTableOfContentsItem: 'createINaturalistTableOfContentsItem',
     CreateResolvableComment: 'CreateResolvableComment',
     ResolveResolvableComment: 'ResolveResolvableComment',
