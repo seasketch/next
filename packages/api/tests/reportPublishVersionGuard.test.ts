@@ -515,3 +515,40 @@ describe("publishing while a new layer version is still preprocessing", () => {
     });
   });
 });
+
+describe("selectively publishing a version that is still preprocessing", () => {
+  test("is no longer pending once preprocessing completes", async () => {
+    await projectTransaction(pool, "public", async (conn, projectId, adminId) => {
+      await clearSession(conn);
+      const ebsa = await createReportingLayer(conn, projectId, "EBSAs");
+      const reportId = await createDraftReport(conn, projectId, [ebsa.stableId]);
+      await publishLayerList(conn, projectId, adminId);
+      await publishReport(conn, reportId);
+
+      const job = await uploadVersionStillPreprocessing(conn, projectId, ebsa);
+      await createSession(conn, adminId, true, false, projectId);
+      await conn.any(
+        sql`select publish_table_of_contents_items(${projectId}, ${sql.array(
+          [ebsa.stableId],
+          "text"
+        )})`
+      );
+      await clearSession(conn);
+      await publishReport(conn, reportId);
+      expect(await publishedRefs(conn, projectId, ebsa.stableId)).toEqual({
+        source_url: null,
+        source_processing_job_id: job.jobKey,
+      });
+
+      const outputUrl = await completePreprocessing(conn, projectId, job);
+      expect(await publishedRefs(conn, projectId, ebsa.stableId)).toEqual({
+        source_url: outputUrl,
+        source_processing_job_id: job.jobKey,
+      });
+      const pending = await conn.anyFirst(
+        sql`select stable_id from pending_publish_items_for_project(${projectId})`
+      );
+      expect(pending).not.toContain(ebsa.stableId);
+    });
+  });
+});
