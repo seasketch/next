@@ -87,6 +87,15 @@ export default function ProjectReportsAdmin() {
     });
   }, [draftReports, sketchClasses]);
 
+  const handleReportDuplicated = useCallback(
+    async (reportId: number) => {
+      await contextQuery.refetch();
+      // eslint-disable-next-line i18next/no-literal-string -- admin route
+      history.push(`/${slug}/admin/reports/${reportId}`);
+    },
+    [contextQuery, history, slug]
+  );
+
   const handleReportDeleted = useCallback(async () => {
     const { data } = await contextQuery.refetch();
     const projectId = data?.projectBySlug?.id;
@@ -366,6 +375,7 @@ export default function ProjectReportsAdmin() {
                     })
                   )}
                   onReportDeleted={handleReportDeleted}
+                  onReportDuplicated={handleReportDuplicated}
                   publishAvailable={selectedReportHasPrimaryAssignment}
                   draftReportIdOverride={selectedReport.id}
                 />
