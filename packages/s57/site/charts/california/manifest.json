@@ -11,12 +11,12 @@
   },
   {
     "source": "approach",
-    "maxzoom": 13,
+    "maxzoom": 14,
     "file": "approach.pmtiles"
   },
   {
     "source": "harbour",
-    "maxzoom": 14,
+    "maxzoom": 15,
     "file": "harbour.pmtiles"
   }
 ]

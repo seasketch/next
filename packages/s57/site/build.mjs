@@ -24,10 +24,13 @@ const dist = path.join(here, "dist");
 const chartsDir = path.join(here, "charts");
 const REGION_ORDER = ["california", "hawaii", "florida-east", "channel"];
 
-// The hosted pack has to stay under 50 MB. Harbour charts are cut at zoom 14
-// and approach charts at zoom 12; the map overzooms the last tile. The local
-// demo still builds the full zoom range.
-const HOSTED_MAXZOOM = { approach: 13, harbour: 14 };
+// The published pack has to stay under 50 MB. California's four full archives
+// are about 78 MB, and the harbour archive's zoom 16 is the part that does
+// not fit. The hosted harbour stops at zoom 15 and the map overzooms that
+// last level. Small, coastal, and approach are complete. The local demo
+// still builds every region through zoom 16.
+const HOSTED_REGIONS = new Set(["california"]);
+const HOSTED_MAXZOOM = { harbour: 15 };
 
 function run(command, args) {
   return new Promise((resolve, reject) => {
@@ -75,17 +78,29 @@ function sortRegions(ids) {
   });
 }
 
-/** Pull archives from a local chart build when one is present. */
+/** Pull the hosted region's archives from a local chart build when one is present. */
 async function syncLocalCharts() {
   const found = [];
   const channel = path.join(repoRoot, ".data/enc-fixtures/channel");
-  if (existsSync(path.join(channel, "manifest.json"))) found.push(["channel", channel]);
+  if (HOSTED_REGIONS.has("channel") && existsSync(path.join(channel, "manifest.json"))) {
+    found.push(["channel", channel]);
+  }
   const regionsRoot = path.join(repoRoot, ".data/enc-fixtures/regions");
   if (existsSync(regionsRoot)) {
     for (const name of readdirSync(regionsRoot)) {
+      if (!HOSTED_REGIONS.has(name)) continue;
       const dir = path.join(regionsRoot, name);
       if (existsSync(path.join(dir, "manifest.json"))) found.push([name, dir]);
     }
+  }
+  let names = [];
+  try {
+    names = await readdir(chartsDir);
+  } catch {
+    names = [];
+  }
+  for (const name of names) {
+    if (!HOSTED_REGIONS.has(name)) await rm(path.join(chartsDir, name), { recursive: true, force: true });
   }
   for (const [id, dir] of found) {
     const dest = path.join(chartsDir, id);
