@@ -138,5 +138,265 @@ describe("unionAtAntimeridian", () => {
         expect(x).toBeGreaterThanOrEqual(originalX);
       }
     });
+    // Stitching across ±180 must not take the long way around the globe.
+    expect(maxLongitudeEdge(result)).toBeLessThan(5);
+  });
+
+  it("keeps a prime-meridian ring near longitude 0", () => {
+    // Same shape as the UK sketch in issue 959 after land clipping: a ring
+    // with coastline west of Greenwich and corners east of it.
+    const primeMeridian: Feature<MultiPolygon> = {
+      type: "Feature",
+      properties: { name: "Bad sketch" },
+      geometry: {
+        type: "MultiPolygon",
+        coordinates: [
+          [
+            [
+              [-0.702438, 54.526119],
+              [-0.5, 54.6],
+              [-0.2, 54.4],
+              [0.384532, 53.757871],
+              [1.477516, 54.940503],
+              [2.358766, 53.993661],
+              [-0.702438, 54.526119],
+            ],
+          ],
+        ],
+      },
+    };
+
+    const result = unionAtAntimeridian(primeMeridian);
+    const longitudes = longitudesOf(result);
+
+    expect(Math.min(...longitudes)).toBeCloseTo(-0.702438, 5);
+    expect(Math.max(...longitudes)).toBeCloseTo(2.358766, 5);
+    expect(maxLongitudeEdge(result)).toBeLessThan(5);
+    expect(longitudes.some((longitude) => longitude > 180)).toBe(false);
+  });
+
+  it("does not move a western prime-meridian part to longitude 360", () => {
+    const splitByLand: Feature<MultiPolygon> = {
+      type: "Feature",
+      properties: {},
+      geometry: {
+        type: "MultiPolygon",
+        coordinates: [
+          [
+            [
+              [-2, 54],
+              [-0.15, 54],
+              [-0.15, 55],
+              [-2, 55],
+              [-2, 54],
+            ],
+          ],
+          [
+            [
+              [0.15, 54],
+              [2, 54],
+              [2, 55],
+              [0.15, 55],
+              [0.15, 54],
+            ],
+          ],
+        ],
+      },
+    };
+
+    const result = unionAtAntimeridian(splitByLand);
+    const longitudes = longitudesOf(result);
+
+    expect(Math.min(...longitudes)).toBeCloseTo(-2, 5);
+    expect(Math.max(...longitudes)).toBeCloseTo(2, 5);
+    expect(maxLongitudeEdge(result)).toBeLessThan(5);
+    expect(result.geometry.coordinates).toHaveLength(2);
+  });
+
+  it("leaves a western-hemisphere polygon west of Greenwich", () => {
+    const hawaii: Feature<MultiPolygon> = {
+      type: "Feature",
+      properties: {},
+      geometry: {
+        type: "MultiPolygon",
+        coordinates: [
+          [
+            [
+              [-155.86, 18.8],
+              [-155.65, 18.8],
+              [-155.65, 19.05],
+              [-155.86, 19.05],
+              [-155.86, 18.8],
+            ],
+          ],
+        ],
+      },
+    };
+
+    const result = unionAtAntimeridian(hawaii);
+    const longitudes = longitudesOf(result);
+
+    expect(Math.min(...longitudes)).toBeCloseTo(-155.86, 5);
+    expect(Math.max(...longitudes)).toBeCloseTo(-155.65, 5);
+  });
+
+  it("stitches an antimeridian split without moving an unrelated prime-meridian part", () => {
+    const mixed: Feature<MultiPolygon> = {
+      type: "Feature",
+      properties: {},
+      geometry: {
+        type: "MultiPolygon",
+        coordinates: [
+          ...fijiSplit.geometry.coordinates,
+          [
+            [
+              [-0.7, 53.8],
+              [0.4, 53.8],
+              [0.4, 54.2],
+              [-0.7, 54.2],
+              [-0.7, 53.8],
+            ],
+          ],
+        ],
+      },
+    };
+
+    const result = unionAtAntimeridian(mixed);
+    const rings = (result.geometry as MultiPolygon).coordinates.map(
+      (polygon) => polygon[0]
+    );
+    const ukRing = rings.find((ring) =>
+      ring.some((position) => position[1] > 0)
+    );
+    const fijiRing = rings.find((ring) =>
+      ring.some((position) => position[1] < 0)
+    );
+
+    expect(ukRing).toBeDefined();
+    expect(fijiRing).toBeDefined();
+    const ukLongitudes = ukRing!.map((position) => position[0]);
+    expect(Math.min(...ukLongitudes)).toBeCloseTo(-0.7, 5);
+    expect(Math.max(...ukLongitudes)).toBeCloseTo(0.4, 5);
+    expect(maxLongitudeEdge(result)).toBeLessThan(5);
+  });
+
+  it("draws an antimeridian hop as a short edge past 180, not across the world", () => {
+    // Auckland to Macauley Island. The geographic step is about 7°, but the
+    // stored longitudes are 174° and -178°. Mapbox would paint the long way
+    // around unless the western vertex is rewritten to about 182°.
+    const hop: Feature<MultiPolygon> = {
+      type: "Feature",
+      properties: {},
+      geometry: {
+        type: "MultiPolygon",
+        coordinates: [
+          [
+            [
+              [174.76398, -36.9],
+              [-178.43054, -36.9],
+              [-178.43054, -36.8],
+              [174.76398, -36.8],
+              [174.76398, -36.9],
+            ],
+          ],
+        ],
+      },
+    };
+
+    const result = unionAtAntimeridian(hop);
+    const longitudes = longitudesOf(result);
+
+    expect(Math.max(...longitudes) - Math.min(...longitudes)).toBeLessThan(10);
+    expect(maxLongitudeEdge(result)).toBeLessThan(10);
+    expect(Math.max(...longitudes)).toBeGreaterThan(180);
+  });
+
+  it("leaves a prime-meridian hop in place", () => {
+    // London to Birmingham. These longitudes are close to each other and far
+    // from ±180, so rewriting them into 0..360 space would cross the globe.
+    const hop: Feature<MultiPolygon> = {
+      type: "Feature",
+      properties: {},
+      geometry: {
+        type: "MultiPolygon",
+        coordinates: [
+          [
+            [
+              [-0.12119, 51.5],
+              [-1.92913, 51.5],
+              [-1.92913, 52.5],
+              [-0.12119, 52.5],
+              [-0.12119, 51.5],
+            ],
+          ],
+        ],
+      },
+    };
+
+    const result = unionAtAntimeridian(hop);
+    const longitudes = longitudesOf(result);
+
+    expect(Math.min(...longitudes)).toBeGreaterThan(-2);
+    expect(Math.max(...longitudes)).toBeLessThan(0);
+    expect(maxLongitudeEdge(result)).toBeLessThan(2);
+  });
+
+  it("leaves a west-only antimeridian part in place when nothing meets it", () => {
+    const westOnly: Feature<MultiPolygon> = {
+      type: "Feature",
+      properties: {},
+      geometry: {
+        type: "MultiPolygon",
+        coordinates: [
+          [
+            [
+              [-180, -19],
+              [-179, -19],
+              [-179, -18],
+              [-180, -18],
+              [-180, -19],
+            ],
+          ],
+        ],
+      },
+    };
+
+    const result = unionAtAntimeridian(westOnly);
+    const longitudes = longitudesOf(result);
+    expect(Math.min(...longitudes)).toBeCloseTo(-180, 5);
+    expect(Math.max(...longitudes)).toBeCloseTo(-179, 5);
   });
 });
+
+function longitudesOf(feature: Feature<Polygon | MultiPolygon>): number[] {
+  const polygons =
+    feature.geometry.type === "Polygon"
+      ? [feature.geometry.coordinates]
+      : feature.geometry.coordinates;
+  const longitudes: number[] = [];
+  polygons.forEach((polygon) => {
+    polygon.forEach((ring) => {
+      ring.forEach(([longitude]) => longitudes.push(longitude));
+    });
+  });
+  return longitudes;
+}
+
+function maxLongitudeEdge(feature: Feature<Polygon | MultiPolygon>): number {
+  const polygons =
+    feature.geometry.type === "Polygon"
+      ? [feature.geometry.coordinates]
+      : feature.geometry.coordinates;
+  let maxEdge = 0;
+  polygons.forEach((polygon) => {
+    polygon.forEach((ring) => {
+      for (let index = 1; index < ring.length; index++) {
+        maxEdge = Math.max(
+          maxEdge,
+          Math.abs(ring[index][0] - ring[index - 1][0])
+        );
+      }
+    });
+  });
+  return maxEdge;
+}
