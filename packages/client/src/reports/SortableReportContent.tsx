@@ -14,10 +14,12 @@ import {
   ReorderReportTabCardsMutationVariables,
   useReorderReportTabCardsMutation,
 } from "../generated/graphql";
-import { useMemo } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { ReportCardTitleToolbarContext } from "./widgets/ReportCardTitleToolbar";
 import { useBaseReportContext } from "./context/BaseReportContext";
 import { useCardDependencies } from "./context/useCardDependencies";
+import { reportCardExitDuration } from "./reportCardExit";
+import "./reportCardExit.css";
 
 interface SortableReportContentProps {
   selectedTab: ReportTabConfiguration;
@@ -40,6 +42,8 @@ export function ReportCardWithToolbarContext({
   onShowCalculationDetails,
   setEditing,
   adminMode,
+  onCardDeleting,
+  onCardDeleteFailed,
 }: {
   card: ReportTabConfiguration["cards"][number];
   dragHandleProps?: any;
@@ -48,6 +52,8 @@ export function ReportCardWithToolbarContext({
   onMoveCardToTab?: (cardId: number) => void;
   onShowCalculationDetails?: (cardId: number) => void;
   setEditing?: (editing: number | null, preselectTitle?: boolean) => void;
+  onCardDeleting?: (cardId: number) => void;
+  onCardDeleteFailed?: (cardId: number) => void;
 }) {
   const cardId = card.id;
   // Dependencies are now fetched inside ReportCard via useCardDependencies
@@ -69,6 +75,8 @@ export function ReportCardWithToolbarContext({
       loading: false,
       setEditing,
       onDownloadResults: undefined,
+      onCardDeleting,
+      onCardDeleteFailed,
     };
   }, [
     cardId,
@@ -79,6 +87,8 @@ export function ReportCardWithToolbarContext({
     onShowCalculationDetails,
     setEditing,
     adminMode,
+    onCardDeleting,
+    onCardDeleteFailed,
   ]);
 
   return (
@@ -100,6 +110,34 @@ export function SortableReportContent(props: SortableReportContentProps) {
     () => (report.tabs || []).length > 1,
     [report.tabs]
   );
+
+  // card id -> measured height, present while the exit animation is playing
+  const [exitingCards, setExitingCards] = useState<ReadonlyMap<number, number>>(
+    () => new Map()
+  );
+
+  const onCardDeleting = useCallback((cardId: number) => {
+    const el = document.querySelector(
+      // eslint-disable-next-line i18next/no-literal-string -- DOM selector
+      `[data-rbd-draggable-id="${cardId}"]`
+    );
+    const height =
+      el instanceof HTMLElement ? el.getBoundingClientRect().height : 0;
+    setExitingCards((prev) => {
+      const next = new Map(prev);
+      next.set(cardId, height);
+      return next;
+    });
+  }, []);
+
+  const onCardDeleteFailed = useCallback((cardId: number) => {
+    setExitingCards((prev) => {
+      if (!prev.has(cardId)) return prev;
+      const next = new Map(prev);
+      next.delete(cardId);
+      return next;
+    });
+  }, []);
 
   const [reorderReportTabCards] = useReorderReportTabCardsMutation({
     onError,
@@ -234,14 +272,14 @@ export function SortableReportContent(props: SortableReportContentProps) {
               className="space-y-2"
             >
               {selectedTab.cards.map((card, index) => {
-                // const { metrics, loading, errors, overlaySources } =
-                //   context.getDependencies(card.id);
+                const exitHeight = exitingCards.get(card.id);
+                const exiting = exitHeight != null;
                 return (
                   <Draggable
                     key={card.id}
                     draggableId={card.id.toString()}
                     index={index}
-                    isDragDisabled={disabled}
+                    isDragDisabled={disabled || exiting}
                   >
                     {(provided, snapshot) => (
                       <div
@@ -252,18 +290,27 @@ export function SortableReportContent(props: SortableReportContentProps) {
                             ? "shadow-lg rotate-2 scale-105 z-50"
                             : ""
                         } ${
-                          !snapshot.isDragging
+                          !snapshot.isDragging && !exiting
                             ? "transition-colors duration-150"
                             : ""
-                        }`}
+                        } ${exiting ? "report-card-exiting" : ""}`}
                         style={{
                           ...provided.draggableProps.style,
+                          ...(exiting
+                            ? {
+                                // eslint-disable-next-line i18next/no-literal-string -- CSS custom property
+                                ["--report-card-height" as string]: `${exitHeight}px`,
+                                animationDuration: `${reportCardExitDuration()}ms`,
+                              }
+                            : null),
                         }}
                       >
                         <ReportCardWithToolbarContext
                           card={card}
                           dragHandleProps={
-                            disabled ? undefined : provided.dragHandleProps
+                            disabled || exiting
+                              ? undefined
+                              : provided.dragHandleProps
                           }
                           hasMultipleTabs={hasMultipleTabs}
                           onMoveCardToTab={props.onMoveCardToTab}
@@ -272,6 +319,8 @@ export function SortableReportContent(props: SortableReportContentProps) {
                           }
                           setEditing={props.setEditing}
                           adminMode={true}
+                          onCardDeleting={onCardDeleting}
+                          onCardDeleteFailed={onCardDeleteFailed}
                         />
                       </div>
                     )}

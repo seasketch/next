@@ -1,4 +1,5 @@
 import { memo, useCallback } from "react";
+import { useApolloClient } from "@apollo/client";
 import { useTranslation } from "react-i18next";
 import {
   ColumnsIcon,
@@ -11,11 +12,11 @@ import { CalculatorIcon, SwitchHorizontalIcon } from "@heroicons/react/outline";
 import ReportCardActionMenu from "../components/ReportCardActionMenu";
 import Spinner from "../../components/Spinner";
 import useDialog from "../../components/useDialog";
-import {
-  DraftReportDocument,
-  useDeleteReportCardMutation,
-} from "../../generated/graphql";
+import { useDeleteReportCardMutation } from "../../generated/graphql";
 import { useGlobalErrorHandler } from "../../components/GlobalErrorHandler";
+import { useBaseReportContext } from "../context/BaseReportContext";
+import { removeReportCardFromCache } from "../utils/removeReportCardFromCache";
+import { reportCardExitDuration, wait } from "../reportCardExit";
 
 export interface ReportCardTitleActionMenuProps {
   menuOpen: boolean;
@@ -27,11 +28,13 @@ export interface ReportCardTitleActionMenuProps {
   hasMultipleTabs: boolean;
   openMoveCardToTabModal?: (cardId: number) => void;
   openCalculationDetailsModal?: (cardId: number) => void;
-  setEditing: (cardId: number) => void;
+  setEditing: (cardId: number | null) => void;
   hasCardContentTabs?: boolean;
   onUseTabbedDisplay?: () => void;
   onRemoveTabbedDisplay?: () => void;
   onManageCardTabs?: () => void;
+  onCardDeleting?: (cardId: number) => void;
+  onCardDeleteFailed?: (cardId: number) => void;
 }
 
 /**
@@ -53,34 +56,57 @@ const ReportCardTitleActionMenu = memo(function ReportCardTitleActionMenu({
   onUseTabbedDisplay,
   onRemoveTabbedDisplay,
   onManageCardTabs,
+  onCardDeleting,
+  onCardDeleteFailed,
 }: ReportCardTitleActionMenuProps) {
   const { t } = useTranslation("admin:sketching");
   const { confirm, confirmDelete } = useDialog();
   const onError = useGlobalErrorHandler();
+  const client = useApolloClient();
+  const { report } = useBaseReportContext();
   const [deleteCardMutation] = useDeleteReportCardMutation({
     onError,
-    refetchQueries: [DraftReportDocument],
-    awaitRefetchQueries: true,
   });
   const handleDeleteCard = useCallback(
-    async (cardId: number) => {
-      await confirmDelete({
+    (id: number) => {
+      confirmDelete({
         message: t("Are you sure you want to delete this card?"),
         description: t("This action cannot be undone."),
-        onDelete: async () => {
-          try {
-            await deleteCardMutation({
-              variables: {
-                id: cardId,
-              },
-            });
-          } catch (error) {
-            // Error is handled by onError
-          }
+        onDelete: () => {
+          // Close the dialog immediately so the exit animation is visible.
+          // The mutation returns only a boolean, and refetching DraftReport
+          // updates the sketch class's primary draft — not this report when
+          // it is a duplicate. Remove the card from the open report's cache
+          // after the animation.
+          onCardDeleting?.(id);
+          setEditing(null);
+          const exit = wait(reportCardExitDuration());
+          void (async () => {
+            try {
+              await deleteCardMutation({
+                variables: {
+                  id,
+                },
+              });
+              await exit;
+              removeReportCardFromCache(client.cache, id, report.id);
+            } catch {
+              onCardDeleteFailed?.(id);
+            }
+          })();
         },
       });
     },
-    [confirmDelete, t, deleteCardMutation]
+    [
+      confirmDelete,
+      t,
+      deleteCardMutation,
+      onCardDeleting,
+      onCardDeleteFailed,
+      setEditing,
+      client,
+      report.id,
+    ]
   );
 
   return (

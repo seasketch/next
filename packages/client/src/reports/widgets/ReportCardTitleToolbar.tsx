@@ -137,6 +137,8 @@ export default function ReportCardTitleToolbar({ node }: { node: Node }) {
           onUseTabbedDisplay={context.onUseTabbedDisplay}
           onRemoveTabbedDisplay={context.onRemoveTabbedDisplay}
           onManageCardTabs={context.onManageCardTabs}
+          onCardDeleting={context.onCardDeleting}
+          onCardDeleteFailed={context.onCardDeleteFailed}
         />
       </div>
     </h1>
@@ -164,6 +166,10 @@ export const ReportCardTitleToolbarContext = createContext<{
   onUseTabbedDisplay?: () => void;
   onRemoveTabbedDisplay?: () => void;
   onManageCardTabs?: () => void;
+  /** Mark the card as leaving so the list can play the exit animation. */
+  onCardDeleting?: (cardId: number) => void;
+  /** Restore a card if the delete mutation fails. */
+  onCardDeleteFailed?: (cardId: number) => void;
 }>({
   adminMode: false,
   cardId: 0,
