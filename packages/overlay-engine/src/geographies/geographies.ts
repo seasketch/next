@@ -726,6 +726,9 @@ export async function clipToGeographies(
     fragments = eliminateOverlap(fragments, existingSketchFragments);
   }
 
+  // `clipped` is the shape Mapbox draws. It may use longitudes outside
+  // [-180, 180] so an antimeridian crossing stays a short edge. `fragments`
+  // stay cut at ±180 and are valid WGS84 polygons.
   return {
     clipped: unionAtAntimeridian(clipped) as PreparedSketch["feature"],
     fragments,
