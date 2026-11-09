@@ -164,6 +164,51 @@ describe("coverage peel", () => {
     assert.equal(coastal[0].properties.retire, 11);
   });
 
+  it("keeps an island the covering cell does not redraw", async () => {
+    const island = square(-119.8, 34.0, -119.6, 34.1);
+    const rock = square(-119.2, 34.4, -119.19, 34.41);
+    const cell = square(-120, 33.9, -119, 34.5);
+    const out = await run(
+      [feature("US2", 2, "land", 6, island, "LNDARE"), feature("US3", 3, "land", 8, rock, "LNDARE")],
+      [feature("US3", 3, "land", 8, cell)]
+    );
+    const general = out.filter((item) => item.properties.cell === "US2");
+    assert.equal(general.length, 1);
+    assert.equal(general[0].tippecanoe.maxzoom, 16);
+    assert.equal(general[0].properties.retire, undefined);
+  });
+
+  it("retires an island when the larger chart redraws that island", async () => {
+    const island = square(-119.8, 34.0, -119.6, 34.1);
+    const redraw = square(-119.81, 33.99, -119.59, 34.11);
+    const cell = square(-120, 33.9, -119, 34.5);
+    const out = await run(
+      [feature("US2", 2, "land", 6, island, "LNDARE"), feature("US3", 3, "land", 8, redraw, "LNDARE")],
+      [feature("US3", 3, "land", 8, cell)]
+    );
+    const general = out.filter((item) => item.properties.cell === "US2");
+    assert.equal(general.length, 1);
+    assert.equal(general[0].tippecanoe.maxzoom, 7);
+    assert.equal(general[0].properties.retire, 8);
+  });
+
+  it("does not cut a traffic lane where the covering cell redraws only a piece", async () => {
+    const lane = square(-120.5, 34.2, -119.5, 34.35);
+    const piece = square(-120.5, 34.2, -120.3, 34.35);
+    const cell = square(-120.6, 34.0, -119.4, 34.5);
+    const out = await run(
+      [
+        feature("US2", 2, "separation", 6, lane, "TSSLPT"),
+        feature("US3", 3, "separation", 8, piece, "TSSLPT"),
+      ],
+      [feature("US3", 3, "separation", 8, cell)]
+    );
+    const general = out.filter((item) => item.properties.cell === "US2");
+    assert.equal(general.length, 1);
+    assert.equal(general[0].tippecanoe.maxzoom, 16);
+    assert.equal(general[0].properties.retire, undefined);
+  });
+
   it("keeps a buoy the covering cell does not carry", async () => {
     const buoy = { type: "Point", coordinates: [-119.5, 34.5] } as unknown as ReturnType<typeof square>;
     const elsewhere = { type: "Point", coordinates: [-119.2, 34.8] } as unknown as ReturnType<typeof square>;

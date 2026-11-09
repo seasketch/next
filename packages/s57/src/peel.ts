@@ -185,16 +185,31 @@ function drawnAs(properties: Record<string, unknown>): string | null {
 }
 
 /**
- * The chart itself: these hand over when the covering cell draws the class
- * at all. Matching them object by object would cost a geometry test per
- * sounding and per contour, and they carry no per-object SCAMIN to honour.
+ * Skin of the chart: a larger cell that draws the class redraws it across
+ * its coverage. Land, coastline, and traffic lanes are not in this set. A
+ * cell that contains one island does not redraw the others, and a lane in
+ * one corner is not the whole separation scheme.
  */
-export const WHOLE_CLASS = new Set(["DEPARE", "DRGARE", "UNSARE", "LNDARE", "DEPCNT", "SOUNDG", "COALNE", "SLCONS"]);
+export const WHOLE_CLASS = new Set(["DEPARE", "DRGARE", "UNSARE", "DEPCNT", "SOUNDG"]);
 
 /** How far apart two cells may place the same buoy or landmark. About 300 m. */
 const SAME_OBJECT = 0.003;
 
-type Extent = { west: number; south: number; east: number; north: number; minzoom: number };
+/**
+ * Charts of the same coast do not share vertices. This closes that gap when
+ * a larger chart's land or lane replaces the smaller one, without reaching
+ * the next island. About 90 m.
+ */
+const REDRAW_GAP = 0.0008;
+
+type Extent = {
+  west: number;
+  south: number;
+  east: number;
+  north: number;
+  minzoom: number;
+  geom?: Geometry;
+};
 
 type Starts = {
   /** First zoom of each class in each cell. */
@@ -239,8 +254,15 @@ async function classStarts(featuresPath: string): Promise<Starts> {
     if (WHOLE_CLASS.has(layer)) return;
     const extent = extentOf(feature.geometry);
     if (!extent) return;
+    let geom: Geometry | undefined;
+    try {
+      const parsed = gdal.Geometry.fromGeoJson(feature.geometry);
+      geom = parsed && !parsed.isEmpty() ? parsed : undefined;
+    } catch {
+      geom = undefined;
+    }
     if (!extents.has(key)) extents.set(key, []);
-    extents.get(key)!.push({ ...extent, minzoom: zoom });
+    extents.get(key)!.push({ ...extent, minzoom: zoom, geom });
   });
   return { byClass, extents };
 }
@@ -285,6 +307,38 @@ function handover(starts: Starts, key: string, layer: string, part: Geometry): n
   return closest?.minzoom ?? null;
 }
 
+function apart(envelope: { minX: number; minY: number; maxX: number; maxY: number }, other: Extent, pad: number): boolean {
+  return (
+    other.west > envelope.maxX + pad ||
+    other.east < envelope.minX - pad ||
+    other.south > envelope.maxY + pad ||
+    other.north < envelope.minY - pad
+  );
+}
+
+/** Share of this shape that the larger chart redraws. Lines are compared as thin ribbons. */
+function coverFraction(featureGeom: Geometry, other: Geometry): number {
+  try {
+    if (featureGeom.name.includes("LINE") || other.name.includes("LINE")) {
+      const mine = featureGeom.buffer(REDRAW_GAP, 2);
+      const theirs = other.buffer(REDRAW_GAP, 2);
+      const area = mine.getArea();
+      if (!(area > 0)) return 0;
+      const overlap = clean(mine.intersection(theirs));
+      return overlap && !overlap.isEmpty() ? overlap.getArea() / area : 0;
+    }
+    const area = featureGeom.getArea();
+    if (!(area > 0)) return 0;
+    const overlap = clean(featureGeom.intersection(other));
+    return overlap && !overlap.isEmpty() ? overlap.getArea() / area : 0;
+  } catch {
+    return 0;
+  }
+}
+
+/** A larger chart redrew this island, coast, or lane, rather than a neighbour. */
+const REDRAWN = 0.6;
+
 function cut(
   feature: Feature,
   geom: Geometry,
@@ -300,6 +354,25 @@ function cut(
   if (!remaining) return 0;
   let written = 0;
   const envelope = remaining.getEnvelope();
+  // A point hands over to the nearby copy. An island, a coastline, or a lane
+  // hands over as a whole when a larger chart redraws that shape. Cutting it
+  // along the cell, or along every partial overlap, leaves the gaps the
+  // overview shows: a lane in pieces, and the next island gone.
+  const redrawn = !family.includes("POINT") && !WHOLE_CLASS.has(layer);
+  if (redrawn) {
+    let retireAt: number | null = null;
+    for (let higher = band + 1; higher <= 6; higher += 1) {
+      for (const mask of masks.near(higher, envelope)) {
+        for (const other of starts.extents.get(`${mask.cell}\0${layer}`) || []) {
+          if (!other.geom || apart(envelope, other, REDRAW_GAP)) continue;
+          if (coverFraction(remaining, other.geom) < REDRAWN) continue;
+          if (retireAt == null || other.minzoom < retireAt) retireAt = other.minzoom;
+        }
+      }
+    }
+    if (retireAt == null) return emit(feature, remaining, maxZoom, family, write);
+    return emit(feature, remaining, retireAt - 1, family, write, retireAt);
+  }
   for (let higher = band + 1; higher <= 6; higher += 1) {
     const covering = masks
       .near(higher, envelope)

@@ -19,6 +19,7 @@ import {
   rewriteEncFeature,
 } from "./layers.js";
 import { prepareReveal } from "./reveal.js";
+import { releaseMinZoom } from "./tileCohorts.js";
 import { ChartFeature, clipDepthCoveredByLand } from "./landCover.js";
 import { peelFeatures } from "./peel.js";
 import { LightFeature, lightSectorFeatures, sectorRings } from "./sectors.js";
@@ -257,20 +258,74 @@ async function splitBySource(
   return files;
 }
 
+/**
+ * Tile one GeoJSONSeq file. Features are grouped by the zoom they should
+ * first appear, and that zoom is `--minimum-zoom` rather than a per-feature
+ * field. See `releaseMinZoom`.
+ */
+async function tileCohorts(
+  work: string,
+  name: string,
+  input: string,
+  maxzoom: number,
+  extra: string[]
+): Promise<string | null> {
+  type Cohort = { path: string; stream: ReturnType<typeof createWriteStream>; count: number };
+  const cohorts = new Map<number, Cohort>();
+  const lines = readline.createInterface({ input: createReadStream(input), crlfDelay: Infinity });
+  for await (const line of lines) {
+    if (!line.trim()) continue;
+    const feature = JSON.parse(line) as { tippecanoe?: { minzoom?: number } };
+    const minzoom = releaseMinZoom(feature);
+    let cohort = cohorts.get(minzoom);
+    if (!cohort) {
+      const cohortPath = path.join(work, `${name}-z${minzoom}.geojsonl`);
+      cohort = { path: cohortPath, stream: createWriteStream(cohortPath), count: 0 };
+      cohorts.set(minzoom, cohort);
+    }
+    cohort.stream.write(JSON.stringify(feature) + "\n");
+    cohort.count += 1;
+    await drained(cohort.stream);
+  }
+  await Promise.all(
+    [...cohorts.values()].map(
+      (cohort) =>
+        new Promise<void>((resolve, reject) => {
+          cohort.stream.end(() => resolve());
+          cohort.stream.on("error", reject);
+        })
+    )
+  );
+  const parts: string[] = [];
+  for (const [minzoom, cohort] of [...cohorts.entries()].sort((a, b) => a[0] - b[0])) {
+    if (cohort.count === 0) continue;
+    const out = path.join(work, `${name}-z${minzoom}.pmtiles`);
+    const tiled = await run("tippecanoe", [
+      "-o",
+      out,
+      "--force",
+      "--no-progress-indicator",
+      "--projection=EPSG:4326",
+      `--minimum-zoom=${minzoom}`,
+      `--maximum-zoom=${maxzoom}`,
+      ...extra,
+      cohort.path,
+    ]);
+    if (tiled.stderr.trim()) console.warn(tiled.stderr.trim().slice(0, 2000));
+    parts.push(out);
+  }
+  if (parts.length === 0) return null;
+  if (parts.length === 1) return parts[0];
+  const joined = path.join(work, `${name}.pmtiles`);
+  await run("tile-join", ["--force", "--quiet", "--no-tile-size-limit", "-o", joined, ...parts]);
+  return joined;
+}
+
 /** Tile one scale group's areas and points into a single archive. */
 async function tileSource(work: string, source: EncSource, files: SplitFiles): Promise<string> {
   const parts: string[] = [];
-  const zooms = ["--minimum-zoom=0", `--maximum-zoom=${source.maxzoom}`];
   if (files.areas.count > 0) {
-    const areasTiles = path.join(work, `${source.id}-areas.pmtiles`);
-    const areaRun = await run("tippecanoe", [
-      "-o",
-      areasTiles,
-      "--force",
-      // Progress on a national chart is more output than execFile buffers.
-      "--no-progress-indicator",
-      "--projection=EPSG:4326",
-      ...zooms,
+    const areasTiles = await tileCohorts(work, `${source.id}-areas`, files.areas.path, source.maxzoom, [
       "--full-detail=14",
       "--low-detail=12",
       "--detect-shared-borders",
@@ -282,32 +337,24 @@ async function tileSource(work: string, source: EncSource, files: SplitFiles): P
       "--no-tile-size-limit",
       "--no-feature-limit",
       "--generate-ids",
-      files.areas.path,
     ]);
-    if (areaRun.stderr.trim()) console.warn(areaRun.stderr.trim().slice(0, 2000));
-    parts.push(areasTiles);
+    if (areasTiles) parts.push(areasTiles);
   }
   if (files.points.count > 0) {
-    const pointTiles = path.join(work, `${source.id}-points.pmtiles`);
     // No size limit: a harbour sounding or a buoy is never the feature
     // that should be thrown away to make a tile smaller.
-    const pointRun = await run("tippecanoe", [
-      "-o",
-      pointTiles,
-      "--force",
-      "--no-progress-indicator",
-      "--projection=EPSG:4326",
-      ...zooms,
+    const pointTiles = await tileCohorts(work, `${source.id}-points`, files.points.path, source.maxzoom, [
       "--no-tile-size-limit",
       "--no-feature-limit",
       // Tippecanoe otherwise keeps 1 point in 2.5 at each zoom below the
       // top, so rocks and soundings blink out and back as you zoom.
       "--drop-rate=1",
       "--generate-ids",
-      files.points.path,
     ]);
-    if (pointRun.stderr.trim()) console.warn(pointRun.stderr.trim().slice(0, 2000));
-    parts.push(pointTiles);
+    if (pointTiles) parts.push(pointTiles);
+  }
+  if (parts.length === 0) {
+    throw new Error(`The ${source.id} charts had no features to tile`);
   }
   if (parts.length === 1) return parts[0];
   const joined = path.join(work, `${source.id}.pmtiles`);

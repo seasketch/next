@@ -1,13 +1,29 @@
 import { copyFile, mkdir, rm, writeFile } from "fs/promises";
 import path from "path";
+import { bandFromCellName } from "../src/layers.js";
 import { processEncFiles } from "../src/process.js";
 import { ChartManifest } from "./channel.js";
 import { fetchRegionCells } from "./fetch-chart.js";
 import { chartRegion, regionChartDir } from "./regions.js";
 
+function maxBandArg(): number | undefined {
+  const index = process.argv.indexOf("--max-band");
+  if (index === -1) return undefined;
+  const value = Number(process.argv[index + 1]);
+  if (!Number.isInteger(value) || value < 1 || value > 6) {
+    throw new Error("--max-band needs an integer from 1 to 6");
+  }
+  return value;
+}
+
 async function main(): Promise<void> {
   const region = chartRegion(process.argv[2]);
-  const cells = await fetchRegionCells(region);
+  const maxBand = maxBandArg();
+  const cells = (await fetchRegionCells(region)).filter((file) => {
+    if (maxBand == null) return true;
+    const band = bandFromCellName(path.basename(file));
+    return band == null || band <= maxBand;
+  });
   const started = Date.now();
   const result = await processEncFiles(cells, {
     clip: region.clip,
