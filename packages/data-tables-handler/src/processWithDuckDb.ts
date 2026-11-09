@@ -246,6 +246,17 @@ export async function filterParquetByJoinValues(
 /** Cap on histogram entries stored per column in column-stats.json. */
 const VALUES_HISTOGRAM_LIMIT = 500;
 
+/**
+ * DuckDB MIN/MAX of a numeric column is SQL NULL when every value is null.
+ * Persisting that null makes admin column menus call toLocaleString on it.
+ * NaN and non-numbers are omitted for the same reason.
+ */
+export function finiteColumnStat(value: unknown): number | undefined {
+  return typeof value === "number" && Number.isFinite(value)
+    ? value
+    : undefined;
+}
+
 export async function computeColumnStatsFromParquet(
   parquetPath: string,
   tableName: string,
@@ -301,17 +312,17 @@ export async function computeColumnStatsFromParquet(
       };
       if (type === "number") {
         const stats = await all<{
-          min: number;
-          max: number;
+          min: unknown;
+          max: unknown;
         }>(
           conn,
           `SELECT MIN(CAST("${colName}" AS DOUBLE)) as min, MAX(CAST("${colName}" AS DOUBLE)) as max FROM observations WHERE "${colName}" IS NOT NULL`,
         );
         if (stats[0]) {
-          (attr as GeostatsAttribute & { min?: number; max?: number }).min =
-            stats[0].min;
-          (attr as GeostatsAttribute & { min?: number; max?: number }).max =
-            stats[0].max;
+          const min = finiteColumnStat(stats[0].min);
+          const max = finiteColumnStat(stats[0].max);
+          if (min !== undefined) attr.min = min;
+          if (max !== undefined) attr.max = max;
         }
       }
       columns.push(attr);
