@@ -90,9 +90,9 @@ const databaseEnv = {
 try {
   await run("npm", ["run", "build", "--silent"]);
   await run("npm", ["run", "setup", "--", "--reset"], databaseEnv);
-  // The e2e API reads seasketch_e2e, and that profile does not run db:watch
-  // against it. Apply the in-progress migration before the server starts so
-  // journeys can exercise it. Committed migrations stay in setup.
+  // setup applies committed migrations only. Apply current.sql with psql.
+  // db:watch --once would also rewrite schema.sql, because it is not running
+  // inside the API test suite.
   await applyCurrentSql();
   const playwrightArgs = process.argv.slice(2);
   const npmArgs = ["test", "--workspace", "@seasketch/e2e"];
