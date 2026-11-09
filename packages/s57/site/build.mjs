@@ -1,18 +1,24 @@
 /**
  * Assemble the static chart site into dist/.
  *
- * Tile archives live in charts/<region>/. When a local `npm run chart` has
- * written a newer copy under the repo's .data directory, that copy replaces
- * the committed one before the site is packed. The published host has no
- * .data directory, so it ships the archives committed next to this script.
+ * The publish host uploads this folder alone and then runs `npm run build`.
+ * The style sources in chart-style/ and the sprites in assets/s57 are copies
+ * of the package sources, refreshed below when this script can see them.
+ * Tile archives live in charts/<region>/. A local chart build under the
+ * repo's .data directory replaces the committed copy. The host has neither
+ * the package sources nor .data, so it ships what is committed here.
+ *
+ * Archives are copied whole. California and Florida at full zoom are each
+ * larger than the host's 50 MB limit, so the published chart is the Santa
+ * Barbara Channel and Hawaii, both through harbour zoom 16. The local demo
+ * still builds every region.
  *
  * Mapbox GL 3.4 has no addProtocol, so a service worker reads each PMTiles
  * archive and answers the style's ordinary /tiles/.../*.mvt requests.
  */
-import { execFile } from "child_process";
 import { createHash } from "crypto";
 import { createReadStream, existsSync, readdirSync, statSync } from "fs";
-import { copyFile, mkdir, open, readdir, readFile, rename, rm, writeFile } from "fs/promises";
+import { copyFile, mkdir, open, readdir, readFile, rm, writeFile } from "fs/promises";
 import path from "path";
 import { fileURLToPath, pathToFileURL } from "url";
 import { build } from "esbuild";
@@ -22,24 +28,11 @@ const here = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(here, "../../..");
 const dist = path.join(here, "dist");
 const chartsDir = path.join(here, "charts");
-const REGION_ORDER = ["california", "hawaii", "florida-east", "channel"];
+const REGION_ORDER = ["channel", "hawaii", "california", "florida-east"];
 
-// The published pack has to stay under 50 MB. California's four full archives
-// are about 78 MB, and the harbour archive's zoom 16 is the part that does
-// not fit. The hosted harbour stops at zoom 15 and the map overzooms that
-// last level. Small, coastal, and approach are complete. The local demo
-// still builds every region through zoom 16.
-const HOSTED_REGIONS = new Set(["california"]);
-const HOSTED_MAXZOOM = { harbour: 15 };
-
-function run(command, args) {
-  return new Promise((resolve, reject) => {
-    execFile(command, args, { maxBuffer: 8 * 1024 * 1024 }, (error, stdout, stderr) => {
-      if (error) reject(new Error(`${command} ${args.join(" ")} failed: ${stderr || error.message}`));
-      else resolve(stdout);
-    });
-  });
-}
+// Complete archives only. Channel is about 6 MB and Hawaii about 21 MB.
+// California's harbour archive alone is 48 MB, and Florida's is 43 MB.
+const HOSTED_REGIONS = new Set(["channel", "hawaii"]);
 
 class NodeSource {
   constructor(file) {
@@ -115,48 +108,32 @@ async function syncLocalCharts() {
   }
 }
 
-/** Drop zoom levels the hosted pack cannot carry. Archives already within the cap are left alone. */
-async function capHostedArchives() {
-  let names = [];
-  try {
-    names = (await readdir(chartsDir)).filter((name) => existsSync(path.join(chartsDir, name, "manifest.json")));
-  } catch {
-    return;
+/** Copy the style and sprites into this folder when the package sources are present. */
+async function refreshVendoredSources() {
+  const styleSrc = path.join(here, "../src/style.ts");
+  const revealSrc = path.join(here, "../src/reveal.ts");
+  if (existsSync(styleSrc) && existsSync(revealSrc)) {
+    const chartStyle = path.join(here, "chart-style");
+    await mkdir(chartStyle, { recursive: true });
+    await copyFile(styleSrc, path.join(chartStyle, "style.ts"));
+    await copyFile(revealSrc, path.join(chartStyle, "reveal.ts"));
   }
-  for (const id of names) {
-    const dir = path.join(chartsDir, id);
-    const manifest = JSON.parse(await readFile(path.join(dir, "manifest.json"), "utf8"));
-    let changed = false;
-    for (const entry of manifest) {
-      const cap = HOSTED_MAXZOOM[entry.source];
-      if (cap == null) continue;
-      const file = path.join(dir, entry.file);
-      const header = await new PMTiles(new NodeSource(file)).getHeader();
-      if (header.maxZoom <= cap) continue;
-      // The extension selects the format. Anything else is written as MBTiles.
-      const tmp = `${file}.capped.pmtiles`;
-      await run("tile-join", [
-        "--force",
-        "--quiet",
-        "--no-tile-size-limit",
-        `--maximum-zoom=${cap}`,
-        "-o",
-        tmp,
-        file,
-      ]);
-      await rename(tmp, file);
-      entry.maxzoom = cap;
-      changed = true;
-      console.log(`capped ${id}/${entry.source} at zoom ${cap}`);
-    }
-    if (changed) await writeFile(path.join(dir, "manifest.json"), JSON.stringify(manifest, null, 2));
+  const publicS57 = path.join(here, "../public/s57");
+  if (existsSync(publicS57)) {
+    const assets = path.join(here, "assets/s57");
+    await rm(assets, { recursive: true, force: true });
+    await copyTree(publicS57, assets);
   }
 }
 
 async function loadStyleBuilder() {
+  const entry = path.join(here, "chart-style/style.ts");
+  if (!existsSync(entry)) {
+    throw new Error("packages/s57/site/chart-style/style.ts is missing. Build the site from the repo once so the style is copied in.");
+  }
   const bundled = path.join(here, ".style-bundle.mjs");
   await build({
-    entryPoints: [path.join(here, "../src/style.ts")],
+    entryPoints: [entry],
     bundle: true,
     format: "esm",
     platform: "node",
@@ -167,8 +144,8 @@ async function loadStyleBuilder() {
 }
 
 async function main() {
+  await refreshVendoredSources();
   await syncLocalCharts();
-  await capHostedArchives();
   let names;
   try {
     names = (await readdir(chartsDir)).filter((name) => existsSync(path.join(chartsDir, name, "manifest.json")));
@@ -190,7 +167,10 @@ async function main() {
   await copyFile(path.join(mapboxDir, "mapbox-gl.js"), path.join(dist, "vendor/mapbox-gl.js"));
   await copyFile(path.join(mapboxDir, "mapbox-gl.css"), path.join(dist, "vendor/mapbox-gl.css"));
 
-  const assetDir = path.join(here, "../public/s57");
+  const assetDir = path.join(here, "assets/s57");
+  if (!existsSync(assetDir)) {
+    throw new Error("packages/s57/site/assets/s57 is missing. Build the site from the repo once so the sprites are copied in.");
+  }
   await copyTree(assetDir, path.join(dist, "s57"));
 
   const listed = [];
