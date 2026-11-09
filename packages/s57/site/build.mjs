@@ -1,5 +1,6 @@
 /**
- * Assemble the static chart site into dist/.
+ * Assemble the static chart site into public/. The host looks for that
+ * directory name after the build. vercel.json names it too.
  *
  * The publish host uploads this folder alone and then runs `npm run build`.
  * The style sources in chart-style/ and the sprites in assets/s57 are copies
@@ -26,7 +27,7 @@ import { PMTiles } from "pmtiles";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(here, "../../..");
-const dist = path.join(here, "dist");
+const dist = path.join(here, "public");
 const chartsDir = path.join(here, "charts");
 const REGION_ORDER = ["channel", "hawaii", "california", "florida-east"];
 

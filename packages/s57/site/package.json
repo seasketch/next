@@ -6,7 +6,7 @@
   "description": "Static S-57 chart viewer. The published site serves the same style as the local demo.",
   "scripts": {
     "build": "node build.mjs",
-    "start": "python3 -m http.server 4174 --bind 127.0.0.1 --directory dist"
+    "start": "python3 -m http.server 4174 --bind 127.0.0.1 --directory public"
   },
   "dependencies": {
     "esbuild": "0.28.1",
