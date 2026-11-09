@@ -1,5 +1,8 @@
 import { useEffect, useRef, useState } from "react";
 import * as Popover from "@radix-ui/react-popover";
+import { FolderIcon, SearchIcon, XIcon } from "@heroicons/react/outline";
+import { LayersIcon } from "@radix-ui/react-icons";
+import { TFunction } from "i18next";
 import { Trans, useTranslation } from "react-i18next";
 import Modal from "../../../components/Modal";
 
@@ -33,6 +36,122 @@ function NameList({ items }: { items: PublishedLayerName[] }) {
         </li>
       ))}
     </ul>
+  );
+}
+
+function layersCount(t: TFunction, count: number) {
+  return count === 1 ? t("1 layer") : `${count} ${t("layers")}`;
+}
+
+function foldersCount(t: TFunction, count: number) {
+  return count === 1 ? t("1 folder") : `${count} ${t("folders")}`;
+}
+
+function PublishedLayersDialog({
+  items,
+  onClose,
+}: {
+  items: PublishedLayerName[];
+  onClose: () => void;
+}) {
+  const { t } = useTranslation("admin:data");
+  const [query, setQuery] = useState("");
+  const needle = query.trim().toLowerCase();
+  const visible = needle
+    ? items.filter((item) => itemLabel(item).toLowerCase().includes(needle))
+    : items;
+  const layerCount = items.filter((item) => !item.isFolder).length;
+  const folderCount = items.length - layerCount;
+
+  return (
+    <Modal
+      title={t("Published layers")}
+      onRequestClose={onClose}
+      scrollable
+      tipyTop
+      footer={[
+        {
+          label: t("Close"),
+          variant: "secondary",
+          onClick: onClose,
+        },
+      ]}
+    >
+      <div className="mb-3 flex flex-col gap-3 sm:flex-row sm:items-center">
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="inline-flex items-center gap-1.5 rounded-full bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-600">
+            <LayersIcon className="h-3.5 w-3.5" aria-hidden />
+            {layersCount(t, layerCount)}
+          </span>
+          {folderCount > 0 ? (
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-50 px-2.5 py-1 text-xs font-medium text-amber-800">
+              <FolderIcon className="h-3.5 w-3.5" aria-hidden />
+              {foldersCount(t, folderCount)}
+            </span>
+          ) : null}
+        </div>
+        <label className="relative block sm:ml-auto sm:w-64">
+          <span className="sr-only">{t("Search layers")}</span>
+          <SearchIcon
+            className="pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400"
+            aria-hidden
+          />
+          <input
+            type="text"
+            value={query}
+            onChange={(event) => setQuery(event.target.value)}
+            placeholder={t("Search layers")}
+            className="w-full rounded-md border border-slate-200 py-1.5 pl-8 pr-8 text-sm text-slate-800 placeholder:text-slate-400 focus:border-blue-300 focus:outline-none focus:ring-1 focus:ring-blue-300"
+          />
+          {query ? (
+            <button
+              type="button"
+              className="absolute inset-y-0 right-2 flex items-center text-slate-400 hover:text-slate-600"
+              aria-label={t("Clear search")}
+              onClick={() => setQuery("")}
+            >
+              <XIcon className="h-4 w-4" aria-hidden />
+            </button>
+          ) : null}
+        </label>
+      </div>
+      {visible.length === 0 ? (
+        <p className="rounded-lg border border-dashed border-slate-200 px-3 py-8 text-center text-sm text-slate-500">
+          {t("No matching layers")}
+        </p>
+      ) : (
+        <ul className="grid grid-cols-1 gap-1.5 sm:grid-cols-2">
+          {visible.map((item) => (
+            <li
+              key={item.stableId}
+              className={
+                item.isFolder
+                  ? "flex min-w-0 items-center gap-2.5 rounded-md bg-amber-50 px-2.5 py-1.5 ring-1 ring-amber-100"
+                  : "flex min-w-0 items-center gap-2.5 rounded-md bg-slate-50 px-2.5 py-1.5 ring-1 ring-slate-100"
+              }
+            >
+              <span
+                className={
+                  item.isFolder
+                    ? "flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-white text-amber-700 ring-1 ring-amber-100"
+                    : "flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-white text-slate-500 ring-1 ring-slate-200"
+                }
+              >
+                {item.isFolder ? (
+                  <FolderIcon className="h-4 w-4" aria-hidden />
+                ) : (
+                  <LayersIcon className="h-4 w-4" aria-hidden />
+                )}
+              </span>
+              <span className="min-w-0 flex-1 truncate text-sm text-slate-800">
+                {itemLabel(item)}
+              </span>
+              {item.isFolder ? <span className="sr-only">{t("Folder")}</span> : null}
+            </li>
+          ))}
+        </ul>
+      )}
+    </Modal>
   );
 }
 
@@ -127,21 +246,10 @@ export default function PublishedLayerNames({
         </Popover.Portal>
       </Popover.Root>
       {modalOpen ? (
-        <Modal
-          title={t("Published layers")}
-          onRequestClose={() => setModalOpen(false)}
-          scrollable
-          tipyTop
-          footer={[
-            {
-              label: t("Close"),
-              variant: "secondary",
-              onClick: () => setModalOpen(false),
-            },
-          ]}
-        >
-          <NameList items={items} />
-        </Modal>
+        <PublishedLayersDialog
+          items={items}
+          onClose={() => setModalOpen(false)}
+        />
       ) : null}
     </>
   );

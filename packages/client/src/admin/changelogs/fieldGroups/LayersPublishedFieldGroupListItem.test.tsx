@@ -1,5 +1,5 @@
 /* eslint-disable i18next/no-literal-string */
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, within } from "@testing-library/react";
 import { ChangeLogDetailsFragment } from "../../../generated/graphql";
 import i18n from "../../../i18n";
 import LayersPublishedFieldGroupListItem from "./LayersPublishedFieldGroupListItem";
@@ -114,6 +114,19 @@ describe("LayersPublishedFieldGroupListItem", () => {
     fireEvent.click(screen.getByRole("button", { name: "Show published layers" }));
     expect(screen.queryByText("Layer 13")).toBeNull();
     fireEvent.click(screen.getByRole("button", { name: "Show all 13" }));
-    expect(screen.getByText("Layer 13")).toBeTruthy();
+    const dialog = screen.getByRole("dialog", { name: "Published layers" });
+    expect(within(dialog).getByText("Layer 13")).toBeTruthy();
+    expect(within(dialog).getByText("13 layers")).toBeTruthy();
+
+    fireEvent.change(within(dialog).getByPlaceholderText("Search layers"), {
+      target: { value: "Layer 13" },
+    });
+    expect(within(dialog).getByText("Layer 13")).toBeTruthy();
+    expect(within(dialog).queryByText("Layer 1")).toBeNull();
+
+    fireEvent.change(within(dialog).getByPlaceholderText("Search layers"), {
+      target: { value: "no such layer" },
+    });
+    expect(within(dialog).getByText("No matching layers")).toBeTruthy();
   });
 });
