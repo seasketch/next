@@ -56,21 +56,22 @@ const ukLand: Feature<Polygon> = {
 };
 
 /**
- * Quadrilateral in the same place as the exported "Bad sketch": about
- * 53.7–54.9°N, from just west of Greenwich to about 2.4°E.
+ * Will's zone from issue 959, traced from the ticket screenshot. Corners sit
+ * on the North Yorkshire coast, at Hull, and at two points in the North Sea
+ * east of Greenwich. This is the sketch he drew, not the wrapped output.
  */
 const ukSketch: Feature<Polygon> = {
   type: "Feature",
-  properties: { name: "Bad sketch" },
+  properties: { name: "Will's zone" },
   geometry: {
     type: "Polygon",
     coordinates: [
       [
-        [-0.8, 53.72],
-        [2.36, 53.99],
-        [1.48, 54.94],
-        [-0.45, 54.7],
-        [-0.8, 53.72],
+        [-0.34, 53.76],
+        [1.66, 54.06],
+        [1.32, 54.94],
+        [-0.83, 54.45],
+        [-0.34, 53.76],
       ],
     ],
   },

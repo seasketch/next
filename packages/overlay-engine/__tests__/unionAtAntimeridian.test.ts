@@ -143,23 +143,21 @@ describe("unionAtAntimeridian", () => {
   });
 
   it("keeps a prime-meridian ring near longitude 0", () => {
-    // Same shape as the UK sketch in issue 959 after land clipping: a ring
-    // with coastline west of Greenwich and corners east of it.
+    // Will's zone from issue 959: North Yorkshire coast to Hull, then east
+    // into the North Sea. The ring crosses Greenwich and stays far from ±180.
     const primeMeridian: Feature<MultiPolygon> = {
       type: "Feature",
-      properties: { name: "Bad sketch" },
+      properties: { name: "Will's zone" },
       geometry: {
         type: "MultiPolygon",
         coordinates: [
           [
             [
-              [-0.702438, 54.526119],
-              [-0.5, 54.6],
-              [-0.2, 54.4],
-              [0.384532, 53.757871],
-              [1.477516, 54.940503],
-              [2.358766, 53.993661],
-              [-0.702438, 54.526119],
+              [-0.34, 53.76],
+              [1.66, 54.06],
+              [1.32, 54.94],
+              [-0.83, 54.45],
+              [-0.34, 53.76],
             ],
           ],
         ],
@@ -169,8 +167,8 @@ describe("unionAtAntimeridian", () => {
     const result = unionAtAntimeridian(primeMeridian);
     const longitudes = longitudesOf(result);
 
-    expect(Math.min(...longitudes)).toBeCloseTo(-0.702438, 5);
-    expect(Math.max(...longitudes)).toBeCloseTo(2.358766, 5);
+    expect(Math.min(...longitudes)).toBeCloseTo(-0.83, 5);
+    expect(Math.max(...longitudes)).toBeCloseTo(1.66, 5);
     expect(maxLongitudeEdge(result)).toBeLessThan(5);
     expect(longitudes.some((longitude) => longitude > 180)).toBe(false);
   });
