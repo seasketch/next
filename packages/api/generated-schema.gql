@@ -1045,6 +1045,11 @@ type ChangeLog implements Node {
   fieldGroup: ChangeLogFieldGroup!
   fromBlob: JSON
   fromSummary: JSON!
+
+  """
+  True when this row is a full overlay publish. Null when the publish has no record of which items it shipped.
+  """
+  fullOverlayPublish: Boolean
   id: BigInt!
   lastAt: Datetime!
   meta: JSON
@@ -1058,6 +1063,17 @@ type ChangeLog implements Node {
   """Reads a single `Project` that is related to this `ChangeLog`."""
   project: Project
   projectId: Int!
+
+  """
+  Layers and folders this publish shipped, with the names they had at the time.
+  """
+  publishedOverlayItems(
+    """Only read the first `n` values of the set."""
+    first: Int
+
+    """Skip the first `n` values."""
+    offset: Int
+  ): [OverlayPublishedItem!]
   saveCount: Int!
   startedAt: Datetime!
   status: ChangeLogStatus!
@@ -12111,6 +12127,12 @@ enum OverlayDataTablesOrderBy {
   PRIMARY_KEY_DESC
   PROJECT_ID_ASC
   PROJECT_ID_DESC
+}
+
+type OverlayPublishedItem {
+  isFolder: Boolean
+  stableId: String
+  title: String
 }
 
 """Information about pagination in a connection."""

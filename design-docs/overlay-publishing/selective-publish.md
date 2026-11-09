@@ -238,7 +238,9 @@ Comparing `geostats` takes about 1.2 s of the pending list, because both copies 
 
 `table_of_contents_items_related_publish_change_logs` used to attach a `layers:published` row to every layer that had a changelog entry between that publish and the previous one. A partial publish of one layer then appeared on the others.
 
-Each publish now inserts `overlay_publish_runs` for that changelog row and `overlay_publish_run_items` for the stable ids it shipped (the pending set for a full publish, the expanded selection for a partial one). A layer's history includes the publish when its `stable_id` is in that set. A `layers:published` row with no run, which is every publish from before this, still uses the time window. Each publish closes an open `layers:published` row first, so a second publish within that field group's five-second window stays its own row with its own ids.
+Each publish now inserts `overlay_publish_runs` for that changelog row and `overlay_publish_run_items` for the stable ids it shipped (the pending set for a full publish, the expanded selection for a partial one), with the title and folder flag those items had at the time. `full_publish` records which kind of run it was. A layer's history includes the publish when its `stable_id` is in that set. A `layers:published` row with no run, which is every publish from before this, still uses the time window and the old "published N layers" sentence. Each publish closes an open `layers:published` row first, so a second publish within that field group's five-second window stays its own row with its own ids.
+
+The overlay changelog reads that record. A full publish says it published the full list, including changes to the shipped count out of the list size (`12 / 400 layers`). A partial publish says it published changes to the shipped layers. The count is a hover target listing those names, and a list longer than 12 opens the rest in a modal. Names are the titles stored on the run, so a layer renamed later still shows the name it had when it was published.
 
 ## 7. UI behaviour
 

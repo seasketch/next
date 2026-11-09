@@ -868,6 +868,8 @@ export type ChangeLog = Node & {
   fieldGroup: ChangeLogFieldGroup;
   fromBlob?: Maybe<Scalars['JSON']>;
   fromSummary: Scalars['JSON'];
+  /** True when this row is a full overlay publish. Null when the publish has no record of which items it shipped. */
+  fullOverlayPublish?: Maybe<Scalars['Boolean']>;
   id: Scalars['BigInt'];
   lastAt: Scalars['Datetime'];
   meta?: Maybe<Scalars['JSON']>;
@@ -877,11 +879,19 @@ export type ChangeLog = Node & {
   /** Reads a single `Project` that is related to this `ChangeLog`. */
   project?: Maybe<Project>;
   projectId: Scalars['Int'];
+  /** Layers and folders this publish shipped, with the names they had at the time. */
+  publishedOverlayItems?: Maybe<Array<OverlayPublishedItem>>;
   saveCount: Scalars['Int'];
   startedAt: Scalars['Datetime'];
   status: ChangeLogStatus;
   toBlob?: Maybe<Scalars['JSON']>;
   toSummary: Scalars['JSON'];
+};
+
+
+export type ChangeLogPublishedOverlayItemsArgs = {
+  first?: Maybe<Scalars['Int']>;
+  offset?: Maybe<Scalars['Int']>;
 };
 
 /**
@@ -10651,6 +10661,13 @@ export enum OverlayDataTablesOrderBy {
   ProjectIdAsc = 'PROJECT_ID_ASC',
   ProjectIdDesc = 'PROJECT_ID_DESC'
 }
+
+export type OverlayPublishedItem = {
+  __typename?: 'OverlayPublishedItem';
+  isFolder?: Maybe<Scalars['Boolean']>;
+  stableId?: Maybe<Scalars['String']>;
+  title?: Maybe<Scalars['String']>;
+};
 
 /** Information about pagination in a connection. */
 export type PageInfo = {
@@ -21355,8 +21372,11 @@ export type FullAdminDataLayerFragment = (
 
 export type ChangeLogDetailsFragment = (
   { __typename?: 'ChangeLog' }
-  & Pick<ChangeLog, 'id' | 'entityId' | 'entityType' | 'fieldGroup' | 'meta' | 'startedAt' | 'lastAt' | 'saveCount' | 'fromSummary' | 'toSummary' | 'editorCanonicalEmail'>
-  & { editorProfile?: Maybe<(
+  & Pick<ChangeLog, 'id' | 'entityId' | 'entityType' | 'fieldGroup' | 'meta' | 'startedAt' | 'lastAt' | 'saveCount' | 'fromSummary' | 'toSummary' | 'fullOverlayPublish' | 'editorCanonicalEmail'>
+  & { publishedOverlayItems?: Maybe<Array<(
+    { __typename?: 'OverlayPublishedItem' }
+    & Pick<OverlayPublishedItem, 'stableId' | 'title' | 'isFolder'>
+  )>>, editorProfile?: Maybe<(
     { __typename?: 'Profile' }
     & Pick<Profile, 'userId' | 'fullname' | 'affiliations' | 'email' | 'nickname' | 'picture'>
   )> }
@@ -28438,6 +28458,12 @@ export const ChangeLogDetailsFragmentDoc = gql`
   saveCount
   fromSummary
   toSummary
+  fullOverlayPublish
+  publishedOverlayItems {
+    stableId
+    title
+    isFolder
+  }
   editorProfile {
     userId
     fullname

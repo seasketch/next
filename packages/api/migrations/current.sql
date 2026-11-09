@@ -696,6 +696,7 @@ begin
       "projectId",
       v_editor,
       v_layer_count,
+      true,
       (select coalesce(array_agg(stable_id), '{}'::text[]) from _units)
     );
   end if;
@@ -2254,6 +2255,7 @@ begin
       "projectId",
       v_editor,
       v_layer_count,
+      false,
       v_sel
     );
   end if;
@@ -2278,13 +2280,16 @@ grant execute on function public.projects_pending_publish_items(public.projects)
 -- listed on a layer it did not include. Rows with no manifest (publishes from
 -- before this existed) keep the time window.
 create table public.overlay_publish_runs (
-  change_log_id bigint primary key references public.change_logs(id) on delete cascade
+  change_log_id bigint primary key references public.change_logs(id) on delete cascade,
+  full_publish boolean not null
 );
 comment on table public.overlay_publish_runs is '@omit';
 
 create table public.overlay_publish_run_items (
   change_log_id bigint not null references public.overlay_publish_runs(change_log_id) on delete cascade,
   stable_id text not null,
+  title text not null,
+  is_folder boolean not null,
   primary key (change_log_id, stable_id)
 );
 comment on table public.overlay_publish_run_items is '@omit';
@@ -2296,6 +2301,7 @@ create or replace function public._record_overlay_publish(
   p_project_id integer,
   p_editor_id integer,
   p_layer_count integer,
+  p_full boolean,
   p_stable_ids text[]
 ) returns void
   language plpgsql
@@ -2329,18 +2335,71 @@ begin
     null,
     null
   );
-  insert into public.overlay_publish_runs (change_log_id)
-  values (v_log_id)
+  insert into public.overlay_publish_runs (change_log_id, full_publish)
+  values (v_log_id, p_full)
   on conflict do nothing;
-  insert into public.overlay_publish_run_items (change_log_id, stable_id)
-  select v_log_id, shipped
-  from unnest(coalesce(p_stable_ids, '{}'::text[])) as shipped
+  -- Titles are copied from the pending units. A removal's draft row is
+  -- already gone by the time this runs, and _units still has its name.
+  insert into public.overlay_publish_run_items (
+    change_log_id, stable_id, title, is_folder
+  )
+  select v_log_id, u.stable_id, coalesce(u.title, u.stable_id), u.is_folder
+  from _units u
+  where u.stable_id = any(coalesce(p_stable_ids, '{}'::text[]))
   on conflict do nothing;
 end;
 $$;
 
-comment on function public._record_overlay_publish(integer, integer, integer, text[]) is '@omit';
-revoke all on function public._record_overlay_publish(integer, integer, integer, text[]) from public;
+comment on function public._record_overlay_publish(integer, integer, integer, boolean, text[]) is '@omit';
+revoke all on function public._record_overlay_publish(integer, integer, integer, boolean, text[]) from public;
+
+-- Read model for the changelog. Titles are the names at publish time.
+create type public.overlay_published_item as (
+  stable_id text,
+  title text,
+  is_folder boolean
+);
+
+create or replace function public.change_logs_full_overlay_publish(c public.change_logs)
+  returns boolean
+  language sql
+  stable
+  security definer
+  set search_path to public, pg_temp
+as $$
+  select r.full_publish
+  from public.overlay_publish_runs r
+  join public.change_logs cl on cl.id = r.change_log_id
+  where r.change_log_id = c.id
+    and cl.project_id = c.project_id
+    and public.session_is_admin(cl.project_id);
+$$;
+
+comment on function public.change_logs_full_overlay_publish(public.change_logs) is
+  'True when this row is a full overlay publish. Null when the publish has no record of which items it shipped.';
+revoke all on function public.change_logs_full_overlay_publish(public.change_logs) from public;
+grant execute on function public.change_logs_full_overlay_publish(public.change_logs) to seasketch_user;
+
+create or replace function public.change_logs_published_overlay_items(c public.change_logs)
+  returns setof public.overlay_published_item
+  language sql
+  stable
+  security definer
+  set search_path to public, pg_temp
+as $$
+  select i.stable_id, i.title, i.is_folder
+  from public.overlay_publish_run_items i
+  join public.change_logs cl on cl.id = i.change_log_id
+  where i.change_log_id = c.id
+    and cl.project_id = c.project_id
+    and public.session_is_admin(cl.project_id)
+  order by i.is_folder, i.title, i.stable_id;
+$$;
+
+comment on function public.change_logs_published_overlay_items(public.change_logs) is
+  E'@simpleCollections only\nLayers and folders this publish shipped, with the names they had at the time.';
+revoke all on function public.change_logs_published_overlay_items(public.change_logs) from public;
+grant execute on function public.change_logs_published_overlay_items(public.change_logs) to seasketch_user;
 
 create or replace function public.table_of_contents_items_related_publish_change_logs(item public.table_of_contents_items)
   returns setof public.change_logs

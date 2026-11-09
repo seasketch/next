@@ -426,6 +426,12 @@ fragment ChangeLogDetails on ChangeLog {
   saveCount
   fromSummary
   toSummary
+  fullOverlayPublish
+  publishedOverlayItems {
+    stableId
+    title
+    isFolder
+  }
   editorProfile {
     userId
     fullname

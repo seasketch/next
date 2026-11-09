@@ -1206,6 +1206,36 @@ describe("selective overlay publish", () => {
         limit 1
       `);
       expect(log.to_summary).toEqual({ layer_count: 1 });
+      const manifest = await asPostgres(conn, () =>
+        conn.one(sql`
+          select r.full_publish, i.title, i.is_folder
+          from change_logs cl
+          join overlay_publish_runs r on r.change_log_id = cl.id
+          join overlay_publish_run_items i on i.change_log_id = cl.id
+          where cl.project_id = ${projectId}
+            and cl.field_group = 'layers:published'
+            and i.stable_id = ${layer.stableId}
+          order by cl.id desc
+          limit 1
+        `)
+      );
+      expect(manifest.full_publish).toBe(false);
+      expect(manifest.title).toBe("Coral cover");
+      expect(manifest.is_folder).toBe(false);
+      const visible = await conn.one(sql`
+        select
+          public.change_logs_full_overlay_publish(cl) as full_publish,
+          item.title
+        from change_logs cl
+        cross join lateral public.change_logs_published_overlay_items(cl) item
+        where cl.project_id = ${projectId}
+          and cl.field_group = 'layers:published'
+          and item.stable_id = ${layer.stableId}
+        order by cl.id desc
+        limit 1
+      `);
+      expect(visible.full_publish).toBe(false);
+      expect(visible.title).toBe("Coral cover");
       const publishedLogId = Number(
         await conn.oneFirst(sql`
           select id from change_logs
