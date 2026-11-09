@@ -10,10 +10,25 @@ import PublishedLayerNames, {
   PublishedLayerName,
 } from "./PublishedLayerNames";
 
-function layerItems(
-  items: ReadonlyArray<PublishedLayerName> | null | undefined
-) {
-  return (items ?? []).filter((item) => !item.isFolder);
+function namedItems(
+  items: ReadonlyArray<{
+    stableId?: string | null;
+    title?: string | null;
+    isFolder?: boolean | null;
+  }> | null | undefined
+): PublishedLayerName[] {
+  return (items ?? []).flatMap((item) => {
+    if (!item.stableId) {
+      return [];
+    }
+    return [
+      {
+        stableId: item.stableId,
+        title: item.title?.trim() ? item.title : item.stableId,
+        isFolder: Boolean(item.isFolder),
+      },
+    ];
+  });
 }
 
 function layersLabel(t: TFunction, n: number) {
@@ -36,8 +51,8 @@ export default function LayersPublishedFieldGroupListItem(
   const layerCount = typeof to.layer_count === "number" ? to.layer_count : 0;
   const manifestKnown = typeof props.changeLog.fullOverlayPublish === "boolean";
   const fullPublish = props.changeLog.fullOverlayPublish === true;
-  const items = props.changeLog.publishedOverlayItems ?? [];
-  const shipped = layerItems(items).length;
+  const items = namedItems(props.changeLog.publishedOverlayItems);
+  const shipped = items.filter((item) => !item.isFolder).length;
   const names = (label: string) => (
     <PublishedLayerNames items={items} label={label} />
   );
