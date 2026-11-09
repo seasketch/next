@@ -25,7 +25,6 @@
     "fetch": "tsx scripts/fetch-chart.ts",
     "chart": "tsx scripts/build-chart.ts",
     "demo": "node demo/serve.mjs",
-    "site": "npm install --prefix site && npm run build --prefix site",
     "compare": "tsx scripts/compare.ts",
     "gaps": "tsx scripts/zoomGaps.ts"
   },
