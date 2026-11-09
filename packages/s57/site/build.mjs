@@ -9,9 +9,10 @@
  * Mapbox GL 3.4 has no addProtocol, so a service worker reads each PMTiles
  * archive and answers the style's ordinary /tiles/.../*.mvt requests.
  */
+import { execFile } from "child_process";
 import { createHash } from "crypto";
 import { createReadStream, existsSync, readdirSync, statSync } from "fs";
-import { copyFile, mkdir, open, readdir, readFile, rm, writeFile } from "fs/promises";
+import { copyFile, mkdir, open, readdir, readFile, rename, rm, writeFile } from "fs/promises";
 import path from "path";
 import { fileURLToPath, pathToFileURL } from "url";
 import { build } from "esbuild";
@@ -22,6 +23,20 @@ const repoRoot = path.resolve(here, "../../..");
 const dist = path.join(here, "dist");
 const chartsDir = path.join(here, "charts");
 const REGION_ORDER = ["california", "hawaii", "florida-east", "channel"];
+
+// The hosted pack has to stay under 50 MB. Harbour charts are cut at zoom 14
+// and approach charts at zoom 12; the map overzooms the last tile. The local
+// demo still builds the full zoom range.
+const HOSTED_MAXZOOM = { approach: 13, harbour: 14 };
+
+function run(command, args) {
+  return new Promise((resolve, reject) => {
+    execFile(command, args, { maxBuffer: 8 * 1024 * 1024 }, (error, stdout, stderr) => {
+      if (error) reject(new Error(`${command} ${args.join(" ")} failed: ${stderr || error.message}`));
+      else resolve(stdout);
+    });
+  });
+}
 
 class NodeSource {
   constructor(file) {
@@ -85,6 +100,44 @@ async function syncLocalCharts() {
   }
 }
 
+/** Drop zoom levels the hosted pack cannot carry. Archives already within the cap are left alone. */
+async function capHostedArchives() {
+  let names = [];
+  try {
+    names = (await readdir(chartsDir)).filter((name) => existsSync(path.join(chartsDir, name, "manifest.json")));
+  } catch {
+    return;
+  }
+  for (const id of names) {
+    const dir = path.join(chartsDir, id);
+    const manifest = JSON.parse(await readFile(path.join(dir, "manifest.json"), "utf8"));
+    let changed = false;
+    for (const entry of manifest) {
+      const cap = HOSTED_MAXZOOM[entry.source];
+      if (cap == null) continue;
+      const file = path.join(dir, entry.file);
+      const header = await new PMTiles(new NodeSource(file)).getHeader();
+      if (header.maxZoom <= cap) continue;
+      // The extension selects the format. Anything else is written as MBTiles.
+      const tmp = `${file}.capped.pmtiles`;
+      await run("tile-join", [
+        "--force",
+        "--quiet",
+        "--no-tile-size-limit",
+        `--maximum-zoom=${cap}`,
+        "-o",
+        tmp,
+        file,
+      ]);
+      await rename(tmp, file);
+      entry.maxzoom = cap;
+      changed = true;
+      console.log(`capped ${id}/${entry.source} at zoom ${cap}`);
+    }
+    if (changed) await writeFile(path.join(dir, "manifest.json"), JSON.stringify(manifest, null, 2));
+  }
+}
+
 async function loadStyleBuilder() {
   const bundled = path.join(here, ".style-bundle.mjs");
   await build({
@@ -100,6 +153,7 @@ async function loadStyleBuilder() {
 
 async function main() {
   await syncLocalCharts();
+  await capHostedArchives();
   let names;
   try {
     names = (await readdir(chartsDir)).filter((name) => existsSync(path.join(chartsDir, name, "manifest.json")));
@@ -150,7 +204,7 @@ async function main() {
       east = Math.max(east, header.maxLon);
       north = Math.max(north, header.maxLat);
       minZoom = Math.min(minZoom, header.minZoom);
-      maxZoom = Math.max(maxZoom, entry.maxzoom || header.maxZoom);
+      maxZoom = Math.max(maxZoom, header.maxZoom);
       swCharts[id][entry.source] = await fileHash(file);
       await copyFile(file, path.join(outDir, entry.file));
       archives.push({
@@ -159,7 +213,7 @@ async function main() {
           tiles: [`/tiles/${id}/${entry.source}/{z}/{x}/{y}.mvt`],
           bounds: [header.minLon, header.minLat, header.maxLon, header.maxLat],
           minzoom: header.minZoom,
-          maxzoom: entry.maxzoom || header.maxZoom,
+          maxzoom: header.maxZoom,
         },
       });
     }
