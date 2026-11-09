@@ -188,7 +188,7 @@ Because pending is structural, an edit that is reverted before publishing is not
 
 `projects_change_logs_since_last_publish` keeps the `last_at > table_of_contents_last_published` range (`-infinity` when the project was never fully published), then drops rows whose item was partial-published after that changelog entry. `projects_comments_since_last_publish` uses the same per-item cutoff. Partial publish does **not** move `table_of_contents_last_published`, so that timestamp stays the last full publish.
 
-No new field groups, and nothing new is written into `from_summary`, `to_summary`, blobs, or `meta`. A partial publish records the existing `layers:published` row exactly as the full publish does.
+No new field groups, and nothing new is written into `from_summary`, `to_summary`, blobs, or `meta`. A partial publish records the existing `layers:published` row exactly as the full publish does. The stable ids that run shipped are stored beside it, in `overlay_publish_runs` and `overlay_publish_run_items`, not in the changelog payload.
 
 ### 6.3 Mutations
 
@@ -234,9 +234,11 @@ Measured on a synthetic project with 3,000 layers in nested folders and about 82
 
 Comparing `geostats` takes about 1.2 s of the pending list, because both copies are decompressed; the rest of the comparison is under 0.2 s. Projects of typical size take a fraction of this. A full publish costs that comparison plus the items that changed. Copying an item is dominated by the 16 generated full-text columns on `table_of_contents_items` and by rewriting `geostats`, so a publish that changes every item is still slow, but no longer slower than before.
 
-### 6.5 Known limitation left for a later update
+### 6.5 Which publish a layer's history shows
 
-`table_of_contents_items_related_publish_change_logs` attributes publishes to layers by time window. Without storing membership it may list a partial publish in the history of a layer it did not include. Fixing that needs a record of what each run shipped, which is out of scope for this update.
+`table_of_contents_items_related_publish_change_logs` used to attach a `layers:published` row to every layer that had a changelog entry between that publish and the previous one. A partial publish of one layer then appeared on the others.
+
+Each publish now inserts `overlay_publish_runs` for that changelog row and `overlay_publish_run_items` for the stable ids it shipped (the pending set for a full publish, the expanded selection for a partial one). A layer's history includes the publish when its `stable_id` is in that set. A `layers:published` row with no run, which is every publish from before this, still uses the time window. Each publish closes an open `layers:published` row first, so a second publish within that field group's five-second window stays its own row with its own ids.
 
 ## 7. UI behaviour
 
@@ -332,7 +334,7 @@ Multi-editor and timing
 Cross-cutting
 
 38. Any publish → tiles ACL document rewritten from the resulting published tree.
-39. Partial publish → one `layers:published` row with the existing shape, counting the layers it published; per-layer history may over-attribute it (§6.5).
+39. Partial publish → one `layers:published` row with the existing shape, counting the layers it published. That layer's history includes the row. A layer that was not in the run does not (§6.5).
 40. Full publish → the published list matches the draft, including reorders, stacking, and untracked field changes. Only differing items are copied; unchanged published rows keep their ids and source copies.
 
 ## 9. Open questions

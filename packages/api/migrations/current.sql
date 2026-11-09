@@ -692,17 +692,11 @@ begin
       and is_draft = true
       and is_folder = false;
 
-    perform record_changelog(
+    perform public._record_overlay_publish(
       "projectId",
       v_editor,
-      'projects',
-      "projectId",
-      'layers:published'::change_log_field_group,
-      '{}'::jsonb,
-      jsonb_build_object('layer_count', v_layer_count),
-      null,
-      null,
-      null
+      v_layer_count,
+      (select coalesce(array_agg(stable_id), '{}'::text[]) from _units)
     );
   end if;
 
@@ -2256,17 +2250,11 @@ begin
     from _units
     where stable_id = any(v_sel)
       and not is_folder;
-    perform record_changelog(
+    perform public._record_overlay_publish(
       "projectId",
       v_editor,
-      'projects',
-      "projectId",
-      'layers:published'::change_log_field_group,
-      '{}'::jsonb,
-      jsonb_build_object('layer_count', v_layer_count),
-      null,
-      null,
-      null
+      v_layer_count,
+      v_sel
     );
   end if;
 
@@ -2284,3 +2272,137 @@ comment on function public.publish_table_of_contents_items(integer, text[]) is
 
 grant execute on function public.publish_table_of_contents_items(integer, text[]) to seasketch_user;
 grant execute on function public.projects_pending_publish_items(public.projects) to seasketch_user;
+
+-- Which items a layers:published row shipped. Layer history uses this instead
+-- of "any edit since the previous publish", so a partial publish is not
+-- listed on a layer it did not include. Rows with no manifest (publishes from
+-- before this existed) keep the time window.
+create table public.overlay_publish_runs (
+  change_log_id bigint primary key references public.change_logs(id) on delete cascade
+);
+comment on table public.overlay_publish_runs is '@omit';
+
+create table public.overlay_publish_run_items (
+  change_log_id bigint not null references public.overlay_publish_runs(change_log_id) on delete cascade,
+  stable_id text not null,
+  primary key (change_log_id, stable_id)
+);
+comment on table public.overlay_publish_run_items is '@omit';
+
+revoke all on table public.overlay_publish_runs from public;
+revoke all on table public.overlay_publish_run_items from public;
+
+create or replace function public._record_overlay_publish(
+  p_project_id integer,
+  p_editor_id integer,
+  p_layer_count integer,
+  p_stable_ids text[]
+) returns void
+  language plpgsql
+  security definer
+  set search_path to public, pg_temp
+as $$
+declare
+  v_log_id bigint;
+begin
+  -- Publishing is one action, not a burst of edits. Close an open
+  -- layers:published row so this run is not merged into the previous one
+  -- (the field group's window is 5 seconds) and the two keep their own ids.
+  update change_logs
+  set status = 'closed'
+  where project_id = p_project_id
+    and editor_id = p_editor_id
+    and entity_type = 'projects'
+    and entity_id = p_project_id
+    and field_group = 'layers:published'
+    and status = 'open';
+
+  v_log_id := record_changelog(
+    p_project_id,
+    p_editor_id,
+    'projects',
+    p_project_id,
+    'layers:published'::change_log_field_group,
+    '{}'::jsonb,
+    jsonb_build_object('layer_count', p_layer_count),
+    null,
+    null,
+    null
+  );
+  insert into public.overlay_publish_runs (change_log_id)
+  values (v_log_id)
+  on conflict do nothing;
+  insert into public.overlay_publish_run_items (change_log_id, stable_id)
+  select v_log_id, shipped
+  from unnest(coalesce(p_stable_ids, '{}'::text[])) as shipped
+  on conflict do nothing;
+end;
+$$;
+
+comment on function public._record_overlay_publish(integer, integer, integer, text[]) is '@omit';
+revoke all on function public._record_overlay_publish(integer, integer, integer, text[]) from public;
+
+create or replace function public.table_of_contents_items_related_publish_change_logs(item public.table_of_contents_items)
+  returns setof public.change_logs
+  language sql
+  stable
+  security definer
+  set search_path to public, pg_temp
+as $$
+  with layer_created as (
+    select ds.created_at
+    from data_layers dl
+    inner join data_sources ds on ds.id = dl.data_source_id
+    where dl.id = item.data_layer_id
+    limit 1
+  ),
+  publish_logs as (
+    select
+      p as publish_log,
+      (
+        select max(prev.last_at)
+        from change_logs prev
+        where prev.project_id = item.project_id
+          and prev.entity_type = 'projects'
+          and prev.entity_id = item.project_id
+          and prev.field_group = 'layers:published'
+          and prev.net_zero_changes = false
+          and prev.last_at < p.last_at
+      ) as previous_publish_at
+    from change_logs p
+    cross join layer_created lc
+    where p.project_id = item.project_id
+      and p.entity_type = 'projects'
+      and p.entity_id = item.project_id
+      and p.field_group = 'layers:published'
+      and p.net_zero_changes = false
+      and session_is_admin(p.project_id)
+      and p.last_at > lc.created_at
+  )
+  select (p.publish_log).*
+  from publish_logs p
+  where case
+    when exists (
+      select 1 from overlay_publish_runs r
+      where r.change_log_id = (p.publish_log).id
+    ) then exists (
+      select 1 from overlay_publish_run_items i
+      where i.change_log_id = (p.publish_log).id
+        and i.stable_id = item.stable_id
+    )
+    else exists (
+      select 1
+      from change_logs c
+      where c.project_id = item.project_id
+        and c.entity_type = 'table_of_contents_items'
+        and c.entity_id = item.id
+        and c.net_zero_changes = false
+        and c.last_at > coalesce(p.previous_publish_at, '-infinity'::timestamptz)
+        and c.last_at <= (p.publish_log).last_at
+    )
+  end
+  order by (p.publish_log).last_at desc;
+$$;
+
+comment on function public.table_of_contents_items_related_publish_change_logs(public.table_of_contents_items) is '@simpleCollections only';
+grant execute on function public.table_of_contents_items_related_publish_change_logs(public.table_of_contents_items) to seasketch_user;

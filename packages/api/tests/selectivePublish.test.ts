@@ -1206,6 +1206,27 @@ describe("selective overlay publish", () => {
         limit 1
       `);
       expect(log.to_summary).toEqual({ layer_count: 1 });
+      const publishedLogId = Number(
+        await conn.oneFirst(sql`
+          select id from change_logs
+          where project_id = ${projectId} and field_group = 'layers:published'
+          order by id desc
+          limit 1
+        `)
+      );
+      const historyFor = (itemId: number) =>
+        conn.any(sql`
+          select cl.id
+          from table_of_contents_items t
+          cross join lateral table_of_contents_items_related_publish_change_logs(t) cl
+          where t.id = ${itemId}
+        `);
+      const layerHistory = await historyFor(layer.itemId);
+      const otherHistory = await historyFor(other.itemId);
+      expect(layerHistory.map((row) => Number(row.id))).toContain(publishedLogId);
+      expect(otherHistory.map((row) => Number(row.id))).not.toContain(
+        publishedLogId
+      );
       expect(other.stableId).toBeTruthy();
       const groups = await conn.any(sql`
         select distinct field_group::text as field_group
