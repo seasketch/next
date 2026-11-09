@@ -1,0 +1,36 @@
+@keyframes report-card-exit {
+  0% {
+    opacity: 1;
+    transform: scale(1);
+    max-height: var(--report-card-height, 480px);
+  }
+  55% {
+    opacity: 0;
+    transform: scale(0.92);
+    max-height: var(--report-card-height, 480px);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(0.92);
+    max-height: 0;
+    margin-top: 0;
+    margin-bottom: 0;
+    padding-top: 0;
+    padding-bottom: 0;
+  }
+}
+
+.report-card-exiting {
+  overflow: hidden;
+  pointer-events: none;
+  transform-origin: top center;
+  animation-name: report-card-exit;
+  animation-timing-function: ease;
+  animation-fill-mode: forwards;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .report-card-exiting {
+    animation: none;
+  }
+}

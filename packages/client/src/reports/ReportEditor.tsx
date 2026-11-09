@@ -21,6 +21,7 @@ import {
   useAddReportCardMutation,
   useCopyableReportCardsQuery,
   useDeleteDraftReportMutation,
+  useDuplicateReportMutation,
   useProjectReportsContextQuery,
   useSetPrimaryReportForSketchClassMutation,
   useUpdateReportTitleMutation,
@@ -123,6 +124,11 @@ export type ReportEditorDeletionProps = {
   onDeleted: () => void | Promise<void>;
 };
 
+export type ReportEditorDuplicationProps = {
+  /** Called with the new draft id after tabs and cards have been copied. */
+  onDuplicated: (reportId: number) => void | Promise<void>;
+};
+
 export default function ReportEditor({
   demonstrationSketches,
   selectedSketchId,
@@ -132,6 +138,7 @@ export default function ReportEditor({
   reportAssociatedSketchClassIds,
   publishMenu,
   reportDeletion,
+  reportDuplication,
 }: {
   demonstrationSketches: Pick<
     Sketch,
@@ -144,6 +151,7 @@ export default function ReportEditor({
   reportAssociatedSketchClassIds?: number[];
   publishMenu?: ReportEditorPublishMenuProps;
   reportDeletion?: ReportEditorDeletionProps;
+  reportDuplication?: ReportEditorDuplicationProps;
 }) {
   const baseContext = useContext(BaseReportContext);
   const subjectContext = useSubjectReportContext();
@@ -252,6 +260,7 @@ export default function ReportEditor({
   const cardsScrollAreaRef = useRef<HTMLDivElement>(null);
   const workspaceScrollAreaRef = useRef<HTMLDivElement>(null);
   const reportPrintControlsRef = useRef<{ runPrint: () => void } | null>(null);
+  const duplicatingRef = useRef(false);
 
   // Get all card IDs from the current tabs data
   const allCardIds = useMemo(() => {
@@ -304,6 +313,9 @@ export default function ReportEditor({
     });
 
   const [deleteDraftReport] = useDeleteDraftReportMutation({
+    onError,
+  });
+  const [duplicateReport, duplicateReportState] = useDuplicateReportMutation({
     onError,
   });
   const [setPrimaryReport] = useSetPrimaryReportForSketchClassMutation({
@@ -398,6 +410,31 @@ export default function ReportEditor({
     baseContext.data?.report?.title,
     reportTitleDraft,
     updateReportTitle,
+  ]);
+
+  const handleDuplicateReport = useCallback(async () => {
+    if (editing != null || duplicatingRef.current) return;
+    const reportId = baseContext.data?.report?.id;
+    if (reportId == null) return;
+    duplicatingRef.current = true;
+    try {
+      const result = await duplicateReport({
+        variables: { sourceReportId: reportId },
+      });
+      const newId = result.data?.duplicateReport?.report?.id;
+      if (newId != null && reportDuplication) {
+        await reportDuplication.onDuplicated(newId);
+      }
+    } catch {
+      // Handled by mutation onError
+    } finally {
+      duplicatingRef.current = false;
+    }
+  }, [
+    editing,
+    baseContext.data?.report?.id,
+    duplicateReport,
+    reportDuplication,
   ]);
 
   const handleDeleteReportRequest = useCallback(() => {
@@ -602,6 +639,23 @@ export default function ReportEditor({
                     </MenuBarItem>
                     <MenuBarItem onClick={openChangeReportTitleModal}>
                       {t("Change report title")}
+                    </MenuBarItem>
+                    <MenuBarItem
+                      disabled={
+                        editMenuDisabled || duplicateReportState.loading
+                      }
+                      onClick={() => {
+                        if (
+                          !editMenuDisabled &&
+                          !duplicateReportState.loading
+                        ) {
+                          void handleDuplicateReport();
+                        }
+                      }}
+                    >
+                      {duplicateReportState.loading
+                        ? t("Duplicating...")
+                        : t("Duplicate report")}
                     </MenuBarItem>
                     {reportDeletion ? (
                       <>

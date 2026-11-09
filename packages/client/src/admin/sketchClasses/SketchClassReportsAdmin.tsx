@@ -39,6 +39,7 @@ export default function SketchClassReportsAdmin({
   associatedSketchClassIds,
   assignedSketchClassesForReport,
   onReportDeleted,
+  onReportDuplicated,
   draftReportIdOverride,
   publishAvailable = true,
 }: {
@@ -49,6 +50,8 @@ export default function SketchClassReportsAdmin({
   assignedSketchClassesForReport?: { id: number; name: string }[];
   /** Called after the draft report is deleted from the server (e.g. refetch + navigate). */
   onReportDeleted?: () => void | Promise<void>;
+  /** Called with the new draft id after the open report is duplicated. */
+  onReportDuplicated?: (reportId: number) => void | Promise<void>;
   /** Force editor to open this draft report id (used for unassigned project reports). */
   draftReportIdOverride?: number;
   /** Whether publish actions should be available in this embedding context. */
@@ -392,6 +395,11 @@ export default function SketchClassReportsAdmin({
                               assignedSketchClassesForReport ?? [],
                             onDeleted: onReportDeleted,
                           }
+                        : undefined
+                    }
+                    reportDuplication={
+                      onReportDuplicated
+                        ? { onDuplicated: onReportDuplicated }
                         : undefined
                     }
                   />

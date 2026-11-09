@@ -5147,6 +5147,39 @@ export type DraftReportOverlaySourcesResults = {
   sketchId: Scalars['Int'];
 };
 
+/** All input for the `duplicateReport` mutation. */
+export type DuplicateReportInput = {
+  /**
+   * An arbitrary string value with no semantic meaning. Will be included in the
+   * payload verbatim. May be used to track mutations by the client.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  sourceReportId?: Maybe<Scalars['Int']>;
+};
+
+/** The output of our `duplicateReport` mutation. */
+export type DuplicateReportPayload = {
+  __typename?: 'DuplicateReportPayload';
+  /**
+   * The exact same `clientMutationId` that was provided in the mutation input,
+   * unchanged and unused. May be used by a client to track mutations.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  /** Our root query field type. Allows us to run any query from our mutation payload. */
+  query?: Maybe<Query>;
+  report?: Maybe<Report>;
+  /** An edge for our `Report`. May be used by Relay 1. */
+  reportEdge?: Maybe<ReportsEdge>;
+  /** Reads a single `SketchClass` that is related to this `Report`. */
+  sketchClass?: Maybe<SketchClass>;
+};
+
+
+/** The output of our `duplicateReport` mutation. */
+export type DuplicateReportPayloadReportEdgeArgs = {
+  orderBy?: Maybe<Array<ReportsOrderBy>>;
+};
+
 /** All input for the `duplicateTableOfContentsItem` mutation. */
 export type DuplicateTableOfContentsItemInput = {
   /**
@@ -7923,6 +7956,8 @@ export type Mutation = {
   /** Ban a user from posting in the discussion forum */
   disableForumPosting?: Maybe<DisableForumPostingPayload>;
   dismissFailedJob?: Maybe<DismissFailedJobPayload>;
+  /** Copies a draft report, including its tabs and cards, into a new unassigned draft titled "<title> (copy)". */
+  duplicateReport?: Maybe<DuplicateReportPayload>;
   duplicateTableOfContentsItem?: Maybe<DuplicateTableOfContentsItemPayload>;
   enableDownloadForEligibleLayers?: Maybe<EnableDownloadForEligibleLayersPayload>;
   /** Re-enable discussion forum posting for a user that was previously banned. */
@@ -9133,6 +9168,12 @@ export type MutationDisableForumPostingArgs = {
 /** The root mutation type which contains root level fields which mutate data. */
 export type MutationDismissFailedJobArgs = {
   input: DismissFailedJobInput;
+};
+
+
+/** The root mutation type which contains root level fields which mutate data. */
+export type MutationDuplicateReportArgs = {
+  input: DuplicateReportInput;
 };
 
 
@@ -25770,6 +25811,22 @@ export type CreateCustomReportMutation = (
   )> }
 );
 
+export type DuplicateReportMutationVariables = Exact<{
+  sourceReportId: Scalars['Int'];
+}>;
+
+
+export type DuplicateReportMutation = (
+  { __typename?: 'Mutation' }
+  & { duplicateReport?: Maybe<(
+    { __typename?: 'DuplicateReportPayload' }
+    & { report?: Maybe<(
+      { __typename?: 'Report' }
+      & Pick<Report, 'id' | 'title'>
+    )> }
+  )> }
+);
+
 export type SetPrimaryReportForSketchClassMutationVariables = Exact<{
   sketchClassId: Scalars['Int'];
   draftReportId: Scalars['Int'];
@@ -41735,6 +41792,42 @@ export function useCreateCustomReportMutation(baseOptions?: Apollo.MutationHookO
 export type CreateCustomReportMutationHookResult = ReturnType<typeof useCreateCustomReportMutation>;
 export type CreateCustomReportMutationResult = Apollo.MutationResult<CreateCustomReportMutation>;
 export type CreateCustomReportMutationOptions = Apollo.BaseMutationOptions<CreateCustomReportMutation, CreateCustomReportMutationVariables>;
+export const DuplicateReportDocument = gql`
+    mutation DuplicateReport($sourceReportId: Int!) {
+  duplicateReport(input: {sourceReportId: $sourceReportId}) {
+    report {
+      id
+      title
+    }
+  }
+}
+    `;
+export type DuplicateReportMutationFn = Apollo.MutationFunction<DuplicateReportMutation, DuplicateReportMutationVariables>;
+
+/**
+ * __useDuplicateReportMutation__
+ *
+ * To run a mutation, you first call `useDuplicateReportMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useDuplicateReportMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [duplicateReportMutation, { data, loading, error }] = useDuplicateReportMutation({
+ *   variables: {
+ *      sourceReportId: // value for 'sourceReportId'
+ *   },
+ * });
+ */
+export function useDuplicateReportMutation(baseOptions?: Apollo.MutationHookOptions<DuplicateReportMutation, DuplicateReportMutationVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useMutation<DuplicateReportMutation, DuplicateReportMutationVariables>(DuplicateReportDocument, options);
+      }
+export type DuplicateReportMutationHookResult = ReturnType<typeof useDuplicateReportMutation>;
+export type DuplicateReportMutationResult = Apollo.MutationResult<DuplicateReportMutation>;
+export type DuplicateReportMutationOptions = Apollo.BaseMutationOptions<DuplicateReportMutation, DuplicateReportMutationVariables>;
 export const SetPrimaryReportForSketchClassDocument = gql`
     mutation SetPrimaryReportForSketchClass($sketchClassId: Int!, $draftReportId: Int!) {
   setPrimaryReportForSketchClass(
@@ -45772,6 +45865,7 @@ export const namedOperations = {
     RecalculateSpatialMetrics: 'RecalculateSpatialMetrics',
     PreprocessSource: 'PreprocessSource',
     CreateCustomReport: 'CreateCustomReport',
+    DuplicateReport: 'DuplicateReport',
     SetPrimaryReportForSketchClass: 'SetPrimaryReportForSketchClass',
     CreateSketchFolder: 'CreateSketchFolder',
     CreateSketch: 'CreateSketch',

@@ -1086,6 +1086,15 @@ mutation CreateCustomReport(
   }
 }
 
+mutation DuplicateReport($sourceReportId: Int!) {
+  duplicateReport(input: { sourceReportId: $sourceReportId }) {
+    report {
+      id
+      title
+    }
+  }
+}
+
 mutation SetPrimaryReportForSketchClass(
   $sketchClassId: Int!
   $draftReportId: Int!

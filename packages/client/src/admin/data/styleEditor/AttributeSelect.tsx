@@ -10,13 +10,23 @@ export type AttributeAvailability = {
   hint?: string;
 };
 
-function attributeExampleText(attr: GeostatsAttribute): string | null {
-  if (
-    attr.type === "number" &&
-    attr.min !== undefined &&
-    attr.max !== undefined
-  ) {
-    return attr.min.toLocaleString() + " - " + attr.max.toLocaleString();
+function finiteBound(value: unknown): number | null {
+  return typeof value === "number" && Number.isFinite(value) ? value : null;
+}
+
+/**
+ * Example text shown under a column name. Numeric ranges come from column
+ * stats JSON, where DuckDB MIN/MAX of an all-null column is stored as null.
+ * `null !== undefined`, so a presence check is not enough to call
+ * toLocaleString.
+ */
+export function attributeExampleText(attr: GeostatsAttribute): string | null {
+  if (attr.type === "number") {
+    const min = finiteBound(attr.min);
+    const max = finiteBound(attr.max);
+    if (min !== null && max !== null) {
+      return min.toLocaleString() + " - " + max.toLocaleString();
+    }
   }
   const samples = Object.keys(attr.values || {}).slice(0, 10);
   if (samples.length > 0) {
