@@ -88,7 +88,12 @@ test.describe("selective overlay publish", () => {
 
     await page.locator("#publish-button").click();
     const full = page.getByRole("dialog", { name: "Publish Overlays" });
-    await expect(full.getByText("Deep Reef", { exact: true })).toBeVisible();
+    // The summarized tab stays on its spinner until ChangeLogsSinceLastPublish
+    // returns. Under a full smoke run that query can take longer than the
+    // default 5s expect, while the dialog itself is already open.
+    await expect(full.getByText("Deep Reef", { exact: true })).toBeVisible({
+      timeout: 20_000,
+    });
     await expect(full.getByText("Coral Reefs", { exact: true })).toHaveCount(0);
     // A click during the dialog's enter transition can be dropped.
     await expect(async () => {
