@@ -24,3 +24,5 @@ npm run chart --workspace @seasketch/s57 -- florida-east
 The build needs `ogr2ogr` and `tippecanoe` on `PATH`. Coverage peeling uses the `gdal-async` package, which brings its own GDAL, so Python and the `osgeo` module are not required. Run `npm install` at the repo root after pulling so that package is linked.
 
 The demo is at http://localhost:4173. It is not for navigation.
+
+`npm run site --workspace @seasketch/s57` copies whatever regions have been built into `site/charts` and writes a static viewer to `site/dist`. That folder is what the hosted chart publishes. Mapbox GL 3.4 cannot read PMTiles itself, so the page's service worker answers the same `/tiles/.../*.mvt` requests the local demo serves. Rebuild and publish the site again after a style or tile change. The local demo is unchanged.

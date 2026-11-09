@@ -1,0 +1,43 @@
+{
+  "id": "hawaii",
+  "title": "Hawaii",
+  "note": "The main Hawaiian islands",
+  "clip": [
+    -160.8,
+    18.5,
+    -154.4,
+    22.7
+  ],
+  "views": [
+    {
+      "name": "Islands",
+      "zoom": 7,
+      "lon": -157.6,
+      "lat": 20.6
+    },
+    {
+      "name": "Honolulu",
+      "zoom": 13,
+      "lon": -157.87,
+      "lat": 21.3
+    },
+    {
+      "name": "Kahului",
+      "zoom": 12,
+      "lon": -156.47,
+      "lat": 20.9
+    },
+    {
+      "name": "Hilo",
+      "zoom": 12,
+      "lon": -155.07,
+      "lat": 19.74
+    },
+    {
+      "name": "Lihue",
+      "zoom": 12,
+      "lon": -159.35,
+      "lat": 21.96
+    }
+  ]
+}
