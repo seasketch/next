@@ -2585,16 +2585,20 @@ COMMENT ON FUNCTION public._publish_rebuild_published_paths(p_project_id integer
 --
 
 CREATE FUNCTION public._publish_record_project_activity(p_project_id integer) RETURNS void
-    LANGUAGE sql SECURITY DEFINER
+    LANGUAGE plpgsql SECURITY DEFINER
     SET search_path TO 'public', 'pg_temp'
     AS $$
-  select graphile_worker.add_job(
+begin
+  -- plpgsql, not sql: graphile_worker is installed by the worker at runtime,
+  -- so a sql function body cannot be validated when this migration commits.
+  perform graphile_worker.add_job(
     'recordProjectActivity',
     payload := json_build_object('projectId', p_project_id),
     run_at := now() + '10 seconds',
     queue_name := 'recordProjectActivity',
     job_key := 'recordProjectActivity:' || p_project_id
   );
+end;
 $$;
 
 
