@@ -12674,11 +12674,6 @@ select{
   color:rgb(4 120 87 / 0.8)
 }
 
-.text-emerald-800{
-  --tw-text-opacity:1;
-  color:rgb(6 95 70 / var(--tw-text-opacity, 1))
-}
-
 .text-emerald-900{
   --tw-text-opacity:1;
   color:rgb(6 78 59 / var(--tw-text-opacity, 1))
@@ -13162,6 +13157,11 @@ select{
   color:rgb(244 244 245 / var(--tw-text-opacity, 1))
 }
 
+.text-zinc-300{
+  --tw-text-opacity:1;
+  color:rgb(212 212 216 / var(--tw-text-opacity, 1))
+}
+
 .text-zinc-400{
   --tw-text-opacity:1;
   color:rgb(161 161 170 / var(--tw-text-opacity, 1))
@@ -13170,11 +13170,6 @@ select{
 .text-zinc-500{
   --tw-text-opacity:1;
   color:rgb(113 113 122 / var(--tw-text-opacity, 1))
-}
-
-.text-zinc-300{
-  --tw-text-opacity:1;
-  color:rgb(212 212 216 / var(--tw-text-opacity, 1))
 }
 
 .text-opacity-80{
@@ -15833,22 +15828,17 @@ input[type="checkbox"][indeterminate="true"]:checked {
   --tw-ring-color:rgb(14 165 233 / var(--tw-ring-opacity, 1))
 }
 
+.focus-visible\:ring-slate-400:focus-visible{
+  --tw-ring-opacity:1;
+  --tw-ring-color:rgb(148 163 184 / var(--tw-ring-opacity, 1))
+}
+
 .focus-visible\:ring-white\/50:focus-visible{
   --tw-ring-color:rgb(255 255 255 / 0.5)
 }
 
 .focus-visible\:ring-white\/70:focus-visible{
   --tw-ring-color:rgb(255 255 255 / 0.7)
-}
-
-.focus-visible\:ring-rose-400:focus-visible{
-  --tw-ring-opacity:1;
-  --tw-ring-color:rgb(251 113 133 / var(--tw-ring-opacity, 1))
-}
-
-.focus-visible\:ring-slate-400:focus-visible{
-  --tw-ring-opacity:1;
-  --tw-ring-color:rgb(148 163 184 / var(--tw-ring-opacity, 1))
 }
 
 .focus-visible\:ring-offset-1:focus-visible{
