@@ -10980,6 +10980,8 @@ export type Project = Node & {
   /** Should be a short length in order to fit in the project header. */
   description?: Maybe<Scalars['String']>;
   downloadableLayersCount?: Maybe<Scalars['Int']>;
+  /** Draft reports for this project, including reports that are not assigned to a sketch class. Published versions are omitted. */
+  draftReports?: Maybe<Array<Report>>;
   draftTableOfContentsHasChanges: Scalars['Boolean'];
   /**
    * Draft layer lists, accessible only to admins. Make edits to the layer list and
@@ -11297,6 +11299,16 @@ export type ProjectDataSourcesForItemsArgs = {
   first?: Maybe<Scalars['Int']>;
   offset?: Maybe<Scalars['Int']>;
   tableOfContentsItemIds?: Maybe<Array<Maybe<Scalars['Int']>>>;
+};
+
+
+/**
+ * SeaSketch Project type. This root type contains most of the fields and queries
+ * needed to drive the application.
+ */
+export type ProjectDraftReportsArgs = {
+  first?: Maybe<Scalars['Int']>;
+  offset?: Maybe<Scalars['Int']>;
 };
 
 
@@ -25372,22 +25384,18 @@ export type CopyableReportCardsQuery = (
   & { project?: Maybe<(
     { __typename?: 'Project' }
     & Pick<Project, 'id'>
-    & { sketchClasses: Array<(
-      { __typename?: 'SketchClass' }
-      & Pick<SketchClass, 'id' | 'name' | 'previewNewReports' | 'isGeographyClippingEnabled'>
-      & { draftReport?: Maybe<(
-        { __typename?: 'Report' }
-        & Pick<Report, 'id'>
-        & { tabs?: Maybe<Array<(
-          { __typename?: 'ReportTab' }
-          & Pick<ReportTab, 'id' | 'position' | 'title'>
-          & { cards?: Maybe<Array<(
-            { __typename?: 'ReportCard' }
-            & Pick<ReportCard, 'id' | 'position' | 'title' | 'body' | 'componentSettings' | 'alternateLanguageSettings'>
-          )>> }
+    & { draftReports?: Maybe<Array<(
+      { __typename?: 'Report' }
+      & Pick<Report, 'id' | 'title'>
+      & { tabs?: Maybe<Array<(
+        { __typename?: 'ReportTab' }
+        & Pick<ReportTab, 'id' | 'position' | 'title'>
+        & { cards?: Maybe<Array<(
+          { __typename?: 'ReportCard' }
+          & Pick<ReportCard, 'id' | 'position' | 'title' | 'body' | 'componentSettings' | 'alternateLanguageSettings'>
         )>> }
-      )> }
-    )> }
+      )>> }
+    )>> }
   )> }
 );
 
@@ -33768,25 +33776,20 @@ export const CopyableReportCardsDocument = /*#__PURE__*/ gql`
     query CopyableReportCards($projectId: Int!) {
   project(id: $projectId) {
     id
-    sketchClasses {
+    draftReports {
       id
-      name
-      previewNewReports
-      isGeographyClippingEnabled
-      draftReport {
+      title
+      tabs {
         id
-        tabs {
+        position
+        title
+        cards {
           id
           position
           title
-          cards {
-            id
-            position
-            title
-            body
-            componentSettings
-            alternateLanguageSettings
-          }
+          body
+          componentSettings
+          alternateLanguageSettings
         }
       }
     }

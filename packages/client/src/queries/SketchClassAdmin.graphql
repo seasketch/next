@@ -852,25 +852,20 @@ query BaseDraftReportContext($reportId: Int!) {
 query CopyableReportCards($projectId: Int!) {
   project(id: $projectId) {
     id
-    sketchClasses {
+    draftReports {
       id
-      name
-      previewNewReports
-      isGeographyClippingEnabled
-      draftReport {
+      title
+      tabs {
         id
-        tabs {
+        position
+        title
+        cards {
           id
           position
           title
-          cards {
-            id
-            position
-            title
-            body
-            componentSettings
-            alternateLanguageSettings
-          }
+          body
+          componentSettings
+          alternateLanguageSettings
         }
       }
     }
