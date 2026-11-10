@@ -920,6 +920,7 @@ export enum ChangeLogFieldGroup {
   FolderDeleted = 'FOLDER_DELETED',
   FolderTitle = 'FOLDER_TITLE',
   FolderType = 'FOLDER_TYPE',
+  LayersListOrderChange = 'LAYERS_LIST_ORDER_CHANGE',
   LayersPublished = 'LAYERS_PUBLISHED',
   LayersZOrderChange = 'LAYERS_Z_ORDER_CHANGE',
   LayerAcl = 'LAYER_ACL',
@@ -8311,7 +8312,7 @@ export type Mutation = {
   updateTopic?: Maybe<UpdateTopicPayload>;
   /** Updates a single `Topic` using its globally unique id and a patch. */
   updateTopicByNodeId?: Maybe<UpdateTopicPayload>;
-  /** Batch reassigns z_index for one project. Records change_logs (layers:z-order-change) on projects when session.user_id is set; to_summary includes reordered_count. */
+  /** Batch reassigns z_index for one project. Records change_logs (layers:z-order-change) on projects when session.user_id is set; to_summary includes reordered_count. Marks the draft overlay list as changed. */
   updateZIndexes?: Maybe<UpdateZIndexesPayload>;
   /** Use to upload pdf documents for use with the Consent FormElement */
   uploadConsentDocument: FormElement;
@@ -11071,6 +11072,8 @@ export type Project = Node & {
   isOfflineEnabled?: Maybe<Scalars['Boolean']>;
   /** Reads and enables pagination through a set of `Post`. */
   latestPostsConnection: PostsConnection;
+  /** Whether sibling order differs between the draft and published overlay lists. Only a full publish ships list order. */
+  listOrderPending?: Maybe<Scalars['Boolean']>;
   /** If a logoUrl is provided, it will link to this url in a new window if provided. */
   logoLink?: Maybe<Scalars['String']>;
   /** URL referencing an image that will be used to represent the project. Will be displayed at 48x48 pixels and must be a public url. */
@@ -21173,7 +21176,7 @@ export type DraftTableOfContentsQuery = (
   { __typename?: 'Query' }
   & { projectBySlug?: Maybe<(
     { __typename?: 'Project' }
-    & Pick<Project, 'id' | 'draftTableOfContentsHasChanges' | 'tableOfContentsLastPublished' | 'hostedTileUuidsRequiringAuth'>
+    & Pick<Project, 'id' | 'draftTableOfContentsHasChanges' | 'overlayOrderPending' | 'tableOfContentsLastPublished' | 'hostedTileUuidsRequiringAuth'>
     & { region: (
       { __typename?: 'GeometryPolygon' }
       & Pick<GeometryPolygon, 'geojson'>
@@ -22433,7 +22436,7 @@ export type ChangeLogsSinceLastPublishQuery = (
   { __typename?: 'Query' }
   & { projectBySlug?: Maybe<(
     { __typename?: 'Project' }
-    & Pick<Project, 'id' | 'tableOfContentsLastPublished'>
+    & Pick<Project, 'id' | 'tableOfContentsLastPublished' | 'listOrderPending'>
     & { commentsSinceLastPublish?: Maybe<Array<(
       { __typename?: 'ResolvableLayerComment' }
       & ResolvableLayerCommentThreadFragment
@@ -31113,6 +31116,7 @@ export const DraftTableOfContentsDocument = /*#__PURE__*/ gql`
   projectBySlug(slug: $slug) {
     id
     draftTableOfContentsHasChanges
+    overlayOrderPending
     tableOfContentsLastPublished
     hostedTileUuidsRequiringAuth
     region {
@@ -32028,6 +32032,7 @@ export const ChangeLogsSinceLastPublishDocument = /*#__PURE__*/ gql`
   projectBySlug(slug: $slug) {
     id
     tableOfContentsLastPublished
+    listOrderPending
     commentsSinceLastPublish {
       ...ResolvableLayerCommentThread
     }

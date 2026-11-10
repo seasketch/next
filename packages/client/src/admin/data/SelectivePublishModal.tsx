@@ -2,6 +2,7 @@ import { ChevronDownIcon, ChevronRightIcon } from "@heroicons/react/solid";
 import { FolderIcon } from "@heroicons/react/outline";
 import { Link2Icon } from "@radix-ui/react-icons";
 import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
+import * as Popover from "@radix-ui/react-popover";
 import * as Tooltip from "@radix-ui/react-tooltip";
 import clsx from "clsx";
 import { ReactNode, useEffect, useMemo, useRef, useState } from "react";
@@ -38,12 +39,11 @@ import {
   checkableUnits,
   checkUnit,
   closureOf,
+  coPublishGroup,
   CrumbSource,
   impliedCheckable,
-  includedWithTitles,
   isPublishKind,
   isSharedSourceBundle,
-  linkedRowIds,
   promoteImplied,
   PublishKind,
   SelectiveUnit,
@@ -207,10 +207,6 @@ export default function SelectivePublishModal({
   });
   const [explicit, setExplicit] = useState<string[]>([]);
   const [highlighted, setHighlighted] = useState<Set<string>>(new Set());
-  const [focusedId, setFocusedId] = useState<string | null>(null);
-  const [collapsedBundles, setCollapsedBundles] = useState<Set<string>>(
-    new Set()
-  );
   const [publishError, setPublishError] = useState<{
     detail?: string;
   } | null>(null);
@@ -310,15 +306,8 @@ export default function SelectivePublishModal({
     }
     return next;
   }, [explicit, implied]);
-  const linkedIds = useMemo(() => {
-    if (!focusedId) {
-      return new Set<string>();
-    }
-    return new Set(linkedRowIds(focusedId, explicit, units));
-  }, [explicit, focusedId, units]);
 
   const selectedCount = explicit.length;
-  const includedCount = implied.length;
   const loading = detailsQuery.loading || !project;
   const lastPublished = project?.tableOfContentsLastPublished
     ? new Date(project.tableOfContentsLastPublished)
@@ -401,7 +390,7 @@ export default function SelectivePublishModal({
       footer={[
         {
           autoFocus: true,
-          label: t("Publish {{count}} selected", { count: selectedCount }),
+          label: t("Publish"),
           variant: "primary",
           disabled: loading || publishState.loading || selectedCount === 0,
           loading: publishState.loading,
@@ -475,9 +464,7 @@ export default function SelectivePublishModal({
                         units={units}
                         explicit={explicit}
                         checkedIds={checkedIds}
-                        linkedIds={linkedIds}
                         highlighted={highlighted}
-                        collapsedBundles={collapsedBundles}
                         crumbsById={crumbsById}
                         summaryFor={summaryFor}
                         t={t}
@@ -511,18 +498,6 @@ export default function SelectivePublishModal({
                           setExplicit(result.explicit);
                           flash(result.nudged);
                         }}
-                        onFocusRow={setFocusedId}
-                        onToggleBundle={(bundleId) => {
-                          setCollapsedBundles((prev) => {
-                            const next = new Set(prev);
-                            if (next.has(bundleId)) {
-                              next.delete(bundleId);
-                            } else {
-                              next.add(bundleId);
-                            }
-                            return next;
-                          });
-                        }}
                         onOpenMetadata={(tocId, initialId) =>
                           setMetadataModal({ tocId, initialId })
                         }
@@ -535,11 +510,6 @@ export default function SelectivePublishModal({
                 </div>
               )}
             </div>
-            {includedCount > 0 ? (
-              <p className="shrink-0 border-t border-slate-100 px-6 py-2 text-xs text-slate-500">
-                {t("+ {{count}} included", { count: includedCount })}
-              </p>
-            ) : null}
           </div>
         </Tooltip.Provider>
       )}
@@ -597,9 +567,7 @@ function UnitSection({
   units,
   explicit,
   checkedIds,
-  linkedIds,
   highlighted,
-  collapsedBundles,
   crumbsById,
   summaryFor,
   t,
@@ -607,8 +575,6 @@ function UnitSection({
   onCheck,
   onUncheck,
   onPromote,
-  onFocusRow,
-  onToggleBundle,
   onOpenMetadata,
   onOpenCartography,
 }: {
@@ -618,9 +584,7 @@ function UnitSection({
   units: SelectiveUnit[];
   explicit: string[];
   checkedIds: Set<string>;
-  linkedIds: Set<string>;
   highlighted: Set<string>;
-  collapsedBundles: Set<string>;
   crumbsById: Map<string, CrumbSource>;
   summaryFor: (unit: SelectiveUnit) => PublishSummaryRow | undefined;
   t: (key: string, options?: Record<string, unknown>) => string;
@@ -628,8 +592,6 @@ function UnitSection({
   onCheck: (stableId: string) => void;
   onUncheck: (stableId: string) => void;
   onPromote: (stableId: string) => void;
-  onFocusRow: (stableId: string | null) => void;
-  onToggleBundle: (bundleId: string) => void;
   onOpenMetadata: (tocId: number, initialId?: string) => void;
   onOpenCartography: (tocId: number, initialId?: string) => void;
 }) {
@@ -650,9 +612,8 @@ function UnitSection({
     >
       {groups.map((group) => {
         const shared = isSharedSourceBundle(group.leader.bundleId);
-        const collapsed =
-          group.leader.bundleId != null &&
-          collapsedBundles.has(group.leader.bundleId);
+        const inside =
+          group.leader.kind === "removed" ? group.mates : [];
         return (
           <li key={group.leader.stableId} className="list-none">
             {shared ? (
@@ -664,42 +625,31 @@ function UnitSection({
               unit={group.leader}
               implied={impliedIds.has(group.leader.stableId)}
               checked={checkedIds.has(group.leader.stableId)}
-              highlighted={
-                highlighted.has(group.leader.stableId) ||
-                linkedIds.has(group.leader.stableId)
-              }
-              includedWith={includedWithTitles(
+              highlighted={highlighted.has(group.leader.stableId)}
+              together={coPublishGroup(
                 group.leader.stableId,
                 explicit,
                 units
               )}
-              insideCount={
-                group.leader.kind === "removed" ? group.mates.length : 0
-              }
-              bundleCollapsed={collapsed}
-              crumbs={ancestorCrumbs(group.leader.parentStableId, crumbsById)}
+              inside={inside}
+              crumbs={ancestorCrumbs(
+                group.leader.parentStableId,
+                crumbsById
+              ).filter((crumb) => !crumb.added)}
               summary={summaryFor(group.leader)}
               t={t}
               onCheck={() => onCheck(group.leader.stableId)}
               onUncheck={() => onUncheck(group.leader.stableId)}
               onPromote={() => onPromote(group.leader.stableId)}
-              onFocus={() => onFocusRow(group.leader.stableId)}
-              onBlur={() => onFocusRow(null)}
-              onToggleBundle={
-                group.mates.length && group.leader.bundleId
-                  ? () => onToggleBundle(group.leader.bundleId as string)
-                  : undefined
-              }
               onOpenMetadata={onOpenMetadata}
               onOpenCartography={onOpenCartography}
             />
-            {!collapsed
+            {shared
               ? group.mates.map((mate) => (
                   <NestedMate
                     key={mate.stableId}
                     mate={mate}
-                    leaderTitle={group.leader.title}
-                    t={t}
+                    together={coPublishGroup(mate.stableId, explicit, units)}
                   />
                 ))
               : null}
@@ -715,18 +665,14 @@ function UnitRow({
   implied,
   checked,
   highlighted,
-  includedWith,
-  insideCount,
-  bundleCollapsed,
+  together,
+  inside,
   crumbs,
   summary,
   t,
   onCheck,
   onUncheck,
   onPromote,
-  onFocus,
-  onBlur,
-  onToggleBundle,
   onOpenMetadata,
   onOpenCartography,
 }: {
@@ -734,56 +680,33 @@ function UnitRow({
   implied: boolean;
   checked: boolean;
   highlighted: boolean;
-  includedWith: string[];
-  insideCount: number;
-  bundleCollapsed: boolean;
+  together: SelectiveUnit[];
+  inside: SelectiveUnit[];
   crumbs: { stableId: string; title: string; added: boolean }[];
   summary?: PublishSummaryRow;
   t: (key: string, options?: Record<string, unknown>) => string;
   onCheck: () => void;
   onUncheck: () => void;
   onPromote: () => void;
-  onFocus: () => void;
-  onBlur: () => void;
-  onToggleBundle?: () => void;
   onOpenMetadata: (tocId: number, initialId?: string) => void;
   onOpenCartography: (tocId: number, initialId?: string) => void;
 }) {
   // eslint-disable-next-line i18next/no-literal-string
   const inputId = `selective-publish-${unit.stableId}`;
-  // eslint-disable-next-line i18next/no-literal-string
-  const captionId = `${inputId}-caption`;
   const removed = unit.kind === "removed";
-  const includedLabel =
-    implied && includedWith.length
-      ? t("Included with {{name}}", {
-          name: includedWith.join(", "),
-        })
-      : "";
+  const linked = together.length > 1;
 
   return (
     <div
       className={clsx(
-        "px-4 py-3.5 transition-colors",
+        "px-4 py-3.5",
         !checked && "opacity-60",
         highlighted && "bg-amber-50"
       )}
-      onMouseEnter={onFocus}
-      onMouseLeave={onBlur}
     >
       <div className="flex items-start gap-3">
         {implied ? (
-          <button
-            type="button"
-            className="mt-0.5 inline-flex h-5 w-5 shrink-0 items-center justify-center rounded text-sky-700 hover:bg-sky-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-500"
-            aria-label={includedLabel || t("Included with this publish")}
-            aria-describedby={captionId}
-            onClick={onPromote}
-            onFocus={onFocus}
-            onBlur={onBlur}
-          >
-            <Link2Icon className="h-4 w-4" aria-hidden />
-          </button>
+          <PublishTogetherIcon group={together} onClick={onPromote} />
         ) : (
           <input
             id={inputId}
@@ -792,13 +715,14 @@ function UnitRow({
             onChange={(event) =>
               event.target.checked ? onCheck() : onUncheck()
             }
-            onFocus={onFocus}
-            onBlur={onBlur}
             className="mt-1 h-4 w-4 shrink-0 rounded border-gray-300 text-primary-600 focus:ring-primary-500"
           />
         )}
         <div className="min-w-0 flex-1 space-y-1.5">
           <div className="flex flex-wrap items-center gap-2">
+            {!implied && linked && inside.length === 0 ? (
+              <PublishTogetherIcon group={together} />
+            ) : null}
             {implied ? (
               <span
                 className={clsx(
@@ -819,20 +743,13 @@ function UnitRow({
                 <ItemTitle unit={unit} />
               </label>
             )}
-            {insideCount > 0 ? (
-              <button
-                type="button"
-                className="inline-flex items-center gap-1 rounded-full bg-rose-50 px-2 py-0.5 text-xs font-medium text-rose-800"
-                onClick={onToggleBundle}
-                aria-expanded={!bundleCollapsed}
-              >
-                {bundleCollapsed ? (
-                  <ChevronRightIcon className="h-3.5 w-3.5" aria-hidden />
-                ) : (
-                  <ChevronDownIcon className="h-3.5 w-3.5" aria-hidden />
-                )}
-                {t("and {{count}} items inside", { count: insideCount })}
-              </button>
+            {inside.length > 0 ? (
+              <InsideItemsPopover
+                mates={inside}
+                label={t("and {{count}} items inside", {
+                  count: inside.length,
+                })}
+              />
             ) : null}
           </div>
           {crumbs.length ? (
@@ -845,24 +762,11 @@ function UnitRow({
                       aria-hidden
                     />
                   ) : null}
-                  {crumb.added ? (
-                    <span className="rounded bg-emerald-50 px-1.5 py-0.5 font-medium text-emerald-800">
-                      {crumb.title}
-                    </span>
-                  ) : (
-                    crumb.title
-                  )}
+                  {crumb.title}
                 </span>
               ))}
             </p>
           ) : null}
-          {includedLabel ? (
-            <p id={captionId} className="text-xs text-slate-500">
-              {includedLabel}
-            </p>
-          ) : (
-            <span id={captionId} className="sr-only" />
-          )}
           {summary && (summary.editors.length > 0 || summary.changeCount > 0) ? (
             <SummaryMetaRow
               editors={summary.editors}
@@ -938,34 +842,160 @@ function ItemTitle({ unit }: { unit: SelectiveUnit }) {
   );
 }
 
+function PublishTogetherIcon({
+  group,
+  onClick,
+}: {
+  group: SelectiveUnit[];
+  /** Replaces the checkbox on a row that was pulled in by another selection. */
+  onClick?: () => void;
+}) {
+  const { t } = useTranslation("admin:data");
+  if (!onClick && group.length < 2) {
+    return null;
+  }
+  const names = group.map((item) => item.title).join(", ");
+  const label = names
+    ? t("Must be published with {{names}}", { names })
+    : t("Must be published together");
+  return (
+    <Tooltip.Root>
+      <Tooltip.Trigger asChild>
+        <button
+          type="button"
+          className={clsx(
+            "inline-flex h-5 w-5 shrink-0 items-center justify-center rounded text-sky-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-500",
+            onClick ? "mt-0.5 hover:bg-sky-50" : null
+          )}
+          aria-label={label}
+          data-together={group.map((item) => item.stableId).join(" ")}
+          onClick={onClick}
+        >
+          <Link2Icon className="h-4 w-4" aria-hidden />
+        </button>
+      </Tooltip.Trigger>
+      <Tooltip.Portal>
+        <Tooltip.Content
+          side="top"
+          sideOffset={6}
+          className="z-[100] max-w-xs select-none rounded-md bg-neutral-950 px-3 py-2 text-left text-xs leading-snug text-zinc-100 shadow-xl outline-none"
+        >
+          <p className="font-medium text-white">
+            {t("Must be published together")}
+          </p>
+          {group.length > 0 ? (
+            <ul className="mt-1 space-y-0.5 text-zinc-300">
+              {group.map((item) => (
+                <li key={item.stableId}>{item.title}</li>
+              ))}
+            </ul>
+          ) : null}
+          <Tooltip.Arrow className="fill-neutral-950" />
+        </Tooltip.Content>
+      </Tooltip.Portal>
+    </Tooltip.Root>
+  );
+}
+
+function InsideItemsPopover({
+  mates,
+  label,
+}: {
+  mates: SelectiveUnit[];
+  label: string;
+}) {
+  const [open, setOpen] = useState(false);
+  const closeTimer = useRef<number>();
+
+  useEffect(() => () => window.clearTimeout(closeTimer.current), []);
+
+  // Closing the popover returns focus to this button. A focus handler would
+  // open it again, so hover uses pointer events only.
+  const cancelClose = () => window.clearTimeout(closeTimer.current);
+  const show = () => {
+    cancelClose();
+    setOpen(true);
+  };
+  const scheduleHide = () => {
+    cancelClose();
+    closeTimer.current = window.setTimeout(() => setOpen(false), 80);
+  };
+
+  return (
+    <Popover.Root open={open} onOpenChange={setOpen}>
+      <Popover.Trigger asChild>
+        <button
+          type="button"
+          onPointerEnter={show}
+          onPointerLeave={scheduleHide}
+          className="inline-flex items-center rounded-full bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-600 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-400"
+        >
+          {label}
+        </button>
+      </Popover.Trigger>
+      <Popover.Portal>
+        <Popover.Content
+          side="top"
+          align="start"
+          sideOffset={8}
+          collisionPadding={12}
+          onPointerEnter={cancelClose}
+          onPointerLeave={scheduleHide}
+          onOpenAutoFocus={(event) => event.preventDefault()}
+          onCloseAutoFocus={(event) => event.preventDefault()}
+          className="z-[200] max-h-64 w-max max-w-xs overflow-y-auto rounded-md border border-slate-200 bg-white py-1 text-sm shadow-lg outline-none"
+        >
+          <ul>
+            {mates.map((mate) => (
+              <li
+                key={mate.stableId}
+                className={clsx(
+                  "flex items-center gap-2 px-3 py-1.5",
+                  mate.kind === "removed"
+                    ? "text-slate-400 line-through"
+                    : "text-slate-700"
+                )}
+              >
+                {mate.isFolder ? (
+                  <FolderIcon
+                    className="h-3.5 w-3.5 flex-none text-slate-300"
+                    aria-hidden
+                  />
+                ) : null}
+                <span className="min-w-0">{mate.title}</span>
+              </li>
+            ))}
+          </ul>
+        </Popover.Content>
+      </Popover.Portal>
+    </Popover.Root>
+  );
+}
+
 function NestedMate({
   mate,
-  leaderTitle,
-  t,
+  together,
 }: {
   mate: SelectiveUnit;
-  leaderTitle: string;
-  t: (key: string, options?: Record<string, unknown>) => string;
+  together: SelectiveUnit[];
 }) {
   const removed = mate.kind === "removed";
   return (
     <div className="border-t border-slate-50 bg-slate-50/40 py-2 pl-12 pr-4">
       <p
         className={clsx(
-          "text-sm",
+          "flex items-center gap-2 text-sm",
           removed ? "text-slate-400 line-through" : "text-slate-600"
         )}
       >
+        <PublishTogetherIcon group={together} />
         {mate.isFolder ? (
           <FolderIcon
-            className="mr-1.5 inline h-3.5 w-3.5 text-slate-300"
+            className="h-3.5 w-3.5 flex-none text-slate-300"
             aria-hidden
           />
         ) : null}
-        {mate.title}
-      </p>
-      <p className="text-xs text-slate-400">
-        {t("Included with {{name}}", { name: leaderTitle })}
+        <span className="min-w-0">{mate.title}</span>
       </p>
     </div>
   );

@@ -80,6 +80,26 @@ describe("LayersPublishedFieldGroupListItem", () => {
     );
   });
 
+  it("counts a folder published with a layer", () => {
+    render(
+      <LayersPublishedFieldGroupListItem
+        scope="project"
+        changeLog={changeLog({
+          fullOverlayPublish: false,
+          toSummary: { layer_count: 1 },
+          publishedOverlayItems: [
+            item("vents", "Fiji Hydrothermal Vents"),
+            item("test", "Test", true),
+          ],
+        })}
+      />
+    );
+
+    expect(screen.getByRole("button", { name: "Show published layers" })).toHaveTextContent(
+      "1 layer and 1 folder"
+    );
+  });
+
   it("keeps the old sentence when a publish has no record of what it shipped", () => {
     render(
       <LayersPublishedFieldGroupListItem

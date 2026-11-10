@@ -119,6 +119,8 @@ export type PublishChangeSummary = {
   lastPublishIso: string | null;
   /** Collapsed z-order updates for the project (not TOC entities) */
   zOrderSummary: PublishZOrderSummary | null;
+  /** Collapsed sibling-order updates for the project (not TOC entities) */
+  listOrderSummary: PublishZOrderSummary | null;
   added: PublishSummaryRow[];
   updated: PublishSummaryRow[];
   removed: PublishSummaryRow[];
@@ -308,6 +310,13 @@ export function buildPublishChangeSummary({
   );
   const zOrderSummary =
     zOrderLogs.length > 0 ? buildZOrderSummary(zOrderLogs) : null;
+  const listOrderLogs = changeLogs.filter(
+    (l) =>
+      l.fieldGroup === ChangeLogFieldGroup.LayersListOrderChange &&
+      l.entityType === "projects"
+  );
+  const listOrderSummary =
+    listOrderLogs.length > 0 ? buildZOrderSummary(listOrderLogs) : null;
 
   const tocLogs = changeLogs.filter((l) => l.entityType === TOC_ENTITY_TYPE);
   const byEntity = new Map<number, ChangeLogDetailsFragment[]>();
@@ -394,6 +403,7 @@ export function buildPublishChangeSummary({
   return {
     lastPublishIso,
     zOrderSummary,
+    listOrderSummary,
     added,
     updated,
     removed,

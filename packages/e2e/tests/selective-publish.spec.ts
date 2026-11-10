@@ -72,7 +72,7 @@ test.describe("selective overlay publish", () => {
     await expect(selective.getByRole("checkbox", { name: "Coral Reefs", exact: true })).toBeChecked();
     await expect(selective.getByRole("checkbox", { name: "Deep Reef", exact: true })).toBeChecked();
     await selective.getByRole("checkbox", { name: "Deep Reef", exact: true }).uncheck();
-    await selective.getByRole("button", { name: "Publish 1 selected" }).click();
+    await selective.getByRole("button", { name: "Publish", exact: true }).click();
     await expect(selective).toBeHidden();
 
     const visitor = await browser.newPage();
@@ -131,9 +131,17 @@ test.describe("selective overlay publish", () => {
 
     await selective.getByRole("checkbox", { name: "Coral", exact: true }).check();
     await expect(selective.getByRole("checkbox", { name: "Habitats", exact: true })).toHaveCount(0);
-    await expect(selective.getByText("Included with Coral")).toBeVisible();
-    await expect(selective.getByText("+ 1 included")).toBeVisible();
-    await selective.getByRole("button", { name: "Publish 1 selected" }).click();
+    await expect(selective.getByText("Habitats", { exact: true })).toHaveCount(1);
+    const together = selective.getByRole("button", {
+      name: /Must be published with (Habitats, Coral|Coral, Habitats)/,
+    });
+    await expect(together).toHaveCount(2);
+    await together.first().hover();
+    const tooltip = page.getByRole("tooltip");
+    await expect(tooltip).toContainText("Must be published together");
+    await expect(tooltip).toContainText("Habitats");
+    await expect(tooltip).toContainText("Coral");
+    await selective.getByRole("button", { name: "Publish", exact: true }).click();
     await expect(selective).toBeHidden();
 
     const visitor = await browser.newPage();

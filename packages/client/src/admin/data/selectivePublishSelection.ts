@@ -229,6 +229,71 @@ export function linkedRowIds(
   return Array.from(ids);
 }
 
+/**
+ * Layers and folders that have to publish with this row.
+ * Bundle-mates are always included. Requirement links are included only while
+ * that dependency is part of the current selection, so a new folder can still
+ * be published on its own.
+ */
+export function coPublishGroup(
+  stableId: string,
+  explicitIds: readonly string[],
+  units: readonly SelectiveUnit[]
+): SelectiveUnit[] {
+  const self = units.find((unit) => unit.stableId === stableId);
+  if (!self) {
+    return [];
+  }
+  const ids = new Set<string>([stableId]);
+  if (self.bundleId) {
+    for (const other of units) {
+      if (other.bundleId === self.bundleId) {
+        ids.add(other.stableId);
+      }
+    }
+  }
+  const active = new Set(closureOf(explicitIds, units));
+  if (active.has(stableId)) {
+    const neighbors = new Map<string, Set<string>>();
+    const link = (leftId: string, rightId: string) => {
+      if (!active.has(leftId) || !active.has(rightId) || leftId === rightId) {
+        return;
+      }
+      const left = neighbors.get(leftId) ?? new Set<string>();
+      left.add(rightId);
+      neighbors.set(leftId, left);
+      const right = neighbors.get(rightId) ?? new Set<string>();
+      right.add(leftId);
+      neighbors.set(rightId, right);
+    };
+    for (const unit of units) {
+      if (!active.has(unit.stableId)) {
+        continue;
+      }
+      for (const required of unit.requiresStableIds) {
+        link(unit.stableId, required);
+      }
+    }
+    const seen = new Set<string>([stableId]);
+    const stack = [stableId];
+    while (stack.length) {
+      const id = stack.pop();
+      if (id == null) {
+        continue;
+      }
+      for (const next of neighbors.get(id) ?? []) {
+        if (seen.has(next)) {
+          continue;
+        }
+        seen.add(next);
+        ids.add(next);
+        stack.push(next);
+      }
+    }
+  }
+  return units.filter((unit) => ids.has(unit.stableId));
+}
+
 /** Titles of the explicit units that pull this row in. Direct requirements come first. */
 export function includedWithTitles(
   stableId: string,

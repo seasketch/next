@@ -19,6 +19,23 @@
 -- project update, activity job, validation, or changelog work for every
 -- copied row return immediately. Each publish does that work once.
 
+-- Sibling reorders are recorded like stacking order. Added before the
+-- functions below cast it. A new enum value cannot be used until this
+-- statement's transaction commits, and these functions only cast it at run time.
+do $$
+begin
+  if not exists (
+    select 1
+    from pg_enum
+    join pg_type on pg_enum.enumtypid = pg_type.oid
+    where pg_type.typname = 'change_log_field_group'
+      and pg_enum.enumlabel = 'layers:list-order-change'
+  ) then
+    alter type public.change_log_field_group add value 'layers:list-order-change';
+  end if;
+end
+$$;
+
 alter table public.table_of_contents_items
   add column if not exists published_at timestamp with time zone;
 
@@ -53,8 +70,15 @@ begin
   if coalesce(current_setting('seasketch.skip_library_source_side_effects', true), '') = 'true' then
     return new;
   end if;
-  if tg_op = 'INSERT' or tg_op = 'UPDATE' or tg_op = 'DELETE' then
-    update projects set draft_table_of_contents_has_changes = true where id = new.project_id;
+  -- The flag is what the Publish button reads. Set it from the draft-vs-published
+  -- diff so an edit that is immediately undone (changelog coalesces to nothing,
+  -- and a full publish would copy nothing) turns the button off again.
+  update projects
+  set draft_table_of_contents_has_changes =
+    public.overlay_list_has_unpublished_changes(id)
+  where id = coalesce(new.project_id, old.project_id);
+  if tg_op = 'DELETE' then
+    return old;
   end if;
   return new;
 end;
@@ -96,14 +120,15 @@ begin
   if coalesce(current_setting('seasketch.skip_library_source_side_effects', true), '') = 'true' then
     return new;
   end if;
-  update projects
-  set draft_table_of_contents_has_changes = true
+  update projects p
+  set draft_table_of_contents_has_changes =
+    public.overlay_list_has_unpublished_changes(p.id)
   where id in (
     select tocs.project_id
     from table_of_contents_items as tocs
-    where tocs.data_layer_id = old.id
+    where tocs.data_layer_id = coalesce(old.id, new.id)
   );
-  return new;
+  return coalesce(new, old);
 end;
 $$;
 
@@ -135,22 +160,24 @@ begin
   -- Live library sources: do not fan out "unpublished changes" to every
   -- consumer project. The owning (Data Library) project still gets the flag.
   if v_library_template_id is not null then
-    update projects
-      set draft_table_of_contents_has_changes = true
+    update projects p
+      set draft_table_of_contents_has_changes =
+        public.overlay_list_has_unpublished_changes(p.id)
       where id = v_project_id;
-    return new;
+    return coalesce(new, old);
   end if;
 
-  update projects
-  set draft_table_of_contents_has_changes = true
+  update projects p
+  set draft_table_of_contents_has_changes =
+    public.overlay_list_has_unpublished_changes(p.id)
   where id in (
     select tocs.project_id
     from table_of_contents_items as tocs
     where tocs.data_layer_id in (
-      select data_layers.id from data_layers where data_layers.data_source_id = old.id
+      select data_layers.id from data_layers where data_layers.data_source_id = coalesce(old.id, new.id)
     )
   );
-  return new;
+  return coalesce(new, old);
 end;
 $$;
 
@@ -164,7 +191,10 @@ begin
   if coalesce(current_setting('seasketch.publishing', true), '') = 'true' then
     return new;
   end if;
-  update projects set draft_table_of_contents_has_changes = true where id = (
+  update projects p
+  set draft_table_of_contents_has_changes =
+    public.overlay_list_has_unpublished_changes(p.id)
+  where id = (
     select project_id from table_of_contents_items where id = (
       select table_of_contents_item_id from access_control_lists where id = new.id
     )
@@ -1112,11 +1142,12 @@ create type public.pending_publish_item as (
 -- deleted.
 --
 -- bundle_id groups units that publish together. A removed folder is bundled
--- with the removed items inside it (bundle_id = the folder's stable_id). Units
--- on a non-library source whose source-level fields changed are bundled as
--- 'source:<draft source id>', so the published layers keep sharing one copy.
--- The first unit of a bundle is its checkbox; included_in_bundle marks the
--- rest.
+-- with the removed items inside it (bundle_id = the folder's stable_id),
+-- including items that were moved into it after the last publish and deleted
+-- with it. Units on a non-library source whose source-level fields changed
+-- are bundled as 'source:<draft source id>', so the published layers keep
+-- sharing one copy. The first unit of a bundle is its checkbox;
+-- included_in_bundle marks the rest.
 create or replace function public.pending_publish_items_for_project(p_project_id integer)
   returns setof public.pending_publish_item
   language sql
@@ -1193,21 +1224,52 @@ as $$
     where u.kind = 'updated'
     group by u.stable_id
   ),
+  -- Draft parent recorded when the item was deleted. Published parent is not
+  -- enough for a layer that was moved into a folder after publish and then
+  -- deleted with that folder: its published parent is still the old one.
+  deleted_draft_parent as (
+    select distinct on (cl.from_blob->>'stable_id')
+      cl.from_blob->>'stable_id' as stable_id,
+      cl.from_blob->>'parent_stable_id' as parent_stable_id
+    from change_logs cl
+    where cl.project_id = p_project_id
+      and cl.field_group in ('layer:deleted', 'folder:deleted')
+      and cl.from_blob ? 'stable_id'
+      and coalesce(cl.from_blob->>'parent_stable_id', '') <> ''
+    order by cl.from_blob->>'stable_id', cl.last_at desc
+  ),
   -- Each removed item, with the outermost removed folder it sits in.
-  removal_tree(root_id, stable_id) as (
-    select r.stable_id, r.stable_id
+  removal_parent as (
+    select
+      r.stable_id,
+      case
+        when exists (
+          select 1
+          from units published_parent
+          where published_parent.kind = 'removed'
+            and published_parent.stable_id = r.parent_stable_id
+        ) then r.parent_stable_id
+        when exists (
+          select 1
+          from units draft_parent
+          where draft_parent.kind = 'removed'
+            and draft_parent.stable_id = dp.parent_stable_id
+        ) then dp.parent_stable_id
+      end as parent_stable_id
     from units r
+    left join deleted_draft_parent dp on dp.stable_id = r.stable_id
     where r.kind = 'removed'
-      and not exists (
-        select 1 from units parent
-        where parent.kind = 'removed' and parent.stable_id = r.parent_stable_id
-      )
+  ),
+  removal_tree(root_id, stable_id, seen) as (
+    select r.stable_id, r.stable_id, array[r.stable_id]
+    from removal_parent r
+    where r.parent_stable_id is null
     union all
-    select t.root_id, child.stable_id
+    select t.root_id, child.stable_id, t.seen || child.stable_id
     from removal_tree t
-    join units child
-      on child.kind = 'removed'
-     and child.parent_stable_id = t.stable_id
+    join removal_parent child
+      on child.parent_stable_id = t.stable_id
+     and child.stable_id <> all (t.seen)
   ),
   removal_sizes as (
     select root_id, count(*) as size
@@ -1363,9 +1425,9 @@ $$;
 comment on function public.layer_stack_order_pending(integer) is '@omit';
 revoke all on function public.layer_stack_order_pending(integer) from public;
 
--- Whether the items present in both trees differ in sibling order or in
--- layer stacking order. Only a full publish ships either.
-create or replace function public.overlay_order_pending(p_project_id integer)
+-- Whether sibling order differs for items that share a parent in both trees.
+-- Only a full publish ships list order.
+create or replace function public.list_order_pending(p_project_id integer)
   returns boolean
   language sql
   stable
@@ -1395,8 +1457,23 @@ as $$
       on p.stable_id = d.stable_id
      and p.parent_stable_id is not distinct from d.parent_stable_id
   )
+  select exists (select 1 from same_parent where draft_rank <> pub_rank);
+$$;
+
+comment on function public.list_order_pending(integer) is '@omit';
+revoke all on function public.list_order_pending(integer) from public;
+
+-- Whether the items present in both trees differ in sibling order or in
+-- layer stacking order. Only a full publish ships either.
+create or replace function public.overlay_order_pending(p_project_id integer)
+  returns boolean
+  language sql
+  stable
+  security definer
+  set search_path to public, pg_temp
+as $$
   select
-    exists (select 1 from same_parent where draft_rank <> pub_rank)
+    public.list_order_pending(p_project_id)
     or public.layer_stack_order_pending(p_project_id);
 $$;
 
@@ -1422,6 +1499,25 @@ $$;
 comment on function public.projects_overlay_order_pending(public.projects) is
   'Whether list order or layer stacking order differs between the draft and published overlay lists. Only a full publish ships either.';
 grant execute on function public.projects_overlay_order_pending(public.projects) to seasketch_user;
+
+-- Null for non-admins. The publish review uses this when a reorder was not
+-- written to the changelog.
+create or replace function public.projects_list_order_pending(project public.projects)
+  returns boolean
+  language sql
+  stable
+  security definer
+  set search_path to public, pg_temp
+as $$
+  select case
+    when session_is_admin(project.id)
+    then public.list_order_pending(project.id)
+  end;
+$$;
+
+comment on function public.projects_list_order_pending(public.projects) is
+  'Whether sibling order differs between the draft and published overlay lists. Only a full publish ships list order.';
+grant execute on function public.projects_list_order_pending(public.projects) to seasketch_user;
 
 -- Whether a full publish would change anything that end users see.
 create or replace function public.overlay_list_has_unpublished_changes(p_project_id integer)
@@ -1468,8 +1564,8 @@ revoke all on function public.overlay_list_has_unpublished_changes(integer) from
 --
 
 -- Changelog rows since the last full publish, without rows for items a
--- partial publish has shipped since. layers:z-order-change stays until a full
--- publish, because partial publish does not ship stacking order.
+-- partial publish has shipped since. Stacking order and list order stay until
+-- a full publish, because partial publish does not ship either.
 create or replace function public.projects_change_logs_since_last_publish(project public.projects)
   returns setof public.change_logs
   language plpgsql
@@ -1494,7 +1590,10 @@ begin
       and cl.field_group <> 'layers:published'
       and cl.last_at > v_last_publish
       and (
-        cl.field_group = 'layers:z-order-change'
+        cl.field_group in (
+          'layers:z-order-change',
+          'layers:list-order-change'
+        )
         or (
           cl.entity_type = 'table_of_contents_items'
           and cl.field_group not in ('layer:deleted', 'folder:deleted')
@@ -2279,13 +2378,13 @@ grant execute on function public.projects_pending_publish_items(public.projects)
 -- of "any edit since the previous publish", so a partial publish is not
 -- listed on a layer it did not include. Rows with no manifest (publishes from
 -- before this existed) keep the time window.
-create table public.overlay_publish_runs (
+create table if not exists public.overlay_publish_runs (
   change_log_id bigint primary key references public.change_logs(id) on delete cascade,
   full_publish boolean not null
 );
 comment on table public.overlay_publish_runs is '@omit';
 
-create table public.overlay_publish_run_items (
+create table if not exists public.overlay_publish_run_items (
   change_log_id bigint not null references public.overlay_publish_runs(change_log_id) on delete cascade,
   stable_id text not null,
   title text not null,
@@ -2354,11 +2453,17 @@ comment on function public._record_overlay_publish(integer, integer, integer, bo
 revoke all on function public._record_overlay_publish(integer, integer, integer, boolean, text[]) from public;
 
 -- Read model for the changelog. Titles are the names at publish time.
-create type public.overlay_published_item as (
-  stable_id text,
-  title text,
-  is_folder boolean
-);
+do $$
+begin
+  create type public.overlay_published_item as (
+    stable_id text,
+    title text,
+    is_folder boolean
+  );
+exception
+  when duplicate_object then null;
+end
+$$;
 
 create or replace function public.change_logs_full_overlay_publish(c public.change_logs)
   returns boolean
@@ -2465,3 +2570,229 @@ $$;
 
 comment on function public.table_of_contents_items_related_publish_change_logs(public.table_of_contents_items) is '@simpleCollections only';
 grant execute on function public.table_of_contents_items_related_publish_change_logs(public.table_of_contents_items) to seasketch_user;
+
+-- Z-order updates run with replication role replica, which skips the trigger
+-- that marks the draft list changed. The publish button reads that flag, so
+-- set it explicitly once triggers are back on. The changelog row is what the
+-- publish modal already shows.
+create or replace function public.update_z_indexes("dataLayerIds" integer[])
+  returns setof public.data_layers
+  language plpgsql
+  security definer
+  set search_path to public, pg_temp
+as $$
+declare
+  z int;
+  pid int;
+  v_editor int;
+  v_reordered_count int;
+begin
+  if (select count(distinct(project_id)) from data_layers where id = any("dataLayerIds")) > 1 then
+    raise 'Denied. Attempting to modify more than one project.';
+  end if;
+  if (session_is_admin((select project_id from data_layers where id = any("dataLayerIds") limit 1))) != true then
+    raise 'Unauthorized';
+  end if;
+
+  pid := (select project_id from data_layers where id = any("dataLayerIds") limit 1);
+
+  v_reordered_count := coalesce(array_length("dataLayerIds", 1), 0);
+
+  -- Disable triggers to prevent unnecessary checks which could cause
+  -- deadlocks if rapidly updating z-indexes on a large number of layers.
+  set session_replication_role = replica;
+  z = 0;
+  for i in array_lower("dataLayerIds", 1)..array_upper("dataLayerIds", 1) loop
+    z = z + 1;
+    update data_layers set z_index = z where id = "dataLayerIds"[i];
+  end loop;
+  set session_replication_role = default;
+
+  if pid is not null then
+    update projects p
+    set draft_table_of_contents_has_changes =
+      public.overlay_list_has_unpublished_changes(p.id)
+    where id = pid;
+  end if;
+
+  v_editor := nullif(current_setting('session.user_id', true), '')::int;
+  if v_editor is not null then
+    perform record_changelog(
+      pid,
+      v_editor,
+      'projects',
+      pid,
+      'layers:z-order-change'::change_log_field_group,
+      '{}'::jsonb,
+      jsonb_build_object('reordered_count', v_reordered_count),
+      null,
+      null,
+      null
+    );
+  end if;
+
+  return query (select * from data_layers where id = any("dataLayerIds"));
+end;
+$$;
+
+comment on function public.update_z_indexes(integer[]) is
+  'Batch reassigns z_index for one project. Records change_logs (layers:z-order-change) on projects when session.user_id is set; to_summary includes reordered_count. Marks the draft overlay list as changed.';
+
+-- A sibling reorder does not change parent_stable_id, so the parent-changed
+-- trigger stays quiet and the publish modal had nothing to show. Record one
+-- project-level list-order event. Calls in one drag coalesce.
+create or replace function public.update_table_of_contents_item_position(
+  "itemId" integer,
+  "parentStableId" text,
+  "sortIndex" integer
+) returns public.table_of_contents_items
+  language plpgsql
+  security definer
+as $$
+declare
+  pid int;
+  parent_path ltree;
+  current_path ltree;
+  item table_of_contents_items;
+  old_sort int;
+  old_parent text;
+  v_editor int;
+begin
+  select project_id, sort_index, parent_stable_id
+    into pid, old_sort, old_parent
+  from table_of_contents_items
+  where id = "itemId" and is_draft = true;
+  if pid is null then
+    raise 'Could not find draft item with id = %', "itemId";
+  end if;
+  if session_is_admin(pid) = false then
+    raise 'Permission denied';
+  end if;
+  select path into current_path from table_of_contents_items where id = "itemId" and is_draft = true;
+
+  if "parentStableId" is not null then
+    select path into parent_path
+    from table_of_contents_items
+    where is_draft = true and project_id = pid and stable_id = "parentStableId";
+    if parent_path is null then
+      raise 'Could not find valid parent with stable_id=%', "parentStableId";
+    end if;
+    -- parent_path <@ current_path is true when the new parent is this item
+    -- or one of its descendants. That move closes a cycle.
+    if parent_path <@ current_path then
+      raise 'Cannot move an item into itself or one of its subfolders';
+    end if;
+  end if;
+
+  update table_of_contents_items
+  set parent_stable_id = "parentStableId", sort_index = "sortIndex"
+  where id = "itemId"
+    and (
+      parent_stable_id is distinct from "parentStableId"
+      or sort_index is distinct from "sortIndex"
+    );
+
+  if found
+    and old_sort is distinct from "sortIndex"
+    and old_parent is not distinct from "parentStableId"
+    and coalesce(current_setting('seasketch.publishing', true), '') <> 'true'
+  then
+    v_editor := nullif(current_setting('session.user_id', true), '')::int;
+    if v_editor is not null then
+      perform record_changelog(
+        pid,
+        v_editor,
+        'projects',
+        pid,
+        'layers:list-order-change'::change_log_field_group,
+        '{}'::jsonb,
+        '{}'::jsonb,
+        null,
+        null,
+        null
+      );
+    end if;
+  end if;
+
+  if "parentStableId" is not null then
+    update table_of_contents_items
+    set path = parent_path || subpath(path, nlevel(current_path) - 1)
+    where is_draft = true and path <@ current_path;
+  else
+    update table_of_contents_items
+    set path = subpath(path, nlevel(current_path) - 1)
+    where is_draft = true and path <@ current_path;
+  end if;
+
+  select * into item from table_of_contents_items where id = "itemId";
+  return item;
+end;
+$$;
+
+-- Delete logs keep the draft stable id and parent so a folder removal can be
+-- bundled with items that were moved into it after the last publish. The
+-- published parent of those items is still the old one.
+create or replace function public.trg_changelog_table_of_contents_items_deleted()
+  returns trigger
+  language plpgsql
+  security definer
+  set search_path to public, pg_temp
+as $$
+declare
+  v_editor     int;
+  v_field_group change_log_field_group;
+  v_from_blob  jsonb;
+  v_ds_id      int;
+  v_ds_url     text;
+begin
+  if not old.is_draft then
+    return old;
+  end if;
+
+  v_editor := nullif(current_setting('session.user_id', true), '')::int;
+  if v_editor is null then
+    return old;
+  end if;
+
+  v_field_group :=
+    case when old.is_folder then 'folder:deleted'::change_log_field_group
+         else 'layer:deleted'::change_log_field_group end;
+
+  v_ds_id := null;
+  v_ds_url := null;
+  if not old.is_folder and old.data_layer_id is not null then
+    select dl.data_source_id, ds.url
+    into v_ds_id, v_ds_url
+    from data_layers dl
+    left join data_sources ds on ds.id = dl.data_source_id
+    where dl.id = old.data_layer_id;
+  end if;
+
+  v_from_blob := jsonb_build_object(
+    'data_source_type', old.data_source_type,
+    'data_layer_id', old.data_layer_id,
+    'data_source_id', v_ds_id,
+    'stable_id', old.stable_id,
+    'parent_stable_id', old.parent_stable_id,
+    'path', old.path::text
+  );
+  if v_ds_url is not null then
+    v_from_blob := v_from_blob || jsonb_build_object('url', v_ds_url);
+  end if;
+
+  perform record_changelog(
+    old.project_id,
+    v_editor,
+    'table_of_contents_items',
+    old.id,
+    v_field_group,
+    jsonb_build_object('title', old.title, 'is_folder', old.is_folder),
+    '{}'::jsonb,
+    v_from_blob,
+    null,
+    null
+  );
+
+  return old;
+end;
+$$;

@@ -554,7 +554,8 @@ export default function TableOfContentsEditor() {
           onRequestSelectivePublish={() => setSelectivePublishOpen(true)}
           publishDisabled={
             tocQuery.data?.projectBySlug?.draftTableOfContentsHasChanges ===
-            false
+              false &&
+            tocQuery.data?.projectBySlug?.overlayOrderPending !== true
           }
           lastPublished={
             tocQuery.data?.projectBySlug?.tableOfContentsLastPublished

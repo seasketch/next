@@ -296,6 +296,7 @@ export default function PublishTableOfContentsModal(props: {
                 changeLogs={changeLogs}
                 draftItems={draftTableOfContentsItems}
                 tableOfContentsLastPublished={tableOfContentsLastPublished}
+                listOrderPending={Boolean(publishProject?.listOrderPending)}
               />
             )}
           </div>

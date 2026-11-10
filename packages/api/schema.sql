@@ -261,7 +261,8 @@ CREATE TYPE public.change_log_field_group AS ENUM (
     'layer:temporal',
     'data_table:temporal',
     'data_table:nodata',
-    'data_table:organism'
+    'data_table:organism',
+    'layers:list-order-change'
 );
 
 
@@ -700,6 +701,17 @@ CREATE TYPE public.optional_basemap_layers_group_type AS ENUM (
 
 
 --
+-- Name: overlay_published_item; Type: TYPE; Schema: public; Owner: -
+--
+
+CREATE TYPE public.overlay_published_item AS (
+	stable_id text,
+	title text,
+	is_folder boolean
+);
+
+
+--
 -- Name: participant_sort_by; Type: TYPE; Schema: public; Owner: -
 --
 
@@ -718,6 +730,24 @@ CREATE TYPE public.participation_status AS ENUM (
     'pending_approval',
     'participant_shared_profile',
     'participant_hidden_profile'
+);
+
+
+--
+-- Name: pending_publish_item; Type: TYPE; Schema: public; Owner: -
+--
+
+CREATE TYPE public.pending_publish_item AS (
+	stable_id text,
+	kind text,
+	title text,
+	is_folder boolean,
+	parent_stable_id text,
+	path text,
+	requires_stable_ids text[],
+	bundle_id text,
+	draft_id integer,
+	included_in_bundle boolean
 );
 
 
@@ -2018,6 +2048,1387 @@ COMMENT ON FUNCTION public._delete_table_of_contents_item(tid integer) IS '@omit
 
 
 --
+-- Name: _overlay_changed_stable_ids(integer); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public._overlay_changed_stable_ids(p_project_id integer) RETURNS SETOF text
+    LANGUAGE sql STABLE SECURITY DEFINER
+    SET search_path TO 'public', 'pg_temp'
+    AS $$
+  select d.stable_id
+  from table_of_contents_items d
+  join table_of_contents_items p
+    on p.project_id = d.project_id
+   and p.stable_id = d.stable_id
+   and not p.is_draft
+  left join data_layers dd on dd.id = d.data_layer_id
+  left join data_layers pd on pd.id = p.data_layer_id
+  left join data_sources ds on ds.id = dd.data_source_id
+  left join data_sources ps on ps.id = pd.data_source_id
+  left join interactivity_settings di on di.id = dd.interactivity_settings_id
+  left join interactivity_settings pi on pi.id = pd.interactivity_settings_id
+  left join access_control_lists da on da.table_of_contents_item_id = d.id
+  left join access_control_lists pa on pa.table_of_contents_item_id = p.id
+  where d.project_id = p_project_id
+    and d.is_draft
+    and (
+      (
+        d.parent_stable_id, d.title, d.is_folder, d.show_radio_children,
+        d.is_click_off_only, d.metadata, d.bounds, d.hide_children,
+        d.geoprocessing_reference_id, d.translated_props, d.enable_download,
+        d.enable_data_tables, d.data_table_join_column,
+        d.copied_from_data_library_template_id, d.hide_arcgis_rest_link,
+        d.data_source_type, d.original_source_upload_available
+      ) is distinct from (
+        p.parent_stable_id, p.title, p.is_folder, p.show_radio_children,
+        p.is_click_off_only, p.metadata, p.bounds, p.hide_children,
+        p.geoprocessing_reference_id, p.translated_props, p.enable_download,
+        p.enable_data_tables, p.data_table_join_column,
+        p.copied_from_data_library_template_id, p.hide_arcgis_rest_link,
+        p.data_source_type, p.original_source_upload_available
+      )
+      or (
+        dd.source_layer, dd.sublayer, dd.sublayer_type, dd.render_under,
+        dd.mapbox_gl_styles
+      ) is distinct from (
+        pd.source_layer, pd.sublayer, pd.sublayer_type, pd.render_under,
+        pd.mapbox_gl_styles
+      )
+      or (
+        di.type, di.short_template, di.long_template, di.cursor, di.title
+      ) is distinct from (
+        pi.type, pi.short_template, pi.long_template, pi.cursor, pi.title
+      )
+      or (
+        ds.id is distinct from ps.id
+        and (
+          ds.id is null
+          or ps.id is null
+          or ds.data_library_template_id is not null
+          or ps.data_library_template_id is not null
+          or public._publishable_source_differs(ds, ps)
+        )
+      )
+      or coalesce(da.type, 'public') is distinct from coalesce(pa.type, 'public')
+      or (
+        (da.type = 'group' or pa.type = 'group')
+        and (
+          select coalesce(array_agg(g.group_id order by g.group_id), '{}'::int[])
+          from access_control_list_groups g
+          where g.access_control_list_id = da.id
+        ) is distinct from (
+          select coalesce(array_agg(g.group_id order by g.group_id), '{}'::int[])
+          from access_control_list_groups g
+          where g.access_control_list_id = pa.id
+        )
+      )
+      or (
+        not d.is_folder
+        and public._publishable_data_tables(d.id)
+          is distinct from public._publishable_data_tables(p.id)
+      )
+    );
+$$;
+
+
+--
+-- Name: FUNCTION _overlay_changed_stable_ids(p_project_id integer); Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON FUNCTION public._overlay_changed_stable_ids(p_project_id integer) IS '@omit';
+
+
+--
+-- Name: _publish_copy_data_source(integer, integer); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public._publish_copy_data_source(p_source_id integer, p_project_id integer) RETURNS integer
+    LANGUAGE plpgsql SECURITY DEFINER
+    SET search_path TO 'public', 'pg_temp'
+    AS $$
+declare
+  v_copy_id int;
+begin
+  -- TODO: This function will have to be updated whenever the schema
+  -- changes since these columns are hard coded... no way around it.
+  -- Also update _publishable_source_differs.
+  insert into data_sources (
+    project_id,
+    type,
+    attribution,
+    bounds,
+    maxzoom,
+    minzoom,
+    url,
+    scheme,
+    tiles,
+    tile_size,
+    encoding,
+    buffer,
+    cluster,
+    cluster_max_zoom,
+    cluster_properties,
+    cluster_radius,
+    generate_id,
+    line_metrics,
+    promote_id,
+    tolerance,
+    coordinates,
+    urls,
+    query_parameters,
+    use_device_pixel_ratio,
+    import_type,
+    original_source_url,
+    enhanced_security,
+    byte_length,
+    supports_dynamic_layers,
+    uploaded_source_filename,
+    uploaded_source_layername,
+    normalized_source_object_key,
+    normalized_source_bytes,
+    geostats,
+    upload_task_id,
+    translated_props,
+    arcgis_fetch_strategy,
+    temporal,
+    created_by,
+    bucket_id,
+    object_key
+  )
+  select
+    p_project_id,
+    type,
+    attribution,
+    bounds,
+    maxzoom,
+    minzoom,
+    url,
+    scheme,
+    tiles,
+    tile_size,
+    encoding,
+    buffer,
+    cluster,
+    cluster_max_zoom,
+    cluster_properties,
+    cluster_radius,
+    generate_id,
+    line_metrics,
+    promote_id,
+    tolerance,
+    coordinates,
+    urls,
+    query_parameters,
+    use_device_pixel_ratio,
+    import_type,
+    original_source_url,
+    enhanced_security,
+    byte_length,
+    supports_dynamic_layers,
+    uploaded_source_filename,
+    uploaded_source_layername,
+    normalized_source_object_key,
+    normalized_source_bytes,
+    geostats,
+    upload_task_id,
+    translated_props,
+    arcgis_fetch_strategy,
+    temporal,
+    created_by,
+    bucket_id,
+    object_key
+  from data_sources
+  where id = p_source_id
+  returning id into v_copy_id;
+
+  insert into data_upload_outputs (
+    data_source_id,
+    project_id,
+    type,
+    created_at,
+    url,
+    remote,
+    is_original,
+    size,
+    filename,
+    original_filename,
+    source_processing_job_key,
+    epsg
+  )
+  select
+    v_copy_id,
+    project_id,
+    type,
+    created_at,
+    url,
+    remote,
+    is_original,
+    size,
+    filename,
+    original_filename,
+    source_processing_job_key,
+    epsg
+  from data_upload_outputs
+  where data_source_id = p_source_id;
+
+  return v_copy_id;
+end;
+$$;
+
+
+--
+-- Name: FUNCTION _publish_copy_data_source(p_source_id integer, p_project_id integer); Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON FUNCTION public._publish_copy_data_source(p_source_id integer, p_project_id integer) IS '@omit';
+
+
+--
+-- Name: _publish_copy_draft_toc_item(integer, integer, integer, public.ltree); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public._publish_copy_draft_toc_item(p_draft_id integer, p_sort_index integer, p_z_index integer, p_path public.ltree) RETURNS TABLE(new_toc_id integer, new_layer_id integer, draft_source_id integer)
+    LANGUAGE plpgsql SECURITY DEFINER
+    SET search_path TO 'public', 'pg_temp'
+    AS $$
+declare
+  item table_of_contents_items;
+  v_path ltree;
+  v_parent_path ltree;
+  v_interactivity_id int;
+  v_layer_id int;
+  v_source_id int;
+  v_library text;
+  acl_type access_control_list_type;
+  acl_id int;
+  orig_acl_id int;
+begin
+  select * into item from table_of_contents_items where id = p_draft_id and is_draft;
+  if item.id is null then
+    raise 'Draft table of contents item % not found', p_draft_id;
+  end if;
+
+  if p_sort_index is null then
+    select coalesce(max(sort_index), -1) + 1 into p_sort_index
+    from table_of_contents_items
+    where project_id = item.project_id
+      and not is_draft
+      and parent_stable_id is not distinct from item.parent_stable_id;
+  end if;
+
+  if p_path is not null then
+    v_path := p_path;
+  elsif item.parent_stable_id is null then
+    v_path := text2ltree(item.stable_id);
+  else
+    select path into v_parent_path
+    from table_of_contents_items
+    where project_id = item.project_id
+      and not is_draft
+      and stable_id = item.parent_stable_id;
+    if v_parent_path is null then
+      raise 'Published parent % is missing for %', item.parent_stable_id, item.stable_id;
+    end if;
+    v_path := v_parent_path || text2ltree(item.stable_id);
+  end if;
+
+  v_layer_id := null;
+  v_source_id := null;
+  if item.is_folder = false then
+    select data_source_id into v_source_id
+    from data_layers where id = item.data_layer_id;
+    select data_library_template_id into v_library
+    from data_sources where id = v_source_id;
+
+    if p_z_index is null then
+      select coalesce(max(dl.z_index), 0) + 1 into p_z_index
+      from data_layers dl
+      join table_of_contents_items t on t.data_layer_id = dl.id
+      where t.project_id = item.project_id
+        and not t.is_draft;
+    end if;
+
+    insert into interactivity_settings (
+      type, short_template, long_template, cursor, title
+    )
+    select type, short_template, long_template, cursor, title
+    from interactivity_settings
+    where id = (
+      select interactivity_settings_id from data_layers where id = item.data_layer_id
+    )
+    returning id into v_interactivity_id;
+
+    insert into data_layers (
+      project_id,
+      data_source_id,
+      source_layer,
+      sublayer,
+      sublayer_type,
+      render_under,
+      mapbox_gl_styles,
+      interactivity_settings_id,
+      z_index
+    )
+    select
+      item.project_id,
+      data_source_id,
+      source_layer,
+      sublayer,
+      sublayer_type,
+      render_under,
+      mapbox_gl_styles,
+      v_interactivity_id,
+      p_z_index
+    from data_layers
+    where id = item.data_layer_id
+    returning id into v_layer_id;
+  end if;
+
+  insert into table_of_contents_items (
+    is_draft,
+    project_id,
+    path,
+    stable_id,
+    parent_stable_id,
+    title,
+    is_folder,
+    show_radio_children,
+    is_click_off_only,
+    metadata,
+    bounds,
+    data_layer_id,
+    sort_index,
+    hide_children,
+    geoprocessing_reference_id,
+    translated_props,
+    enable_download,
+    enable_data_tables,
+    data_table_join_column,
+    copied_from_data_library_template_id,
+    hide_arcgis_rest_link,
+    data_source_type,
+    original_source_upload_available,
+    published_at
+  ) values (
+    false,
+    item.project_id,
+    v_path,
+    item.stable_id,
+    item.parent_stable_id,
+    item.title,
+    item.is_folder,
+    item.show_radio_children,
+    item.is_click_off_only,
+    item.metadata,
+    item.bounds,
+    v_layer_id,
+    p_sort_index,
+    item.hide_children,
+    item.geoprocessing_reference_id,
+    item.translated_props,
+    item.enable_download,
+    item.enable_data_tables,
+    item.data_table_join_column,
+    item.copied_from_data_library_template_id,
+    item.hide_arcgis_rest_link,
+    item.data_source_type,
+    item.original_source_upload_available,
+    clock_timestamp()
+  )
+  returning id into new_toc_id;
+
+  new_layer_id := v_layer_id;
+  draft_source_id := case when v_library is null then v_source_id else null end;
+
+  select type, id into acl_type, orig_acl_id
+  from access_control_lists
+  where table_of_contents_item_id = item.id;
+  if acl_type is not null and acl_type <> 'public' then
+    update access_control_lists
+    set type = acl_type
+    where table_of_contents_item_id = new_toc_id
+    returning id into acl_id;
+    if acl_type = 'group' then
+      insert into access_control_list_groups (access_control_list_id, group_id)
+      select acl_id, group_id
+      from access_control_list_groups
+      where access_control_list_id = orig_acl_id;
+    end if;
+  end if;
+
+  insert into overlay_data_tables (
+    table_of_contents_item_id,
+    project_id,
+    name,
+    join_column,
+    overlay_join_column,
+    row_count,
+    created_by,
+    version,
+    parquet_remote,
+    parquet_url,
+    column_stats_remote,
+    visualization_columns,
+    visualization_ops,
+    calculation_mode,
+    additional_replicate_identifiers,
+    replicate_label,
+    replicate_label_custom,
+    within_replicate_operations,
+    across_replicate_operations,
+    subject_column,
+    observation_detail_columns,
+    coverage_mode,
+    coverage_remote,
+    effort_marker_values,
+    excluded_values,
+    required_filter_columns,
+    hidden_filter_columns,
+    filter_column_labels,
+    temporal,
+    organism,
+    nodata_values,
+    source_parquet_remote,
+    stable_id,
+    description
+  )
+  select
+    new_toc_id,
+    odt.project_id,
+    odt.name,
+    odt.join_column,
+    odt.overlay_join_column,
+    odt.row_count,
+    odt.created_by,
+    odt.version,
+    odt.parquet_remote,
+    odt.parquet_url,
+    odt.column_stats_remote,
+    odt.visualization_columns,
+    odt.visualization_ops,
+    odt.calculation_mode,
+    odt.additional_replicate_identifiers,
+    odt.replicate_label,
+    odt.replicate_label_custom,
+    odt.within_replicate_operations,
+    odt.across_replicate_operations,
+    odt.subject_column,
+    odt.observation_detail_columns,
+    odt.coverage_mode,
+    odt.coverage_remote,
+    odt.effort_marker_values,
+    odt.excluded_values,
+    odt.required_filter_columns,
+    odt.hidden_filter_columns,
+    odt.filter_column_labels,
+    odt.temporal,
+    odt.organism,
+    odt.nodata_values,
+    odt.source_parquet_remote,
+    odt.stable_id,
+    odt.description
+  from overlay_data_tables odt
+  where odt.table_of_contents_item_id = item.id
+    and odt.deleted_at is null;
+
+  return next;
+end;
+$$;
+
+
+--
+-- Name: FUNCTION _publish_copy_draft_toc_item(p_draft_id integer, p_sort_index integer, p_z_index integer, p_path public.ltree); Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON FUNCTION public._publish_copy_draft_toc_item(p_draft_id integer, p_sort_index integer, p_z_index integer, p_path public.ltree) IS '@omit';
+
+
+--
+-- Name: _publish_rebuild_published_paths(integer); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public._publish_rebuild_published_paths(p_project_id integer) RETURNS void
+    LANGUAGE sql SECURITY DEFINER
+    SET search_path TO 'public', 'pg_temp'
+    AS $$
+  with recursive published as (
+    select id, stable_id, parent_stable_id, path
+    from table_of_contents_items
+    where project_id = p_project_id and not is_draft
+  ),
+  tree(id, stable_id, new_path) as (
+    select id, stable_id, text2ltree(stable_id)
+    from published
+    where parent_stable_id is null
+    union all
+    select c.id, c.stable_id, t.new_path || text2ltree(c.stable_id)
+    from tree t
+    join published c on c.parent_stable_id = t.stable_id
+  )
+  update table_of_contents_items x
+  set path = tree.new_path
+  from tree
+  where x.id = tree.id
+    and x.path is distinct from tree.new_path;
+$$;
+
+
+--
+-- Name: FUNCTION _publish_rebuild_published_paths(p_project_id integer); Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON FUNCTION public._publish_rebuild_published_paths(p_project_id integer) IS '@omit';
+
+
+--
+-- Name: _publish_record_project_activity(integer); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public._publish_record_project_activity(p_project_id integer) RETURNS void
+    LANGUAGE sql SECURITY DEFINER
+    SET search_path TO 'public', 'pg_temp'
+    AS $$
+  select graphile_worker.add_job(
+    'recordProjectActivity',
+    payload := json_build_object('projectId', p_project_id),
+    run_at := now() + '10 seconds',
+    queue_name := 'recordProjectActivity',
+    job_key := 'recordProjectActivity:' || p_project_id
+  );
+$$;
+
+
+--
+-- Name: FUNCTION _publish_record_project_activity(p_project_id integer); Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON FUNCTION public._publish_record_project_activity(p_project_id integer) IS '@omit';
+
+
+--
+-- Name: _publish_units(integer, text[], boolean); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public._publish_units(p_project_id integer, p_sel text[], p_full boolean) RETURNS void
+    LANGUAGE plpgsql SECURITY DEFINER
+    SET search_path TO 'public', 'pg_temp'
+    AS $$
+declare
+  v_row record;
+  v_detached int;
+  v_copied_toc int;
+  v_copied_layer int;
+  v_copied_source int;
+  v_layer_ids int[] := '{}'::int[];
+  v_source_ids int[] := '{}'::int[];
+  v_source int;
+  v_target int;
+  v_sort int;
+  v_z int;
+begin
+  if to_regclass('pg_temp._detached_sources') is not null then
+    drop table pg_temp._detached_sources;
+  end if;
+  create temp table _detached_sources (
+    draft_source_id int,
+    published_source_id int not null
+  ) on commit drop;
+
+  -- Removals, deepest first.
+  for v_row in
+    select u.stable_id
+    from _units u
+    join table_of_contents_items p
+      on p.project_id = p_project_id
+     and not p.is_draft
+     and p.stable_id = u.stable_id
+    where u.kind = 'removed'
+      and u.stable_id = any(p_sel)
+    order by nlevel(p.path) desc
+  loop
+    v_detached := public._unpublish_toc_stable_id(p_project_id, v_row.stable_id);
+    if v_detached is not null then
+      insert into _detached_sources values (null, v_detached);
+    end if;
+  end loop;
+
+  -- New and updated items, parents first.
+  for v_row in
+    select
+      d.id as draft_id,
+      d.stable_id,
+      d.parent_stable_id,
+      d.sort_index,
+      d.path,
+      dl.z_index,
+      dl.data_source_id
+    from _units u
+    join table_of_contents_items d
+      on d.project_id = p_project_id
+     and d.is_draft
+     and d.stable_id = u.stable_id
+    left join data_layers dl on dl.id = d.data_layer_id
+    where u.kind in ('added', 'updated')
+      and u.stable_id = any(p_sel)
+    order by nlevel(d.path), d.sort_index, d.stable_id
+  loop
+    if p_full then
+      v_sort := v_row.sort_index;
+      v_z := v_row.z_index;
+    else
+      v_sort := null;
+      v_z := null;
+      select
+        case
+          when p.parent_stable_id is not distinct from v_row.parent_stable_id
+          then p.sort_index
+        end,
+        pl.z_index
+        into v_sort, v_z
+      from table_of_contents_items p
+      left join data_layers pl on pl.id = p.data_layer_id
+      where p.project_id = p_project_id
+        and not p.is_draft
+        and p.stable_id = v_row.stable_id;
+    end if;
+    v_detached := public._unpublish_toc_stable_id(p_project_id, v_row.stable_id);
+    if v_detached is not null then
+      insert into _detached_sources values (v_row.data_source_id, v_detached);
+    end if;
+    select new_toc_id, new_layer_id, draft_source_id
+      into v_copied_toc, v_copied_layer, v_copied_source
+    from public._publish_copy_draft_toc_item(
+      v_row.draft_id,
+      v_sort,
+      v_z,
+      case when p_full then v_row.path end
+    );
+    if v_copied_layer is not null and v_copied_source is not null then
+      v_layer_ids := v_layer_ids || v_copied_layer;
+      v_source_ids := v_source_ids || v_copied_source;
+    end if;
+  end loop;
+
+  -- Point the new published layers at a published copy of their draft source.
+  for v_source in
+    select distinct s from unnest(v_source_ids) s
+  loop
+    select ps.id into v_target
+    from (
+      select pl.data_source_id as id
+      from data_layers dl
+      join table_of_contents_items dt
+        on dt.data_layer_id = dl.id
+       and dt.is_draft
+      join table_of_contents_items pt
+        on pt.project_id = dt.project_id
+       and pt.stable_id = dt.stable_id
+       and not pt.is_draft
+      join data_layers pl on pl.id = pt.data_layer_id
+      where dl.data_source_id = v_source
+      union
+      select published_source_id
+      from _detached_sources
+      where draft_source_id = v_source
+    ) candidate
+    join data_sources ps on ps.id = candidate.id
+    join data_sources ds on ds.id = v_source
+    where ps.id <> v_source
+      and ps.data_library_template_id is null
+      and not public._publishable_source_differs(ds, ps)
+    order by ps.id
+    limit 1;
+    if v_target is null then
+      v_target := public._publish_copy_data_source(v_source, p_project_id);
+    end if;
+    update data_layers dl
+    set data_source_id = v_target
+    where dl.id in (
+      select t.layer_id
+      from unnest(v_layer_ids, v_source_ids) as t(layer_id, source_id)
+      where t.source_id = v_source
+    );
+    v_target := null;
+  end loop;
+
+  delete from data_sources s
+  where s.id in (select published_source_id from _detached_sources)
+    and not exists (select 1 from data_layers dl where dl.data_source_id = s.id);
+
+  if p_full then
+    update table_of_contents_items p
+    set sort_index = d.sort_index, path = d.path
+    from table_of_contents_items d
+    where d.project_id = p_project_id
+      and d.is_draft
+      and p.project_id = p_project_id
+      and not p.is_draft
+      and p.stable_id = d.stable_id
+      and (p.sort_index, p.path) is distinct from (d.sort_index, d.path);
+
+    update data_layers pl
+    set z_index = dl.z_index
+    from table_of_contents_items d
+    join data_layers dl on dl.id = d.data_layer_id
+    join table_of_contents_items p
+      on p.project_id = d.project_id
+     and p.stable_id = d.stable_id
+     and not p.is_draft
+    where d.project_id = p_project_id
+      and d.is_draft
+      and pl.id = p.data_layer_id
+      and pl.z_index is distinct from dl.z_index;
+  else
+    perform public._publish_rebuild_published_paths(p_project_id);
+  end if;
+end;
+$$;
+
+
+--
+-- Name: FUNCTION _publish_units(p_project_id integer, p_sel text[], p_full boolean); Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON FUNCTION public._publish_units(p_project_id integer, p_sel text[], p_full boolean) IS '@omit';
+
+
+--
+-- Name: _publishable_data_tables(integer); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public._publishable_data_tables(p_toc_id integer) RETURNS jsonb
+    LANGUAGE sql STABLE SECURITY DEFINER
+    SET search_path TO 'public', 'pg_temp'
+    AS $$
+  select coalesce(
+    jsonb_agg(
+      jsonb_build_object(
+        'stable_id', odt.stable_id,
+        'name', odt.name,
+        'join_column', odt.join_column,
+        'overlay_join_column', odt.overlay_join_column,
+        'row_count', odt.row_count,
+        'version', odt.version,
+        'parquet_remote', odt.parquet_remote,
+        'parquet_url', odt.parquet_url,
+        'column_stats_remote', odt.column_stats_remote,
+        'visualization_columns', odt.visualization_columns,
+        'visualization_ops', odt.visualization_ops,
+        'calculation_mode', odt.calculation_mode,
+        'additional_replicate_identifiers', odt.additional_replicate_identifiers,
+        'replicate_label', odt.replicate_label,
+        'replicate_label_custom', odt.replicate_label_custom,
+        'within_replicate_operations', odt.within_replicate_operations,
+        'across_replicate_operations', odt.across_replicate_operations,
+        'subject_column', odt.subject_column,
+        'observation_detail_columns', odt.observation_detail_columns,
+        'coverage_mode', odt.coverage_mode,
+        'coverage_remote', odt.coverage_remote,
+        'effort_marker_values', odt.effort_marker_values,
+        'excluded_values', odt.excluded_values,
+        'required_filter_columns', odt.required_filter_columns,
+        'hidden_filter_columns', odt.hidden_filter_columns,
+        'filter_column_labels', odt.filter_column_labels,
+        'temporal', odt.temporal,
+        'organism', odt.organism,
+        'nodata_values', odt.nodata_values,
+        'source_parquet_remote', odt.source_parquet_remote,
+        'description', odt.description
+      )
+      order by odt.stable_id
+    ),
+    '[]'::jsonb
+  )
+  from overlay_data_tables odt
+  where odt.table_of_contents_item_id = p_toc_id
+    and odt.deleted_at is null;
+$$;
+
+
+--
+-- Name: FUNCTION _publishable_data_tables(p_toc_id integer); Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON FUNCTION public._publishable_data_tables(p_toc_id integer) IS '@omit';
+
+
+--
+-- Name: extract_column_details_from_geostats(jsonb); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.extract_column_details_from_geostats(geostats jsonb) RETURNS jsonb
+    LANGUAGE sql IMMUTABLE
+    AS $$
+  -- returns a Record<attribute, props> with the following properties:
+  -- - type: "string"
+  -- - countDistinct: number
+  select jsonb_object_agg(attr->>'attribute', jsonb_build_object(
+    'type', attr->>'type',
+    'countDistinct', attr->>'countDistinct'
+  )) from jsonb_array_elements(geostats->'layers'->0->'attributes') as attr;
+  $$;
+
+
+--
+-- Name: extract_raster_band_count_from_geostats(jsonb); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.extract_raster_band_count_from_geostats(geostats jsonb) RETURNS integer
+    LANGUAGE sql IMMUTABLE
+    AS $$
+  select jsonb_array_length(geostats->'bands')::integer;
+  $$;
+
+
+--
+-- Name: extract_vector_geometry_type_from_geostats(jsonb); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.extract_vector_geometry_type_from_geostats(geostats jsonb) RETURNS text
+    LANGUAGE sql IMMUTABLE
+    AS $_$
+  select (jsonb_path_query_first(geostats, '$.layers[0].geometry'))->>0
+  $_$;
+
+
+--
+-- Name: get_first_band_offset(jsonb); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.get_first_band_offset(geostats jsonb) RETURNS real
+    LANGUAGE sql IMMUTABLE
+    AS $$
+SELECT CASE
+           WHEN geostats->'bands' IS NOT NULL
+                AND jsonb_typeof(geostats->'bands') = 'array'
+                AND jsonb_array_length(geostats->'bands') > 0
+                AND (geostats->'bands'->0)->>'offset' IS NOT NULL THEN
+               ((geostats->'bands'->0)->>'offset')::real
+           ELSE NULL
+       END
+$$;
+
+
+--
+-- Name: get_first_band_scale(jsonb); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.get_first_band_scale(geostats jsonb) RETURNS real
+    LANGUAGE sql IMMUTABLE
+    AS $$
+SELECT CASE
+           WHEN geostats->'bands' IS NOT NULL
+                AND jsonb_typeof(geostats->'bands') = 'array'
+                AND jsonb_array_length(geostats->'bands') > 0
+                AND (geostats->'bands'->0)->>'scale' IS NOT NULL THEN
+               ((geostats->'bands'->0)->>'scale')::real
+           ELSE NULL
+       END
+$$;
+
+
+--
+-- Name: get_representative_colors(jsonb); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.get_representative_colors(geostats jsonb) RETURNS jsonb
+    LANGUAGE sql IMMUTABLE
+    AS $$
+SELECT CASE
+           WHEN geostats ? 'representativeColorsForRGB' 
+                AND jsonb_typeof(geostats->'representativeColorsForRGB') = 'array' THEN
+               geostats->'representativeColorsForRGB'
+           ELSE null
+       END
+$$;
+
+
+--
+-- Name: data_sources; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.data_sources (
+    id integer NOT NULL,
+    created_at timestamp with time zone DEFAULT timezone('utc'::text, now()) NOT NULL,
+    project_id integer NOT NULL,
+    type text NOT NULL,
+    attribution text,
+    bounds numeric[],
+    maxzoom integer,
+    minzoom integer,
+    url text,
+    scheme public.tile_scheme,
+    tiles text[],
+    tile_size integer,
+    encoding public.raster_dem_encoding,
+    buffer integer,
+    cluster boolean,
+    cluster_max_zoom integer,
+    cluster_properties jsonb,
+    cluster_radius integer,
+    generate_id boolean,
+    line_metrics boolean,
+    promote_id boolean,
+    tolerance numeric,
+    coordinates numeric[],
+    urls text[],
+    query_parameters jsonb,
+    use_device_pixel_ratio boolean,
+    import_type text,
+    original_source_url text,
+    enhanced_security boolean,
+    bucket_id text,
+    object_key uuid,
+    byte_length integer,
+    supports_dynamic_layers boolean DEFAULT true NOT NULL,
+    uploaded_source_filename text,
+    uploaded_source_layername text,
+    normalized_source_object_key text,
+    normalized_source_bytes bigint,
+    geostats jsonb,
+    upload_task_id uuid,
+    translated_props jsonb DEFAULT '{}'::jsonb NOT NULL,
+    arcgis_fetch_strategy public.arcgis_feature_layer_fetch_strategy DEFAULT 'tiled'::public.arcgis_feature_layer_fetch_strategy NOT NULL,
+    uploaded_by integer,
+    was_converted_from_esri_feature_layer boolean DEFAULT false NOT NULL,
+    created_by integer,
+    changelog text,
+    raster_representative_colors jsonb GENERATED ALWAYS AS (public.get_representative_colors(geostats)) STORED,
+    raster_offset real GENERATED ALWAYS AS (public.get_first_band_offset(geostats)) STORED,
+    raster_scale real GENERATED ALWAYS AS (public.get_first_band_scale(geostats)) STORED,
+    data_library_template_id text,
+    data_library_metadata jsonb,
+    is_single_band_raster boolean GENERATED ALWAYS AS (((jsonb_typeof((geostats -> 'bands'::text)) = 'array'::text) AND (jsonb_array_length((geostats -> 'bands'::text)) = 1))) STORED,
+    raster_band_count integer GENERATED ALWAYS AS (public.extract_raster_band_count_from_geostats(geostats)) STORED,
+    vector_geometry_type text GENERATED ALWAYS AS (public.extract_vector_geometry_type_from_geostats(geostats)) STORED,
+    feature_count integer GENERATED ALWAYS AS (((((geostats -> 'layers'::text) -> 0) ->> 'count'::text))::integer) STORED,
+    column_details jsonb GENERATED ALWAYS AS (public.extract_column_details_from_geostats(geostats)) STORED,
+    temporal jsonb,
+    CONSTRAINT data_sources_buffer_check CHECK (((buffer >= 0) AND (buffer <= 512))),
+    CONSTRAINT data_sources_tile_size_check CHECK (((tile_size = 128) OR (tile_size = 256) OR (tile_size = 512)))
+);
+
+
+--
+-- Name: TABLE data_sources; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON TABLE public.data_sources IS '
+@omit all
+SeaSketch DataSources are analogous to MapBox GL Style sources but are extended
+to include new types to support services such as ArcGIS MapServers and content
+hosted on the SeaSketch CDN.
+
+When documentation is lacking for any of these properties, consult the [MapBox GL Style docs](https://docs.mapbox.com/mapbox-gl-js/style-spec/sources/#geojson-promoteId)
+';
+
+
+--
+-- Name: COLUMN data_sources.id; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.data_sources.id IS 'Should be used as sourceId in stylesheets.';
+
+
+--
+-- Name: COLUMN data_sources.type; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.data_sources.type IS 'MapBox GL source type or custom seasketch type.';
+
+
+--
+-- Name: COLUMN data_sources.attribution; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.data_sources.attribution IS 'Contains an attribution to be displayed when the map is shown to a user.';
+
+
+--
+-- Name: COLUMN data_sources.bounds; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.data_sources.bounds IS 'An array containing the longitude and latitude of the southwest and northeast corners of the source bounding box in the following order: `[sw.lng, sw.lat, ne.lng, ne.lat]`. When this property is included in a source, no tiles outside of the given bounds are requested by Mapbox GL. This property can also be used as metadata for non-tiled sources.';
+
+
+--
+-- Name: COLUMN data_sources.maxzoom; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.data_sources.maxzoom IS 'For Vector, Raster, GeoJSON and Raster DEM sources. Maximum zoom level for which tiles are available, as in the TileJSON spec. Data from tiles at the maxzoom are used when displaying the map at higher zoom levels.';
+
+
+--
+-- Name: COLUMN data_sources.minzoom; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.data_sources.minzoom IS 'For Vector, Raster, and Raster DEM sources. Minimum zoom level for which tiles are available, as in the TileJSON spec.';
+
+
+--
+-- Name: COLUMN data_sources.url; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.data_sources.url IS 'A URL to a TileJSON resource for tiled sources. For GeoJSON or SEASKETCH_VECTOR sources, use this to fill in the data property of the source. Also used by ARCGIS_DYNAMIC_MAPSERVER and ARCGIS_VECTOR';
+
+
+--
+-- Name: COLUMN data_sources.scheme; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.data_sources.scheme IS 'For MapBox Vector and Raster sources. Influences the y direction of the tile coordinates. The global-mercator (aka Spherical Mercator) profile is assumed.';
+
+
+--
+-- Name: COLUMN data_sources.tiles; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.data_sources.tiles IS 'For tiled sources, a list of endpoints that can be used to retrieve tiles.';
+
+
+--
+-- Name: COLUMN data_sources.tile_size; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.data_sources.tile_size IS 'The minimum visual size to display tiles for this layer. Only configurable for raster layers.';
+
+
+--
+-- Name: COLUMN data_sources.encoding; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.data_sources.encoding IS 'Raster-DEM only. The encoding used by this source. Mapbox Terrain RGB is used by default';
+
+
+--
+-- Name: COLUMN data_sources.buffer; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.data_sources.buffer IS 'GeoJSON only. Size of the tile buffer on each side. A value of 0 produces no buffer. A value of 512 produces a buffer as wide as the tile itself. Larger values produce fewer rendering artifacts near tile edges and slower performance.';
+
+
+--
+-- Name: COLUMN data_sources.cluster; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.data_sources.cluster IS '
+GeoJSON only.
+
+If the data is a collection of point features, setting this to true clusters the points by radius into groups. Cluster groups become new Point features in the source with additional properties:
+
+  * cluster Is true if the point is a cluster
+  * cluster_id A unqiue id for the cluster to be used in conjunction with the [cluster inspection methods](https://docs.mapbox.com/mapbox-gl-js/api/#geojsonsource#getclusterexpansionzoom)
+  * point_count Number of original points grouped into this cluster
+  * point_count_abbreviated An abbreviated point count
+';
+
+
+--
+-- Name: COLUMN data_sources.cluster_max_zoom; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.data_sources.cluster_max_zoom IS 'GeoJSON only. Max zoom on which to cluster points if clustering is enabled. Defaults to one zoom less than maxzoom (so that last zoom features are not clustered).';
+
+
+--
+-- Name: COLUMN data_sources.cluster_properties; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.data_sources.cluster_properties IS 'See [MapBox GL Style docs](https://docs.mapbox.com/mapbox-gl-js/style-spec/sources/#geojson-clusterProperties).';
+
+
+--
+-- Name: COLUMN data_sources.cluster_radius; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.data_sources.cluster_radius IS 'GeoJSON only. Radius of each cluster if clustering is enabled. A value of 512 indicates a radius equal to the width of a tile.';
+
+
+--
+-- Name: COLUMN data_sources.generate_id; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.data_sources.generate_id IS 'GeoJSON only. Whether to generate ids for the geojson features. When enabled, the feature.id property will be auto assigned based on its index in the features array, over-writing any previous values.';
+
+
+--
+-- Name: COLUMN data_sources.line_metrics; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.data_sources.line_metrics IS 'GeoJSON only. Whether to calculate line distance metrics. This is required for line layers that specify line-gradient values.';
+
+
+--
+-- Name: COLUMN data_sources.promote_id; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.data_sources.promote_id IS 'GeoJSON only. A property to use as a feature id (for feature state). Either a property name, or an object of the form `{<sourceLayer>: <propertyName>}.`';
+
+
+--
+-- Name: COLUMN data_sources.tolerance; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.data_sources.tolerance IS 'GeoJSON only. Douglas-Peucker simplification tolerance (higher means simpler geometries and faster performance).';
+
+
+--
+-- Name: COLUMN data_sources.coordinates; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.data_sources.coordinates IS 'Image sources only. Corners of image specified in longitude, latitude pairs.';
+
+
+--
+-- Name: COLUMN data_sources.urls; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.data_sources.urls IS 'Video sources only. URLs to video content in order of preferred format.';
+
+
+--
+-- Name: COLUMN data_sources.query_parameters; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.data_sources.query_parameters IS 'ARCGIS_DYNAMIC_MAPSERVER and ARCGIS_VECTOR only. Key-Value object with querystring parameters that will be added to requests.';
+
+
+--
+-- Name: COLUMN data_sources.use_device_pixel_ratio; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.data_sources.use_device_pixel_ratio IS 'ARCGIS_DYNAMIC_MAPSERVER only. When using a high-dpi screen, request higher resolution images.';
+
+
+--
+-- Name: COLUMN data_sources.import_type; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.data_sources.import_type IS 'For SeaSketchVector sources, identifies whether the original source comes from a direct upload or a service location like ArcGIS server';
+
+
+--
+-- Name: COLUMN data_sources.original_source_url; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.data_sources.original_source_url IS 'For SeaSketchVector sources, identifies location of original service that hosted the data, if any. This can be used to update a layer with an updated copy of the data source if necessary.';
+
+
+--
+-- Name: COLUMN data_sources.enhanced_security; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.data_sources.enhanced_security IS 'SEASKETCH_VECTOR sources only. When enabled, uploads will be placed in a different class of storage that requires a temporary security credential to access. Set during creation and cannot be changed.';
+
+
+--
+-- Name: COLUMN data_sources.bucket_id; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.data_sources.bucket_id IS 'SEASKETCH_VECTOR sources only. S3 bucket where data are stored. Populated from Project.data_sources_bucket on creation.';
+
+
+--
+-- Name: COLUMN data_sources.object_key; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.data_sources.object_key IS 'SEASKETCH_VECTOR sources only. S3 object key where data are stored';
+
+
+--
+-- Name: COLUMN data_sources.byte_length; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.data_sources.byte_length IS 'SEASKETCH_VECTOR sources only. Approximate size of the geojson source';
+
+
+--
+-- Name: COLUMN data_sources.supports_dynamic_layers; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.data_sources.supports_dynamic_layers IS 'ArcGIS map service setting. If enabled, client can reorder layers and apply layer-specific opacity settings.';
+
+
+--
+-- Name: COLUMN data_sources.uploaded_source_layername; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.data_sources.uploaded_source_layername IS 'If uploaded using a multi-layer file format (gdb), includes the layer ID. SEASKETCH_VECTOR sources only.';
+
+
+--
+-- Name: COLUMN data_sources.normalized_source_object_key; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.data_sources.normalized_source_object_key IS 'Sources are converted to flatgeobuf (vector, 4326) or geotif (raster) and store indefinitely so they may be processed into tilesets and to support the download function. SEASKETCH_VECTOR sources only.';
+
+
+--
+-- Name: COLUMN data_sources.normalized_source_bytes; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.data_sources.normalized_source_bytes IS 'Size of the normalized file. SEASKETCH_VECTOR sources only.';
+
+
+--
+-- Name: COLUMN data_sources.geostats; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.data_sources.geostats IS 'mapbox-geostats summary information for vector sources. Useful for cartographic tools and authoring popups. SEASKETCH_VECTOR sources only.';
+
+
+--
+-- Name: COLUMN data_sources.upload_task_id; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.data_sources.upload_task_id IS 'UUID of the upload processing job associated with a SEASKETCH_VECTOR source.';
+
+
+--
+-- Name: COLUMN data_sources.uploaded_by; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.data_sources.uploaded_by IS '@omit';
+
+
+--
+-- Name: COLUMN data_sources.temporal; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.data_sources.temporal IS '@omit';
+
+
+--
+-- Name: _publishable_source_differs(public.data_sources, public.data_sources); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public._publishable_source_differs(a public.data_sources, b public.data_sources) RETURNS boolean
+    LANGUAGE sql STABLE
+    AS $$
+  select (
+    a.type, a.attribution, a.bounds, a.maxzoom, a.minzoom, a.url, a.scheme,
+    a.tiles, a.tile_size, a.encoding, a.buffer, a.cluster, a.cluster_max_zoom,
+    a.cluster_properties, a.cluster_radius, a.generate_id, a.line_metrics,
+    a.promote_id, a.tolerance, a.coordinates, a.urls, a.query_parameters,
+    a.use_device_pixel_ratio, a.import_type, a.original_source_url,
+    a.enhanced_security, a.byte_length, a.supports_dynamic_layers,
+    a.uploaded_source_filename, a.uploaded_source_layername,
+    a.normalized_source_object_key, a.normalized_source_bytes, a.upload_task_id,
+    a.translated_props, a.arcgis_fetch_strategy, a.temporal, a.bucket_id,
+    a.object_key, a.geostats
+  ) is distinct from (
+    b.type, b.attribution, b.bounds, b.maxzoom, b.minzoom, b.url, b.scheme,
+    b.tiles, b.tile_size, b.encoding, b.buffer, b.cluster, b.cluster_max_zoom,
+    b.cluster_properties, b.cluster_radius, b.generate_id, b.line_metrics,
+    b.promote_id, b.tolerance, b.coordinates, b.urls, b.query_parameters,
+    b.use_device_pixel_ratio, b.import_type, b.original_source_url,
+    b.enhanced_security, b.byte_length, b.supports_dynamic_layers,
+    b.uploaded_source_filename, b.uploaded_source_layername,
+    b.normalized_source_object_key, b.normalized_source_bytes, b.upload_task_id,
+    b.translated_props, b.arcgis_fetch_strategy, b.temporal, b.bucket_id,
+    b.object_key, b.geostats
+  )
+  or public._publishable_upload_outputs(a.id)
+    is distinct from public._publishable_upload_outputs(b.id);
+$$;
+
+
+--
+-- Name: FUNCTION _publishable_source_differs(a public.data_sources, b public.data_sources); Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON FUNCTION public._publishable_source_differs(a public.data_sources, b public.data_sources) IS '@omit';
+
+
+--
+-- Name: _publishable_upload_outputs(integer); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public._publishable_upload_outputs(p_source_id integer) RETURNS jsonb
+    LANGUAGE sql STABLE SECURITY DEFINER
+    SET search_path TO 'public', 'pg_temp'
+    AS $$
+  select coalesce(
+    jsonb_agg(
+      jsonb_build_array(
+        o.type, o.url, o.remote, o.is_original, o.size, o.filename,
+        o.original_filename, o.source_processing_job_key, o.epsg
+      )
+      order by o.type, o.remote, o.url, o.filename
+    ),
+    '[]'::jsonb
+  )
+  from data_upload_outputs o
+  where o.data_source_id = p_source_id;
+$$;
+
+
+--
+-- Name: FUNCTION _publishable_upload_outputs(p_source_id integer); Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON FUNCTION public._publishable_upload_outputs(p_source_id integer) IS '@omit';
+
+
+--
+-- Name: _record_overlay_publish(integer, integer, integer, boolean, text[]); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public._record_overlay_publish(p_project_id integer, p_editor_id integer, p_layer_count integer, p_full boolean, p_stable_ids text[]) RETURNS void
+    LANGUAGE plpgsql SECURITY DEFINER
+    SET search_path TO 'public', 'pg_temp'
+    AS $$
+declare
+  v_log_id bigint;
+begin
+  -- Publishing is one action, not a burst of edits. Close an open
+  -- layers:published row so this run is not merged into the previous one
+  -- (the field group's window is 5 seconds) and the two keep their own ids.
+  update change_logs
+  set status = 'closed'
+  where project_id = p_project_id
+    and editor_id = p_editor_id
+    and entity_type = 'projects'
+    and entity_id = p_project_id
+    and field_group = 'layers:published'
+    and status = 'open';
+
+  v_log_id := record_changelog(
+    p_project_id,
+    p_editor_id,
+    'projects',
+    p_project_id,
+    'layers:published'::change_log_field_group,
+    '{}'::jsonb,
+    jsonb_build_object('layer_count', p_layer_count),
+    null,
+    null,
+    null
+  );
+  insert into public.overlay_publish_runs (change_log_id, full_publish)
+  values (v_log_id, p_full)
+  on conflict do nothing;
+  -- Titles are copied from the pending units. A removal's draft row is
+  -- already gone by the time this runs, and _units still has its name.
+  insert into public.overlay_publish_run_items (
+    change_log_id, stable_id, title, is_folder
+  )
+  select v_log_id, u.stable_id, coalesce(u.title, u.stable_id), u.is_folder
+  from _units u
+  where u.stable_id = any(coalesce(p_stable_ids, '{}'::text[]))
+  on conflict do nothing;
+end;
+$$;
+
+
+--
+-- Name: FUNCTION _record_overlay_publish(p_project_id integer, p_editor_id integer, p_layer_count integer, p_full boolean, p_stable_ids text[]); Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON FUNCTION public._record_overlay_publish(p_project_id integer, p_editor_id integer, p_layer_count integer, p_full boolean, p_stable_ids text[]) IS '@omit';
+
+
+--
 -- Name: _session_has_toc_access(integer); Type: FUNCTION; Schema: public; Owner: -
 --
 
@@ -2077,6 +3488,58 @@ CREATE FUNCTION public._session_on_toc_item_acl(lpath public.ltree) RETURNS bool
 --
 
 COMMENT ON FUNCTION public._session_on_toc_item_acl(lpath public.ltree) IS '@omit';
+
+
+--
+-- Name: _unpublish_toc_stable_id(integer, text); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public._unpublish_toc_stable_id(p_project_id integer, p_stable_id text) RETURNS integer
+    LANGUAGE plpgsql SECURITY DEFINER
+    SET search_path TO 'public', 'pg_temp'
+    AS $$
+declare
+  v_toc_id int;
+  v_layer_id int;
+  v_source_id int;
+  v_interactivity_id int;
+begin
+  select id, data_layer_id
+    into v_toc_id, v_layer_id
+  from table_of_contents_items
+  where project_id = p_project_id
+    and not is_draft
+    and stable_id = p_stable_id
+  limit 1;
+  if v_toc_id is null then
+    return null;
+  end if;
+  if v_layer_id is not null then
+    select
+      case when ds.data_library_template_id is null then dl.data_source_id end,
+      dl.interactivity_settings_id
+      into v_source_id, v_interactivity_id
+    from data_layers dl
+    left join data_sources ds on ds.id = dl.data_source_id
+    where dl.id = v_layer_id;
+  end if;
+  delete from table_of_contents_items where id = v_toc_id;
+  if v_layer_id is not null then
+    delete from data_layers where id = v_layer_id;
+    if v_interactivity_id is not null then
+      delete from interactivity_settings where id = v_interactivity_id;
+    end if;
+  end if;
+  return v_source_id;
+end;
+$$;
+
+
+--
+-- Name: FUNCTION _unpublish_toc_stable_id(p_project_id integer, p_stable_id text); Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON FUNCTION public._unpublish_toc_stable_id(p_project_id integer, p_stable_id text) IS '@omit';
 
 
 --
@@ -2364,15 +3827,22 @@ COMMENT ON FUNCTION public.acl_changelog_try_record(p_acl_id integer, p_from_sum
 CREATE FUNCTION public.acl_update_draft_toc_has_changes() RETURNS trigger
     LANGUAGE plpgsql SECURITY DEFINER
     AS $$
-  begin
-    update projects set draft_table_of_contents_has_changes = true where id = (
-      select project_id from table_of_contents_items where id = (
-        select table_of_contents_item_id from access_control_lists where id = NEW.id
-      )
-    );
-    return NEW;
-  end;
-  $$;
+begin
+  -- publishing-bailout
+  if coalesce(current_setting('seasketch.publishing', true), '') = 'true' then
+    return new;
+  end if;
+  update projects p
+  set draft_table_of_contents_has_changes =
+    public.overlay_list_has_unpublished_changes(p.id)
+  where id = (
+    select project_id from table_of_contents_items where id = (
+      select table_of_contents_item_id from access_control_lists where id = new.id
+    )
+  );
+  return new;
+end;
+$$;
 
 
 --
@@ -2998,20 +4468,22 @@ CREATE FUNCTION public.after_data_layers_update_or_delete_set_draft_table_of_con
     LANGUAGE plpgsql SECURITY DEFINER
     AS $$
 begin
-  if coalesce(current_setting('seasketch.skip_library_source_side_effects', true), '') = 'true' then
-    return NEW;
+  -- publishing-bailout
+  if coalesce(current_setting('seasketch.publishing', true), '') = 'true' then
+    return new;
   end if;
-  update projects
-  set draft_table_of_contents_has_changes = true
+  if coalesce(current_setting('seasketch.skip_library_source_side_effects', true), '') = 'true' then
+    return new;
+  end if;
+  update projects p
+  set draft_table_of_contents_has_changes =
+    public.overlay_list_has_unpublished_changes(p.id)
   where id in (
-    select 
-      tocs.project_id
-    from 
-      table_of_contents_items as tocs
-    where 
-      tocs.data_layer_id = old.id
+    select tocs.project_id
+    from table_of_contents_items as tocs
+    where tocs.data_layer_id = coalesce(old.id, new.id)
   );
-  return NEW;
+  return coalesce(new, old);
 end;
 $$;
 
@@ -3027,8 +4499,12 @@ declare
   v_library_template_id text;
   v_project_id int;
 begin
+  -- publishing-bailout
+  if coalesce(current_setting('seasketch.publishing', true), '') = 'true' then
+    return new;
+  end if;
   if coalesce(current_setting('seasketch.skip_library_source_side_effects', true), '') = 'true' then
-    return NEW;
+    return new;
   end if;
 
   if tg_op = 'DELETE' then
@@ -3042,25 +4518,24 @@ begin
   -- Live library sources: do not fan out "unpublished changes" to every
   -- consumer project. The owning (Data Library) project still gets the flag.
   if v_library_template_id is not null then
-    update projects
-      set draft_table_of_contents_has_changes = true
+    update projects p
+      set draft_table_of_contents_has_changes =
+        public.overlay_list_has_unpublished_changes(p.id)
       where id = v_project_id;
-    return NEW;
+    return coalesce(new, old);
   end if;
 
-  update projects
-  set draft_table_of_contents_has_changes = true
+  update projects p
+  set draft_table_of_contents_has_changes =
+    public.overlay_list_has_unpublished_changes(p.id)
   where id in (
-    select
-      tocs.project_id
-    from
-      table_of_contents_items as tocs
-    where
-      tocs.data_layer_id in (
-        select data_layers.id from data_layers where data_layers.data_source_id = old.id
-      )
-    );
-  return NEW;
+    select tocs.project_id
+    from table_of_contents_items as tocs
+    where tocs.data_layer_id in (
+      select data_layers.id from data_layers where data_layers.data_source_id = coalesce(old.id, new.id)
+    )
+  );
+  return coalesce(new, old);
 end;
 $$;
 
@@ -3072,16 +4547,16 @@ $$;
 CREATE FUNCTION public.after_deleted__data_upload_outputs() RETURNS trigger
     LANGUAGE plpgsql SECURITY DEFINER
     AS $$
-  BEGIN
-    -- Check to see if there are any other data_upload_output records with the same remote value
-    if not exists (
-      select 1 from data_upload_outputs where remote = OLD.remote and id != OLD.id
-    ) then
-      insert into deleted_data_upload_outputs (remote, data_upload_output_data) values (OLD.remote, row_to_json(OLD));
-    end if;
-    return OLD;
-  END;
-  $$;
+begin
+  -- Check to see if there are any other data_upload_output records with the same remote value
+  if not exists (
+    select 1 from data_upload_outputs where remote = old.remote and id != old.id
+  ) then
+    insert into deleted_data_upload_outputs (remote, data_upload_output_data) values (old.remote, row_to_json(old));
+  end if;
+  return old;
+end;
+$$;
 
 
 --
@@ -4266,45 +5741,49 @@ CREATE FUNCTION public.before_insert_form_elements_func() RETURNS trigger
 CREATE FUNCTION public.before_insert_or_update_data_layers_trigger() RETURNS trigger
     LANGUAGE plpgsql
     AS $$
-  declare
-    source_type text;
-    max_z int;
-  begin
-    select type into source_type from data_sources where id = new.data_source_id;
-    if source_type is null then
-      raise 'Unknown source type. %', (new.data_source_id);
-    end if;
-    if new.sublayer is not null and source_type != 'arcgis-dynamic-mapserver' then
-      raise 'sublayer property can only be specified for layers associated with a arcgis-dynamic-mapserver source';
-    end if;
-    if source_type = 'vector' then
-      if new.source_layer is null then
-        raise 'Layers with "vector" data sources must specify a source_layer';
-      end if;
-    elsif source_type != 'seasketch-mvt' and source_type != 'seasketch-raster' and source_type != 'seasketch-vector' then
-      if new.source_layer is not null then
-        raise 'Only Layers with data_sources of type "vector", "seasketch-mvt", or "seasketch-raster" should specify a source_layer. Type was %', (source_type);
-      end if;
-    end if;
-    if (source_type = 'vector' or source_type = 'geojson' or source_type = 'seasketch-vector' or source_type = 'seasketch-mvt') then
-      if new.mapbox_gl_styles is null then
-        raise 'Vector layers must specify mapbox_gl_styles';
-      end if;
-    else
-      if new.mapbox_gl_styles is not null and source_type != 'seasketch-raster' and source_type != 'raster' then
-        raise 'Layers with data_sources of type % should not specify mapbox_gl_styles', (source_type);
-      end if;
-    end if;
-    if old is null and NEW.z_index = 0 then
-      -- assign a z-index
-      select max(z_index) + 1 into max_z from data_layers where project_id = new.project_id;
-      if max_z is null then
-        max_z = 0;
-      end if;
-      new.z_index = max_z;
-    end if;
+declare
+  source_type text;
+  max_z int;
+begin
+  -- publishing-bailout
+  if coalesce(current_setting('seasketch.publishing', true), '') = 'true' then
     return new;
-  end;
+  end if;
+  select type into source_type from data_sources where id = new.data_source_id;
+  if source_type is null then
+    raise 'Unknown source type. %', (new.data_source_id);
+  end if;
+  if new.sublayer is not null and source_type != 'arcgis-dynamic-mapserver' then
+    raise 'sublayer property can only be specified for layers associated with a arcgis-dynamic-mapserver source';
+  end if;
+  if source_type = 'vector' then
+    if new.source_layer is null then
+      raise 'Layers with "vector" data sources must specify a source_layer';
+    end if;
+  elsif source_type != 'seasketch-mvt' and source_type != 'seasketch-raster' and source_type != 'seasketch-vector' then
+    if new.source_layer is not null then
+      raise 'Only Layers with data_sources of type "vector", "seasketch-mvt", or "seasketch-raster" should specify a source_layer. Type was %', (source_type);
+    end if;
+  end if;
+  if (source_type = 'vector' or source_type = 'geojson' or source_type = 'seasketch-vector' or source_type = 'seasketch-mvt') then
+    if new.mapbox_gl_styles is null then
+      raise 'Vector layers must specify mapbox_gl_styles';
+    end if;
+  else
+    if new.mapbox_gl_styles is not null and source_type != 'seasketch-raster' and source_type != 'raster' then
+      raise 'Layers with data_sources of type % should not specify mapbox_gl_styles', (source_type);
+    end if;
+  end if;
+  if old is null and new.z_index = 0 then
+    -- assign a z-index
+    select max(z_index) + 1 into max_z from data_layers where project_id = new.project_id;
+    if max_z is null then
+      max_z = 0;
+    end if;
+    new.z_index = max_z;
+  end if;
+  return new;
+end;
 $$;
 
 
@@ -4315,83 +5794,87 @@ $$;
 CREATE FUNCTION public.before_insert_or_update_data_sources_trigger() RETURNS trigger
     LANGUAGE plpgsql
     AS $$
-  declare
-    bucket_id text;
-  begin
-    if new.type = 'arcgis-dynamic-mapserver-raster-sublayer' then
-      raise exception 'arcgis-dynamic-mapserver-raster-sublayer is not a valid data source type. It is only to be used as a table of contents item data_source_type value.';
-    end if;
-    if new.type = 'arcgis-dynamic-mapserver-vector-sublayer' then
-      raise exception 'arcgis-dynamic-mapserver-vector-sublayer is not a valid data source type. It is only to be used as a table of contents item data_source_type value.';
-    end if;
-    if new.minzoom is not null and (new.type != 'vector' and new.type != 'raster' and new.type != 'raster-dem' and new.type != 'seasketch-mvt' and new.type != 'seasketch-raster' and new.type != 'arcgis-raster-tiles' ) then
-      raise 'minzoom may only be set for tiled sources (vector, raster, raster-dem)';
-    end if;
-    if new.coordinates is null and (new.type = 'video' or new.type = 'image') then
-      raise 'coordinates must be set on image and video sources';
-    end if;
-    if new.coordinates is not null and (new.type != 'video' and new.type != 'image') then
-      raise 'coordinates property can only be set on image and video sources';
-    end if;
-    if new.maxzoom is not null and (new.type = 'image' or new.type = 'video') then
-      raise 'maxzoom cannot be set for image and video sources';
-    end if;
-    if new.url is null and (new.type = 'geojson' or new.type = 'image' or new.type = 'arcgis-dynamic-mapserver' or new.type = 'arcgis-vector' or new.type = 'seasketch-mvt') then
-      raise 'url must be set for "%" sources', (new.type);
-    end if;
-    if new.scheme is not null and (new.type != 'raster' and new.type != 'raster-dem' and new.type != 'vector' and new.type != 'seasketch-mvt') then
-      raise 'scheme property is not allowed for "%" sources', (new.type);
-    end if;
-    if new.tiles is not null and (new.type != 'raster' and new.type != 'raster-dem' and new.type != 'vector' and new.type != 'seasketch-vector') then
-      raise 'tiles property is not allowed for "%" sources', (new.type);
-    end if;
-    if new.encoding is not null and new.type != 'raster-dem' then
-      raise 'encoding property only allowed on raster-dem sources';
-    end if;
-    if new.tile_size is not null and (new.type != 'raster' and new.type != 'raster-dem' and new.type != 'vector' and new.type != 'seasketch-mvt' and new.type != 'seasketch-raster' and new.type != 'inaturalist') then
-      raise 'tile_size property is not allowed for "%" sources', (new.type);
-    end if;
-    if (new.type != 'geojson' and new.type != 'seasketch-vector') and (new.buffer is not null or new.cluster is not null or new.cluster_max_zoom is not null or new.cluster_properties is not null or new.cluster_radius is not null or new.generate_id is not null or new.line_metrics is not null or new.promote_id is not null or new.tolerance is not null) then
-      raise 'geojson props such as buffer, cluster, generate_id, etc not allowed on % sources', (new.type);
-    end if;
-    if (new.byte_length is not null and new.type != 'seasketch-vector' and new.type != 'seasketch-mvt' and new.type != 'seasketch-raster') then
-      raise 'byte_length can only be set on seasketch-vector, seasketch_mvt and seasketch-raster sources';
-    end if;
-    if (new.type = 'seasketch-vector' and new.type != 'seasketch-mvt' and new.byte_length is null) then
-      raise 'seasketch-vector and mvt sources must have byte_length set to an approximate value';
-    end if;
-    if new.urls is not null and new.type != 'video' then
-      raise 'urls property not allowed on % sources', (new.type);
-    end if;
-    if new.query_parameters is not null and (new.type != 'arcgis-vector' and new.type != 'arcgis-dynamic-mapserver' and new.type != 'inaturalist') then
-      raise 'query_parameters property not allowed on % sources', (new.type);
-    end if;
-    if new.use_device_pixel_ratio is not null and (new.type != 'arcgis-dynamic-mapserver' and new.type != 'arcgis-raster-tiles') then
-      raise 'use_device_pixel_ratio property not allowed on % sources', (new.type);
-    end if;
-    if new.import_type is not null and new.type != 'seasketch-vector' and new.type != 'seasketch-mvt' and new.type != 'seasketch-raster' then
-      raise 'import_type property is only allowed for seasketch-vector, seasketch-mvt, and seasketch-raster sources';
-    end if;
-    if new.import_type is null and (new.type = 'seasketch-vector' or new.type = 'seasketch-mvt') then
-      raise 'import_type property is required for seasketch-vector sources';
-    end if;
-    if new.original_source_url is not null and (new.type != 'seasketch-vector' and new.type != 'seasketch-mvt') then
-      raise 'original_source_url may only be set on seasketch-vector sources';
-    end if;
-    if new.enhanced_security is not null and new.type != 'seasketch-vector' then
-      raise 'enhanced_security may only be set on seasketch-vector sources';
-    end if;
-    if old is null and new.type = 'seasketch-vector' then
-      if new.bucket_id is null then
-        new.bucket_id = (select data_sources_bucket_id from projects where id = new.project_id);
-      end if;
-      if new.object_key is null then
-        new.object_key = (select gen_random_uuid());
-      end if;
-      new.tiles = null;
-    end if;
+declare
+  bucket_id text;
+begin
+  -- publishing-bailout
+  if coalesce(current_setting('seasketch.publishing', true), '') = 'true' then
     return new;
-  end;
+  end if;
+  if new.type = 'arcgis-dynamic-mapserver-raster-sublayer' then
+    raise exception 'arcgis-dynamic-mapserver-raster-sublayer is not a valid data source type. It is only to be used as a table of contents item data_source_type value.';
+  end if;
+  if new.type = 'arcgis-dynamic-mapserver-vector-sublayer' then
+    raise exception 'arcgis-dynamic-mapserver-vector-sublayer is not a valid data source type. It is only to be used as a table of contents item data_source_type value.';
+  end if;
+  if new.minzoom is not null and (new.type != 'vector' and new.type != 'raster' and new.type != 'raster-dem' and new.type != 'seasketch-mvt' and new.type != 'seasketch-raster' and new.type != 'arcgis-raster-tiles' ) then
+    raise 'minzoom may only be set for tiled sources (vector, raster, raster-dem)';
+  end if;
+  if new.coordinates is null and (new.type = 'video' or new.type = 'image') then
+    raise 'coordinates must be set on image and video sources';
+  end if;
+  if new.coordinates is not null and (new.type != 'video' and new.type != 'image') then
+    raise 'coordinates property can only be set on image and video sources';
+  end if;
+  if new.maxzoom is not null and (new.type = 'image' or new.type = 'video') then
+    raise 'maxzoom cannot be set for image and video sources';
+  end if;
+  if new.url is null and (new.type = 'geojson' or new.type = 'image' or new.type = 'arcgis-dynamic-mapserver' or new.type = 'arcgis-vector' or new.type = 'seasketch-mvt') then
+    raise 'url must be set for "%" sources', (new.type);
+  end if;
+  if new.scheme is not null and (new.type != 'raster' and new.type != 'raster-dem' and new.type != 'vector' and new.type != 'seasketch-mvt') then
+    raise 'scheme property is not allowed for "%" sources', (new.type);
+  end if;
+  if new.tiles is not null and (new.type != 'raster' and new.type != 'raster-dem' and new.type != 'vector' and new.type != 'seasketch-vector') then
+    raise 'tiles property is not allowed for "%" sources', (new.type);
+  end if;
+  if new.encoding is not null and new.type != 'raster-dem' then
+    raise 'encoding property only allowed on raster-dem sources';
+  end if;
+  if new.tile_size is not null and (new.type != 'raster' and new.type != 'raster-dem' and new.type != 'vector' and new.type != 'seasketch-mvt' and new.type != 'seasketch-raster' and new.type != 'inaturalist') then
+    raise 'tile_size property is not allowed for "%" sources', (new.type);
+  end if;
+  if (new.type != 'geojson' and new.type != 'seasketch-vector') and (new.buffer is not null or new.cluster is not null or new.cluster_max_zoom is not null or new.cluster_properties is not null or new.cluster_radius is not null or new.generate_id is not null or new.line_metrics is not null or new.promote_id is not null or new.tolerance is not null) then
+    raise 'geojson props such as buffer, cluster, generate_id, etc not allowed on % sources', (new.type);
+  end if;
+  if (new.byte_length is not null and new.type != 'seasketch-vector' and new.type != 'seasketch-mvt' and new.type != 'seasketch-raster') then
+    raise 'byte_length can only be set on seasketch-vector, seasketch_mvt and seasketch-raster sources';
+  end if;
+  if (new.type = 'seasketch-vector' and new.type != 'seasketch-mvt' and new.byte_length is null) then
+    raise 'seasketch-vector and mvt sources must have byte_length set to an approximate value';
+  end if;
+  if new.urls is not null and new.type != 'video' then
+    raise 'urls property not allowed on % sources', (new.type);
+  end if;
+  if new.query_parameters is not null and (new.type != 'arcgis-vector' and new.type != 'arcgis-dynamic-mapserver' and new.type != 'inaturalist') then
+    raise 'query_parameters property not allowed on % sources', (new.type);
+  end if;
+  if new.use_device_pixel_ratio is not null and (new.type != 'arcgis-dynamic-mapserver' and new.type != 'arcgis-raster-tiles') then
+    raise 'use_device_pixel_ratio property not allowed on % sources', (new.type);
+  end if;
+  if new.import_type is not null and new.type != 'seasketch-vector' and new.type != 'seasketch-mvt' and new.type != 'seasketch-raster' then
+    raise 'import_type property is only allowed for seasketch-vector, seasketch-mvt, and seasketch-raster sources';
+  end if;
+  if new.import_type is null and (new.type = 'seasketch-vector' or new.type = 'seasketch-mvt') then
+    raise 'import_type property is required for seasketch-vector sources';
+  end if;
+  if new.original_source_url is not null and (new.type != 'seasketch-vector' and new.type != 'seasketch-mvt') then
+    raise 'original_source_url may only be set on seasketch-vector sources';
+  end if;
+  if new.enhanced_security is not null and new.type != 'seasketch-vector' then
+    raise 'enhanced_security may only be set on seasketch-vector sources';
+  end if;
+  if old is null and new.type = 'seasketch-vector' then
+    if new.bucket_id is null then
+      new.bucket_id = (select data_sources_bucket_id from projects where id = new.project_id);
+    end if;
+    if new.object_key is null then
+      new.object_key = (select gen_random_uuid());
+    end if;
+    new.tiles = null;
+  end if;
+  return new;
+end;
 $$;
 
 
@@ -4468,83 +5951,86 @@ $$;
 CREATE FUNCTION public.before_insert_or_update_table_of_contents_items_trigger() RETURNS trigger
     LANGUAGE plpgsql SECURITY DEFINER
     AS $$
-  begin
-    if new.is_folder or new.data_layer_id is null then
-      new.data_source_type = null;
-    else
-      new.data_source_type = data_source_type(new.data_layer_id);
-    end if;
-    if (new.data_source_type = 'seasketch-vector' or new.data_source_type = 'seasketch-mvt' or new.data_source_type = 'seasketch-raster') and new.original_source_upload_available = false then
-      new.original_source_upload_available = (
-      
-              select exists (
-                select 
-                  original_filename
-                from 
-                  data_upload_outputs
-                where 
-                  data_upload_outputs.data_source_id = (
-                    select 
-                      data_layers.data_source_id
-                    from 
-                      data_layers
-                    where 
-                      data_layers.id = new.data_layer_id
-                  ) and
-                  data_upload_outputs.is_original = true
-              )
-      );
-    end if;
-    if old.is_folder != new.is_folder then
-      raise 'Cannot change is_folder. Create a new table of contents item';
-    end if;
-    if old.is_draft = false and coalesce(current_setting('seasketch.skip_library_source_side_effects', true), '') != 'true' then
-      raise 'Cannot alter table of contents items after they are published';
-    end if;
-    if new.sort_index is null then
-      new.sort_index = (select coalesce(max(sort_index), -1) + 1 from table_of_contents_items where is_draft = true and project_id = new.project_id and parent_stable_id = new.parent_stable_id or (parent_stable_id is null and new.parent_stable_id is null));
-    end if;
-    if old is null and new.is_draft = true then -- inserting
-      new.enable_download = (select enable_download_by_default from projects where id = new.project_id);
-      -- verify that stable_id is unique among draft items
-      if (select count(id) from table_of_contents_items where stable_id = new.stable_id and is_draft = true) > 0 then
-        raise '% is not a unique stable_id.', new.stable_id;
-      end if;
-      -- set path
-      if new.parent_stable_id is null then
-        new.path = new.stable_id;
-      else
-        if (select count(id) from table_of_contents_items where is_draft = true and stable_id = new.parent_stable_id) > 0 then
-          -- set path, finding path of parent and appending to it
-          new.path = (select path from table_of_contents_items where is_draft = true and stable_id = new.parent_stable_id) || new.stable_id;
-        else
-          raise 'Cannot find parent item with stable_id=%', new.parent_stable_id;
-        end if;
-      end if;
-    end if;
-    if new.is_folder then
-      if new.data_layer_id is not null then
-        raise 'Folders cannot have data_layer_id set';
-      end if;
-      if new.bounds is not null then
-        raise 'Folders cannot have bounds set';
-      end if;
-    else
-      if new.data_layer_id is null then
-        raise 'data_layer_id must be set if is_folder=false';
-      end if;
-      if new.show_radio_children then
-        raise 'show_radio_children must be false if is_folder=false';
-      end if;
-      if new.is_click_off_only then
-        raise 'is_click_off_only must be false if is_folder=false';
-      end if;
-    end if;
-    if length(trim(new.title)) = 0 then
-      raise 'title cannot be empty';
-    end if;
+begin
+  -- publishing-bailout
+  if coalesce(current_setting('seasketch.publishing', true), '') = 'true' and new.is_draft = false then
     return new;
-  end;
+  end if;
+  if new.is_folder or new.data_layer_id is null then
+    new.data_source_type = null;
+  else
+    new.data_source_type = data_source_type(new.data_layer_id);
+  end if;
+  if (new.data_source_type = 'seasketch-vector' or new.data_source_type = 'seasketch-mvt' or new.data_source_type = 'seasketch-raster') and new.original_source_upload_available = false then
+    new.original_source_upload_available = (
+      select exists (
+        select
+          original_filename
+        from
+          data_upload_outputs
+        where
+          data_upload_outputs.data_source_id = (
+            select
+              data_layers.data_source_id
+            from
+              data_layers
+            where
+              data_layers.id = new.data_layer_id
+          ) and
+          data_upload_outputs.is_original = true
+      )
+    );
+  end if;
+  if old.is_folder != new.is_folder then
+    raise 'Cannot change is_folder. Create a new table of contents item';
+  end if;
+  if old.is_draft = false and coalesce(current_setting('seasketch.skip_library_source_side_effects', true), '') != 'true' then
+    raise 'Cannot alter table of contents items after they are published';
+  end if;
+  if new.sort_index is null then
+    new.sort_index = (select coalesce(max(sort_index), -1) + 1 from table_of_contents_items where is_draft = true and project_id = new.project_id and parent_stable_id = new.parent_stable_id or (parent_stable_id is null and new.parent_stable_id is null));
+  end if;
+  if old is null and new.is_draft = true then -- inserting
+    new.enable_download = (select enable_download_by_default from projects where id = new.project_id);
+    -- verify that stable_id is unique among draft items
+    if (select count(id) from table_of_contents_items where stable_id = new.stable_id and is_draft = true) > 0 then
+      raise '% is not a unique stable_id.', new.stable_id;
+    end if;
+    -- set path
+    if new.parent_stable_id is null then
+      new.path = new.stable_id;
+    else
+      if (select count(id) from table_of_contents_items where is_draft = true and stable_id = new.parent_stable_id) > 0 then
+        -- set path, finding path of parent and appending to it
+        new.path = (select path from table_of_contents_items where is_draft = true and stable_id = new.parent_stable_id) || new.stable_id;
+      else
+        raise 'Cannot find parent item with stable_id=%', new.parent_stable_id;
+      end if;
+    end if;
+  end if;
+  if new.is_folder then
+    if new.data_layer_id is not null then
+      raise 'Folders cannot have data_layer_id set';
+    end if;
+    if new.bounds is not null then
+      raise 'Folders cannot have bounds set';
+    end if;
+  else
+    if new.data_layer_id is null then
+      raise 'data_layer_id must be set if is_folder=false';
+    end if;
+    if new.show_radio_children then
+      raise 'show_radio_children must be false if is_folder=false';
+    end if;
+    if new.is_click_off_only then
+      raise 'is_click_off_only must be false if is_folder=false';
+    end if;
+  end if;
+  if length(trim(new.title)) = 0 then
+    raise 'title cannot be empty';
+  end if;
+  return new;
+end;
 $$;
 
 
@@ -4640,16 +6126,20 @@ $$;
 CREATE FUNCTION public.before_layer_insert_create_interactivity_settings_func() RETURNS trigger
     LANGUAGE plpgsql SECURITY DEFINER
     AS $$
-    declare
-      iid int;
-    begin
-      if new.interactivity_settings_id is null then
-        insert into interactivity_settings (type) values ('NONE') returning id into iid;
-        new.interactivity_settings_id = iid;
-      end if;
-      return new;
-    end;
-  $$;
+declare
+  iid int;
+begin
+  -- publishing-bailout
+  if coalesce(current_setting('seasketch.publishing', true), '') = 'true' then
+    return new;
+  end if;
+  if new.interactivity_settings_id is null then
+    insert into interactivity_settings (type) values ('NONE') returning id into iid;
+    new.interactivity_settings_id = iid;
+  end if;
+  return new;
+end;
+$$;
 
 
 --
@@ -5315,6 +6805,56 @@ CREATE FUNCTION public.change_logs_editor_profile(changelog public.change_logs) 
     AS $$
   select * from public.user_profiles where user_id = changelog.editor_id;
 $$;
+
+
+--
+-- Name: change_logs_full_overlay_publish(public.change_logs); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.change_logs_full_overlay_publish(c public.change_logs) RETURNS boolean
+    LANGUAGE sql STABLE SECURITY DEFINER
+    SET search_path TO 'public', 'pg_temp'
+    AS $$
+  select r.full_publish
+  from public.overlay_publish_runs r
+  join public.change_logs cl on cl.id = r.change_log_id
+  where r.change_log_id = c.id
+    and cl.project_id = c.project_id
+    and public.session_is_admin(cl.project_id);
+$$;
+
+
+--
+-- Name: FUNCTION change_logs_full_overlay_publish(c public.change_logs); Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON FUNCTION public.change_logs_full_overlay_publish(c public.change_logs) IS 'True when this row is a full overlay publish. Null when the publish has no record of which items it shipped.';
+
+
+--
+-- Name: change_logs_published_overlay_items(public.change_logs); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.change_logs_published_overlay_items(c public.change_logs) RETURNS SETOF public.overlay_published_item
+    LANGUAGE sql STABLE SECURITY DEFINER
+    SET search_path TO 'public', 'pg_temp'
+    AS $$
+  select i.stable_id, i.title, i.is_folder
+  from public.overlay_publish_run_items i
+  join public.change_logs cl on cl.id = i.change_log_id
+  where i.change_log_id = c.id
+    and cl.project_id = c.project_id
+    and public.session_is_admin(cl.project_id)
+  order by i.is_folder, i.title, i.stable_id;
+$$;
+
+
+--
+-- Name: FUNCTION change_logs_published_overlay_items(c public.change_logs); Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON FUNCTION public.change_logs_published_overlay_items(c public.change_logs) IS '@simpleCollections only
+Layers and folders this publish shipped, with the names they had at the time.';
 
 
 --
@@ -7105,6 +8645,7 @@ CREATE TABLE public.table_of_contents_items (
     enable_data_tables boolean DEFAULT false NOT NULL,
     data_table_join_column text,
     hide_arcgis_rest_link boolean DEFAULT false NOT NULL,
+    published_at timestamp with time zone,
     CONSTRAINT table_of_contents_items_data_tables_join_column_required CHECK (((NOT enable_data_tables) OR ((data_table_join_column IS NOT NULL) AND (length(btrim(data_table_join_column)) > 0)))),
     CONSTRAINT table_of_contents_items_metadata_check CHECK (((metadata IS NULL) OR (char_length((metadata)::text) < 100000))),
     CONSTRAINT titlechk CHECK ((char_length(title) > 0))
@@ -7260,6 +8801,13 @@ COMMENT ON COLUMN public.table_of_contents_items.data_table_join_column IS 'Over
 
 COMMENT ON COLUMN public.table_of_contents_items.hide_arcgis_rest_link IS '@name hideArcGISRestLink
 When true, the ESRI REST URL is omitted from the public metadata page. Defaults to false so ArcGIS service URLs are shown.';
+
+
+--
+-- Name: COLUMN table_of_contents_items.published_at; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.table_of_contents_items.published_at IS 'When a publish wrote this row. Null on draft rows.';
 
 
 --
@@ -11225,452 +12773,6 @@ CREATE FUNCTION public.data_source_type(data_layer_id integer) RETURNS text
 
 
 --
--- Name: extract_column_details_from_geostats(jsonb); Type: FUNCTION; Schema: public; Owner: -
---
-
-CREATE FUNCTION public.extract_column_details_from_geostats(geostats jsonb) RETURNS jsonb
-    LANGUAGE sql IMMUTABLE
-    AS $$
-  -- returns a Record<attribute, props> with the following properties:
-  -- - type: "string"
-  -- - countDistinct: number
-  select jsonb_object_agg(attr->>'attribute', jsonb_build_object(
-    'type', attr->>'type',
-    'countDistinct', attr->>'countDistinct'
-  )) from jsonb_array_elements(geostats->'layers'->0->'attributes') as attr;
-  $$;
-
-
---
--- Name: extract_raster_band_count_from_geostats(jsonb); Type: FUNCTION; Schema: public; Owner: -
---
-
-CREATE FUNCTION public.extract_raster_band_count_from_geostats(geostats jsonb) RETURNS integer
-    LANGUAGE sql IMMUTABLE
-    AS $$
-  select jsonb_array_length(geostats->'bands')::integer;
-  $$;
-
-
---
--- Name: extract_vector_geometry_type_from_geostats(jsonb); Type: FUNCTION; Schema: public; Owner: -
---
-
-CREATE FUNCTION public.extract_vector_geometry_type_from_geostats(geostats jsonb) RETURNS text
-    LANGUAGE sql IMMUTABLE
-    AS $_$
-  select (jsonb_path_query_first(geostats, '$.layers[0].geometry'))->>0
-  $_$;
-
-
---
--- Name: get_first_band_offset(jsonb); Type: FUNCTION; Schema: public; Owner: -
---
-
-CREATE FUNCTION public.get_first_band_offset(geostats jsonb) RETURNS real
-    LANGUAGE sql IMMUTABLE
-    AS $$
-SELECT CASE
-           WHEN geostats->'bands' IS NOT NULL
-                AND jsonb_typeof(geostats->'bands') = 'array'
-                AND jsonb_array_length(geostats->'bands') > 0
-                AND (geostats->'bands'->0)->>'offset' IS NOT NULL THEN
-               ((geostats->'bands'->0)->>'offset')::real
-           ELSE NULL
-       END
-$$;
-
-
---
--- Name: get_first_band_scale(jsonb); Type: FUNCTION; Schema: public; Owner: -
---
-
-CREATE FUNCTION public.get_first_band_scale(geostats jsonb) RETURNS real
-    LANGUAGE sql IMMUTABLE
-    AS $$
-SELECT CASE
-           WHEN geostats->'bands' IS NOT NULL
-                AND jsonb_typeof(geostats->'bands') = 'array'
-                AND jsonb_array_length(geostats->'bands') > 0
-                AND (geostats->'bands'->0)->>'scale' IS NOT NULL THEN
-               ((geostats->'bands'->0)->>'scale')::real
-           ELSE NULL
-       END
-$$;
-
-
---
--- Name: get_representative_colors(jsonb); Type: FUNCTION; Schema: public; Owner: -
---
-
-CREATE FUNCTION public.get_representative_colors(geostats jsonb) RETURNS jsonb
-    LANGUAGE sql IMMUTABLE
-    AS $$
-SELECT CASE
-           WHEN geostats ? 'representativeColorsForRGB' 
-                AND jsonb_typeof(geostats->'representativeColorsForRGB') = 'array' THEN
-               geostats->'representativeColorsForRGB'
-           ELSE null
-       END
-$$;
-
-
---
--- Name: data_sources; Type: TABLE; Schema: public; Owner: -
---
-
-CREATE TABLE public.data_sources (
-    id integer NOT NULL,
-    created_at timestamp with time zone DEFAULT timezone('utc'::text, now()) NOT NULL,
-    project_id integer NOT NULL,
-    type text NOT NULL,
-    attribution text,
-    bounds numeric[],
-    maxzoom integer,
-    minzoom integer,
-    url text,
-    scheme public.tile_scheme,
-    tiles text[],
-    tile_size integer,
-    encoding public.raster_dem_encoding,
-    buffer integer,
-    cluster boolean,
-    cluster_max_zoom integer,
-    cluster_properties jsonb,
-    cluster_radius integer,
-    generate_id boolean,
-    line_metrics boolean,
-    promote_id boolean,
-    tolerance numeric,
-    coordinates numeric[],
-    urls text[],
-    query_parameters jsonb,
-    use_device_pixel_ratio boolean,
-    import_type text,
-    original_source_url text,
-    enhanced_security boolean,
-    bucket_id text,
-    object_key uuid,
-    byte_length integer,
-    supports_dynamic_layers boolean DEFAULT true NOT NULL,
-    uploaded_source_filename text,
-    uploaded_source_layername text,
-    normalized_source_object_key text,
-    normalized_source_bytes bigint,
-    geostats jsonb,
-    upload_task_id uuid,
-    translated_props jsonb DEFAULT '{}'::jsonb NOT NULL,
-    arcgis_fetch_strategy public.arcgis_feature_layer_fetch_strategy DEFAULT 'tiled'::public.arcgis_feature_layer_fetch_strategy NOT NULL,
-    uploaded_by integer,
-    was_converted_from_esri_feature_layer boolean DEFAULT false NOT NULL,
-    created_by integer,
-    changelog text,
-    raster_representative_colors jsonb GENERATED ALWAYS AS (public.get_representative_colors(geostats)) STORED,
-    raster_offset real GENERATED ALWAYS AS (public.get_first_band_offset(geostats)) STORED,
-    raster_scale real GENERATED ALWAYS AS (public.get_first_band_scale(geostats)) STORED,
-    data_library_template_id text,
-    data_library_metadata jsonb,
-    is_single_band_raster boolean GENERATED ALWAYS AS (((jsonb_typeof((geostats -> 'bands'::text)) = 'array'::text) AND (jsonb_array_length((geostats -> 'bands'::text)) = 1))) STORED,
-    raster_band_count integer GENERATED ALWAYS AS (public.extract_raster_band_count_from_geostats(geostats)) STORED,
-    vector_geometry_type text GENERATED ALWAYS AS (public.extract_vector_geometry_type_from_geostats(geostats)) STORED,
-    feature_count integer GENERATED ALWAYS AS (((((geostats -> 'layers'::text) -> 0) ->> 'count'::text))::integer) STORED,
-    column_details jsonb GENERATED ALWAYS AS (public.extract_column_details_from_geostats(geostats)) STORED,
-    temporal jsonb,
-    CONSTRAINT data_sources_buffer_check CHECK (((buffer >= 0) AND (buffer <= 512))),
-    CONSTRAINT data_sources_tile_size_check CHECK (((tile_size = 128) OR (tile_size = 256) OR (tile_size = 512)))
-);
-
-
---
--- Name: TABLE data_sources; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON TABLE public.data_sources IS '
-@omit all
-SeaSketch DataSources are analogous to MapBox GL Style sources but are extended
-to include new types to support services such as ArcGIS MapServers and content
-hosted on the SeaSketch CDN.
-
-When documentation is lacking for any of these properties, consult the [MapBox GL Style docs](https://docs.mapbox.com/mapbox-gl-js/style-spec/sources/#geojson-promoteId)
-';
-
-
---
--- Name: COLUMN data_sources.id; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON COLUMN public.data_sources.id IS 'Should be used as sourceId in stylesheets.';
-
-
---
--- Name: COLUMN data_sources.type; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON COLUMN public.data_sources.type IS 'MapBox GL source type or custom seasketch type.';
-
-
---
--- Name: COLUMN data_sources.attribution; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON COLUMN public.data_sources.attribution IS 'Contains an attribution to be displayed when the map is shown to a user.';
-
-
---
--- Name: COLUMN data_sources.bounds; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON COLUMN public.data_sources.bounds IS 'An array containing the longitude and latitude of the southwest and northeast corners of the source bounding box in the following order: `[sw.lng, sw.lat, ne.lng, ne.lat]`. When this property is included in a source, no tiles outside of the given bounds are requested by Mapbox GL. This property can also be used as metadata for non-tiled sources.';
-
-
---
--- Name: COLUMN data_sources.maxzoom; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON COLUMN public.data_sources.maxzoom IS 'For Vector, Raster, GeoJSON and Raster DEM sources. Maximum zoom level for which tiles are available, as in the TileJSON spec. Data from tiles at the maxzoom are used when displaying the map at higher zoom levels.';
-
-
---
--- Name: COLUMN data_sources.minzoom; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON COLUMN public.data_sources.minzoom IS 'For Vector, Raster, and Raster DEM sources. Minimum zoom level for which tiles are available, as in the TileJSON spec.';
-
-
---
--- Name: COLUMN data_sources.url; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON COLUMN public.data_sources.url IS 'A URL to a TileJSON resource for tiled sources. For GeoJSON or SEASKETCH_VECTOR sources, use this to fill in the data property of the source. Also used by ARCGIS_DYNAMIC_MAPSERVER and ARCGIS_VECTOR';
-
-
---
--- Name: COLUMN data_sources.scheme; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON COLUMN public.data_sources.scheme IS 'For MapBox Vector and Raster sources. Influences the y direction of the tile coordinates. The global-mercator (aka Spherical Mercator) profile is assumed.';
-
-
---
--- Name: COLUMN data_sources.tiles; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON COLUMN public.data_sources.tiles IS 'For tiled sources, a list of endpoints that can be used to retrieve tiles.';
-
-
---
--- Name: COLUMN data_sources.tile_size; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON COLUMN public.data_sources.tile_size IS 'The minimum visual size to display tiles for this layer. Only configurable for raster layers.';
-
-
---
--- Name: COLUMN data_sources.encoding; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON COLUMN public.data_sources.encoding IS 'Raster-DEM only. The encoding used by this source. Mapbox Terrain RGB is used by default';
-
-
---
--- Name: COLUMN data_sources.buffer; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON COLUMN public.data_sources.buffer IS 'GeoJSON only. Size of the tile buffer on each side. A value of 0 produces no buffer. A value of 512 produces a buffer as wide as the tile itself. Larger values produce fewer rendering artifacts near tile edges and slower performance.';
-
-
---
--- Name: COLUMN data_sources.cluster; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON COLUMN public.data_sources.cluster IS '
-GeoJSON only.
-
-If the data is a collection of point features, setting this to true clusters the points by radius into groups. Cluster groups become new Point features in the source with additional properties:
-
-  * cluster Is true if the point is a cluster
-  * cluster_id A unqiue id for the cluster to be used in conjunction with the [cluster inspection methods](https://docs.mapbox.com/mapbox-gl-js/api/#geojsonsource#getclusterexpansionzoom)
-  * point_count Number of original points grouped into this cluster
-  * point_count_abbreviated An abbreviated point count
-';
-
-
---
--- Name: COLUMN data_sources.cluster_max_zoom; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON COLUMN public.data_sources.cluster_max_zoom IS 'GeoJSON only. Max zoom on which to cluster points if clustering is enabled. Defaults to one zoom less than maxzoom (so that last zoom features are not clustered).';
-
-
---
--- Name: COLUMN data_sources.cluster_properties; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON COLUMN public.data_sources.cluster_properties IS 'See [MapBox GL Style docs](https://docs.mapbox.com/mapbox-gl-js/style-spec/sources/#geojson-clusterProperties).';
-
-
---
--- Name: COLUMN data_sources.cluster_radius; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON COLUMN public.data_sources.cluster_radius IS 'GeoJSON only. Radius of each cluster if clustering is enabled. A value of 512 indicates a radius equal to the width of a tile.';
-
-
---
--- Name: COLUMN data_sources.generate_id; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON COLUMN public.data_sources.generate_id IS 'GeoJSON only. Whether to generate ids for the geojson features. When enabled, the feature.id property will be auto assigned based on its index in the features array, over-writing any previous values.';
-
-
---
--- Name: COLUMN data_sources.line_metrics; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON COLUMN public.data_sources.line_metrics IS 'GeoJSON only. Whether to calculate line distance metrics. This is required for line layers that specify line-gradient values.';
-
-
---
--- Name: COLUMN data_sources.promote_id; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON COLUMN public.data_sources.promote_id IS 'GeoJSON only. A property to use as a feature id (for feature state). Either a property name, or an object of the form `{<sourceLayer>: <propertyName>}.`';
-
-
---
--- Name: COLUMN data_sources.tolerance; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON COLUMN public.data_sources.tolerance IS 'GeoJSON only. Douglas-Peucker simplification tolerance (higher means simpler geometries and faster performance).';
-
-
---
--- Name: COLUMN data_sources.coordinates; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON COLUMN public.data_sources.coordinates IS 'Image sources only. Corners of image specified in longitude, latitude pairs.';
-
-
---
--- Name: COLUMN data_sources.urls; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON COLUMN public.data_sources.urls IS 'Video sources only. URLs to video content in order of preferred format.';
-
-
---
--- Name: COLUMN data_sources.query_parameters; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON COLUMN public.data_sources.query_parameters IS 'ARCGIS_DYNAMIC_MAPSERVER and ARCGIS_VECTOR only. Key-Value object with querystring parameters that will be added to requests.';
-
-
---
--- Name: COLUMN data_sources.use_device_pixel_ratio; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON COLUMN public.data_sources.use_device_pixel_ratio IS 'ARCGIS_DYNAMIC_MAPSERVER only. When using a high-dpi screen, request higher resolution images.';
-
-
---
--- Name: COLUMN data_sources.import_type; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON COLUMN public.data_sources.import_type IS 'For SeaSketchVector sources, identifies whether the original source comes from a direct upload or a service location like ArcGIS server';
-
-
---
--- Name: COLUMN data_sources.original_source_url; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON COLUMN public.data_sources.original_source_url IS 'For SeaSketchVector sources, identifies location of original service that hosted the data, if any. This can be used to update a layer with an updated copy of the data source if necessary.';
-
-
---
--- Name: COLUMN data_sources.enhanced_security; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON COLUMN public.data_sources.enhanced_security IS 'SEASKETCH_VECTOR sources only. When enabled, uploads will be placed in a different class of storage that requires a temporary security credential to access. Set during creation and cannot be changed.';
-
-
---
--- Name: COLUMN data_sources.bucket_id; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON COLUMN public.data_sources.bucket_id IS 'SEASKETCH_VECTOR sources only. S3 bucket where data are stored. Populated from Project.data_sources_bucket on creation.';
-
-
---
--- Name: COLUMN data_sources.object_key; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON COLUMN public.data_sources.object_key IS 'SEASKETCH_VECTOR sources only. S3 object key where data are stored';
-
-
---
--- Name: COLUMN data_sources.byte_length; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON COLUMN public.data_sources.byte_length IS 'SEASKETCH_VECTOR sources only. Approximate size of the geojson source';
-
-
---
--- Name: COLUMN data_sources.supports_dynamic_layers; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON COLUMN public.data_sources.supports_dynamic_layers IS 'ArcGIS map service setting. If enabled, client can reorder layers and apply layer-specific opacity settings.';
-
-
---
--- Name: COLUMN data_sources.uploaded_source_layername; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON COLUMN public.data_sources.uploaded_source_layername IS 'If uploaded using a multi-layer file format (gdb), includes the layer ID. SEASKETCH_VECTOR sources only.';
-
-
---
--- Name: COLUMN data_sources.normalized_source_object_key; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON COLUMN public.data_sources.normalized_source_object_key IS 'Sources are converted to flatgeobuf (vector, 4326) or geotif (raster) and store indefinitely so they may be processed into tilesets and to support the download function. SEASKETCH_VECTOR sources only.';
-
-
---
--- Name: COLUMN data_sources.normalized_source_bytes; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON COLUMN public.data_sources.normalized_source_bytes IS 'Size of the normalized file. SEASKETCH_VECTOR sources only.';
-
-
---
--- Name: COLUMN data_sources.geostats; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON COLUMN public.data_sources.geostats IS 'mapbox-geostats summary information for vector sources. Useful for cartographic tools and authoring popups. SEASKETCH_VECTOR sources only.';
-
-
---
--- Name: COLUMN data_sources.upload_task_id; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON COLUMN public.data_sources.upload_task_id IS 'UUID of the upload processing job associated with a SEASKETCH_VECTOR source.';
-
-
---
--- Name: COLUMN data_sources.uploaded_by; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON COLUMN public.data_sources.uploaded_by IS '@omit';
-
-
---
--- Name: COLUMN data_sources.temporal; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON COLUMN public.data_sources.temporal IS '@omit';
-
-
---
 -- Name: data_sources_approximate_fgb_index_size(public.data_sources); Type: FUNCTION; Schema: public; Owner: -
 --
 
@@ -15430,6 +16532,47 @@ CREATE FUNCTION public.label_for_form_element_value(attr_value jsonb, component_
 
 
 --
+-- Name: layer_stack_order_pending(integer); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.layer_stack_order_pending(p_project_id integer) RETURNS boolean
+    LANGUAGE sql STABLE SECURITY DEFINER
+    SET search_path TO 'public', 'pg_temp'
+    AS $$
+  with common as (
+    select
+      d.stable_id,
+      dd.z_index as draft_z,
+      pd.z_index as pub_z
+    from table_of_contents_items d
+    join table_of_contents_items p
+      on p.project_id = d.project_id
+     and p.stable_id = d.stable_id
+     and not p.is_draft
+    join data_layers dd on dd.id = d.data_layer_id
+    join data_layers pd on pd.id = p.data_layer_id
+    where d.project_id = p_project_id
+      and d.is_draft
+      and not d.is_folder
+  ),
+  ranked as (
+    select
+      row_number() over (order by draft_z, stable_id) as draft_rank,
+      row_number() over (order by pub_z, stable_id) as pub_rank
+    from common
+  )
+  select exists (select 1 from ranked where draft_rank <> pub_rank);
+$$;
+
+
+--
+-- Name: FUNCTION layer_stack_order_pending(p_project_id integer); Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON FUNCTION public.layer_stack_order_pending(p_project_id integer) IS '@omit';
+
+
+--
 -- Name: lcfirst(text); Type: FUNCTION; Schema: public; Owner: -
 --
 
@@ -15464,6 +16607,48 @@ forum posts, and any other shared content. In the forum a balance will need to
 be made to hide their posts entirely since anonymous content could be malicious, 
 and maintain a historical record of discussions.
 ';
+
+
+--
+-- Name: list_order_pending(integer); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.list_order_pending(p_project_id integer) RETURNS boolean
+    LANGUAGE sql STABLE SECURITY DEFINER
+    SET search_path TO 'public', 'pg_temp'
+    AS $$
+  with draft as (
+    select stable_id, parent_stable_id, sort_index
+    from table_of_contents_items
+    where project_id = p_project_id and is_draft
+  ),
+  published as (
+    select stable_id, parent_stable_id, sort_index
+    from table_of_contents_items
+    where project_id = p_project_id and not is_draft
+  ),
+  same_parent as (
+    select
+      row_number() over (
+        partition by d.parent_stable_id order by d.sort_index, d.stable_id
+      ) as draft_rank,
+      row_number() over (
+        partition by p.parent_stable_id order by p.sort_index, p.stable_id
+      ) as pub_rank
+    from draft d
+    join published p
+      on p.stable_id = d.stable_id
+     and p.parent_stable_id is not distinct from d.parent_stable_id
+  )
+  select exists (select 1 from same_parent where draft_rank <> pub_rank);
+$$;
+
+
+--
+-- Name: FUNCTION list_order_pending(p_project_id integer); Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON FUNCTION public.list_order_pending(p_project_id integer) IS '@omit';
 
 
 --
@@ -16358,6 +17543,301 @@ begin
   return new;
 end;
 $$;
+
+
+--
+-- Name: overlay_list_has_unpublished_changes(integer); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.overlay_list_has_unpublished_changes(p_project_id integer) RETURNS boolean
+    LANGUAGE sql STABLE SECURITY DEFINER
+    SET search_path TO 'public', 'pg_temp'
+    AS $$
+  select
+    exists (
+      select 1
+      from table_of_contents_items d
+      where d.project_id = p_project_id
+        and d.is_draft
+        and not exists (
+          select 1 from table_of_contents_items p
+          where p.project_id = p_project_id
+            and not p.is_draft
+            and p.stable_id = d.stable_id
+        )
+    )
+    or exists (
+      select 1
+      from table_of_contents_items p
+      where p.project_id = p_project_id
+        and not p.is_draft
+        and not exists (
+          select 1 from table_of_contents_items d
+          where d.project_id = p_project_id
+            and d.is_draft
+            and d.stable_id = p.stable_id
+        )
+    )
+    or exists (select 1 from public._overlay_changed_stable_ids(p_project_id))
+    or public.overlay_order_pending(p_project_id);
+$$;
+
+
+--
+-- Name: FUNCTION overlay_list_has_unpublished_changes(p_project_id integer); Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON FUNCTION public.overlay_list_has_unpublished_changes(p_project_id integer) IS '@omit';
+
+
+--
+-- Name: overlay_order_pending(integer); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.overlay_order_pending(p_project_id integer) RETURNS boolean
+    LANGUAGE sql STABLE SECURITY DEFINER
+    SET search_path TO 'public', 'pg_temp'
+    AS $$
+  select
+    public.list_order_pending(p_project_id)
+    or public.layer_stack_order_pending(p_project_id);
+$$;
+
+
+--
+-- Name: FUNCTION overlay_order_pending(p_project_id integer); Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON FUNCTION public.overlay_order_pending(p_project_id integer) IS '@omit';
+
+
+--
+-- Name: pending_publish_items_for_project(integer); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.pending_publish_items_for_project(p_project_id integer) RETURNS SETOF public.pending_publish_item
+    LANGUAGE sql STABLE SECURITY DEFINER
+    SET search_path TO 'public', 'pg_temp'
+    AS $$
+  with recursive draft as (
+    select id, stable_id, parent_stable_id, title, is_folder, path, data_layer_id
+    from table_of_contents_items
+    where project_id = p_project_id and is_draft
+  ),
+  published as (
+    select id, stable_id, parent_stable_id, title, is_folder, path, data_layer_id
+    from table_of_contents_items
+    where project_id = p_project_id and not is_draft
+  ),
+  units as (
+    select
+      d.stable_id, 'added'::text as kind, d.title, d.is_folder,
+      d.parent_stable_id, d.path, d.id as draft_id
+    from draft d
+    where not exists (select 1 from published p where p.stable_id = d.stable_id)
+    union all
+    select
+      d.stable_id, 'updated'::text, d.title, d.is_folder,
+      d.parent_stable_id, d.path, d.id
+    from draft d
+    where d.stable_id in (
+      select public._overlay_changed_stable_ids(p_project_id)
+    )
+    union all
+    select
+      p.stable_id, 'removed'::text, p.title, p.is_folder,
+      p.parent_stable_id, p.path, null::int
+    from published p
+    where not exists (select 1 from draft d where d.stable_id = p.stable_id)
+  ),
+  -- The unbroken run of new folders above a new or updated item.
+  added_chain(unit_id, ancestor_id) as (
+    select u.stable_id, a.stable_id
+    from units u
+    join units a on a.kind = 'added' and a.stable_id = u.parent_stable_id
+    where u.kind in ('added', 'updated')
+    union all
+    select c.unit_id, a.stable_id
+    from added_chain c
+    join units cur on cur.kind = 'added' and cur.stable_id = c.ancestor_id
+    join units a on a.kind = 'added' and a.stable_id = cur.parent_stable_id
+  ),
+  added_requires as (
+    select unit_id, array_agg(distinct ancestor_id) as reqs
+    from added_chain
+    group by unit_id
+  ),
+  -- An item moved into a folder that is still inside it on the published
+  -- tree needs the moves that take that folder out, or publishing it alone
+  -- would make a cycle.
+  subtree_requires as (
+    select u.stable_id as unit_id, array_agg(distinct m.stable_id) as reqs
+    from units u
+    join published self on self.stable_id = u.stable_id
+    join published new_parent
+      on new_parent.stable_id = u.parent_stable_id
+     and self.path @> new_parent.path
+    join published x
+      on self.path @> x.path
+     and x.path @> new_parent.path
+     and x.stable_id <> u.stable_id
+    join units m
+      on m.stable_id = x.stable_id
+     and m.kind = 'updated'
+     and m.parent_stable_id is distinct from x.parent_stable_id
+    where u.kind = 'updated'
+    group by u.stable_id
+  ),
+  -- Draft parent recorded when the item was deleted. Published parent is not
+  -- enough for a layer that was moved into a folder after publish and then
+  -- deleted with that folder: its published parent is still the old one.
+  deleted_draft_parent as (
+    select distinct on (cl.from_blob->>'stable_id')
+      cl.from_blob->>'stable_id' as stable_id,
+      cl.from_blob->>'parent_stable_id' as parent_stable_id
+    from change_logs cl
+    where cl.project_id = p_project_id
+      and cl.field_group in ('layer:deleted', 'folder:deleted')
+      and cl.from_blob ? 'stable_id'
+      and coalesce(cl.from_blob->>'parent_stable_id', '') <> ''
+    order by cl.from_blob->>'stable_id', cl.last_at desc
+  ),
+  -- Each removed item, with the outermost removed folder it sits in.
+  removal_parent as (
+    select
+      r.stable_id,
+      case
+        when exists (
+          select 1
+          from units published_parent
+          where published_parent.kind = 'removed'
+            and published_parent.stable_id = r.parent_stable_id
+        ) then r.parent_stable_id
+        when exists (
+          select 1
+          from units draft_parent
+          where draft_parent.kind = 'removed'
+            and draft_parent.stable_id = dp.parent_stable_id
+        ) then dp.parent_stable_id
+      end as parent_stable_id
+    from units r
+    left join deleted_draft_parent dp on dp.stable_id = r.stable_id
+    where r.kind = 'removed'
+  ),
+  removal_tree(root_id, stable_id, seen) as (
+    select r.stable_id, r.stable_id, array[r.stable_id]
+    from removal_parent r
+    where r.parent_stable_id is null
+    union all
+    select t.root_id, child.stable_id, t.seen || child.stable_id
+    from removal_tree t
+    join removal_parent child
+      on child.parent_stable_id = t.stable_id
+     and child.stable_id <> all (t.seen)
+  ),
+  removal_sizes as (
+    select root_id, count(*) as size
+    from removal_tree
+    group by root_id
+  ),
+  -- Published children of removed items that still exist in draft were moved
+  -- out first. They are updated units, and the removal needs them.
+  removal_requires as (
+    select t.root_id as unit_id, array_agg(distinct moved.stable_id) as reqs
+    from removal_tree t
+    join published child on child.parent_stable_id = t.stable_id
+    join units moved
+      on moved.stable_id = child.stable_id
+     and moved.kind = 'updated'
+    group by t.root_id
+  ),
+  dirty_sources as (
+    select distinct dd.data_source_id
+    from units u
+    join draft d on d.stable_id = u.stable_id
+    join published p on p.stable_id = u.stable_id
+    join data_layers dd on dd.id = d.data_layer_id
+    join data_layers pd on pd.id = p.data_layer_id
+    join data_sources ds
+      on ds.id = dd.data_source_id
+     and ds.data_library_template_id is null
+    join data_sources ps on ps.id = pd.data_source_id
+    where u.kind = 'updated'
+      and ds.id <> ps.id
+      and public._publishable_source_differs(ds, ps)
+  ),
+  source_members as (
+    select u.stable_id, dd.data_source_id
+    from units u
+    join draft d on d.stable_id = u.stable_id
+    join data_layers dd on dd.id = d.data_layer_id
+    join dirty_sources s on s.data_source_id = dd.data_source_id
+    where u.kind in ('added', 'updated')
+  ),
+  source_bundles as (
+    select data_source_id, min(stable_id) as leader_id
+    from source_members
+    group by data_source_id
+    having count(*) > 1
+  ),
+  bundled as (
+    select
+      u.stable_id,
+      u.kind,
+      u.title,
+      u.is_folder,
+      u.parent_stable_id,
+      u.path::text as path,
+      coalesce(ar.reqs, '{}'::text[])
+        || coalesce(sr.reqs, '{}'::text[])
+        || coalesce(rr.reqs, '{}'::text[]) as requires_stable_ids,
+      u.draft_id,
+      case
+        when rs.size > 1 then rt.root_id
+        when sb.data_source_id is not null then 'source:' || sb.data_source_id::text
+      end as bundle_id,
+      case
+        when rs.size > 1 then rt.root_id <> u.stable_id
+        when sb.data_source_id is not null then sb.leader_id <> u.stable_id
+        else false
+      end as included_in_bundle
+    from units u
+    left join added_requires ar on ar.unit_id = u.stable_id
+    left join subtree_requires sr on sr.unit_id = u.stable_id
+    left join removal_requires rr on rr.unit_id = u.stable_id
+    left join removal_tree rt on u.kind = 'removed' and rt.stable_id = u.stable_id
+    left join removal_sizes rs on rs.root_id = rt.root_id
+    left join source_members sm on sm.stable_id = u.stable_id
+    left join source_bundles sb on sb.data_source_id = sm.data_source_id
+  ),
+  bundle_requires as (
+    select bundle_id, array_agg(distinct r) as reqs
+    from bundled, unnest(requires_stable_ids) r
+    where bundle_id is not null
+    group by bundle_id
+  )
+  select
+    b.stable_id,
+    b.kind,
+    b.title,
+    b.is_folder,
+    b.parent_stable_id,
+    b.path,
+    coalesce(br.reqs, b.requires_stable_ids),
+    b.bundle_id,
+    b.draft_id,
+    b.included_in_bundle
+  from bundled b
+  left join bundle_requires br on br.bundle_id = b.bundle_id
+  order by b.kind, b.path, b.stable_id;
+$$;
+
+
+--
+-- Name: FUNCTION pending_publish_items_for_project(p_project_id integer); Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON FUNCTION public.pending_publish_items_for_project(p_project_id integer) IS '@omit';
 
 
 --
@@ -17305,34 +18785,84 @@ CREATE FUNCTION public.projects_center_geojson(project public.projects) RETURNS 
 
 CREATE FUNCTION public.projects_change_logs_since_last_publish(project public.projects) RETURNS SETOF public.change_logs
     LANGUAGE plpgsql STABLE SECURITY DEFINER
-    AS $$
-  declare
-    v_last_publish timestamp;
-  begin
-    if session_is_admin(project.id) = false then
-      raise 'Permission denied. Must be a project admin';
-    end if;
-    select table_of_contents_last_published into v_last_publish from projects where id = project.id;
-    if v_last_publish is null then
-      return query
-        select *
-        from change_logs
-        where project_id = project.id
-          and net_zero_changes = false
-          and field_group != 'layers:published'
-          and session_is_admin(project_id)
-        order by last_at desc;
-    end if;
-    return query
-      select *
-      from change_logs
-      where project_id = project.id
-        and last_at > v_last_publish
-        and net_zero_changes = false
-        and field_group != 'layers:published'
-      order by last_at desc;
-  end;
-$$;
+    SET search_path TO 'public', 'pg_temp'
+    AS $_$
+declare
+  v_last_publish timestamptz;
+begin
+  if session_is_admin(project.id) = false then
+    raise 'Permission denied. Must be a project admin';
+  end if;
+  select coalesce(table_of_contents_last_published, '-infinity'::timestamptz)
+    into v_last_publish
+  from projects where id = project.id;
+  return query
+    select cl.*
+    from change_logs cl
+    where cl.project_id = project.id
+      and cl.net_zero_changes = false
+      and cl.field_group <> 'layers:published'
+      and cl.last_at > v_last_publish
+      and (
+        cl.field_group in (
+          'layers:z-order-change',
+          'layers:list-order-change'
+        )
+        or (
+          cl.entity_type = 'table_of_contents_items'
+          and cl.field_group not in ('layer:deleted', 'folder:deleted')
+          and exists (
+            select 1
+            from table_of_contents_items d
+            left join table_of_contents_items p
+              on p.project_id = d.project_id
+             and not p.is_draft
+             and p.stable_id = d.stable_id
+            where d.id = cl.entity_id
+              and d.project_id = cl.project_id
+              and d.is_draft
+              and (p.id is null or cl.last_at > coalesce(p.published_at, '-infinity'::timestamptz))
+          )
+        )
+        or (
+          cl.entity_type <> 'table_of_contents_items'
+          and cl.meta ? 'table_of_contents_item_id'
+          and (cl.meta->>'table_of_contents_item_id') ~ '^[0-9]+$'
+          and exists (
+            select 1
+            from table_of_contents_items d
+            left join table_of_contents_items p
+              on p.project_id = d.project_id
+             and not p.is_draft
+             and p.stable_id = d.stable_id
+            where d.id = (cl.meta->>'table_of_contents_item_id')::int
+              and d.project_id = cl.project_id
+              and d.is_draft
+              and (p.id is null or cl.last_at > coalesce(p.published_at, '-infinity'::timestamptz))
+          )
+        )
+        or (
+          cl.field_group in ('layer:deleted', 'folder:deleted')
+          and exists (
+            select 1
+            from table_of_contents_items p
+            where p.project_id = cl.project_id
+              and not p.is_draft
+              and not exists (
+                select 1
+                from table_of_contents_items d
+                where d.project_id = p.project_id
+                  and d.is_draft
+                  and d.stable_id = p.stable_id
+              )
+              and p.title = cl.from_summary->>'title'
+              and p.is_folder = (cl.field_group = 'folder:deleted')
+          )
+        )
+      )
+    order by cl.last_at desc;
+end;
+$_$;
 
 
 --
@@ -17348,17 +18878,37 @@ COMMENT ON FUNCTION public.projects_change_logs_since_last_publish(project publi
 
 CREATE FUNCTION public.projects_comments_since_last_publish(project public.projects) RETURNS SETOF public.resolvable_layer_comments
     LANGUAGE plpgsql STABLE SECURITY DEFINER
+    SET search_path TO 'public', 'pg_temp'
     AS $$
-  declare
-    v_last_publish timestamp;
-  begin
-    if session_is_admin(project.id) = false then
-      raise exception 'Access denied to project %', project.id;
-    end if;
-    select table_of_contents_last_published into v_last_publish from projects where id = project.id;
-    return query
-    select * from resolvable_layer_comments where project_id = project.id and (resolved_at > v_last_publish or created_at > v_last_publish) and parent_comment_id is null;
-  end;
+declare
+  v_last_publish timestamptz;
+begin
+  if session_is_admin(project.id) = false then
+    raise exception 'Access denied to project %', project.id;
+  end if;
+  select coalesce(table_of_contents_last_published, '-infinity'::timestamptz)
+    into v_last_publish
+  from projects where id = project.id;
+  return query
+    select c.*
+    from resolvable_layer_comments c
+    where c.project_id = project.id
+      and c.parent_comment_id is null
+      and (c.resolved_at > v_last_publish or c.created_at > v_last_publish)
+      and not exists (
+        select 1
+        from table_of_contents_items d
+        join table_of_contents_items p
+          on p.project_id = d.project_id
+         and not p.is_draft
+         and p.stable_id = d.stable_id
+        where d.id = c.table_of_contents_item_id
+          and d.is_draft
+          and p.published_at is not null
+          and c.created_at <= p.published_at
+          and (c.resolved_at is null or c.resolved_at <= p.published_at)
+      );
+end;
 $$;
 
 
@@ -17817,6 +19367,28 @@ CREATE FUNCTION public.projects_latest_posts(project public.projects) RETURNS SE
 
 
 --
+-- Name: projects_list_order_pending(public.projects); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.projects_list_order_pending(project public.projects) RETURNS boolean
+    LANGUAGE sql STABLE SECURITY DEFINER
+    SET search_path TO 'public', 'pg_temp'
+    AS $$
+  select case
+    when session_is_admin(project.id)
+    then public.list_order_pending(project.id)
+  end;
+$$;
+
+
+--
+-- Name: FUNCTION projects_list_order_pending(project public.projects); Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON FUNCTION public.projects_list_order_pending(project public.projects) IS 'Whether sibling order differs between the draft and published overlay lists. Only a full publish ships list order.';
+
+
+--
 -- Name: project_map_data_requests; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -18109,6 +19681,28 @@ A list of all sketches for this project and the current user session
 
 
 --
+-- Name: projects_overlay_order_pending(public.projects); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.projects_overlay_order_pending(project public.projects) RETURNS boolean
+    LANGUAGE sql STABLE SECURITY DEFINER
+    SET search_path TO 'public', 'pg_temp'
+    AS $$
+  select case
+    when session_is_admin(project.id)
+    then public.overlay_order_pending(project.id)
+  end;
+$$;
+
+
+--
+-- Name: FUNCTION projects_overlay_order_pending(project public.projects); Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON FUNCTION public.projects_overlay_order_pending(project public.projects) IS 'Whether list order or layer stacking order differs between the draft and published overlay lists. Only a full publish ships either.';
+
+
+--
 -- Name: projects_participant_count(public.projects); Type: FUNCTION; Schema: public; Owner: -
 --
 
@@ -18179,6 +19773,31 @@ their profile with project administrators.
 If the project is invite-only, users who have not been approved will not appear
 in this list. Those users can be accessed via `unapprovedParticipants()`
 ';
+
+
+--
+-- Name: projects_pending_publish_items(public.projects); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.projects_pending_publish_items(project public.projects) RETURNS SETOF public.pending_publish_item
+    LANGUAGE plpgsql STABLE SECURITY DEFINER
+    SET search_path TO 'public', 'pg_temp'
+    AS $$
+begin
+  if session_is_admin(project.id) = false then
+    raise 'Permission denied. Must be a project admin';
+  end if;
+  return query
+    select * from public.pending_publish_items_for_project(project.id);
+end;
+$$;
+
+
+--
+-- Name: FUNCTION projects_pending_publish_items(project public.projects); Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON FUNCTION public.projects_pending_publish_items(project public.projects) IS '@simpleCollections only';
 
 
 --
@@ -19151,462 +20770,66 @@ $$;
 
 CREATE FUNCTION public.publish_table_of_contents("projectId" integer) RETURNS SETOF public.table_of_contents_items
     LANGUAGE plpgsql SECURITY DEFINER
+    SET search_path TO 'public', 'pg_temp'
     AS $$
 declare
   v_editor int;
   v_layer_count int;
-  lid int;
-  item table_of_contents_items;
-  source_id int;
-  copied_source_id int;
-  acl_type access_control_list_type;
-  acl_id int;
-  orig_acl_id int;
-  new_toc_id int;
-  new_interactivity_settings_id int;
+  v_dup text;
+  v_detached int;
+  v_detached_ids int[] := '{}'::int[];
 begin
-  -- check permissions
+  perform pg_advisory_xact_lock(hashtext('publish_toc:' || "projectId"::text));
   if session_is_admin("projectId") = false then
     raise 'Permission denied. Must be a project admin';
   end if;
+  perform set_config('seasketch.publishing', 'true', true);
 
-  -- delete existing published table of contents items, layers, sources, and interactivity settings
-  -- (published overlay_data_tables cascade-delete with their TOC rows)
-  delete from
-    interactivity_settings
-  where
-    id in (
-      select
-        data_layers.interactivity_settings_id
-      from
-        data_layers
-      inner join
-        table_of_contents_items
-      on
-        data_layers.id = table_of_contents_items.data_layer_id
-      where
-        table_of_contents_items.project_id = "projectId" and
-        is_draft = false
-    );
-
-  -- Never delete shared data library sources; they are referenced by the
-  -- canonical template and by draft/published copies in other projects.
-  delete from data_sources where data_sources.data_library_template_id is null and data_sources.id in (
-    select
-      data_source_id
-    from
-      data_layers
-    inner join
-      table_of_contents_items
-    on
-      data_layers.id = table_of_contents_items.data_layer_id
-    where
-      table_of_contents_items.project_id = "projectId" and
-      is_draft = false
-  );
-  delete from data_layers where id in (
-    select
-      data_layer_id
-    from
-      table_of_contents_items
-    where
-      project_id = "projectId" and
-      is_draft = false
-  );
-  delete from
-    table_of_contents_items
-  where
-    project_id = "projectId" and
-    is_draft = false;
-
-  -- one-by-one, copy related layers and link table of contents items
-  for item in
-    select
-      *
-    from
-      table_of_contents_items
-    where
-      is_draft = true and
-      project_id = "projectId"
+  -- Publishes that ran concurrently before the publish lock existed could
+  -- leave two published rows with one stable_id. Remove them all so the
+  -- draft item is copied again.
+  for v_dup in
+    select stable_id
+    from table_of_contents_items
+    where project_id = "projectId" and not is_draft
+    group by stable_id
+    having count(*) > 1
   loop
-    if item.is_folder = false then
-      -- copy interactivity settings first
-      insert into interactivity_settings (
-        type,
-        short_template,
-        long_template,
-        cursor,
-        title
-      ) select
-          type,
-          short_template,
-          long_template,
-          cursor,
-          title
-        from
-          interactivity_settings
-        where
-          interactivity_settings.id = (
-            select interactivity_settings_id from data_layers where data_layers.id = item.data_layer_id
-          )
-        returning
-          id
-        into
-          new_interactivity_settings_id;
-
-      insert into data_layers (
-        project_id,
-        data_source_id,
-        source_layer,
-        sublayer,
-        sublayer_type,
-        render_under,
-        mapbox_gl_styles,
-        interactivity_settings_id,
-        z_index
-      )
-      select "projectId",
-        data_source_id,
-        source_layer,
-        sublayer,
-        sublayer_type,
-        render_under,
-        mapbox_gl_styles,
-        new_interactivity_settings_id,
-        z_index
-      from
-        data_layers
-      where
-        id = item.data_layer_id
-      returning id into lid;
-    else
-      lid = item.data_layer_id;
-    end if;
-    -- TODO: this will have to be modified with the addition of any columns
-    insert into table_of_contents_items (
-      is_draft,
-      project_id,
-      path,
-      stable_id,
-      parent_stable_id,
-      title,
-      is_folder,
-      show_radio_children,
-      is_click_off_only,
-      metadata,
-      bounds,
-      data_layer_id,
-      sort_index,
-      hide_children,
-      geoprocessing_reference_id,
-      translated_props,
-      enable_download,
-      enable_data_tables,
-      data_table_join_column,
-      copied_from_data_library_template_id,
-      hide_arcgis_rest_link
-    ) values (
-      false,
-      "projectId",
-      item.path,
-      item.stable_id,
-      item.parent_stable_id,
-      item.title,
-      item.is_folder,
-      item.show_radio_children,
-      item.is_click_off_only,
-      item.metadata,
-      item.bounds,
-      lid,
-      item.sort_index,
-      item.hide_children,
-      item.geoprocessing_reference_id,
-      item.translated_props,
-      item.enable_download,
-      item.enable_data_tables,
-      item.data_table_join_column,
-      item.copied_from_data_library_template_id,
-      item.hide_arcgis_rest_link
-    ) returning id into new_toc_id;
-    select
-      type, id into acl_type, orig_acl_id
-    from
-      access_control_lists
-    where
-      table_of_contents_item_id = (
-        select
-          id
-        from
-          table_of_contents_items
-        where is_draft = true and stable_id = item.stable_id
-      );
-    -- copy access control list settings
-    if acl_type != 'public' then
-      update
-        access_control_lists
-      set type = acl_type
-      where table_of_contents_item_id = new_toc_id
-      returning id into acl_id;
-      if acl_type = 'group' then
-        insert into
-          access_control_list_groups (
-            access_control_list_id,
-            group_id
-          )
-        select
-          acl_id,
-          group_id
-        from
-          access_control_list_groups
-        where
-          access_control_list_id = orig_acl_id;
+    while exists (
+      select 1 from table_of_contents_items
+      where project_id = "projectId" and not is_draft and stable_id = v_dup
+    ) loop
+      v_detached := public._unpublish_toc_stable_id("projectId", v_dup);
+      if v_detached is not null then
+        v_detached_ids := v_detached_ids || v_detached;
       end if;
-    end if;
+    end loop;
   end loop;
+  delete from data_sources s
+  where s.id = any(v_detached_ids)
+    and not exists (select 1 from data_layers dl where dl.data_source_id = s.id);
 
-  -- Copy active draft overlay data tables onto newly published TOC items in one
-  -- statement (matched by TOC stable_id). Soft-deleted draft history is skipped.
-  -- Data table stable_id is preserved so bookmarks/prefs survive publish.
-  insert into overlay_data_tables (
-    table_of_contents_item_id,
-    project_id,
-    name,
-    join_column,
-    overlay_join_column,
-    row_count,
-    created_by,
-    version,
-    parquet_remote,
-    parquet_url,
-    column_stats_remote,
-    visualization_columns,
-    visualization_ops,
-    calculation_mode,
-    additional_replicate_identifiers,
-    replicate_label,
-    replicate_label_custom,
-    within_replicate_operations,
-    across_replicate_operations,
-    subject_column,
-    observation_detail_columns,
-    coverage_mode,
-    coverage_remote,
-    effort_marker_values,
-    excluded_values,
-    required_filter_columns,
-    hidden_filter_columns,
-    filter_column_labels,
-    temporal,
-    organism,
-    nodata_values,
-    source_parquet_remote,
-    stable_id,
-    description
-  )
-  select
-    published_toc.id,
-    odt.project_id,
-    odt.name,
-    odt.join_column,
-    odt.overlay_join_column,
-    odt.row_count,
-    odt.created_by,
-    odt.version,
-    odt.parquet_remote,
-    odt.parquet_url,
-    odt.column_stats_remote,
-    odt.visualization_columns,
-    odt.visualization_ops,
-    odt.calculation_mode,
-    odt.additional_replicate_identifiers,
-    odt.replicate_label,
-    odt.replicate_label_custom,
-    odt.within_replicate_operations,
-    odt.across_replicate_operations,
-    odt.subject_column,
-    odt.observation_detail_columns,
-    odt.coverage_mode,
-    odt.coverage_remote,
-    odt.effort_marker_values,
-    odt.excluded_values,
-    odt.required_filter_columns,
-    odt.hidden_filter_columns,
-    odt.filter_column_labels,
-    odt.temporal,
-    odt.organism,
-    odt.nodata_values,
-    odt.source_parquet_remote,
-    odt.stable_id,
-    odt.description
-  from overlay_data_tables odt
-  inner join table_of_contents_items draft_toc
-    on draft_toc.id = odt.table_of_contents_item_id
-  inner join table_of_contents_items published_toc
-    on published_toc.project_id = draft_toc.project_id
-    and published_toc.stable_id = draft_toc.stable_id
-    and published_toc.is_draft = false
-  where draft_toc.project_id = "projectId"
-    and draft_toc.is_draft = true
-    and draft_toc.is_folder = false
-    and odt.deleted_at is null;
+  if to_regclass('pg_temp._units') is not null then
+    drop table pg_temp._units;
+  end if;
+  create temp table _units on commit drop as
+    select * from public.pending_publish_items_for_project("projectId");
 
-  -- one-by-one, copy related sources and update foreign keys of layers.
-  -- Data library sources are skipped: published layers keep referencing the
-  -- shared source so library updates are visible to end-users immediately
-  -- ("live" layers), without requiring a republish.
-  for source_id in
-    select distinct(data_layers.data_source_id) from data_layers
-    inner join data_sources
-      on data_sources.id = data_layers.data_source_id
-    where data_sources.data_library_template_id is null and data_layers.id in (
-      select
-        data_layer_id
-      from
-        table_of_contents_items
-      where
-        is_draft = false and
-        project_id = "projectId" and
-        is_folder = false
-    )
-  loop
-    -- TODO: This function will have to be updated whenever the schema
-    -- changes since these columns are hard coded... no way around it.
-    insert into data_sources (
-      project_id,
-      type,
-      attribution,
-      bounds,
-      maxzoom,
-      minzoom,
-      url,
-      scheme,
-      tiles,
-      tile_size,
-      encoding,
-      buffer,
-      cluster,
-      cluster_max_zoom,
-      cluster_properties,
-      cluster_radius,
-      generate_id,
-      line_metrics,
-      promote_id,
-      tolerance,
-      coordinates,
-      urls,
-      query_parameters,
-      use_device_pixel_ratio,
-      import_type,
-      original_source_url,
-      enhanced_security,
-      byte_length,
-      supports_dynamic_layers,
-      uploaded_source_filename,
-      uploaded_source_layername,
-      normalized_source_object_key,
-      normalized_source_bytes,
-      geostats,
-      upload_task_id,
-      translated_props,
-      arcgis_fetch_strategy,
-      temporal,
-      created_by
-    )
-      select
-        "projectId",
-      type,
-      attribution,
-      bounds,
-      maxzoom,
-      minzoom,
-      url,
-      scheme,
-      tiles,
-      tile_size,
-      encoding,
-      buffer,
-      cluster,
-      cluster_max_zoom,
-      cluster_properties,
-      cluster_radius,
-      generate_id,
-      line_metrics,
-      promote_id,
-      tolerance,
-      coordinates,
-      urls,
-      query_parameters,
-      use_device_pixel_ratio,
-      import_type,
-      original_source_url,
-      enhanced_security,
-      byte_length,
-      supports_dynamic_layers,
-      uploaded_source_filename,
-      uploaded_source_layername,
-      normalized_source_object_key,
-      normalized_source_bytes,
-      geostats,
-      upload_task_id,
-      translated_props,
-      arcgis_fetch_strategy,
-      temporal,
-      created_by
-      from
-        data_sources
-      where
-        id = source_id
-      returning id into copied_source_id;
-    -- copy data_upload_outputs
-    insert into data_upload_outputs (
-      data_source_id,
-      project_id,
-      type,
-      created_at,
-      url,
-      remote,
-      is_original,
-      size,
-      filename,
-      original_filename,
-      source_processing_job_key,
-      epsg
-    ) select
-        copied_source_id,
-        project_id,
-        type,
-        created_at,
-        url,
-        remote,
-        is_original,
-        size,
-        filename,
-        original_filename,
-        source_processing_job_key,
-        epsg
-      from
-        data_upload_outputs
-      where
-        data_source_id = source_id;
-    -- update data_layers that should now reference the copy
-    update
-      data_layers
-    set data_source_id = copied_source_id
-    where
-      data_source_id = source_id and
-      data_layers.id in ((
-        select distinct(data_layer_id) from table_of_contents_items where is_draft = false and
-        project_id = "projectId" and
-        is_folder = false
-      ));
-  end loop;
-  update
-    projects
+  perform public._publish_units(
+    "projectId",
+    (select coalesce(array_agg(stable_id), '{}'::text[]) from _units),
+    true
+  );
+
+  perform set_config('seasketch.publishing', 'false', true);
+
+  update projects
   set
     draft_table_of_contents_has_changes = false,
     table_of_contents_last_published = now()
-  where
-    id = "projectId";
+  where id = "projectId";
+
+  perform public._publish_record_project_activity("projectId");
 
   v_editor := nullif(current_setting('session.user_id', true), '')::int;
   if v_editor is not null then
@@ -19616,20 +20839,15 @@ begin
       and is_draft = true
       and is_folder = false;
 
-    perform record_changelog(
+    perform public._record_overlay_publish(
       "projectId",
       v_editor,
-      'projects',
-      "projectId",
-      'layers:published'::change_log_field_group,
-      '{}'::jsonb,
-      jsonb_build_object('layer_count', v_layer_count),
-      null,
-      null,
-      null
+      v_layer_count,
+      true,
+      (select coalesce(array_agg(stable_id), '{}'::text[]) from _units)
     );
   end if;
-  -- return items
+
   return query select * from table_of_contents_items
     where project_id = "projectId" and is_draft = false;
 end;
@@ -19641,6 +20859,138 @@ $$;
 --
 
 COMMENT ON FUNCTION public.publish_table_of_contents("projectId" integer) IS 'Copies draft TOC to published; sets project flags. Records change_logs (layers:published) with draft layer_count when session.user_id is set.';
+
+
+--
+-- Name: publish_table_of_contents_items(integer, text[]); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.publish_table_of_contents_items("projectId" integer, "stableIds" text[]) RETURNS SETOF public.table_of_contents_items
+    LANGUAGE plpgsql SECURITY DEFINER
+    SET search_path TO 'public', 'pg_temp'
+    AS $$
+declare
+  v_editor int;
+  v_layer_count int;
+  v_sel text[];
+  v_next text[];
+  v_orphan text;
+begin
+  perform pg_advisory_xact_lock(hashtext('publish_toc:' || "projectId"::text));
+  if session_is_admin("projectId") = false then
+    raise 'Permission denied. Must be a project admin';
+  end if;
+
+  if to_regclass('pg_temp._units') is not null then
+    drop table pg_temp._units;
+  end if;
+  create temp table _units on commit drop as
+    select * from public.pending_publish_items_for_project("projectId");
+
+  -- The selection, plus everything it requires and every bundle-mate.
+  v_sel := coalesce((
+    select array_agg(distinct stable_id)
+    from _units
+    where stable_id = any(coalesce("stableIds", '{}'::text[]))
+  ), '{}'::text[]);
+  loop
+    select coalesce(array_agg(distinct x), '{}'::text[]) into v_next
+    from (
+      select unnest(v_sel) as x
+      union
+      select unnest(u.requires_stable_ids)
+      from _units u
+      where u.stable_id = any(v_sel)
+      union
+      select u2.stable_id
+      from _units u
+      join _units u2
+        on u.bundle_id is not null
+       and u2.bundle_id = u.bundle_id
+      where u.stable_id = any(v_sel)
+    ) s
+    where x in (select stable_id from _units);
+    exit when v_next <@ v_sel and v_sel <@ v_next;
+    v_sel := v_next;
+  end loop;
+
+  if cardinality(v_sel) = 0 then
+    return;
+  end if;
+
+  perform set_config('seasketch.publishing', 'true', true);
+
+  perform public._publish_units("projectId", v_sel, false);
+
+  -- Every published item must hang off a root. A missing parent or a parent
+  -- cycle would hide items from end users.
+  with recursive reachable(stable_id) as (
+    select stable_id
+    from table_of_contents_items
+    where project_id = "projectId"
+      and not is_draft
+      and parent_stable_id is null
+    union all
+    select c.stable_id
+    from reachable r
+    join table_of_contents_items c
+      on c.project_id = "projectId"
+     and not c.is_draft
+     and c.parent_stable_id = r.stable_id
+  )
+  select c.title into v_orphan
+  from table_of_contents_items c
+  where c.project_id = "projectId"
+    and not c.is_draft
+    and c.stable_id not in (select stable_id from reachable)
+  order by c.title
+  limit 1;
+  if v_orphan is not null then
+    raise 'Publishing this selection would leave "%" without a published folder. Use Publish to publish the whole list.', v_orphan;
+  end if;
+
+  perform set_config('seasketch.publishing', 'false', true);
+
+  -- Each published unit now matches its draft, and nothing outside the
+  -- selection changed, so the units left over are what is still pending.
+  update projects
+  set draft_table_of_contents_has_changes =
+    exists (select 1 from _units where not (stable_id = any(v_sel)))
+    or public.overlay_order_pending("projectId")
+  where id = "projectId";
+
+  perform public._publish_record_project_activity("projectId");
+
+  v_editor := nullif(current_setting('session.user_id', true), '')::int;
+  if v_editor is not null then
+    select count(*)::int into v_layer_count
+    from _units
+    where stable_id = any(v_sel)
+      and not is_folder;
+    perform public._record_overlay_publish(
+      "projectId",
+      v_editor,
+      v_layer_count,
+      false,
+      v_sel
+    );
+  end if;
+
+  return query
+    select *
+    from table_of_contents_items
+    where project_id = "projectId"
+      and not is_draft
+      and stable_id = any(v_sel);
+end;
+$$;
+
+
+--
+-- Name: FUNCTION publish_table_of_contents_items("projectId" integer, "stableIds" text[]); Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON FUNCTION public.publish_table_of_contents_items("projectId" integer, "stableIds" text[]) IS 'Publishes the selected draft overlay items, and anything they require, without replacing the rest of the published tree. Does not publish sort_index or z_index.';
 
 
 --
@@ -20037,19 +21387,23 @@ CREATE FUNCTION public.record_project_activity(pid integer) RETURNS public.proje
 CREATE FUNCTION public.record_project_activity_on_delete() RETURNS trigger
     LANGUAGE plpgsql
     AS $$
-  begin
-    perform graphile_worker.add_job(
-      'recordProjectActivity',
-      payload := json_build_object(
-        'projectId', old.project_id
-      ),
-      run_at := NOW() + '10 seconds',
-      queue_name := 'recordProjectActivity',
-      job_key := 'recordProjectActivity:' || old.project_id
-    );
+begin
+  -- publishing-bailout
+  if coalesce(current_setting('seasketch.publishing', true), '') = 'true' then
     return old;
-  end;
-  $$;
+  end if;
+  perform graphile_worker.add_job(
+    'recordProjectActivity',
+    payload := json_build_object(
+      'projectId', old.project_id
+    ),
+    run_at := now() + '10 seconds',
+    queue_name := 'recordProjectActivity',
+    job_key := 'recordProjectActivity:' || old.project_id
+  );
+  return old;
+end;
+$$;
 
 
 --
@@ -25081,16 +26435,27 @@ COMMENT ON FUNCTION public.table_of_contents_items_project_background_jobs(item 
 CREATE FUNCTION public.table_of_contents_items_project_update() RETURNS trigger
     LANGUAGE plpgsql SECURITY DEFINER
     AS $$
-    begin
-      if coalesce(current_setting('seasketch.skip_library_source_side_effects', true), '') = 'true' then
-        return NEW;
-      end if;
-      if tg_op = 'INSERT' or tg_op = 'UPDATE' or tg_op = 'DELETE' then
-        update projects set draft_table_of_contents_has_changes = true where id = NEW.project_id;
-      end if;
-      return NEW;
-    end;
-  $$;
+begin
+  -- publishing-bailout
+  if coalesce(current_setting('seasketch.publishing', true), '') = 'true' then
+    return new;
+  end if;
+  if coalesce(current_setting('seasketch.skip_library_source_side_effects', true), '') = 'true' then
+    return new;
+  end if;
+  -- The flag is what the Publish button reads. Set it from the draft-vs-published
+  -- diff so an edit that is immediately undone (changelog coalesces to nothing,
+  -- and a full publish would copy nothing) turns the button off again.
+  update projects
+  set draft_table_of_contents_has_changes =
+    public.overlay_list_has_unpublished_changes(id)
+  where id = coalesce(new.project_id, old.project_id);
+  if tg_op = 'DELETE' then
+    return old;
+  end if;
+  return new;
+end;
+$$;
 
 
 --
@@ -25149,40 +26514,50 @@ COMMENT ON FUNCTION public.table_of_contents_items_quota_used(item public.table_
 
 CREATE FUNCTION public.table_of_contents_items_related_publish_change_logs(item public.table_of_contents_items) RETURNS SETOF public.change_logs
     LANGUAGE sql STABLE SECURITY DEFINER
+    SET search_path TO 'public', 'pg_temp'
     AS $$
-    with layer_created as (
-      select ds.created_at
-      from data_layers dl
-      inner join data_sources ds on ds.id = dl.data_source_id
-      where dl.id = item.data_layer_id
-      limit 1
-    ),
-    publish_logs as (
-      select
-        p as publish_log,
-        (
-          select max(prev.last_at)
-          from change_logs prev
-          where prev.project_id = item.project_id
-            and prev.entity_type = 'projects'
-            and prev.entity_id = item.project_id
-            and prev.field_group = 'layers:published'
-            and prev.net_zero_changes = false
-            and prev.last_at < p.last_at
-        ) as previous_publish_at
-      from change_logs p
-      cross join layer_created lc
-      where p.project_id = item.project_id
-        and p.entity_type = 'projects'
-        and p.entity_id = item.project_id
-        and p.field_group = 'layers:published'
-        and p.net_zero_changes = false
-        and session_is_admin(p.project_id)
-        and p.last_at > lc.created_at
+  with layer_created as (
+    select ds.created_at
+    from data_layers dl
+    inner join data_sources ds on ds.id = dl.data_source_id
+    where dl.id = item.data_layer_id
+    limit 1
+  ),
+  publish_logs as (
+    select
+      p as publish_log,
+      (
+        select max(prev.last_at)
+        from change_logs prev
+        where prev.project_id = item.project_id
+          and prev.entity_type = 'projects'
+          and prev.entity_id = item.project_id
+          and prev.field_group = 'layers:published'
+          and prev.net_zero_changes = false
+          and prev.last_at < p.last_at
+      ) as previous_publish_at
+    from change_logs p
+    cross join layer_created lc
+    where p.project_id = item.project_id
+      and p.entity_type = 'projects'
+      and p.entity_id = item.project_id
+      and p.field_group = 'layers:published'
+      and p.net_zero_changes = false
+      and session_is_admin(p.project_id)
+      and p.last_at > lc.created_at
+  )
+  select (p.publish_log).*
+  from publish_logs p
+  where case
+    when exists (
+      select 1 from overlay_publish_runs r
+      where r.change_log_id = (p.publish_log).id
+    ) then exists (
+      select 1 from overlay_publish_run_items i
+      where i.change_log_id = (p.publish_log).id
+        and i.stable_id = item.stable_id
     )
-    select (p.publish_log).*
-    from publish_logs p
-    where exists (
+    else exists (
       select 1
       from change_logs c
       where c.project_id = item.project_id
@@ -25192,8 +26567,9 @@ CREATE FUNCTION public.table_of_contents_items_related_publish_change_logs(item 
         and c.last_at > coalesce(p.previous_publish_at, '-infinity'::timestamptz)
         and c.last_at <= (p.publish_log).last_at
     )
-    order by (p.publish_log).last_at desc;
-  $$;
+  end
+  order by (p.publish_log).last_at desc;
+$$;
 
 
 --
@@ -25807,6 +27183,10 @@ declare
   v_url             text;
   v_toc             record;
 begin
+  -- publishing-bailout
+  if coalesce(current_setting('seasketch.publishing', true), '') = 'true' then
+    return new;
+  end if;
   if coalesce(current_setting('seasketch.skip_library_source_side_effects', true), '') = 'true' then
     return new;
   end if;
@@ -26246,7 +27626,10 @@ begin
   v_from_blob := jsonb_build_object(
     'data_source_type', old.data_source_type,
     'data_layer_id', old.data_layer_id,
-    'data_source_id', v_ds_id
+    'data_source_id', v_ds_id,
+    'stable_id', old.stable_id,
+    'parent_stable_id', old.parent_stable_id,
+    'path', old.path::text
   );
   if v_ds_url is not null then
     v_from_blob := v_from_blob || jsonb_build_object('url', v_ds_url);
@@ -26435,6 +27818,10 @@ CREATE FUNCTION public.trg_changelog_table_of_contents_items_insert_created() RE
 declare
   v_editor int;
 begin
+  -- publishing-bailout
+  if coalesce(current_setting('seasketch.publishing', true), '') = 'true' then
+    return new;
+  end if;
   if not new.is_draft or not new.is_folder then
     return new;
   end if;
@@ -26483,6 +27870,10 @@ declare
   v_data_source_id  int;
   v_url             text;
 begin
+  -- publishing-bailout
+  if coalesce(current_setting('seasketch.publishing', true), '') = 'true' then
+    return new;
+  end if;
   if not new.is_draft or new.is_folder or new.data_layer_id is null then
     return new;
   end if;
@@ -28192,8 +29583,14 @@ declare
   parent_path ltree;
   current_path ltree;
   item table_of_contents_items;
+  old_sort int;
+  old_parent text;
+  v_editor int;
 begin
-  select project_id into pid from table_of_contents_items where id = "itemId" and is_draft = true;
+  select project_id, sort_index, parent_stable_id
+    into pid, old_sort, old_parent
+  from table_of_contents_items
+  where id = "itemId" and is_draft = true;
   if pid is null then
     raise 'Could not find draft item with id = %', "itemId";
   end if;
@@ -28223,6 +29620,28 @@ begin
       parent_stable_id is distinct from "parentStableId"
       or sort_index is distinct from "sortIndex"
     );
+
+  if found
+    and old_sort is distinct from "sortIndex"
+    and old_parent is not distinct from "parentStableId"
+    and coalesce(current_setting('seasketch.publishing', true), '') <> 'true'
+  then
+    v_editor := nullif(current_setting('session.user_id', true), '')::int;
+    if v_editor is not null then
+      perform record_changelog(
+        pid,
+        v_editor,
+        'projects',
+        pid,
+        'layers:list-order-change'::change_log_field_group,
+        '{}'::jsonb,
+        '{}'::jsonb,
+        null,
+        null,
+        null
+      );
+    end if;
+  end if;
 
   if "parentStableId" is not null then
     update table_of_contents_items
@@ -28282,6 +29701,13 @@ begin
   end loop;
   set session_replication_role = default;
 
+  if pid is not null then
+    update projects p
+    set draft_table_of_contents_has_changes =
+      public.overlay_list_has_unpublished_changes(p.id)
+    where id = pid;
+  end if;
+
   v_editor := nullif(current_setting('session.user_id', true), '')::int;
   if v_editor is not null then
     perform record_changelog(
@@ -28307,7 +29733,7 @@ $$;
 -- Name: FUNCTION update_z_indexes("dataLayerIds" integer[]); Type: COMMENT; Schema: public; Owner: -
 --
 
-COMMENT ON FUNCTION public.update_z_indexes("dataLayerIds" integer[]) IS 'Batch reassigns z_index for one project. Records change_logs (layers:z-order-change) on projects when session.user_id is set; to_summary includes reordered_count.';
+COMMENT ON FUNCTION public.update_z_indexes("dataLayerIds" integer[]) IS 'Batch reassigns z_index for one project. Records change_logs (layers:z-order-change) on projects when session.user_id is set; to_summary includes reordered_count. Marks the draft overlay list as changed.';
 
 
 --
@@ -29522,6 +30948,42 @@ ALTER TABLE public.overlay_data_tables ALTER COLUMN id ADD GENERATED ALWAYS AS I
 
 
 --
+-- Name: overlay_publish_run_items; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.overlay_publish_run_items (
+    change_log_id bigint NOT NULL,
+    stable_id text NOT NULL,
+    title text NOT NULL,
+    is_folder boolean NOT NULL
+);
+
+
+--
+-- Name: TABLE overlay_publish_run_items; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON TABLE public.overlay_publish_run_items IS '@omit';
+
+
+--
+-- Name: overlay_publish_runs; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.overlay_publish_runs (
+    change_log_id bigint NOT NULL,
+    full_publish boolean NOT NULL
+);
+
+
+--
+-- Name: TABLE overlay_publish_runs; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON TABLE public.overlay_publish_runs IS '@omit';
+
+
+--
 -- Name: pending_topic_notifications; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -30622,6 +32084,22 @@ ALTER TABLE ONLY public.overlay_data_tables
 
 
 --
+-- Name: overlay_publish_run_items overlay_publish_run_items_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.overlay_publish_run_items
+    ADD CONSTRAINT overlay_publish_run_items_pkey PRIMARY KEY (change_log_id, stable_id);
+
+
+--
+-- Name: overlay_publish_runs overlay_publish_runs_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.overlay_publish_runs
+    ADD CONSTRAINT overlay_publish_runs_pkey PRIMARY KEY (change_log_id);
+
+
+--
 -- Name: pending_topic_notifications pending_topic_notifications_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -31258,6 +32736,13 @@ CREATE INDEX data_sources_project_id_idx ON public.data_sources USING btree (pro
 --
 
 CREATE INDEX data_upload_outputs_data_source_id_idx ON public.data_upload_outputs USING btree (data_source_id);
+
+
+--
+-- Name: data_upload_outputs_remote_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX data_upload_outputs_remote_idx ON public.data_upload_outputs USING btree (remote);
 
 
 --
@@ -33535,6 +35020,22 @@ ALTER TABLE ONLY public.overlay_data_tables
 
 ALTER TABLE ONLY public.overlay_data_tables
     ADD CONSTRAINT overlay_data_tables_table_of_contents_item_id_fkey FOREIGN KEY (table_of_contents_item_id) REFERENCES public.table_of_contents_items(id) ON DELETE CASCADE;
+
+
+--
+-- Name: overlay_publish_run_items overlay_publish_run_items_change_log_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.overlay_publish_run_items
+    ADD CONSTRAINT overlay_publish_run_items_change_log_id_fkey FOREIGN KEY (change_log_id) REFERENCES public.overlay_publish_runs(change_log_id) ON DELETE CASCADE;
+
+
+--
+-- Name: overlay_publish_runs overlay_publish_runs_change_log_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.overlay_publish_runs
+    ADD CONSTRAINT overlay_publish_runs_change_log_id_fkey FOREIGN KEY (change_log_id) REFERENCES public.change_logs(id) ON DELETE CASCADE;
 
 
 --
@@ -36206,6 +37707,13 @@ REVOKE ALL ON FUNCTION public._ltxtq_rexec(public.ltxtquery, public.ltree[]) FRO
 
 
 --
+-- Name: FUNCTION _overlay_changed_stable_ids(p_project_id integer); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public._overlay_changed_stable_ids(p_project_id integer) FROM PUBLIC;
+
+
+--
 -- Name: FUNCTION _postgis_deprecate(oldname text, newname text, version text); Type: ACL; Schema: public; Owner: -
 --
 
@@ -36252,6 +37760,302 @@ REVOKE ALL ON FUNCTION public._postgis_selectivity(tbl regclass, att_name text, 
 --
 
 REVOKE ALL ON FUNCTION public._postgis_stats(tbl regclass, att_name text, text) FROM PUBLIC;
+
+
+--
+-- Name: FUNCTION _publish_copy_data_source(p_source_id integer, p_project_id integer); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public._publish_copy_data_source(p_source_id integer, p_project_id integer) FROM PUBLIC;
+
+
+--
+-- Name: FUNCTION _publish_copy_draft_toc_item(p_draft_id integer, p_sort_index integer, p_z_index integer, p_path public.ltree); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public._publish_copy_draft_toc_item(p_draft_id integer, p_sort_index integer, p_z_index integer, p_path public.ltree) FROM PUBLIC;
+
+
+--
+-- Name: FUNCTION _publish_rebuild_published_paths(p_project_id integer); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public._publish_rebuild_published_paths(p_project_id integer) FROM PUBLIC;
+
+
+--
+-- Name: FUNCTION _publish_record_project_activity(p_project_id integer); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public._publish_record_project_activity(p_project_id integer) FROM PUBLIC;
+
+
+--
+-- Name: FUNCTION _publish_units(p_project_id integer, p_sel text[], p_full boolean); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public._publish_units(p_project_id integer, p_sel text[], p_full boolean) FROM PUBLIC;
+
+
+--
+-- Name: FUNCTION _publishable_data_tables(p_toc_id integer); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public._publishable_data_tables(p_toc_id integer) FROM PUBLIC;
+
+
+--
+-- Name: FUNCTION extract_column_details_from_geostats(geostats jsonb); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.extract_column_details_from_geostats(geostats jsonb) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.extract_column_details_from_geostats(geostats jsonb) TO anon;
+
+
+--
+-- Name: FUNCTION extract_raster_band_count_from_geostats(geostats jsonb); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.extract_raster_band_count_from_geostats(geostats jsonb) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.extract_raster_band_count_from_geostats(geostats jsonb) TO anon;
+
+
+--
+-- Name: FUNCTION extract_vector_geometry_type_from_geostats(geostats jsonb); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.extract_vector_geometry_type_from_geostats(geostats jsonb) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.extract_vector_geometry_type_from_geostats(geostats jsonb) TO anon;
+
+
+--
+-- Name: FUNCTION get_first_band_offset(geostats jsonb); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.get_first_band_offset(geostats jsonb) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.get_first_band_offset(geostats jsonb) TO anon;
+
+
+--
+-- Name: FUNCTION get_first_band_scale(geostats jsonb); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.get_first_band_scale(geostats jsonb) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.get_first_band_scale(geostats jsonb) TO anon;
+
+
+--
+-- Name: FUNCTION get_representative_colors(geostats jsonb); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.get_representative_colors(geostats jsonb) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.get_representative_colors(geostats jsonb) TO anon;
+
+
+--
+-- Name: TABLE data_sources; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT SELECT ON TABLE public.data_sources TO anon;
+GRANT SELECT,INSERT,DELETE ON TABLE public.data_sources TO seasketch_user;
+
+
+--
+-- Name: COLUMN data_sources.attribution; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT UPDATE(attribution) ON TABLE public.data_sources TO seasketch_user;
+
+
+--
+-- Name: COLUMN data_sources.maxzoom; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT UPDATE(maxzoom) ON TABLE public.data_sources TO seasketch_user;
+
+
+--
+-- Name: COLUMN data_sources.minzoom; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT UPDATE(minzoom) ON TABLE public.data_sources TO seasketch_user;
+
+
+--
+-- Name: COLUMN data_sources.url; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT UPDATE(url) ON TABLE public.data_sources TO seasketch_user;
+
+
+--
+-- Name: COLUMN data_sources.scheme; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT UPDATE(scheme) ON TABLE public.data_sources TO seasketch_user;
+
+
+--
+-- Name: COLUMN data_sources.tiles; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT UPDATE(tiles) ON TABLE public.data_sources TO seasketch_user;
+
+
+--
+-- Name: COLUMN data_sources.tile_size; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT UPDATE(tile_size) ON TABLE public.data_sources TO seasketch_user;
+
+
+--
+-- Name: COLUMN data_sources.encoding; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT UPDATE(encoding) ON TABLE public.data_sources TO seasketch_user;
+
+
+--
+-- Name: COLUMN data_sources.buffer; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT UPDATE(buffer) ON TABLE public.data_sources TO seasketch_user;
+
+
+--
+-- Name: COLUMN data_sources.cluster; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT UPDATE(cluster) ON TABLE public.data_sources TO seasketch_user;
+
+
+--
+-- Name: COLUMN data_sources.cluster_max_zoom; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT UPDATE(cluster_max_zoom) ON TABLE public.data_sources TO seasketch_user;
+
+
+--
+-- Name: COLUMN data_sources.cluster_properties; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT UPDATE(cluster_properties) ON TABLE public.data_sources TO seasketch_user;
+
+
+--
+-- Name: COLUMN data_sources.cluster_radius; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT UPDATE(cluster_radius) ON TABLE public.data_sources TO seasketch_user;
+
+
+--
+-- Name: COLUMN data_sources.generate_id; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT UPDATE(generate_id) ON TABLE public.data_sources TO seasketch_user;
+
+
+--
+-- Name: COLUMN data_sources.line_metrics; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT UPDATE(line_metrics) ON TABLE public.data_sources TO seasketch_user;
+
+
+--
+-- Name: COLUMN data_sources.promote_id; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT UPDATE(promote_id) ON TABLE public.data_sources TO seasketch_user;
+
+
+--
+-- Name: COLUMN data_sources.tolerance; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT UPDATE(tolerance) ON TABLE public.data_sources TO seasketch_user;
+
+
+--
+-- Name: COLUMN data_sources.coordinates; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT UPDATE(coordinates) ON TABLE public.data_sources TO seasketch_user;
+
+
+--
+-- Name: COLUMN data_sources.urls; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT UPDATE(urls) ON TABLE public.data_sources TO seasketch_user;
+
+
+--
+-- Name: COLUMN data_sources.query_parameters; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT UPDATE(query_parameters) ON TABLE public.data_sources TO seasketch_user;
+
+
+--
+-- Name: COLUMN data_sources.use_device_pixel_ratio; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT UPDATE(use_device_pixel_ratio) ON TABLE public.data_sources TO seasketch_user;
+
+
+--
+-- Name: COLUMN data_sources.supports_dynamic_layers; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT SELECT(supports_dynamic_layers) ON TABLE public.data_sources TO anon;
+GRANT INSERT(supports_dynamic_layers),UPDATE(supports_dynamic_layers) ON TABLE public.data_sources TO seasketch_user;
+
+
+--
+-- Name: COLUMN data_sources.translated_props; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT SELECT(translated_props) ON TABLE public.data_sources TO anon;
+GRANT UPDATE(translated_props) ON TABLE public.data_sources TO seasketch_user;
+
+
+--
+-- Name: COLUMN data_sources.arcgis_fetch_strategy; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT UPDATE(arcgis_fetch_strategy) ON TABLE public.data_sources TO seasketch_user;
+
+
+--
+-- Name: COLUMN data_sources.temporal; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT UPDATE(temporal) ON TABLE public.data_sources TO seasketch_user;
+
+
+--
+-- Name: FUNCTION _publishable_source_differs(a public.data_sources, b public.data_sources); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public._publishable_source_differs(a public.data_sources, b public.data_sources) FROM PUBLIC;
+
+
+--
+-- Name: FUNCTION _publishable_upload_outputs(p_source_id integer); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public._publishable_upload_outputs(p_source_id integer) FROM PUBLIC;
+
+
+--
+-- Name: FUNCTION _record_overlay_publish(p_project_id integer, p_editor_id integer, p_layer_count integer, p_full boolean, p_stable_ids text[]); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public._record_overlay_publish(p_project_id integer, p_editor_id integer, p_layer_count integer, p_full boolean, p_stable_ids text[]) FROM PUBLIC;
 
 
 --
@@ -36541,6 +38345,13 @@ REVOKE ALL ON FUNCTION public._st_voronoi(g1 public.geometry, clip public.geomet
 --
 
 REVOKE ALL ON FUNCTION public._st_within(geom1 public.geometry, geom2 public.geometry) FROM PUBLIC;
+
+
+--
+-- Name: FUNCTION _unpublish_toc_stable_id(p_project_id integer, p_stable_id text); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public._unpublish_toc_stable_id(p_project_id integer, p_stable_id text) FROM PUBLIC;
 
 
 --
@@ -37792,6 +39603,22 @@ GRANT UPDATE ON TABLE public.user_profiles TO seasketch_user;
 
 REVOKE ALL ON FUNCTION public.change_logs_editor_profile(changelog public.change_logs) FROM PUBLIC;
 GRANT ALL ON FUNCTION public.change_logs_editor_profile(changelog public.change_logs) TO seasketch_user;
+
+
+--
+-- Name: FUNCTION change_logs_full_overlay_publish(c public.change_logs); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.change_logs_full_overlay_publish(c public.change_logs) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.change_logs_full_overlay_publish(c public.change_logs) TO seasketch_user;
+
+
+--
+-- Name: FUNCTION change_logs_published_overlay_items(c public.change_logs); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.change_logs_published_overlay_items(c public.change_logs) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.change_logs_published_overlay_items(c public.change_logs) TO seasketch_user;
 
 
 --
@@ -39167,239 +40994,6 @@ GRANT ALL ON FUNCTION public.data_layers_version(data_layer public.data_layers) 
 --
 
 REVOKE ALL ON FUNCTION public.data_source_type(data_layer_id integer) FROM PUBLIC;
-
-
---
--- Name: FUNCTION extract_column_details_from_geostats(geostats jsonb); Type: ACL; Schema: public; Owner: -
---
-
-REVOKE ALL ON FUNCTION public.extract_column_details_from_geostats(geostats jsonb) FROM PUBLIC;
-GRANT ALL ON FUNCTION public.extract_column_details_from_geostats(geostats jsonb) TO anon;
-
-
---
--- Name: FUNCTION extract_raster_band_count_from_geostats(geostats jsonb); Type: ACL; Schema: public; Owner: -
---
-
-REVOKE ALL ON FUNCTION public.extract_raster_band_count_from_geostats(geostats jsonb) FROM PUBLIC;
-GRANT ALL ON FUNCTION public.extract_raster_band_count_from_geostats(geostats jsonb) TO anon;
-
-
---
--- Name: FUNCTION extract_vector_geometry_type_from_geostats(geostats jsonb); Type: ACL; Schema: public; Owner: -
---
-
-REVOKE ALL ON FUNCTION public.extract_vector_geometry_type_from_geostats(geostats jsonb) FROM PUBLIC;
-GRANT ALL ON FUNCTION public.extract_vector_geometry_type_from_geostats(geostats jsonb) TO anon;
-
-
---
--- Name: FUNCTION get_first_band_offset(geostats jsonb); Type: ACL; Schema: public; Owner: -
---
-
-REVOKE ALL ON FUNCTION public.get_first_band_offset(geostats jsonb) FROM PUBLIC;
-GRANT ALL ON FUNCTION public.get_first_band_offset(geostats jsonb) TO anon;
-
-
---
--- Name: FUNCTION get_first_band_scale(geostats jsonb); Type: ACL; Schema: public; Owner: -
---
-
-REVOKE ALL ON FUNCTION public.get_first_band_scale(geostats jsonb) FROM PUBLIC;
-GRANT ALL ON FUNCTION public.get_first_band_scale(geostats jsonb) TO anon;
-
-
---
--- Name: FUNCTION get_representative_colors(geostats jsonb); Type: ACL; Schema: public; Owner: -
---
-
-REVOKE ALL ON FUNCTION public.get_representative_colors(geostats jsonb) FROM PUBLIC;
-GRANT ALL ON FUNCTION public.get_representative_colors(geostats jsonb) TO anon;
-
-
---
--- Name: TABLE data_sources; Type: ACL; Schema: public; Owner: -
---
-
-GRANT SELECT ON TABLE public.data_sources TO anon;
-GRANT SELECT,INSERT,DELETE ON TABLE public.data_sources TO seasketch_user;
-
-
---
--- Name: COLUMN data_sources.attribution; Type: ACL; Schema: public; Owner: -
---
-
-GRANT UPDATE(attribution) ON TABLE public.data_sources TO seasketch_user;
-
-
---
--- Name: COLUMN data_sources.maxzoom; Type: ACL; Schema: public; Owner: -
---
-
-GRANT UPDATE(maxzoom) ON TABLE public.data_sources TO seasketch_user;
-
-
---
--- Name: COLUMN data_sources.minzoom; Type: ACL; Schema: public; Owner: -
---
-
-GRANT UPDATE(minzoom) ON TABLE public.data_sources TO seasketch_user;
-
-
---
--- Name: COLUMN data_sources.url; Type: ACL; Schema: public; Owner: -
---
-
-GRANT UPDATE(url) ON TABLE public.data_sources TO seasketch_user;
-
-
---
--- Name: COLUMN data_sources.scheme; Type: ACL; Schema: public; Owner: -
---
-
-GRANT UPDATE(scheme) ON TABLE public.data_sources TO seasketch_user;
-
-
---
--- Name: COLUMN data_sources.tiles; Type: ACL; Schema: public; Owner: -
---
-
-GRANT UPDATE(tiles) ON TABLE public.data_sources TO seasketch_user;
-
-
---
--- Name: COLUMN data_sources.tile_size; Type: ACL; Schema: public; Owner: -
---
-
-GRANT UPDATE(tile_size) ON TABLE public.data_sources TO seasketch_user;
-
-
---
--- Name: COLUMN data_sources.encoding; Type: ACL; Schema: public; Owner: -
---
-
-GRANT UPDATE(encoding) ON TABLE public.data_sources TO seasketch_user;
-
-
---
--- Name: COLUMN data_sources.buffer; Type: ACL; Schema: public; Owner: -
---
-
-GRANT UPDATE(buffer) ON TABLE public.data_sources TO seasketch_user;
-
-
---
--- Name: COLUMN data_sources.cluster; Type: ACL; Schema: public; Owner: -
---
-
-GRANT UPDATE(cluster) ON TABLE public.data_sources TO seasketch_user;
-
-
---
--- Name: COLUMN data_sources.cluster_max_zoom; Type: ACL; Schema: public; Owner: -
---
-
-GRANT UPDATE(cluster_max_zoom) ON TABLE public.data_sources TO seasketch_user;
-
-
---
--- Name: COLUMN data_sources.cluster_properties; Type: ACL; Schema: public; Owner: -
---
-
-GRANT UPDATE(cluster_properties) ON TABLE public.data_sources TO seasketch_user;
-
-
---
--- Name: COLUMN data_sources.cluster_radius; Type: ACL; Schema: public; Owner: -
---
-
-GRANT UPDATE(cluster_radius) ON TABLE public.data_sources TO seasketch_user;
-
-
---
--- Name: COLUMN data_sources.generate_id; Type: ACL; Schema: public; Owner: -
---
-
-GRANT UPDATE(generate_id) ON TABLE public.data_sources TO seasketch_user;
-
-
---
--- Name: COLUMN data_sources.line_metrics; Type: ACL; Schema: public; Owner: -
---
-
-GRANT UPDATE(line_metrics) ON TABLE public.data_sources TO seasketch_user;
-
-
---
--- Name: COLUMN data_sources.promote_id; Type: ACL; Schema: public; Owner: -
---
-
-GRANT UPDATE(promote_id) ON TABLE public.data_sources TO seasketch_user;
-
-
---
--- Name: COLUMN data_sources.tolerance; Type: ACL; Schema: public; Owner: -
---
-
-GRANT UPDATE(tolerance) ON TABLE public.data_sources TO seasketch_user;
-
-
---
--- Name: COLUMN data_sources.coordinates; Type: ACL; Schema: public; Owner: -
---
-
-GRANT UPDATE(coordinates) ON TABLE public.data_sources TO seasketch_user;
-
-
---
--- Name: COLUMN data_sources.urls; Type: ACL; Schema: public; Owner: -
---
-
-GRANT UPDATE(urls) ON TABLE public.data_sources TO seasketch_user;
-
-
---
--- Name: COLUMN data_sources.query_parameters; Type: ACL; Schema: public; Owner: -
---
-
-GRANT UPDATE(query_parameters) ON TABLE public.data_sources TO seasketch_user;
-
-
---
--- Name: COLUMN data_sources.use_device_pixel_ratio; Type: ACL; Schema: public; Owner: -
---
-
-GRANT UPDATE(use_device_pixel_ratio) ON TABLE public.data_sources TO seasketch_user;
-
-
---
--- Name: COLUMN data_sources.supports_dynamic_layers; Type: ACL; Schema: public; Owner: -
---
-
-GRANT SELECT(supports_dynamic_layers) ON TABLE public.data_sources TO anon;
-GRANT INSERT(supports_dynamic_layers),UPDATE(supports_dynamic_layers) ON TABLE public.data_sources TO seasketch_user;
-
-
---
--- Name: COLUMN data_sources.translated_props; Type: ACL; Schema: public; Owner: -
---
-
-GRANT SELECT(translated_props) ON TABLE public.data_sources TO anon;
-GRANT UPDATE(translated_props) ON TABLE public.data_sources TO seasketch_user;
-
-
---
--- Name: COLUMN data_sources.arcgis_fetch_strategy; Type: ACL; Schema: public; Owner: -
---
-
-GRANT UPDATE(arcgis_fetch_strategy) ON TABLE public.data_sources TO seasketch_user;
-
-
---
--- Name: COLUMN data_sources.temporal; Type: ACL; Schema: public; Owner: -
---
-
-GRANT UPDATE(temporal) ON TABLE public.data_sources TO seasketch_user;
 
 
 --
@@ -41445,6 +43039,13 @@ GRANT ALL ON FUNCTION public.label_for_form_element_value(attr_value jsonb, comp
 
 
 --
+-- Name: FUNCTION layer_stack_order_pending(p_project_id integer); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.layer_stack_order_pending(p_project_id integer) FROM PUBLIC;
+
+
+--
 -- Name: FUNCTION lca(public.ltree[]); Type: ACL; Schema: public; Owner: -
 --
 
@@ -41514,6 +43115,13 @@ GRANT ALL ON FUNCTION public.lcfirst(word text) TO anon;
 
 REVOKE ALL ON FUNCTION public.leave_project(project_id integer) FROM PUBLIC;
 GRANT ALL ON FUNCTION public.leave_project(project_id integer) TO seasketch_user;
+
+
+--
+-- Name: FUNCTION list_order_pending(p_project_id integer); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.list_order_pending(p_project_id integer) FROM PUBLIC;
 
 
 --
@@ -42047,10 +43655,31 @@ REVOKE ALL ON FUNCTION public.overlay_data_tables_draft_toc_has_changes() FROM P
 
 
 --
+-- Name: FUNCTION overlay_list_has_unpublished_changes(p_project_id integer); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.overlay_list_has_unpublished_changes(p_project_id integer) FROM PUBLIC;
+
+
+--
+-- Name: FUNCTION overlay_order_pending(p_project_id integer); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.overlay_order_pending(p_project_id integer) FROM PUBLIC;
+
+
+--
 -- Name: FUNCTION path(public.geometry); Type: ACL; Schema: public; Owner: -
 --
 
 REVOKE ALL ON FUNCTION public.path(public.geometry) FROM PUBLIC;
+
+
+--
+-- Name: FUNCTION pending_publish_items_for_project(p_project_id integer); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.pending_publish_items_for_project(p_project_id integer) FROM PUBLIC;
 
 
 --
@@ -43010,6 +44639,14 @@ GRANT ALL ON FUNCTION public.projects_latest_posts(project public.projects) TO a
 
 
 --
+-- Name: FUNCTION projects_list_order_pending(project public.projects); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.projects_list_order_pending(project public.projects) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.projects_list_order_pending(project public.projects) TO seasketch_user;
+
+
+--
 -- Name: FUNCTION projects_map_data_requests(project public.projects, period public.activity_stats_period); Type: ACL; Schema: public; Owner: -
 --
 
@@ -43052,6 +44689,14 @@ GRANT ALL ON FUNCTION public.projects_my_sketches(project public.projects) TO an
 
 
 --
+-- Name: FUNCTION projects_overlay_order_pending(project public.projects); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.projects_overlay_order_pending(project public.projects) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.projects_overlay_order_pending(project public.projects) TO seasketch_user;
+
+
+--
 -- Name: FUNCTION projects_participant_count(p public.projects); Type: ACL; Schema: public; Owner: -
 --
 
@@ -43065,6 +44710,14 @@ GRANT ALL ON FUNCTION public.projects_participant_count(p public.projects) TO se
 
 REVOKE ALL ON FUNCTION public.projects_participants(p public.projects, order_by public.participant_sort_by, direction public.sort_by_direction) FROM PUBLIC;
 GRANT ALL ON FUNCTION public.projects_participants(p public.projects, order_by public.participant_sort_by, direction public.sort_by_direction) TO seasketch_user;
+
+
+--
+-- Name: FUNCTION projects_pending_publish_items(project public.projects); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.projects_pending_publish_items(project public.projects) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.projects_pending_publish_items(project public.projects) TO seasketch_user;
 
 
 --
@@ -43259,6 +44912,14 @@ REVOKE ALL ON FUNCTION public.publish_report_snapshot(p_draft_report_id integer)
 
 REVOKE ALL ON FUNCTION public.publish_table_of_contents("projectId" integer) FROM PUBLIC;
 GRANT ALL ON FUNCTION public.publish_table_of_contents("projectId" integer) TO seasketch_user;
+
+
+--
+-- Name: FUNCTION publish_table_of_contents_items("projectId" integer, "stableIds" text[]); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.publish_table_of_contents_items("projectId" integer, "stableIds" text[]) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.publish_table_of_contents_items("projectId" integer, "stableIds" text[]) TO seasketch_user;
 
 
 --

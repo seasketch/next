@@ -2,7 +2,7 @@
 import { MockedProvider } from "@apollo/client/testing";
 import { MockedResponse } from "@apollo/client/testing";
 import { GraphQLError } from "graphql";
-import { render, waitFor } from "@testing-library/react";
+import { fireEvent, render, waitFor } from "@testing-library/react";
 import { Route, MemoryRouter } from "react-router-dom";
 import { ToastProvider } from "../../components/Toast";
 import {
@@ -28,8 +28,9 @@ beforeAll(() => {
     "admin:data",
     {
       "and {{count}} items inside": "and {{count}} items inside",
-      "Included with {{name}}": "Included with {{name}}",
-      "Publish {{count}} selected": "Publish {{count}} selected",
+      "Must be published together": "Must be published together",
+      "Must be published with {{names}}": "Must be published with {{names}}",
+      Publish: "Publish",
       "Layer stacking order": "Layer stacking order",
     },
     true,
@@ -159,7 +160,19 @@ test("selective publish binds a new folder to the layer that moved into it", asy
   renderModal();
   await waitFor(() => {
     expect(document.body.textContent).toContain("Coral cover");
+    expect(document.body.textContent).toContain("and {{count}} items inside");
+  });
+  expect(document.body.textContent).not.toContain("Old reef");
+  const inside = Array.from(document.querySelectorAll("button")).find(
+    (button) => button.textContent === "and {{count}} items inside"
+  );
+  fireEvent.pointerEnter(inside as HTMLButtonElement);
+  await waitFor(() => {
     expect(document.body.textContent).toContain("Old reef");
+  });
+  fireEvent.pointerLeave(inside as HTMLButtonElement);
+  await waitFor(() => {
+    expect(document.body.textContent).not.toContain("Old reef");
   });
 
   const habitats = document.getElementById(
@@ -185,7 +198,7 @@ test("selective publish binds a new folder to the layer that moved into it", asy
   ).click();
   const included = await waitFor(() => {
     const button = document.querySelector(
-      "[aria-label*='Included with']"
+      "button[data-together='habitats coral']"
     ) as HTMLButtonElement | null;
     expect(button).toBeTruthy();
     return button as HTMLButtonElement;
@@ -193,6 +206,12 @@ test("selective publish binds a new folder to the layer that moved into it", asy
   expect(
     document.getElementById("selective-publish-habitats")
   ).toBeNull();
+  expect(document.body.textContent).not.toContain("Included with");
+  expect(document.body.textContent).not.toContain("+ 1 included");
+  expect(document.querySelector(".bg-emerald-50")).toBeNull();
+  expect(
+    document.querySelectorAll("button[data-together='habitats coral']")
+  ).toHaveLength(2);
 
   included.click();
   await waitFor(() => {
@@ -274,7 +293,7 @@ test("a server error is shown with its message", async () => {
   renderModal([details, metadata, failure]);
   const button = await waitFor(() => {
     const element = Array.from(document.querySelectorAll("button")).find(
-      (candidate) => /^Publish .*selected$/.test(candidate.textContent?.trim() || "")
+      (candidate) => candidate.textContent?.trim() === "Publish"
     );
     expect(element).toBeTruthy();
     expect(element?.disabled).toBe(false);

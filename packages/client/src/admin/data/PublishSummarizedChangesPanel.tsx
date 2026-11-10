@@ -131,10 +131,13 @@ export default function PublishSummarizedChangesPanel({
   changeLogs,
   draftItems,
   tableOfContentsLastPublished,
+  listOrderPending = false,
 }: {
   changeLogs: ChangeLogDetailsFragment[];
   draftItems: DraftTocItemForPublishSummary[];
   tableOfContentsLastPublished?: string | null;
+  /** True when sibling order differs even if no list-order changelog was written. */
+  listOrderPending?: boolean;
 }) {
   const { t } = useTranslation("admin:data");
   const { t: adminT } = useTranslation("admin");
@@ -154,7 +157,10 @@ export default function PublishSummarizedChangesPanel({
     initialId?: string;
   } | null>(null);
 
-  if (!changeLogs.length) {
+  const listOrderFromLog = Boolean(summaryModel.listOrderSummary);
+  const showListOrder = listOrderFromLog || listOrderPending;
+
+  if (!changeLogs.length && !showListOrder) {
     const daysSinceIntroduction = Math.floor(
       (Date.now() - CHANGE_LOG_INTRODUCTION_DATE.getTime()) /
         (1000 * 60 * 60 * 24)
@@ -188,14 +194,21 @@ export default function PublishSummarizedChangesPanel({
   if (summaryModel.zOrderSummary) {
     totalChangeEvents += summaryModel.zOrderSummary.changeCount;
   }
+  if (summaryModel.listOrderSummary) {
+    totalChangeEvents += summaryModel.listOrderSummary.changeCount;
+  } else if (listOrderPending) {
+    totalChangeEvents += 1;
+  }
 
   const affectedEntityCount =
     summaryModel.added.length +
     summaryModel.updated.length +
     summaryModel.removed.length +
-    (summaryModel.zOrderSummary ? 1 : 0);
+    (summaryModel.zOrderSummary ? 1 : 0) +
+    (showListOrder ? 1 : 0);
 
-  const otherChangesCount = summaryModel.zOrderSummary ? 1 : 0;
+  const otherChangesCount =
+    (summaryModel.zOrderSummary ? 1 : 0) + (showListOrder ? 1 : 0);
 
   return (
     <Tooltip.Provider delayDuration={120} skipDelayDuration={300}>
@@ -278,7 +291,22 @@ export default function PublishSummarizedChangesPanel({
             count={otherChangesCount}
           >
             {summaryModel.zOrderSummary ? (
-              <ZOrderSummarizedRow summary={summaryModel.zOrderSummary} t={t} />
+              <OrderSummarizedRow
+                summary={summaryModel.zOrderSummary}
+                t={t}
+                title={
+                  <Trans ns="admin:data">Layer z-order stacking updated</Trans>
+                }
+              />
+            ) : null}
+            {showListOrder ? (
+              <OrderSummarizedRow
+                summary={summaryModel.listOrderSummary}
+                t={t}
+                title={
+                  <Trans ns="admin:data">Layer list order updated</Trans>
+                }
+              />
             ) : null}
           </SummarizedSection>
         </div>
@@ -302,12 +330,14 @@ export default function PublishSummarizedChangesPanel({
   );
 }
 
-function ZOrderSummarizedRow({
+function OrderSummarizedRow({
   summary,
   t,
+  title,
 }: {
-  summary: PublishZOrderSummary;
+  summary: PublishZOrderSummary | null;
   t: (key: string) => string;
+  title: ReactNode;
 }) {
   return (
     <li className="px-4 py-4">
@@ -319,18 +349,18 @@ function ZOrderSummarizedRow({
                 className="h-[1.125rem] w-[1.125rem] flex-none text-indigo-500"
                 aria-hidden
               />
-              <span className="min-w-0">
-                <Trans ns="admin:data">Layer z-order stacking updated</Trans>
-              </span>
+              <span className="min-w-0">{title}</span>
             </span>
           </p>
-          <SummaryMetaRow
-            editors={summary.editors}
-            primaryEditor={summary.primaryEditor}
-            changeCount={summary.changeCount}
-            lastChangeAt={summary.lastChangeAt}
-            t={t}
-          />
+          {summary ? (
+            <SummaryMetaRow
+              editors={summary.editors}
+              primaryEditor={summary.primaryEditor}
+              changeCount={summary.changeCount}
+              lastChangeAt={summary.lastChangeAt}
+              t={t}
+            />
+          ) : null}
         </div>
       </div>
     </li>

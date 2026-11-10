@@ -17,6 +17,7 @@ import LayerTemporalFieldGroupListItem from "./LayerTemporalFieldGroupListItem";
 import LayerTitleFieldGroupListItem from "./LayerTitleFieldGroupListItem";
 import LayerUploadedFieldGroupListItem from "./LayerUploadedFieldGroupListItem";
 import LayersPublishedFieldGroupListItem from "./LayersPublishedFieldGroupListItem";
+import LayersListOrderChangeFieldGroupListItem from "./LayersListOrderChangeFieldGroupListItem";
 import LayersZOrderChangeFieldGroupListItem from "./LayersZOrderChangeFieldGroupListItem";
 import ResolvableLayerCommentFieldGroupListItem from "./ResolvableLayerCommentFieldGroupListItem";
 import DataTableCreatedFieldGroupListItem from "./DataTableCreatedFieldGroupListItem";
@@ -55,6 +56,8 @@ export const FIELD_GROUP_LIST_ITEM_COMPONENTS: Partial<
   [ChangeLogFieldGroup.FolderCreated]: FolderCreatedFieldGroupListItem,
   [ChangeLogFieldGroup.FolderType]: FolderTypeFieldGroupListItem,
   [ChangeLogFieldGroup.LayersPublished]: LayersPublishedFieldGroupListItem,
+  [ChangeLogFieldGroup.LayersListOrderChange]:
+    LayersListOrderChangeFieldGroupListItem,
   [ChangeLogFieldGroup.LayersZOrderChange]: LayersZOrderChangeFieldGroupListItem,
   [ChangeLogFieldGroup.ResolvableLayerCommentsCreated]:
     ResolvableLayerCommentFieldGroupListItem,

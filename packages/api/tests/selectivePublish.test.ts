@@ -465,6 +465,23 @@ describe("selective overlay publish", () => {
     });
   });
 
+  test("7b. undoing a title edit clears the publish button flag", async () => {
+    await asAdmin(async (conn, projectId) => {
+      const layer = await addLayer(conn, projectId, "Coral");
+      await publishAll(conn, projectId);
+      await conn.any(sql`
+        update table_of_contents_items set title = 'Renamed' where id = ${layer.itemId}
+      `);
+      expect(await hasChanges(conn, projectId)).toBe(true);
+      expect(await pending(conn, projectId)).toHaveLength(1);
+      await conn.any(sql`
+        update table_of_contents_items set title = 'Coral' where id = ${layer.itemId}
+      `);
+      expect(await pending(conn, projectId)).toHaveLength(0);
+      expect(await hasChanges(conn, projectId)).toBe(false);
+    });
+  });
+
   test("8. a field the changelog does not track is still an updated unit", async () => {
     await asAdmin( async (conn, projectId) => {
       const layer = await addLayer(conn, projectId, "Coral");
@@ -849,6 +866,47 @@ describe("selective overlay publish", () => {
     });
   });
 
+  test("22b. a layer moved into a folder and deleted with it is bundled", async () => {
+    await asAdmin(async (conn, projectId) => {
+      const outer = await addFolder(conn, projectId, "Outer");
+      const inner = await addFolder(conn, projectId, "Inner");
+      const layer = await addLayer(conn, projectId, "Coral");
+      await publishAll(conn, projectId);
+      await move(conn, inner.id, outer.stableId, 0);
+      await move(conn, layer.itemId, inner.stableId, 0);
+      await conn.any(sql`select delete_table_of_contents_branch(${outer.id})`);
+      const rows = await pending(conn, projectId);
+      expect(rows).toHaveLength(3);
+      expect(new Set(rows.map((row) => row.bundle_id))).toEqual(
+        new Set([outer.stableId])
+      );
+      expect(
+        rows.find((row) => row.stable_id === outer.stableId).included_in_bundle
+      ).toBe(false);
+      expect(
+        rows.filter((row) => row.included_in_bundle).map((row) => row.stable_id).sort()
+      ).toEqual([inner.stableId, layer.stableId].sort());
+      await publishSome(conn, projectId, [outer.stableId]);
+      expect(await publishedTitles(conn, projectId)).toEqual([]);
+    });
+  });
+
+  test("22c. a layer moved back out is not bundled with the deleted folder", async () => {
+    await asAdmin(async (conn, projectId) => {
+      const folder = await addFolder(conn, projectId, "Habitats");
+      const layer = await addLayer(conn, projectId, "Coral");
+      await publishAll(conn, projectId);
+      await move(conn, layer.itemId, folder.stableId, 0);
+      await move(conn, layer.itemId, null, 0);
+      await conn.any(sql`select delete_table_of_contents_branch(${layer.itemId})`);
+      await conn.any(sql`select delete_table_of_contents_branch(${folder.id})`);
+      const rows = await pending(conn, projectId);
+      expect(rows).toHaveLength(2);
+      expect(rows.every((row) => row.bundle_id == null)).toBe(true);
+      expect(rows.every((row) => row.included_in_bundle === false)).toBe(true);
+    });
+  });
+
   test("23. renaming a folder is one updated unit", async () => {
     await asAdmin( async (conn, projectId) => {
       const folder = await addFolder(conn, projectId, "Habitats");
@@ -998,6 +1056,46 @@ describe("selective overlay publish", () => {
       `);
       expect(title).toBe("C2");
       expect(await hasChanges(conn, projectId)).toBe(true);
+    });
+  });
+
+  test("30b. z-order alone marks the draft list as changed", async () => {
+    await asAdmin(async (conn, projectId) => {
+      const a = await addLayer(conn, projectId, "A");
+      const b = await addLayer(conn, projectId, "B");
+      await publishAll(conn, projectId);
+      await conn.any(sql`
+        select update_z_indexes(${sql.array([b.layerId, a.layerId], "int4")})
+      `);
+      expect(await hasChanges(conn, projectId)).toBe(true);
+      expect(await stackOrderPending(conn, projectId)).toBe(true);
+    });
+  });
+
+  test("30c. reordering siblings is pending and recorded for the publish review", async () => {
+    await asAdmin(async (conn, projectId) => {
+      const a = await addLayer(conn, projectId, "A");
+      const b = await addLayer(conn, projectId, "B");
+      await publishAll(conn, projectId);
+      await move(conn, b.itemId, null, 0);
+      await move(conn, a.itemId, null, 1);
+      expect(
+        await asPostgres(conn, async () =>
+          Boolean(
+            await conn.oneFirst(sql`select list_order_pending(${projectId})`)
+          )
+        )
+      ).toBe(true);
+      expect(await hasChanges(conn, projectId)).toBe(true);
+      expect(
+        Number(
+          await conn.oneFirst(sql`
+            select count(*)::int from change_logs
+            where project_id = ${projectId}
+              and field_group = 'layers:list-order-change'
+          `)
+        )
+      ).toBeGreaterThan(0);
     });
   });
 

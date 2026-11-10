@@ -1113,6 +1113,7 @@ enum ChangeLogFieldGroup {
   FOLDER_DELETED
   FOLDER_TITLE
   FOLDER_TYPE
+  LAYERS_LIST_ORDER_CHANGE
   LAYERS_PUBLISHED
   LAYERS_Z_ORDER_CHANGE
   LAYER_ACL
@@ -11525,7 +11526,7 @@ type Mutation {
   ): UpdateTopicPayload
 
   """
-  Batch reassigns z_index for one project. Records change_logs (layers:z-order-change) on projects when session.user_id is set; to_summary includes reordered_count.
+  Batch reassigns z_index for one project. Records change_logs (layers:z-order-change) on projects when session.user_id is set; to_summary includes reordered_count. Marks the draft overlay list as changed.
   """
   updateZIndexes(
     """
@@ -12884,6 +12885,11 @@ type Project implements Node {
     """
     offset: Int
   ): PostsConnection!
+
+  """
+  Whether sibling order differs between the draft and published overlay lists. Only a full publish ships list order.
+  """
+  listOrderPending: Boolean
 
   """
   If a logoUrl is provided, it will link to this url in a new window if provided.

@@ -16,6 +16,7 @@ query DraftTableOfContents($slug: String!) {
   projectBySlug(slug: $slug) {
     id
     draftTableOfContentsHasChanges
+    overlayOrderPending
     tableOfContentsLastPublished
     # Keep auth UUID list in sync when draft TOC changes (e.g. new uploads)
     hostedTileUuidsRequiringAuth
@@ -1334,6 +1335,7 @@ query ChangeLogsSinceLastPublish($slug: String!) {
   projectBySlug(slug: $slug) {
     id
     tableOfContentsLastPublished
+    listOrderPending
     commentsSinceLastPublish {
       ...ResolvableLayerCommentThread
     }

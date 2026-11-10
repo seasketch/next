@@ -35,8 +35,25 @@ function layersLabel(t: TFunction, n: number) {
   return n === 1 ? t("1 layer") : `${n} ${t("layers")}`;
 }
 
+function foldersLabel(t: TFunction, n: number) {
+  return n === 1 ? t("1 folder") : `${n} ${t("folders")}`;
+}
+
 function othersLabel(t: TFunction, n: number) {
   return n === 1 ? t("1 other") : `${n} ${t("others")}`;
+}
+
+/** Layers and folders that shipped, named separately when both are present. */
+function publishedChangesLabel(t: TFunction, layers: number, folders: number) {
+  const layerText = layers > 0 ? layersLabel(t, layers) : "";
+  const folderText = folders > 0 ? foldersLabel(t, folders) : "";
+  if (layerText && folderText) {
+    return `${layerText} ${t("and")} ${folderText}`;
+  }
+  if (folderText) {
+    return folderText;
+  }
+  return layersLabel(t, layers);
 }
 
 function ratioLabel(t: TFunction, shipped: number, total: number) {
@@ -53,13 +70,30 @@ export default function LayersPublishedFieldGroupListItem(
   const fullPublish = props.changeLog.fullOverlayPublish === true;
   const items = namedItems(props.changeLog.publishedOverlayItems);
   const shipped = items.filter((item) => !item.isFolder).length;
+  const folderCount = items.length - shipped;
   const names = (label: string) => (
     <PublishedLayerNames items={items} label={label} />
   );
   const sentence =
     props.scope === "project"
-      ? projectSentence({ t, manifestKnown, fullPublish, layerCount, shipped, names })
-      : layerSentence({ t, manifestKnown, fullPublish, layerCount, shipped, names });
+      ? projectSentence({
+          t,
+          manifestKnown,
+          fullPublish,
+          layerCount,
+          shipped,
+          folderCount,
+          names,
+        })
+      : layerSentence({
+          t,
+          manifestKnown,
+          fullPublish,
+          layerCount,
+          shipped,
+          folderCount,
+          names,
+        });
 
   return (
     <BaseFieldGroupListItem
@@ -78,6 +112,7 @@ function projectSentence({
   fullPublish,
   layerCount,
   shipped,
+  folderCount,
   names,
 }: {
   t: TFunction;
@@ -85,6 +120,7 @@ function projectSentence({
   fullPublish: boolean;
   layerCount: number;
   shipped: number;
+  folderCount: number;
   names: (label: string) => ReactNode;
 }) {
   if (!manifestKnown) {
@@ -112,7 +148,7 @@ function projectSentence({
       </>
     );
   }
-  const label = layersLabel(t, shipped);
+  const label = publishedChangesLabel(t, shipped, folderCount);
   return (
     <>
       {t("published changes to")} {names(label)}
@@ -126,6 +162,7 @@ function layerSentence({
   fullPublish,
   layerCount,
   shipped,
+  folderCount,
   names,
 }: {
   t: TFunction;
@@ -133,6 +170,7 @@ function layerSentence({
   fullPublish: boolean;
   layerCount: number;
   shipped: number;
+  folderCount: number;
   names: (label: string) => ReactNode;
 }) {
   if (!manifestKnown) {
@@ -159,12 +197,18 @@ function layerSentence({
       </>
     );
   }
-  if (others === 0) {
+  if (others === 0 && folderCount === 0) {
     return t("published this layer");
   }
+  const companion =
+    folderCount === 0
+      ? othersLabel(t, others)
+      : others === 0
+      ? foldersLabel(t, folderCount)
+      : `${othersLabel(t, others)} ${t("and")} ${foldersLabel(t, folderCount)}`;
   return (
     <>
-      {t("published this layer along with")} {names(othersLabel(t, others))}
+      {t("published this layer along with")} {names(companion)}
     </>
   );
 }

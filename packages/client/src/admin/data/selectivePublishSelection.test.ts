@@ -3,6 +3,7 @@ import {
   bundleMates,
   checkUnit,
   closureOf,
+  coPublishGroup,
   impliedCheckable,
   includedWithTitles,
   linkedRowIds,
@@ -233,6 +234,95 @@ describe("selective publish selection", () => {
     const layer = unit({ stableId: "layer" });
     expect(closureOf(["missing", "layer"], [layer])).toEqual(["layer"]);
     expect(checkUnit(["layer"], "layer")).toEqual(["layer"]);
+  });
+
+  test("a co-publish group names both sides while the dependency is selected", () => {
+    const folder = unit({
+      stableId: "folder",
+      kind: "added",
+      title: "Habitats",
+      isFolder: true,
+    });
+    const layer = unit({
+      stableId: "layer",
+      title: "Coral",
+      requiresStableIds: ["folder"],
+    });
+    const units = [folder, layer];
+    expect(coPublishGroup("layer", ["layer"], units).map((row) => row.stableId)).toEqual([
+      "folder",
+      "layer",
+    ]);
+    expect(coPublishGroup("folder", ["layer"], units).map((row) => row.stableId)).toEqual([
+      "folder",
+      "layer",
+    ]);
+    expect(coPublishGroup("folder", ["folder", "layer"], units).map((row) => row.title)).toEqual([
+      "Habitats",
+      "Coral",
+    ]);
+    expect(coPublishGroup("folder", ["folder"], units).map((row) => row.stableId)).toEqual([
+      "folder",
+    ]);
+    expect(coPublishGroup("missing", ["layer"], units)).toEqual([]);
+  });
+
+  test("a co-publish group follows a chain of new folders", () => {
+    const outer = unit({
+      stableId: "outer",
+      kind: "added",
+      title: "Outer",
+      isFolder: true,
+    });
+    const inner = unit({
+      stableId: "inner",
+      kind: "added",
+      title: "Inner",
+      isFolder: true,
+      requiresStableIds: ["outer"],
+    });
+    const layer = unit({
+      stableId: "layer",
+      title: "Coral",
+      requiresStableIds: ["inner"],
+    });
+    const units = [outer, inner, layer];
+    expect(coPublishGroup("layer", ["layer"], units).map((row) => row.stableId)).toEqual([
+      "outer",
+      "inner",
+      "layer",
+    ]);
+    expect(coPublishGroup("outer", ["layer"], units).map((row) => row.stableId)).toEqual([
+      "outer",
+      "inner",
+      "layer",
+    ]);
+  });
+
+  test("bundle mates stay in the co-publish group even when nothing is selected", () => {
+    const folder = unit({
+      stableId: "folder",
+      kind: "removed",
+      title: "Benthic",
+      isFolder: true,
+      bundleId: "folder",
+    });
+    const child = unit({
+      stableId: "child",
+      kind: "removed",
+      title: "Old reef",
+      bundleId: "folder",
+      includedInBundle: true,
+    });
+    const units = [folder, child];
+    expect(coPublishGroup("folder", [], units).map((row) => row.title)).toEqual([
+      "Benthic",
+      "Old reef",
+    ]);
+    expect(coPublishGroup("child", [], units).map((row) => row.stableId)).toEqual([
+      "folder",
+      "child",
+    ]);
   });
 
   test("breadcrumbs mark an added ancestor and stop at a missing parent", () => {
