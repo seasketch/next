@@ -12686,6 +12686,17 @@ type Project implements Node {
   """Should be a short length in order to fit in the project header."""
   description: String
   downloadableLayersCount: Int
+
+  """
+  Draft reports for this project, including reports that are not assigned to a sketch class. Published versions are omitted. Admins only.
+  """
+  draftReports(
+    """Only read the first `n` values of the set."""
+    first: Int
+
+    """Skip the first `n` values."""
+    offset: Int
+  ): [Report!]
   draftTableOfContentsHasChanges: Boolean!
 
   """

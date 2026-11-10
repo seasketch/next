@@ -52,34 +52,89 @@ function mergeComponentSettingsForCopy(
   return { copiedFromCardId: sourceCardId };
 }
 
-type TabRow = NonNullable<
-  NonNullable<
-    NonNullable<
-      CopyableReportCardsQuery["project"]
-    >["sketchClasses"][number]["draftReport"]
-  >["tabs"]
->[number];
+type CopyableCard = { id: number; position: number; title?: string | null };
 
-type SourceCard = NonNullable<TabRow["cards"]>[number];
-
-type CopyableSketchClassRow = NonNullable<
-  NonNullable<CopyableReportCardsQuery["project"]>["sketchClasses"]
->[number];
-
-type GroupedSketchClass = {
-  sketchClassId: number;
-  sketchClassName: string;
+type GroupedCopyableReport<TCard extends CopyableCard> = {
+  reportId: number;
+  reportTitle: string;
   hideTabTitles: boolean;
   tabs: Array<{
     tabId: number;
     tabTitle: string;
-    cards: SourceCard[];
+    cards: TCard[];
   }>;
 };
 
+type CopyableReport<TCard extends CopyableCard> = {
+  id: number;
+  title?: string | null;
+  tabs?: ReadonlyArray<
+    | {
+        id: number;
+        position: number;
+        title: string;
+        cards?: ReadonlyArray<TCard | null> | null;
+      }
+    | null
+  > | null;
+};
+
+/**
+ * Draft reports for this project, excluding the one open in the editor.
+ * Sections are keyed by report title. Reports with no cards are omitted.
+ */
+export function groupCopyableReports<TCard extends CopyableCard>(
+  reports:
+    | ReadonlyArray<CopyableReport<TCard> | null>
+    | null
+    | undefined,
+  currentReportId: number | null
+): GroupedCopyableReport<TCard>[] {
+  const result: GroupedCopyableReport<TCard>[] = [];
+  const seenReportIds = new Set<number>();
+
+  for (const report of reports ?? []) {
+    if (!report || report.id === currentReportId || seenReportIds.has(report.id)) {
+      continue;
+    }
+    seenReportIds.add(report.id);
+    const tabs = [...(report.tabs ?? [])]
+      .filter((tab): tab is NonNullable<typeof tab> => tab != null)
+      .sort((a, b) => a.position - b.position || a.id - b.id)
+      .map((tab) => ({
+        tabId: tab.id,
+        tabTitle: tab.title,
+        cards: [...(tab.cards ?? [])]
+          .filter((card): card is TCard => card != null)
+          .sort((a, b) => a.position - b.position || a.id - b.id),
+      }))
+      .filter((tab) => tab.cards.length > 0);
+    if (tabs.length === 0) {
+      continue;
+    }
+    result.push({
+      reportId: report.id,
+      reportTitle: report.title?.trim() ?? "",
+      hideTabTitles: tabs.length <= 1,
+      tabs,
+    });
+  }
+
+  result.sort((a, b) => {
+    const byTitle = a.reportTitle.localeCompare(b.reportTitle, undefined, {
+      sensitivity: "base",
+    });
+    if (byTitle !== 0) {
+      return byTitle;
+    }
+    return a.reportId - b.reportId;
+  });
+
+  return result;
+}
+
 export function CopyCardsFromReportPopover({
   targetTabId,
-  currentSketchClassId,
   draftReportId,
   demonstrationSketchId,
   existingCopies,
@@ -88,8 +143,7 @@ export function CopyCardsFromReportPopover({
   copyQueryLoading,
 }: {
   targetTabId: number;
-  currentSketchClassId: number;
-  /** Draft report id for `Report.dependencies(sketchId)` — must refetch after cards change. */
+  /** Draft report open in the editor. Excluded from the list, and refetched after cards change. */
   draftReportId: number | null;
   /** Demonstration sketch used by `ReportDependenciesContextProvider`. */
   demonstrationSketchId: number | null;
@@ -114,49 +168,14 @@ export function CopyCardsFromReportPopover({
   const [addReportCard] = useAddReportCardMutation({ onError });
   const [deleteReportCard] = useDeleteReportCardMutation({ onError });
 
-  const grouped = useMemo(() => {
-    const sketchClasses =
-      copyQueryData?.project?.sketchClasses?.filter(
-        (sc: CopyableSketchClassRow) => sc.id !== currentSketchClassId
-      ) ?? [];
-
-    const eligible = sketchClasses.filter(
-      (sc: CopyableSketchClassRow) =>
-        sc.previewNewReports || sc.isGeographyClippingEnabled
-    );
-
-    const sortedClasses = [...eligible].sort((a, b) =>
-      a.name.localeCompare(b.name)
-    );
-
-    const result: GroupedSketchClass[] = [];
-
-    for (const sc of sortedClasses) {
-      const tabs = [...(sc.draftReport?.tabs ?? [])].sort(
-        (a, b) => a.position - b.position
-      );
-      const hideTabTitles = tabs.length <= 1;
-
-      let cardCount = 0;
-      for (const tab of tabs) {
-        cardCount += (tab.cards ?? []).length;
-      }
-      if (cardCount === 0) continue;
-
-      result.push({
-        sketchClassId: sc.id,
-        sketchClassName: sc.name,
-        hideTabTitles,
-        tabs: tabs.map((tab) => ({
-          tabId: tab.id,
-          tabTitle: tab.title,
-          cards: [...(tab.cards ?? [])].sort((a, b) => a.position - b.position),
-        })),
-      });
-    }
-
-    return result;
-  }, [copyQueryData?.project?.sketchClasses, currentSketchClassId]);
+  const grouped = useMemo(
+    () =>
+      groupCopyableReports(
+        copyQueryData?.project?.draftReports,
+        draftReportId
+      ),
+    [copyQueryData?.project?.draftReports, draftReportId]
+  );
 
   const toggleCard = useCallback((id: number) => {
     setSelectedIds((prev) => {
@@ -171,7 +190,8 @@ export function CopyCardsFromReportPopover({
   }, []);
 
   const handleCopy = useCallback(async () => {
-    const ordered: SourceCard[] = [];
+    type OrderedCard = (typeof grouped)[number]["tabs"][number]["cards"][number];
+    const ordered: OrderedCard[] = [];
     for (const g of grouped) {
       for (const tab of g.tabs) {
         for (const c of tab.cards) {
@@ -280,7 +300,6 @@ export function CopyCardsFromReportPopover({
   }, [
     addReportCard,
     client,
-    currentSketchClassId,
     demonstrationSketchId,
     deleteReportCard,
     draftReportId,
@@ -308,7 +327,7 @@ export function CopyCardsFromReportPopover({
           {t("Copy From Another Report")}
         </h2> */}
         <p className="mt-1 max-w-[22rem] text-xs leading-relaxed text-gray-500">
-          {t("Copy cards from reports in other sketch classes.")}
+          {t("Copy cards from other reports.")}
         </p>
       </header>
 
@@ -321,15 +340,15 @@ export function CopyCardsFromReportPopover({
           <div className="space-y-0">
             {grouped.map((g, groupIndex) => (
               <section
-                key={g.sketchClassId}
+                key={g.reportId}
                 className={
                   groupIndex > 0
                     ? "mt-4 border-t border-gray-100 pt-4"
                     : undefined
                 }
               >
-                <h3 className="mb-2 px-2 text-[11px] font-semibold uppercase tracking-wider text-gray-400">
-                  {g.sketchClassName}
+                <h3 className="mb-2 px-2 break-words text-[13px] font-semibold tracking-tight text-gray-800">
+                  {g.reportTitle.trim() || t("Untitled report")}
                 </h3>
                 <div className="space-y-3">
                   {g.tabs.map((tab) => (
