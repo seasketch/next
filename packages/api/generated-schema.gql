@@ -12665,7 +12665,7 @@ type Project implements Node {
   downloadableLayersCount: Int
 
   """
-  Draft reports for this project, including reports that are not assigned to a sketch class. Published versions are omitted.
+  Draft reports for this project, including reports that are not assigned to a sketch class. Published versions are omitted. Admins only.
   """
   draftReports(
     """Only read the first `n` values of the set."""

@@ -10980,7 +10980,7 @@ export type Project = Node & {
   /** Should be a short length in order to fit in the project header. */
   description?: Maybe<Scalars['String']>;
   downloadableLayersCount?: Maybe<Scalars['Int']>;
-  /** Draft reports for this project, including reports that are not assigned to a sketch class. Published versions are omitted. */
+  /** Draft reports for this project, including reports that are not assigned to a sketch class. Published versions are omitted. Admins only. */
   draftReports?: Maybe<Array<Report>>;
   draftTableOfContentsHasChanges: Scalars['Boolean'];
   /**

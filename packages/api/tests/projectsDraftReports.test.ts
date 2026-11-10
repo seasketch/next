@@ -64,4 +64,46 @@ describe("projects_draft_reports", () => {
       }
     );
   });
+
+  test("returns no drafts to anonymous or non-admin sessions", async () => {
+    await projectTransaction(
+      pool,
+      "public",
+      async (conn, projectId, adminId, [otherUser]) => {
+        await createSession(conn, adminId);
+        const reportId = (await conn.oneFirst(
+          sql`insert into reports (project_id, title)
+              values (${projectId}, 'Unpublished')
+              returning id`
+        )) as number;
+
+        const adminRows = await conn.any(sql`
+          select r.id
+          from projects p
+          cross join lateral public.projects_draft_reports(p) r
+          where p.id = ${projectId}
+        `);
+        expect(adminRows.map((row) => row.id)).toContain(reportId);
+
+        await createSession(conn, otherUser);
+        const signedInRows = await conn.any(sql`
+          select r.id
+          from projects p
+          cross join lateral public.projects_draft_reports(p) r
+          where p.id = ${projectId}
+        `);
+        expect(signedInRows).toEqual([]);
+
+        await createSession(conn);
+        await expect(
+          conn.any(sql`
+            select r.id
+            from projects p
+            cross join lateral public.projects_draft_reports(p) r
+            where p.id = ${projectId}
+          `)
+        ).rejects.toThrow(/permission denied/);
+      }
+    );
+  });
 });
