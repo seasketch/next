@@ -11,6 +11,7 @@
     "bootstrap": "npm install",
     "setup": "bash packages/api/scripts/setup.sh",
     "dev": "node scripts/dev.mjs",
+    "clean": "tsc -b --clean",
     "build": "tsc -b && npm run build:bundles",
     "build:api": "tsc -b packages/api && npm run build:bundles",
     "build:client-libs": "tsc -b packages/geostats-types packages/map-tile-cache-calculator packages/mapbox-gl-esri-sources packages/overlay-engine && npm run build:bundles",
