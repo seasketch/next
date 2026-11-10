@@ -30,10 +30,9 @@ jest.mock("../../generated/graphql", () => {
 const copyQueryData = {
   project: {
     id: 7,
-    sketchClasses: [
-      {
-        id: 1,
-        draftReport: {
+    draftReportsConnection: {
+      nodes: [
+        {
           id: 9,
           title: "Current report",
           tabs: [
@@ -54,10 +53,7 @@ const copyQueryData = {
           },
         ],
         },
-      },
-      {
-        id: 2,
-        draftReport: {
+        {
           id: 10,
           title: "Coastal habitats",
           tabs: [
@@ -93,8 +89,8 @@ const copyQueryData = {
           },
         ],
         },
-      },
-    ],
+      ],
+    },
   },
 };
 

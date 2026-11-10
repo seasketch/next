@@ -43,10 +43,8 @@ export default function SketchClassReportAssignment({
   }
 
   const currentDraftReportId = data?.sketchClass?.draftReport?.id;
-  const reports = (data?.reportsConnection?.nodes || []).filter(
-    (report: any) =>
-      report.projectId === data?.projectBySlug?.id && report.draftId == null
-  );
+  const reports =
+    data?.projectBySlug?.draftReportsConnection?.nodes?.filter(Boolean) || [];
 
   const hasReportAssignment = currentDraftReportId != null;
 

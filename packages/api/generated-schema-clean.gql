@@ -12663,6 +12663,29 @@ type Project implements Node {
   """Should be a short length in order to fit in the project header."""
   description: String
   downloadableLayersCount: Int
+
+  """
+  Draft reports for this project, including reports that are not assigned to a sketch class. Published versions are omitted.
+  """
+  draftReportsConnection(
+    """Read all values in the set after (below) this cursor."""
+    after: Cursor
+
+    """Read all values in the set before (above) this cursor."""
+    before: Cursor
+
+    """Only read the first `n` values of the set."""
+    first: Int
+
+    """Only read the last `n` values of the set."""
+    last: Int
+
+    """
+    Skip the first `n` values from our `after` cursor, an alternative to cursor
+    based pagination. May not be used with `last`.
+    """
+    offset: Int
+  ): ReportsConnection!
   draftTableOfContentsHasChanges: Boolean!
 
   """

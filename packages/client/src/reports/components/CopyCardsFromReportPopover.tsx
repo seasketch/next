@@ -80,18 +80,12 @@ type CopyableReport<TCard extends CopyableCard> = {
 };
 
 /**
- * Draft reports on this project's sketch classes, excluding the one open in
- * the editor. A report assigned to several classes appears once, under its title.
- * Reports with no cards are omitted.
+ * Draft reports for this project, excluding the one open in the editor.
+ * Sections are keyed by report title. Reports with no cards are omitted.
  */
 export function groupCopyableReports<TCard extends CopyableCard>(
-  sketchClasses:
-    | ReadonlyArray<
-        | {
-            draftReport?: CopyableReport<TCard> | null;
-          }
-        | null
-      >
+  reports:
+    | ReadonlyArray<CopyableReport<TCard> | null>
     | null
     | undefined,
   currentReportId: number | null
@@ -99,8 +93,7 @@ export function groupCopyableReports<TCard extends CopyableCard>(
   const result: GroupedCopyableReport<TCard>[] = [];
   const seenReportIds = new Set<number>();
 
-  for (const sketchClass of sketchClasses ?? []) {
-    const report = sketchClass?.draftReport;
+  for (const report of reports ?? []) {
     if (!report || report.id === currentReportId || seenReportIds.has(report.id)) {
       continue;
     }
@@ -178,10 +171,10 @@ export function CopyCardsFromReportPopover({
   const grouped = useMemo(
     () =>
       groupCopyableReports(
-        copyQueryData?.project?.sketchClasses,
+        copyQueryData?.project?.draftReportsConnection?.nodes,
         draftReportId
       ),
-    [copyQueryData?.project?.sketchClasses, draftReportId]
+    [copyQueryData?.project?.draftReportsConnection?.nodes, draftReportId]
   );
 
   const toggleCard = useCallback((id: number) => {

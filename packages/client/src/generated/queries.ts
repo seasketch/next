@@ -10980,6 +10980,8 @@ export type Project = Node & {
   /** Should be a short length in order to fit in the project header. */
   description?: Maybe<Scalars['String']>;
   downloadableLayersCount?: Maybe<Scalars['Int']>;
+  /** Draft reports for this project, including reports that are not assigned to a sketch class. Published versions are omitted. */
+  draftReportsConnection: ReportsConnection;
   draftTableOfContentsHasChanges: Scalars['Boolean'];
   /**
    * Draft layer lists, accessible only to admins. Make edits to the layer list and
@@ -11297,6 +11299,19 @@ export type ProjectDataSourcesForItemsArgs = {
   first?: Maybe<Scalars['Int']>;
   offset?: Maybe<Scalars['Int']>;
   tableOfContentsItemIds?: Maybe<Array<Maybe<Scalars['Int']>>>;
+};
+
+
+/**
+ * SeaSketch Project type. This root type contains most of the fields and queries
+ * needed to drive the application.
+ */
+export type ProjectDraftReportsConnectionArgs = {
+  after?: Maybe<Scalars['Cursor']>;
+  before?: Maybe<Scalars['Cursor']>;
+  first?: Maybe<Scalars['Int']>;
+  last?: Maybe<Scalars['Int']>;
+  offset?: Maybe<Scalars['Int']>;
 };
 
 
@@ -25372,10 +25387,9 @@ export type CopyableReportCardsQuery = (
   & { project?: Maybe<(
     { __typename?: 'Project' }
     & Pick<Project, 'id'>
-    & { sketchClasses: Array<(
-      { __typename?: 'SketchClass' }
-      & Pick<SketchClass, 'id'>
-      & { draftReport?: Maybe<(
+    & { draftReportsConnection: (
+      { __typename?: 'ReportsConnection' }
+      & { nodes: Array<(
         { __typename?: 'Report' }
         & Pick<Report, 'id' | 'title'>
         & { tabs?: Maybe<Array<(
@@ -25387,7 +25401,7 @@ export type CopyableReportCardsQuery = (
           )>> }
         )>> }
       )> }
-    )> }
+    ) }
   )> }
 );
 
@@ -25621,13 +25635,13 @@ export type ProjectReportsContextQuery = (
         & Pick<Report, 'id'>
       )> }
       & SketchingDetailsFragment
-    )> }
-  )>, reportsConnection?: Maybe<(
-    { __typename?: 'ReportsConnection' }
-    & { nodes: Array<(
-      { __typename?: 'Report' }
-      & Pick<Report, 'id' | 'title' | 'updatedAt' | 'projectId' | 'draftId'>
-    )> }
+    )>, draftReportsConnection: (
+      { __typename?: 'ReportsConnection' }
+      & { nodes: Array<(
+        { __typename?: 'Report' }
+        & Pick<Report, 'id' | 'title' | 'updatedAt'>
+      )> }
+    ) }
   )> }
 );
 
@@ -25642,12 +25656,13 @@ export type SketchClassReportAssignmentQuery = (
   & { projectBySlug?: Maybe<(
     { __typename?: 'Project' }
     & Pick<Project, 'id'>
-  )>, reportsConnection?: Maybe<(
-    { __typename?: 'ReportsConnection' }
-    & { nodes: Array<(
-      { __typename?: 'Report' }
-      & Pick<Report, 'id' | 'title' | 'projectId' | 'draftId'>
-    )> }
+    & { draftReportsConnection: (
+      { __typename?: 'ReportsConnection' }
+      & { nodes: Array<(
+        { __typename?: 'Report' }
+        & Pick<Report, 'id' | 'title'>
+      )> }
+    ) }
   )>, sketchClass?: Maybe<(
     { __typename?: 'SketchClass' }
     & Pick<SketchClass, 'id'>
@@ -33768,9 +33783,8 @@ export const CopyableReportCardsDocument = /*#__PURE__*/ gql`
     query CopyableReportCards($projectId: Int!) {
   project(id: $projectId) {
     id
-    sketchClasses {
-      id
-      draftReport {
+    draftReportsConnection {
+      nodes {
         id
         title
         tabs {
@@ -33965,14 +33979,12 @@ export const ProjectReportsContextDocument = /*#__PURE__*/ gql`
         id
       }
     }
-  }
-  reportsConnection {
-    nodes {
-      id
-      title
-      updatedAt
-      projectId
-      draftId
+    draftReportsConnection {
+      nodes {
+        id
+        title
+        updatedAt
+      }
     }
   }
 }
@@ -33981,13 +33993,11 @@ export const SketchClassReportAssignmentDocument = /*#__PURE__*/ gql`
     query SketchClassReportAssignment($slug: String!, $sketchClassId: Int!) {
   projectBySlug(slug: $slug) {
     id
-  }
-  reportsConnection {
-    nodes {
-      id
-      title
-      projectId
-      draftId
+    draftReportsConnection {
+      nodes {
+        id
+        title
+      }
     }
   }
   sketchClass(id: $sketchClassId) {

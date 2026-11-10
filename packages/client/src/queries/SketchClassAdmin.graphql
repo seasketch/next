@@ -852,9 +852,8 @@ query BaseDraftReportContext($reportId: Int!) {
 query CopyableReportCards($projectId: Int!) {
   project(id: $projectId) {
     id
-    sketchClasses {
-      id
-      draftReport {
+    draftReportsConnection {
+      nodes {
         id
         title
         tabs {
@@ -1034,14 +1033,12 @@ query ProjectReportsContext($slug: String!) {
         id
       }
     }
-  }
-  reportsConnection {
-    nodes {
-      id
-      title
-      updatedAt
-      projectId
-      draftId
+    draftReportsConnection {
+      nodes {
+        id
+        title
+        updatedAt
+      }
     }
   }
 }
@@ -1049,13 +1046,11 @@ query ProjectReportsContext($slug: String!) {
 query SketchClassReportAssignment($slug: String!, $sketchClassId: Int!) {
   projectBySlug(slug: $slug) {
     id
-  }
-  reportsConnection {
-    nodes {
-      id
-      title
-      projectId
-      draftId
+    draftReportsConnection {
+      nodes {
+        id
+        title
+      }
     }
   }
   sketchClass(id: $sketchClassId) {
