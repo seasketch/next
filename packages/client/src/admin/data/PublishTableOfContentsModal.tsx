@@ -32,9 +32,12 @@ import {
 import { ChangeLogFieldGroup } from "../../generated/graphql";
 import LayerMetadataRevisionModal from "./LayerMetadataRevisionModal";
 import LayerCartographyRevisionModal from "./LayerCartographyRevisionModal";
+import useDialog from "../../components/useDialog";
 
 export default function PublishTableOfContentsModal(props: {
   onRequestClose: () => void;
+  /** Draft and published overlay lists match, including order. */
+  nothingToPublish?: boolean;
 }) {
   type PublishProject =
     | (ChangeLogsSinceLastPublishQuery["projectBySlug"] & {
@@ -45,6 +48,7 @@ export default function PublishTableOfContentsModal(props: {
     | undefined;
   const { t } = useTranslation("admin");
   const { t: dataT } = useTranslation("admin:data");
+  const { alert } = useDialog();
   const { slug } = useParams<{ slug: string }>();
   const layerEditingContext = useContext(LayerEditingContext);
   const [activeTab, setActiveTab] = useState<
@@ -189,10 +193,15 @@ export default function PublishTableOfContentsModal(props: {
         {
           autoFocus: true,
           label: t("Publish"),
-          disabled: publishState.loading,
+          disabled: publishState.loading || Boolean(props.nothingToPublish),
+          allowDisabledClick: Boolean(props.nothingToPublish),
           loading: publishState.loading,
           variant: "primary",
           onClick: async () => {
+            if (props.nothingToPublish) {
+              void alert(dataT("No changes to publish"));
+              return;
+            }
             await publish({
               variables: {
                 projectId: projectId!,

@@ -13,6 +13,11 @@ import clsx from "clsx";
 
 export type FooterButtonProps = {
   disabled?: boolean;
+  /**
+   * Keep a disabled button clickable. Use when a click should explain why the
+   * action is unavailable instead of doing nothing.
+   */
+  allowDisabledClick?: boolean;
   loading?: boolean;
   onClick?: () => void;
   variant?: "primary" | "secondary" | "danger" | "trash";
@@ -366,7 +371,8 @@ function FooterButton(props: FooterButtonProps) {
       autoFocus={props.autoFocus || false}
       type="button"
       className={clsx(
-        props.disabled && "pointer-events-none opacity-50",
+        props.disabled && !props.allowDisabledClick && "pointer-events-none",
+        props.disabled && "opacity-50",
         "inline-flex justify-center w-full rounded-md border shadow-sm px-4 py-2 text-base font-medium focus:outline-none focus:ring-2 focus:ring-offset-2 sm:w-auto sm:text-sm items-center",
         colors,
         props.className

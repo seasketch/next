@@ -511,6 +511,11 @@ export default function TableOfContentsEditor() {
       )}
       {publishOpen && (
         <PublishTableOfContentsModal
+          nothingToPublish={
+            tocQuery.data?.projectBySlug?.draftTableOfContentsHasChanges ===
+              false &&
+            tocQuery.data?.projectBySlug?.overlayOrderPending !== true
+          }
           onRequestClose={() => {
             setPublishOpen(false);
             // Hack so that tooltip doesn't reappear after publishing
@@ -556,13 +561,6 @@ export default function TableOfContentsEditor() {
             tocQuery.data?.projectBySlug?.draftTableOfContentsHasChanges ===
               false &&
             tocQuery.data?.projectBySlug?.overlayOrderPending !== true
-          }
-          lastPublished={
-            tocQuery.data?.projectBySlug?.tableOfContentsLastPublished
-              ? new Date(
-                  tocQuery.data.projectBySlug.tableOfContentsLastPublished!
-                )
-              : undefined
           }
         />
       )}
@@ -816,7 +814,6 @@ function Header({
   onRequestPublish,
   onRequestSelectivePublish,
   publishDisabled,
-  lastPublished,
   openArcGISCart,
   hasLocalState,
   resetLocalState,
@@ -835,7 +832,6 @@ function Header({
   onRequestPublish: () => void;
   onRequestSelectivePublish: () => void;
   publishDisabled?: boolean;
-  lastPublished?: Date;
   openArcGISCart: () => void;
   hasLocalState?: boolean;
   resetLocalState?: () => void;
@@ -1084,7 +1080,6 @@ function Header({
         <div className="ml-auto shrink-0 pl-3">
           <PublishSplitButton
             publishDisabled={publishDisabled}
-            lastPublished={lastPublished}
             onRequestPublish={onRequestPublish}
             onRequestSelectivePublish={onRequestSelectivePublish}
           />

@@ -11,6 +11,7 @@ import { useParams } from "react-router-dom";
 import Modal from "../../components/Modal";
 import Spinner from "../../components/Spinner";
 import { useToast } from "../../components/Toast";
+import useDialog from "../../components/useDialog";
 import {
   ChangeLogFieldGroup,
   DraftTableOfContentsDocument,
@@ -59,88 +60,80 @@ type PendingRow = NonNullable<
 
 export function PublishSplitButton({
   publishDisabled,
-  lastPublished,
   onRequestPublish,
   onRequestSelectivePublish,
 }: {
   publishDisabled?: boolean;
-  lastPublished?: Date;
   onRequestPublish: () => void;
   onRequestSelectivePublish: () => void;
 }) {
   const { t } = useTranslation("admin:data");
+  const { alert } = useDialog();
   const tone = publishDisabled
-    ? "bg-white text-black opacity-80"
+    ? "cursor-default bg-white text-slate-400"
     : "bg-primary-500 text-white";
 
+  const blocked = () => {
+    void alert(t("No changes to publish"));
+  };
+
   return (
-    <Tooltip.Provider>
-      <Tooltip.Root delayDuration={200}>
-        <Tooltip.Trigger asChild>
-          <div className="inline-flex overflow-hidden rounded shadow-sm">
-            <button
-              id="publish-button"
-              type="button"
-              className={`${tone} px-2 py-0.5`}
-              onClick={onRequestPublish}
-            >
-              <Trans ns="admin:data">Publish</Trans>
-            </button>
-            <DropdownMenu.Root modal={false}>
-              <DropdownMenu.Trigger asChild>
-                <button
-                  type="button"
-                  className={`${tone} border-l ${
-                    publishDisabled ? "border-black/10" : "border-white/25"
-                  } px-1 py-0.5 hover:bg-black/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/70`}
-                  aria-label={t("More publish options")}
-                >
-                  <ChevronDownIcon className="h-3.5 w-3.5" aria-hidden />
-                </button>
-              </DropdownMenu.Trigger>
-              <DropdownMenu.Portal>
-                <DropdownMenu.Content
-                  align="end"
-                  sideOffset={6}
-                  onCloseAutoFocus={(event) => event.preventDefault()}
-                  className="z-[80] min-w-[16rem] overflow-hidden rounded-md border border-black/5 bg-white p-1 text-left shadow-lg"
-                >
-                  <DropdownMenu.Item
-                    className="cursor-pointer rounded px-3 py-2 outline-none data-[highlighted]:bg-slate-100"
-                    onSelect={onRequestSelectivePublish}
-                  >
-                    <span className="block text-sm font-medium text-slate-900">
-                      {t("Selective publish")}
-                    </span>
-                    <span className="mt-0.5 block text-xs leading-snug text-slate-500">
-                      {t("Choose which draft changes to publish")}
-                    </span>
-                  </DropdownMenu.Item>
-                </DropdownMenu.Content>
-              </DropdownMenu.Portal>
-            </DropdownMenu.Root>
-          </div>
-        </Tooltip.Trigger>
-        <Tooltip.Portal>
-          <Tooltip.Content
-            style={{ maxWidth: 220 }}
-            className="z-50 select-none rounded bg-white px-4 py-2 text-center shadow"
-            side="right"
+    <div className="inline-flex overflow-hidden rounded shadow-sm">
+      <button
+        id="publish-button"
+        type="button"
+        aria-disabled={publishDisabled || undefined}
+        className={`${tone} px-2 py-0.5`}
+        onClick={() => {
+          if (publishDisabled) {
+            blocked();
+            return;
+          }
+          onRequestPublish();
+        }}
+      >
+        <Trans ns="admin:data">Publish</Trans>
+      </button>
+      <DropdownMenu.Root modal={false}>
+        <DropdownMenu.Trigger asChild>
+          <button
+            type="button"
+            className={`${tone} border-l ${
+              publishDisabled ? "border-black/10" : "border-white/25"
+            } px-1 py-0.5 hover:bg-black/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/70`}
+            aria-label={t("More publish options")}
           >
-            {publishDisabled ? (
-              t("No changes")
-            ) : lastPublished ? (
-              t("Has changes since last publish on {{date}}", {
-                date: lastPublished.toLocaleDateString(),
-              })
-            ) : (
-              t("Has changes since last publish")
-            )}
-            <Tooltip.Arrow style={{ fill: "white" }} />
-          </Tooltip.Content>
-        </Tooltip.Portal>
-      </Tooltip.Root>
-    </Tooltip.Provider>
+            <ChevronDownIcon className="h-3.5 w-3.5" aria-hidden />
+          </button>
+        </DropdownMenu.Trigger>
+        <DropdownMenu.Portal>
+          <DropdownMenu.Content
+            align="end"
+            sideOffset={6}
+            onCloseAutoFocus={(event) => event.preventDefault()}
+            className="z-[80] min-w-[16rem] overflow-hidden rounded-md border border-black/5 bg-white p-1 text-left shadow-lg"
+          >
+            <DropdownMenu.Item
+              className="cursor-pointer rounded px-3 py-2 outline-none data-[highlighted]:bg-slate-100"
+              onSelect={() => {
+                if (publishDisabled) {
+                  blocked();
+                  return;
+                }
+                onRequestSelectivePublish();
+              }}
+            >
+              <span className="block text-sm font-medium text-slate-900">
+                {t("Selective publish")}
+              </span>
+              <span className="mt-0.5 block text-xs leading-snug text-slate-500">
+                {t("Choose which draft changes to publish")}
+              </span>
+            </DropdownMenu.Item>
+          </DropdownMenu.Content>
+        </DropdownMenu.Portal>
+      </DropdownMenu.Root>
+    </div>
   );
 }
 
