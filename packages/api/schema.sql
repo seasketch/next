@@ -17540,6 +17540,30 @@ $$;
 
 
 --
+-- Name: projects_draft_reports(public.projects); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.projects_draft_reports(p public.projects) RETURNS SETOF public.reports
+    LANGUAGE sql STABLE
+    AS $$
+  select r.*
+  from public.reports r
+  where public.session_is_admin(p.id)
+    and r.project_id = p.id
+    and r.draft_id is null
+  order by lower(r.title), r.id;
+$$;
+
+
+--
+-- Name: FUNCTION projects_draft_reports(p public.projects); Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON FUNCTION public.projects_draft_reports(p public.projects) IS '@simpleCollections only
+Draft reports for this project, including reports that are not assigned to a sketch class. Published versions are omitted. Admins only.';
+
+
+--
 -- Name: projects_draft_table_of_contents_items(public.projects); Type: FUNCTION; Schema: public; Owner: -
 --
 
@@ -42901,6 +42925,16 @@ GRANT ALL ON FUNCTION public.projects_data_sources_for_items(p public.projects, 
 
 REVOKE ALL ON FUNCTION public.projects_downloadable_layers_count(p public.projects) FROM PUBLIC;
 GRANT ALL ON FUNCTION public.projects_downloadable_layers_count(p public.projects) TO seasketch_user;
+
+
+--
+-- Name: FUNCTION projects_draft_reports(p public.projects); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.projects_draft_reports(p public.projects) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.projects_draft_reports(p public.projects) TO anon;
+GRANT ALL ON FUNCTION public.projects_draft_reports(p public.projects) TO seasketch_user;
+GRANT ALL ON FUNCTION public.projects_draft_reports(p public.projects) TO seasketch_superuser;
 
 
 --

@@ -62,17 +62,10 @@ export default function ProjectReportsAdmin() {
 
   const draftReports = useMemo(
     () =>
-      (contextQuery.data?.reportsConnection?.nodes || [])
-        .filter((r: any): r is NonNullable<typeof r> => Boolean(r))
-        .filter(
-          (r: any) =>
-            r.projectId === contextQuery.data?.projectBySlug?.id &&
-            r.draftId == null
-        ),
-    [
-      contextQuery.data?.reportsConnection?.nodes,
-      contextQuery.data?.projectBySlug?.id,
-    ]
+      (
+        contextQuery.data?.projectBySlug?.draftReports || []
+      ).filter((r: any): r is NonNullable<typeof r> => Boolean(r)),
+    [contextQuery.data?.projectBySlug?.draftReports]
   );
 
   const reportsWithAssignments = useMemo(() => {
@@ -98,10 +91,9 @@ export default function ProjectReportsAdmin() {
 
   const handleReportDeleted = useCallback(async () => {
     const { data } = await contextQuery.refetch();
-    const projectId = data?.projectBySlug?.id;
-    const remaining = (data?.reportsConnection?.nodes || [])
-      .filter(Boolean)
-      .filter((r: any) => r.projectId === projectId && r.draftId == null);
+    const remaining = (
+      data?.projectBySlug?.draftReports || []
+    ).filter(Boolean);
     if (remaining.length > 0) {
       // eslint-disable-next-line i18next/no-literal-string -- admin route
       history.replace(`/${slug}/admin/reports/${remaining[0].id}`);

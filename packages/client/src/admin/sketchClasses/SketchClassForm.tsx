@@ -188,12 +188,9 @@ export default function SketchClassForm({
       fetchPolicy: "network-only",
     });
 
-    const projectId = data?.projectBySlug?.id;
     const existingDraftReportId = data?.sketchClass?.draftReport?.id;
-    const reportCandidates = (data?.reportsConnection?.nodes ?? []).filter(
-      (r: { projectId?: number; draftId?: number | null }) =>
-        r.projectId === projectId && r.draftId == null
-    );
+    const reportCandidates =
+      data?.projectBySlug?.draftReports ?? [];
     const firstDraftReportId = reportCandidates[0]?.id;
 
     if (!existingDraftReportId && firstDraftReportId != null) {

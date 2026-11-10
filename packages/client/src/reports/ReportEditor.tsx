@@ -12,7 +12,6 @@ import {
   useState,
 } from "react";
 import { useTranslation } from "react-i18next";
-import type { CopyableReportCardsQuery } from "../generated/graphql";
 import {
   BaseDraftReportContextDocument,
   ProjectReportsContextDocument,
@@ -42,6 +41,7 @@ import {
 import {
   CopyCardsFromReportPopover,
   getCopiedFromCardId,
+  groupCopyableReports,
 } from "./components/CopyCardsFromReportPopover";
 import { ExampleSketchSelector } from "./components/DemonstrationSketchDropdown";
 import {
@@ -61,10 +61,6 @@ import ReportFullPrintBridge from "./ReportFullPrintBridge";
 import { ReportTabManagementModal } from "./ReportTabManagementModal";
 import { ReportTabs } from "./ReportTabs";
 import { SortableReportContent } from "./SortableReportContent";
-type CopyableSketchClassRow = NonNullable<
-  NonNullable<CopyableReportCardsQuery["project"]>["sketchClasses"]
->[number];
-
 /** New cards are appended at the end of the tab; scroll the list to the bottom. */
 function scrollContainerToBottom(
   scrollContainer: HTMLElement,
@@ -224,13 +220,15 @@ export default function ReportEditor({
     nextFetchPolicy: "cache-first",
   });
 
-  const eligibleSketchClassCount = useMemo(() => {
-    const classes = copyCardsQuery.data?.project?.sketchClasses ?? [];
-    return classes.filter(
-      (sc: CopyableSketchClassRow) =>
-        sc.previewNewReports || sc.isGeographyClippingEnabled
+  const copyableReportCount = useMemo(() => {
+    return groupCopyableReports(
+      copyCardsQuery.data?.project?.draftReports,
+      baseContext.data?.report?.id ?? null
     ).length;
-  }, [copyCardsQuery.data?.project?.sketchClasses]);
+  }, [
+    baseContext.data?.report?.id,
+    copyCardsQuery.data?.project?.draftReports,
+  ]);
 
   const existingCopies = useMemo(() => {
     const map = new Map<
@@ -576,14 +574,10 @@ export default function ReportEditor({
   }
 
   const report = baseContext.data.report;
-  const assignableProjectId = reportAssignmentsQuery.data?.projectBySlug?.id;
   const assignableReports = (
-    reportAssignmentsQuery.data?.reportsConnection?.nodes || []
-  )
-    .filter((r: any): r is NonNullable<typeof r> => Boolean(r))
-    .filter(
-      (r: any) => r.projectId === assignableProjectId && r.draftId == null
-    );
+    reportAssignmentsQuery.data?.projectBySlug?.draftReports ||
+    []
+  ).filter((r: any): r is NonNullable<typeof r> => Boolean(r));
   const assignableSketchClasses = (
     reportAssignmentsQuery.data?.projectBySlug?.sketchClasses || []
   )
@@ -665,7 +659,7 @@ export default function ReportEditor({
                         </MenuBarItem>
                       </>
                     ) : null}
-                    {eligibleSketchClassCount > 1 && projectId ? (
+                    {copyableReportCount > 0 && projectId ? (
                       <>
                         <MenuBarSeparator />
                         <MenuBarLabel>{t("Copy content")}</MenuBarLabel>
@@ -690,10 +684,6 @@ export default function ReportEditor({
                               <CopyCardsFromReportPopover
                                 targetTabId={
                                   selectedTabId ?? report.tabs?.[0]?.id ?? 0
-                                }
-                                currentSketchClassId={
-                                  subjectContext.data?.sketch?.sketchClass
-                                    ?.id ?? -1
                                 }
                                 draftReportId={report.id ?? null}
                                 demonstrationSketchId={selectedSketchId}
