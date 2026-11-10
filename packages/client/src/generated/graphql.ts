@@ -25364,24 +25364,31 @@ export type BaseDraftReportContextQuery = (
   )> }
 );
 
-export type CopyableReportCardsQueryVariables = Exact<{ [key: string]: never; }>;
+export type CopyableReportCardsQueryVariables = Exact<{
+  projectId: Scalars['Int'];
+}>;
 
 
 export type CopyableReportCardsQuery = (
   { __typename?: 'Query' }
-  & { reportsConnection?: Maybe<(
-    { __typename?: 'ReportsConnection' }
-    & { nodes: Array<(
-      { __typename?: 'Report' }
-      & Pick<Report, 'id' | 'title' | 'projectId' | 'draftId'>
-      & { tabs?: Maybe<Array<(
-        { __typename?: 'ReportTab' }
-        & Pick<ReportTab, 'id' | 'position' | 'title'>
-        & { cards?: Maybe<Array<(
-          { __typename?: 'ReportCard' }
-          & Pick<ReportCard, 'id' | 'position' | 'title' | 'body' | 'componentSettings' | 'alternateLanguageSettings'>
+  & { project?: Maybe<(
+    { __typename?: 'Project' }
+    & Pick<Project, 'id'>
+    & { sketchClasses: Array<(
+      { __typename?: 'SketchClass' }
+      & Pick<SketchClass, 'id'>
+      & { draftReport?: Maybe<(
+        { __typename?: 'Report' }
+        & Pick<Report, 'id' | 'title'>
+        & { tabs?: Maybe<Array<(
+          { __typename?: 'ReportTab' }
+          & Pick<ReportTab, 'id' | 'position' | 'title'>
+          & { cards?: Maybe<Array<(
+            { __typename?: 'ReportCard' }
+            & Pick<ReportCard, 'id' | 'position' | 'title' | 'body' | 'componentSettings' | 'alternateLanguageSettings'>
+          )>> }
         )>> }
-      )>> }
+      )> }
     )> }
   )> }
 );
@@ -40924,24 +40931,26 @@ export type BaseDraftReportContextQueryHookResult = ReturnType<typeof useBaseDra
 export type BaseDraftReportContextLazyQueryHookResult = ReturnType<typeof useBaseDraftReportContextLazyQuery>;
 export type BaseDraftReportContextQueryResult = Apollo.QueryResult<BaseDraftReportContextQuery, BaseDraftReportContextQueryVariables>;
 export const CopyableReportCardsDocument = gql`
-    query CopyableReportCards {
-  reportsConnection {
-    nodes {
+    query CopyableReportCards($projectId: Int!) {
+  project(id: $projectId) {
+    id
+    sketchClasses {
       id
-      title
-      projectId
-      draftId
-      tabs {
+      draftReport {
         id
-        position
         title
-        cards {
+        tabs {
           id
           position
           title
-          body
-          componentSettings
-          alternateLanguageSettings
+          cards {
+            id
+            position
+            title
+            body
+            componentSettings
+            alternateLanguageSettings
+          }
         }
       }
     }
@@ -40961,10 +40970,11 @@ export const CopyableReportCardsDocument = gql`
  * @example
  * const { data, loading, error } = useCopyableReportCardsQuery({
  *   variables: {
+ *      projectId: // value for 'projectId'
  *   },
  * });
  */
-export function useCopyableReportCardsQuery(baseOptions?: Apollo.QueryHookOptions<CopyableReportCardsQuery, CopyableReportCardsQueryVariables>) {
+export function useCopyableReportCardsQuery(baseOptions: Apollo.QueryHookOptions<CopyableReportCardsQuery, CopyableReportCardsQueryVariables>) {
         const options = {...defaultOptions, ...baseOptions}
         return Apollo.useQuery<CopyableReportCardsQuery, CopyableReportCardsQueryVariables>(CopyableReportCardsDocument, options);
       }

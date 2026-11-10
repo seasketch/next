@@ -65,49 +65,46 @@ type GroupedCopyableReport<TCard extends CopyableCard> = {
   }>;
 };
 
+type CopyableReport<TCard extends CopyableCard> = {
+  id: number;
+  title?: string | null;
+  tabs?: ReadonlyArray<
+    | {
+        id: number;
+        position: number;
+        title: string;
+        cards?: ReadonlyArray<TCard | null> | null;
+      }
+    | null
+  > | null;
+};
+
 /**
- * Reports to copy from: every draft in this project except the one open in
- * the editor. Sections are keyed by report title. Reports with no cards are omitted.
+ * Draft reports on this project's sketch classes, excluding the one open in
+ * the editor. A report assigned to several classes appears once, under its title.
+ * Reports with no cards are omitted.
  */
 export function groupCopyableReports<TCard extends CopyableCard>(
-  reports:
+  sketchClasses:
     | ReadonlyArray<
         | {
-            id: number;
-            title?: string | null;
-            projectId?: number | null;
-            draftId?: number | null;
-            tabs?: ReadonlyArray<
-              | {
-                  id: number;
-                  position: number;
-                  title: string;
-                  cards?: ReadonlyArray<TCard | null> | null;
-                }
-              | null
-            > | null;
+            draftReport?: CopyableReport<TCard> | null;
           }
         | null
       >
     | null
     | undefined,
-  currentReportId: number | null,
-  projectId: number | null
+  currentReportId: number | null
 ): GroupedCopyableReport<TCard>[] {
   const result: GroupedCopyableReport<TCard>[] = [];
-  if (projectId == null) {
-    return result;
-  }
+  const seenReportIds = new Set<number>();
 
-  for (const report of reports ?? []) {
-    if (
-      !report ||
-      report.id === currentReportId ||
-      report.projectId !== projectId ||
-      report.draftId != null
-    ) {
+  for (const sketchClass of sketchClasses ?? []) {
+    const report = sketchClass?.draftReport;
+    if (!report || report.id === currentReportId || seenReportIds.has(report.id)) {
       continue;
     }
+    seenReportIds.add(report.id);
     const tabs = [...(report.tabs ?? [])]
       .filter((tab): tab is NonNullable<typeof tab> => tab != null)
       .sort((a, b) => a.position - b.position || a.id - b.id)
@@ -145,7 +142,6 @@ export function groupCopyableReports<TCard extends CopyableCard>(
 
 export function CopyCardsFromReportPopover({
   targetTabId,
-  projectId,
   draftReportId,
   demonstrationSketchId,
   existingCopies,
@@ -154,7 +150,6 @@ export function CopyCardsFromReportPopover({
   copyQueryLoading,
 }: {
   targetTabId: number;
-  projectId: number | null;
   /** Draft report open in the editor. Excluded from the list, and refetched after cards change. */
   draftReportId: number | null;
   /** Demonstration sketch used by `ReportDependenciesContextProvider`. */
@@ -183,11 +178,10 @@ export function CopyCardsFromReportPopover({
   const grouped = useMemo(
     () =>
       groupCopyableReports(
-        copyQueryData?.reportsConnection?.nodes,
-        draftReportId,
-        projectId
+        copyQueryData?.project?.sketchClasses,
+        draftReportId
       ),
-    [copyQueryData?.reportsConnection?.nodes, draftReportId, projectId]
+    [copyQueryData?.project?.sketchClasses, draftReportId]
   );
 
   const toggleCard = useCallback((id: number) => {

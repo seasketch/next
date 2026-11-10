@@ -849,24 +849,26 @@ query BaseDraftReportContext($reportId: Int!) {
   }
 }
 
-query CopyableReportCards {
-  reportsConnection {
-    nodes {
+query CopyableReportCards($projectId: Int!) {
+  project(id: $projectId) {
+    id
+    sketchClasses {
       id
-      title
-      projectId
-      draftId
-      tabs {
+      draftReport {
         id
-        position
         title
-        cards {
+        tabs {
           id
           position
           title
-          body
-          componentSettings
-          alternateLanguageSettings
+          cards {
+            id
+            position
+            title
+            body
+            componentSettings
+            alternateLanguageSettings
+          }
         }
       }
     }
