@@ -329,8 +329,11 @@ describe("Live data library updates", () => {
 
         expect(await draftHasChanges(conn, projectId)).toBe(false);
         expect(await changeLogCount(conn, projectId)).toBe(0);
+        // Draft and published template layers share this source, so the
+        // attribution is already what a publish would ship. The button stays
+        // off. The changelog below is the record of the edit.
         expect(await draftHasChanges(conn, template.templateProjectId)).toBe(
-          true
+          false
         );
         expect(
           await changeLogCount(conn, template.templateProjectId)

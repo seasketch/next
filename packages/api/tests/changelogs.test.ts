@@ -300,6 +300,7 @@ describe("change_logs", () => {
         "layer:temporal",
         "layer:title",
         "layer:uploaded",
+        "layers:list-order-change",
         "layers:published",
         "layers:z-order-change",
         "resolvable_layer_comments:created",
@@ -748,6 +749,10 @@ describe("change_logs", () => {
           data_source_type: null,
           data_layer_id: null,
           data_source_id: null,
+          // Removals keep identity so list-order reconstruction can place them.
+          stable_id: folder.stableId,
+          parent_stable_id: null,
+          path: folder.stableId,
         });
       },
     );
