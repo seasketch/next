@@ -171,10 +171,10 @@ export function CopyCardsFromReportPopover({
   const grouped = useMemo(
     () =>
       groupCopyableReports(
-        copyQueryData?.project?.draftReportsConnection?.nodes,
+        copyQueryData?.project?.draftReports,
         draftReportId
       ),
-    [copyQueryData?.project?.draftReportsConnection?.nodes, draftReportId]
+    [copyQueryData?.project?.draftReports, draftReportId]
   );
 
   const toggleCard = useCallback((id: number) => {

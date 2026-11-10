@@ -190,7 +190,7 @@ export default function SketchClassForm({
 
     const existingDraftReportId = data?.sketchClass?.draftReport?.id;
     const reportCandidates =
-      data?.projectBySlug?.draftReportsConnection?.nodes ?? [];
+      data?.projectBySlug?.draftReports ?? [];
     const firstDraftReportId = reportCandidates[0]?.id;
 
     if (!existingDraftReportId && firstDraftReportId != null) {

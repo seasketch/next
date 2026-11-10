@@ -63,9 +63,9 @@ export default function ProjectReportsAdmin() {
   const draftReports = useMemo(
     () =>
       (
-        contextQuery.data?.projectBySlug?.draftReportsConnection?.nodes || []
+        contextQuery.data?.projectBySlug?.draftReports || []
       ).filter((r: any): r is NonNullable<typeof r> => Boolean(r)),
-    [contextQuery.data?.projectBySlug?.draftReportsConnection?.nodes]
+    [contextQuery.data?.projectBySlug?.draftReports]
   );
 
   const reportsWithAssignments = useMemo(() => {
@@ -92,7 +92,7 @@ export default function ProjectReportsAdmin() {
   const handleReportDeleted = useCallback(async () => {
     const { data } = await contextQuery.refetch();
     const remaining = (
-      data?.projectBySlug?.draftReportsConnection?.nodes || []
+      data?.projectBySlug?.draftReports || []
     ).filter(Boolean);
     if (remaining.length > 0) {
       // eslint-disable-next-line i18next/no-literal-string -- admin route

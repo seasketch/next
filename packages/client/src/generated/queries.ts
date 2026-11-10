@@ -10981,7 +10981,7 @@ export type Project = Node & {
   description?: Maybe<Scalars['String']>;
   downloadableLayersCount?: Maybe<Scalars['Int']>;
   /** Draft reports for this project, including reports that are not assigned to a sketch class. Published versions are omitted. */
-  draftReportsConnection: ReportsConnection;
+  draftReports?: Maybe<Array<Report>>;
   draftTableOfContentsHasChanges: Scalars['Boolean'];
   /**
    * Draft layer lists, accessible only to admins. Make edits to the layer list and
@@ -11306,11 +11306,8 @@ export type ProjectDataSourcesForItemsArgs = {
  * SeaSketch Project type. This root type contains most of the fields and queries
  * needed to drive the application.
  */
-export type ProjectDraftReportsConnectionArgs = {
-  after?: Maybe<Scalars['Cursor']>;
-  before?: Maybe<Scalars['Cursor']>;
+export type ProjectDraftReportsArgs = {
   first?: Maybe<Scalars['Int']>;
-  last?: Maybe<Scalars['Int']>;
   offset?: Maybe<Scalars['Int']>;
 };
 
@@ -25387,21 +25384,18 @@ export type CopyableReportCardsQuery = (
   & { project?: Maybe<(
     { __typename?: 'Project' }
     & Pick<Project, 'id'>
-    & { draftReportsConnection: (
-      { __typename?: 'ReportsConnection' }
-      & { nodes: Array<(
-        { __typename?: 'Report' }
-        & Pick<Report, 'id' | 'title'>
-        & { tabs?: Maybe<Array<(
-          { __typename?: 'ReportTab' }
-          & Pick<ReportTab, 'id' | 'position' | 'title'>
-          & { cards?: Maybe<Array<(
-            { __typename?: 'ReportCard' }
-            & Pick<ReportCard, 'id' | 'position' | 'title' | 'body' | 'componentSettings' | 'alternateLanguageSettings'>
-          )>> }
+    & { draftReports?: Maybe<Array<(
+      { __typename?: 'Report' }
+      & Pick<Report, 'id' | 'title'>
+      & { tabs?: Maybe<Array<(
+        { __typename?: 'ReportTab' }
+        & Pick<ReportTab, 'id' | 'position' | 'title'>
+        & { cards?: Maybe<Array<(
+          { __typename?: 'ReportCard' }
+          & Pick<ReportCard, 'id' | 'position' | 'title' | 'body' | 'componentSettings' | 'alternateLanguageSettings'>
         )>> }
-      )> }
-    ) }
+      )>> }
+    )>> }
   )> }
 );
 
@@ -25635,13 +25629,10 @@ export type ProjectReportsContextQuery = (
         & Pick<Report, 'id'>
       )> }
       & SketchingDetailsFragment
-    )>, draftReportsConnection: (
-      { __typename?: 'ReportsConnection' }
-      & { nodes: Array<(
-        { __typename?: 'Report' }
-        & Pick<Report, 'id' | 'title' | 'updatedAt'>
-      )> }
-    ) }
+    )>, draftReports?: Maybe<Array<(
+      { __typename?: 'Report' }
+      & Pick<Report, 'id' | 'title' | 'updatedAt'>
+    )>> }
   )> }
 );
 
@@ -25656,13 +25647,10 @@ export type SketchClassReportAssignmentQuery = (
   & { projectBySlug?: Maybe<(
     { __typename?: 'Project' }
     & Pick<Project, 'id'>
-    & { draftReportsConnection: (
-      { __typename?: 'ReportsConnection' }
-      & { nodes: Array<(
-        { __typename?: 'Report' }
-        & Pick<Report, 'id' | 'title'>
-      )> }
-    ) }
+    & { draftReports?: Maybe<Array<(
+      { __typename?: 'Report' }
+      & Pick<Report, 'id' | 'title'>
+    )>> }
   )>, sketchClass?: Maybe<(
     { __typename?: 'SketchClass' }
     & Pick<SketchClass, 'id'>
@@ -33783,22 +33771,20 @@ export const CopyableReportCardsDocument = /*#__PURE__*/ gql`
     query CopyableReportCards($projectId: Int!) {
   project(id: $projectId) {
     id
-    draftReportsConnection {
-      nodes {
+    draftReports {
+      id
+      title
+      tabs {
         id
+        position
         title
-        tabs {
+        cards {
           id
           position
           title
-          cards {
-            id
-            position
-            title
-            body
-            componentSettings
-            alternateLanguageSettings
-          }
+          body
+          componentSettings
+          alternateLanguageSettings
         }
       }
     }
@@ -33979,12 +33965,10 @@ export const ProjectReportsContextDocument = /*#__PURE__*/ gql`
         id
       }
     }
-    draftReportsConnection {
-      nodes {
-        id
-        title
-        updatedAt
-      }
+    draftReports {
+      id
+      title
+      updatedAt
     }
   }
 }
@@ -33993,11 +33977,9 @@ export const SketchClassReportAssignmentDocument = /*#__PURE__*/ gql`
     query SketchClassReportAssignment($slug: String!, $sketchClassId: Int!) {
   projectBySlug(slug: $slug) {
     id
-    draftReportsConnection {
-      nodes {
-        id
-        title
-      }
+    draftReports {
+      id
+      title
     }
   }
   sketchClass(id: $sketchClassId) {

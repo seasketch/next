@@ -222,12 +222,12 @@ export default function ReportEditor({
 
   const copyableReportCount = useMemo(() => {
     return groupCopyableReports(
-      copyCardsQuery.data?.project?.draftReportsConnection?.nodes,
+      copyCardsQuery.data?.project?.draftReports,
       baseContext.data?.report?.id ?? null
     ).length;
   }, [
     baseContext.data?.report?.id,
-    copyCardsQuery.data?.project?.draftReportsConnection?.nodes,
+    copyCardsQuery.data?.project?.draftReports,
   ]);
 
   const existingCopies = useMemo(() => {
@@ -575,7 +575,7 @@ export default function ReportEditor({
 
   const report = baseContext.data.report;
   const assignableReports = (
-    reportAssignmentsQuery.data?.projectBySlug?.draftReportsConnection?.nodes ||
+    reportAssignmentsQuery.data?.projectBySlug?.draftReports ||
     []
   ).filter((r: any): r is NonNullable<typeof r> => Boolean(r));
   const assignableSketchClasses = (

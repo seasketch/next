@@ -17558,7 +17558,7 @@ $$;
 -- Name: FUNCTION projects_draft_reports(p public.projects); Type: COMMENT; Schema: public; Owner: -
 --
 
-COMMENT ON FUNCTION public.projects_draft_reports(p public.projects) IS '@simpleConnections only
+COMMENT ON FUNCTION public.projects_draft_reports(p public.projects) IS '@simpleCollections only
 Draft reports for this project, including reports that are not assigned to a sketch class. Published versions are omitted.';
 
 
