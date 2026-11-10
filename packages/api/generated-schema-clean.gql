@@ -1045,6 +1045,11 @@ type ChangeLog implements Node {
   fieldGroup: ChangeLogFieldGroup!
   fromBlob: JSON
   fromSummary: JSON!
+
+  """
+  True when this row is a full overlay publish. Null when the publish has no record of which items it shipped.
+  """
+  fullOverlayPublish: Boolean
   id: BigInt!
   lastAt: Datetime!
   meta: JSON
@@ -1058,6 +1063,17 @@ type ChangeLog implements Node {
   """Reads a single `Project` that is related to this `ChangeLog`."""
   project: Project
   projectId: Int!
+
+  """
+  Layers and folders this publish shipped, with the names they had at the time.
+  """
+  publishedOverlayItems(
+    """Only read the first `n` values of the set."""
+    first: Int
+
+    """Skip the first `n` values."""
+    offset: Int
+  ): [OverlayPublishedItem!]
   saveCount: Int!
   startedAt: Datetime!
   status: ChangeLogStatus!
@@ -1097,6 +1113,7 @@ enum ChangeLogFieldGroup {
   FOLDER_DELETED
   FOLDER_TITLE
   FOLDER_TYPE
+  LAYERS_LIST_ORDER_CHANGE
   LAYERS_PUBLISHED
   LAYERS_Z_ORDER_CHANGE
   LAYER_ACL
@@ -10396,6 +10413,16 @@ type Mutation {
     """
     input: PublishTableOfContentsInput!
   ): PublishTableOfContentsPayload
+
+  """
+  Publishes the selected draft overlay items, and anything they require, without replacing the rest of the published tree. Does not publish sort_index or z_index.
+  """
+  publishTableOfContentsItems(
+    """
+    The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
+    """
+    input: PublishTableOfContentsItemsInput!
+  ): PublishTableOfContentsItemsPayload
   recalculateSpatialMetrics(
     """
     The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
@@ -11499,7 +11526,7 @@ type Mutation {
   ): UpdateTopicPayload
 
   """
-  Batch reassigns z_index for one project. Records change_logs (layers:z-order-change) on projects when session.user_id is set; to_summary includes reordered_count.
+  Batch reassigns z_index for one project. Records change_logs (layers:z-order-change) on projects when session.user_id is set; to_summary includes reordered_count. Marks the draft overlay list as changed.
   """
   updateZIndexes(
     """
@@ -12147,6 +12174,12 @@ enum OverlayDataTablesOrderBy {
   PROJECT_ID_DESC
 }
 
+type OverlayPublishedItem {
+  isFolder: Boolean
+  stableId: String
+  title: String
+}
+
 """Information about pagination in a connection."""
 type PageInfo {
   """When paginating forwards, the cursor to continue."""
@@ -12172,6 +12205,19 @@ enum ParticipationStatus {
   PARTICIPANT_HIDDEN_PROFILE
   PARTICIPANT_SHARED_PROFILE
   PENDING_APPROVAL
+}
+
+type PendingPublishItem {
+  bundleId: String
+  draftId: Int
+  includedInBundle: Boolean
+  isFolder: Boolean
+  kind: String
+  parentStableId: String
+  path: String
+  requiresStableIds: [String]
+  stableId: String
+  title: String
 }
 
 type Post implements Node {
@@ -12841,6 +12887,11 @@ type Project implements Node {
   ): PostsConnection!
 
   """
+  Whether sibling order differs between the draft and published overlay lists. Only a full publish ships list order.
+  """
+  listOrderPending: Boolean
+
+  """
   If a logoUrl is provided, it will link to this url in a new window if provided.
   """
   logoLink: String
@@ -12985,6 +13036,11 @@ type Project implements Node {
   ): OverlayDataTablesConnection!
 
   """
+  Whether list order or layer stacking order differs between the draft and published overlay lists. Only a full publish ships either.
+  """
+  overlayOrderPending: Boolean
+
+  """
   Count of all users who have opted into participating in the project, sharing their profile with project administrators.
   """
   participantCount: Int
@@ -13007,6 +13063,15 @@ type Project implements Node {
     offset: Int
     orderBy: ParticipantSortBy
   ): [User!]
+
+  """Reads and enables pagination through a set of `PendingPublishItem`."""
+  pendingPublishItems(
+    """Only read the first `n` values of the set."""
+    first: Int
+
+    """Skip the first `n` values."""
+    offset: Int
+  ): [PendingPublishItem!]
 
   """
   Draft polygon overlays that can be used as a Geography base or clipping layer.
@@ -13956,6 +14021,32 @@ input PublishTableOfContentsInput {
   """
   clientMutationId: String
   projectId: Int
+}
+
+"""All input for the `publishTableOfContentsItems` mutation."""
+input PublishTableOfContentsItemsInput {
+  """
+  An arbitrary string value with no semantic meaning. Will be included in the
+  payload verbatim. May be used to track mutations by the client.
+  """
+  clientMutationId: String
+  projectId: Int
+  stableIds: [String]
+}
+
+"""The output of our `publishTableOfContentsItems` mutation."""
+type PublishTableOfContentsItemsPayload {
+  """
+  The exact same `clientMutationId` that was provided in the mutation input,
+  unchanged and unused. May be used by a client to track mutations.
+  """
+  clientMutationId: String
+
+  """
+  Our root query field type. Allows us to run any query from our mutation payload.
+  """
+  query: Query
+  tableOfContentsItems: [TableOfContentsItem!]
 }
 
 """The output of our `publishTableOfContents` mutation."""
@@ -18379,6 +18470,9 @@ type TableOfContentsItem implements Node {
     offset: Int
   ): [ProjectBackgroundJob!]
   projectId: Int!
+
+  """When a publish wrote this row. Null on draft rows."""
+  publishedAt: Datetime
 
   """Reads and enables pagination through a set of `QuotaDetail`."""
   quotaUsed(

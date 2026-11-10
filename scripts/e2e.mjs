@@ -3,6 +3,7 @@
 // Playwright.
 // The dev database is not touched. Playwright starts its own API and client.
 import { spawn } from "node:child_process";
+import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { e2eStack } from "./dev.config.mjs";
@@ -39,6 +40,46 @@ function run(command, args, env, cwd = root) {
   });
 }
 
+function applyCurrentSql() {
+  const sqlPath = path.join(root, "packages/api/migrations/current.sql");
+  return new Promise((resolve, reject) => {
+    const child = spawn(
+      "docker",
+      [
+        "exec",
+        "-i",
+        "seasketch_db",
+        "psql",
+        "-U",
+        "postgres",
+        "-d",
+        e2eStack.database,
+        "-v",
+        "ON_ERROR_STOP=1",
+        "-1",
+        "-f",
+        "-",
+      ],
+      { cwd: root, stdio: ["pipe", "inherit", "inherit"] }
+    );
+    const sql = fs.createReadStream(sqlPath);
+    sql.on("error", reject);
+    sql.pipe(child.stdin);
+    child.on("error", reject);
+    child.on("exit", (code, signal) => {
+      if (code === 0) {
+        resolve();
+      } else {
+        reject(
+          new Error(
+            `Applying current.sql to ${e2eStack.database} exited ${code === null ? signal : code}`
+          )
+        );
+      }
+    });
+  });
+}
+
 const databaseEnv = {
   SEASKETCH_DB_NAME: e2eStack.database,
   SEASKETCH_REDIS_DB: String(e2eStack.redisDb),
@@ -49,14 +90,10 @@ const databaseEnv = {
 try {
   await run("npm", ["run", "build", "--silent"]);
   await run("npm", ["run", "setup", "--", "--reset"], databaseEnv);
-  // setup applies committed migrations only. The API suite also runs the
-  // in-progress migrations/current.sql, so the e2e stack matches it.
-  await run(
-    "npm",
-    ["run", "db:watch", "--silent", "--", "--once"],
-    databaseEnv,
-    path.join(root, "packages/api")
-  );
+  // setup applies committed migrations only. Apply current.sql with psql.
+  // db:watch --once would also rewrite schema.sql, because it is not running
+  // inside the API test suite.
+  await applyCurrentSql();
   const playwrightArgs = process.argv.slice(2);
   const npmArgs = ["test", "--workspace", "@seasketch/e2e"];
   if (playwrightArgs.length > 0) {

@@ -45,7 +45,6 @@ import { useRegisterDropTarget } from "../uploads/DataAdminDropTargetContext";
 import { DROP_TARGET_PRIORITY } from "../uploads/dropTargets";
 import { Feature } from "geojson";
 import { Map } from "mapbox-gl";
-import * as Tooltip from "@radix-ui/react-tooltip";
 import React from "react";
 import { ZIndexEditableList } from "./ZIndexEditableList";
 import { LayerEditingContext } from "./LayerEditingContext";
@@ -79,6 +78,9 @@ import withScrolling, {
 } from "@nosferatu500/react-dnd-scrollzone";
 import { useApolloClient } from "@apollo/client";
 import { parseTocItemIdFromSearch } from "./layerAdminDeepLink";
+import SelectivePublishModal, {
+  PublishSplitButton,
+} from "./SelectivePublishModal";
 
 const ScrollingComponent = withScrolling("div");
 
@@ -150,6 +152,7 @@ export default function TableOfContentsEditor() {
     useUpdateTableOfContentsItemChildrenMutation();
   const [folderId, setFolderId] = useState<number>();
   const [publishOpen, setPublishOpen] = useState(false);
+  const [selectivePublishOpen, setSelectivePublishOpen] = useState(false);
   const [arcgisCartOpen, setArcgisCartOpen] = useState(false);
   useDraftStatusSubscription({
     variables: {
@@ -518,6 +521,11 @@ export default function TableOfContentsEditor() {
           }}
         />
       )}
+      {selectivePublishOpen && (
+        <SelectivePublishModal
+          onRequestClose={() => setSelectivePublishOpen(false)}
+        />
+      )}
       {tocQuery.data?.projectBySlug?.id && (
         <Header
           sharedLayersCount={
@@ -543,9 +551,11 @@ export default function TableOfContentsEditor() {
           selectedView={selectedView}
           setSelectedView={setSelectedView}
           onRequestPublish={() => setPublishOpen(true)}
+          onRequestSelectivePublish={() => setSelectivePublishOpen(true)}
           publishDisabled={
             tocQuery.data?.projectBySlug?.draftTableOfContentsHasChanges ===
-            false
+              false &&
+            tocQuery.data?.projectBySlug?.overlayOrderPending !== true
           }
           lastPublished={
             tocQuery.data?.projectBySlug?.tableOfContentsLastPublished
@@ -804,6 +814,7 @@ function Header({
   map,
   onRequestOpenFolder,
   onRequestPublish,
+  onRequestSelectivePublish,
   publishDisabled,
   lastPublished,
   openArcGISCart,
@@ -822,6 +833,7 @@ function Header({
   map?: Map;
   onRequestOpenFolder: () => void;
   onRequestPublish: () => void;
+  onRequestSelectivePublish: () => void;
   publishDisabled?: boolean;
   lastPublished?: Date;
   openArcGISCart: () => void;
@@ -1055,8 +1067,9 @@ function Header({
         {(selectedView === "tree" ||
           selectedView === "downloads" ||
           selectedView === "sharing") && (
-          <div className="ml-2">
+          <div className="ml-2 min-w-0 flex-1">
             <OverlaySearchInput
+              className="w-full"
               search={search}
               onChange={onSearchChange}
               loading={searchLoading}
@@ -1068,44 +1081,13 @@ function Header({
             />
           </div>
         )}
-        <div className="flex-1 text-right">
-          <Tooltip.Provider>
-            <Tooltip.Root delayDuration={200}>
-              <Tooltip.Trigger asChild>
-                <button
-                  id="publish-button"
-                  className={`${
-                    publishDisabled
-                      ? "bg-white text-black opacity-80"
-                      : "bg-primary-500 text-white"
-                  } rounded px-2 py-0.5 mx-1 shadow-sm`}
-                  onClick={onRequestPublish}
-                >
-                  <Trans ns="admin:data">Publish</Trans>
-                </button>
-              </Tooltip.Trigger>
-              <Tooltip.Portal>
-                <Tooltip.Content
-                  style={{ maxWidth: 220 }}
-                  className="z-50 select-none rounded bg-white px-4 py-2 shadow text-center"
-                  // sideOffset={-200}
-                  side="right"
-                >
-                  {publishDisabled ? (
-                    t("No changes")
-                  ) : (
-                    <span>
-                      {t("Has changes since last publish")}
-                      {lastPublished
-                        ? " on " + lastPublished.toLocaleDateString()
-                        : null}
-                    </span>
-                  )}
-                  <Tooltip.Arrow className="" style={{ fill: "white" }} />
-                </Tooltip.Content>
-              </Tooltip.Portal>
-            </Tooltip.Root>
-          </Tooltip.Provider>
+        <div className="ml-auto shrink-0 pl-3">
+          <PublishSplitButton
+            publishDisabled={publishDisabled}
+            lastPublished={lastPublished}
+            onRequestPublish={onRequestPublish}
+            onRequestSelectivePublish={onRequestSelectivePublish}
+          />
         </div>
       </Menubar.Root>
       {dataDownloadSettingOpen && (

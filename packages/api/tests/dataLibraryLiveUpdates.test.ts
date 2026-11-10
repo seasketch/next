@@ -329,8 +329,11 @@ describe("Live data library updates", () => {
 
         expect(await draftHasChanges(conn, projectId)).toBe(false);
         expect(await changeLogCount(conn, projectId)).toBe(0);
+        // Draft and published template layers share this source, so the
+        // attribution is already what a publish would ship. The button stays
+        // off. The changelog below is the record of the edit.
         expect(await draftHasChanges(conn, template.templateProjectId)).toBe(
-          true
+          false
         );
         expect(
           await changeLogCount(conn, template.templateProjectId)
@@ -542,19 +545,28 @@ describe("Live data library updates", () => {
       const pubSourceId = await layerSourceId(conn, pubLayerId);
       expect(pubSourceId).not.toBe(sourceId);
 
-      // republish creates a fresh clone; the old one is orphaned (no layers
-      // reference it) and left for the cleanup worker
+      // an unchanged source keeps its published clone
+      await publish(conn, projectId, adminId);
+      expect(await publishedLayerId(conn, projectId, stableId)).toBe(pubLayerId);
+      expect(await layerSourceId(conn, pubLayerId)).toBe(pubSourceId);
+
+      // a changed source is cloned again and the old clone is deleted
+      await asPostgres(conn, () =>
+        conn.any(
+          sql`update data_sources set attribution = 'changed' where id = ${sourceId}`
+        )
+      );
       await publish(conn, projectId, adminId);
       const newPubLayerId = await publishedLayerId(conn, projectId, stableId);
       const newPubSourceId = await layerSourceId(conn, newPubLayerId);
       expect(newPubSourceId).not.toBe(sourceId);
       expect(newPubSourceId).not.toBe(pubSourceId);
-      const oldCloneRefs = await asPostgres(conn, () =>
+      const oldClones = await asPostgres(conn, () =>
         conn.oneFirst(
-          sql`select count(*)::int from data_layers where data_source_id = ${pubSourceId}`
+          sql`select count(*)::int from data_sources where id = ${pubSourceId}`
         )
       );
-      expect(Number(oldCloneRefs)).toBe(0);
+      expect(Number(oldClones)).toBe(0);
 
       // published TOC items are still immutable outside library fan-out
       await asPostgres(conn, async () => {

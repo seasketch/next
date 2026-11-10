@@ -300,6 +300,7 @@ describe("change_logs", () => {
         "layer:temporal",
         "layer:title",
         "layer:uploaded",
+        "layers:list-order-change",
         "layers:published",
         "layers:z-order-change",
         "resolvable_layer_comments:created",
@@ -748,6 +749,10 @@ describe("change_logs", () => {
           data_source_type: null,
           data_layer_id: null,
           data_source_id: null,
+          // Removals keep identity so list-order reconstruction can place them.
+          stable_id: folder.stableId,
+          parent_stable_id: null,
+          path: folder.stableId,
         });
       },
     );
@@ -938,6 +943,11 @@ describe("change_logs", () => {
         );
         await closeLogs(conn, projectId);
 
+        await conn.any(sql`
+          update table_of_contents_items
+          set title = 'Target Layer edited'
+          where id = ${target.itemId}
+        `);
         const targetFirstChangeId = await withPg(conn, () =>
           conn.oneFirst(sql`
             select record_changelog(
@@ -987,6 +997,11 @@ describe("change_logs", () => {
         );
         await closeLogs(conn, projectId);
 
+        await conn.any(sql`
+          update table_of_contents_items
+          set title = 'Other Layer edited'
+          where id = ${other.itemId}
+        `);
         const otherChangeId = await withPg(conn, () =>
           conn.oneFirst(sql`
             select record_changelog(
@@ -1019,6 +1034,11 @@ describe("change_logs", () => {
         );
         await closeLogs(conn, projectId);
 
+        await conn.any(sql`
+          update table_of_contents_items
+          set title = 'Target Layer again'
+          where id = ${target.itemId}
+        `);
         const targetSecondChangeId = await withPg(conn, () =>
           conn.oneFirst(sql`
             select record_changelog(
@@ -1091,6 +1111,7 @@ describe("change_logs", () => {
             where id = ${layer.sourceId}
           `),
         );
+        await conn.any(sql`select publish_table_of_contents(${projectId})`);
         await clearLogs(conn, projectId);
 
         const netZeroChangeId = await withPg(conn, () =>

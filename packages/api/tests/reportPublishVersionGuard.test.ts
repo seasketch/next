@@ -139,6 +139,7 @@ async function publishLayerList(
   await clearSession(conn);
 }
 
+/** Runs in a savepoint, so a refused publish leaves the test transaction usable. */
 function publishReport(conn: DatabaseTransactionConnectionType, reportId: number) {
   // Savepoint, so an expected refusal doesn't abort the test transaction.
   return conn.transaction((t) =>
@@ -303,6 +304,61 @@ describe("publish_report_snapshot and unpublished layer versions", () => {
       expect(publishedUrl).toBe(newUrl);
     });
   });
+
+  test("publishes once only the new version is selectively published", async () => {
+    await projectTransaction(pool, "public", async (conn, projectId, adminId) => {
+      await clearSession(conn);
+      const ebsa = await createReportingLayer(conn, projectId, "EBSAs");
+      const seamounts = await createReportingLayer(conn, projectId, "Seamounts");
+      const reportId = await createDraftReport(conn, projectId, [
+        ebsa.stableId,
+        seamounts.stableId,
+      ]);
+      await publishLayerList(conn, projectId, adminId);
+      await publishReport(conn, reportId);
+
+      const newSourceId = await uploadNewVersion(conn, projectId, ebsa);
+      await uploadNewVersion(conn, projectId, seamounts);
+      await createSession(conn, adminId, true, false, projectId);
+      await conn.any(
+        sql`select publish_table_of_contents_items(${projectId}, ${sql.array(
+          [ebsa.stableId],
+          "text"
+        )})`
+      );
+      await clearSession(conn);
+      await expect(publishReport(conn, reportId)).rejects.toThrow(
+        UNPUBLISHED_VERSION
+      );
+
+      const publishedEbsa = await conn.one<{ url: string; output: string }>(
+        sql`select ds.url, out.url as output
+            from table_of_contents_items i
+            join data_layers l on l.id = i.data_layer_id
+            join data_sources ds on ds.id = l.data_source_id
+            left join lateral table_of_contents_items_reporting_output(i.*) out on true
+            where i.stable_id = ${ebsa.stableId} and not i.is_draft`
+      );
+      const draftEbsa = await conn.one<{ url: string; output: string }>(
+        sql`select ds.url, out.url as output
+            from data_sources ds
+            left join data_upload_outputs out
+              on out.data_source_id = ds.id and is_reporting_type(out.type)
+            where ds.id = ${newSourceId}`
+      );
+      expect(publishedEbsa).toEqual(draftEbsa);
+
+      await createSession(conn, adminId, true, false, projectId);
+      await conn.any(
+        sql`select publish_table_of_contents_items(${projectId}, ${sql.array(
+          [seamounts.stableId],
+          "text"
+        )})`
+      );
+      await clearSession(conn);
+      await publishReport(conn, reportId);
+    });
+  });
 });
 
 describe("publishing while a new layer version is still preprocessing", () => {
@@ -456,6 +512,43 @@ describe("publishing while a new layer version is still preprocessing", () => {
         source_url: null,
         source_processing_job_id: job.jobKey,
       });
+    });
+  });
+});
+
+describe("selectively publishing a version that is still preprocessing", () => {
+  test("is no longer pending once preprocessing completes", async () => {
+    await projectTransaction(pool, "public", async (conn, projectId, adminId) => {
+      await clearSession(conn);
+      const ebsa = await createReportingLayer(conn, projectId, "EBSAs");
+      const reportId = await createDraftReport(conn, projectId, [ebsa.stableId]);
+      await publishLayerList(conn, projectId, adminId);
+      await publishReport(conn, reportId);
+
+      const job = await uploadVersionStillPreprocessing(conn, projectId, ebsa);
+      await createSession(conn, adminId, true, false, projectId);
+      await conn.any(
+        sql`select publish_table_of_contents_items(${projectId}, ${sql.array(
+          [ebsa.stableId],
+          "text"
+        )})`
+      );
+      await clearSession(conn);
+      await publishReport(conn, reportId);
+      expect(await publishedRefs(conn, projectId, ebsa.stableId)).toEqual({
+        source_url: null,
+        source_processing_job_id: job.jobKey,
+      });
+
+      const outputUrl = await completePreprocessing(conn, projectId, job);
+      expect(await publishedRefs(conn, projectId, ebsa.stableId)).toEqual({
+        source_url: outputUrl,
+        source_processing_job_id: job.jobKey,
+      });
+      const pending = await conn.anyFirst(
+        sql`select stable_id from pending_publish_items_for_project(${projectId})`
+      );
+      expect(pending).not.toContain(ebsa.stableId);
     });
   });
 });
