@@ -28,12 +28,13 @@ jest.mock("../../generated/graphql", () => {
 });
 
 const copyQueryData = {
-  project: {
-    id: 1,
-    draftReports: [
+  reportsConnection: {
+    nodes: [
       {
         id: 9,
         title: "Current report",
+        projectId: 7,
+        draftId: null,
         tabs: [
           {
             id: 1,
@@ -55,6 +56,8 @@ const copyQueryData = {
       {
         id: 10,
         title: "Coastal habitats",
+        projectId: 7,
+        draftId: null,
         tabs: [
           {
             id: 2,
@@ -97,6 +100,7 @@ test("groups copyable cards under report titles and omits the open report", () =
     <CopyCardsFromReportPopover
       targetTabId={100}
       draftReportId={9}
+      projectId={7}
       demonstrationSketchId={null}
       existingCopies={new Map()}
       onDone={() => undefined}

@@ -214,7 +214,6 @@ export default function ReportEditor({
     nextFetchPolicy: "cache-first",
   });
   const copyCardsQuery = useCopyableReportCardsQuery({
-    variables: { projectId: projectId! },
     skip: !projectId,
     fetchPolicy: "cache-first",
     nextFetchPolicy: "cache-first",
@@ -222,12 +221,14 @@ export default function ReportEditor({
 
   const copyableReportCount = useMemo(() => {
     return groupCopyableReports(
-      copyCardsQuery.data?.project?.draftReports,
-      baseContext.data?.report?.id ?? null
+      copyCardsQuery.data?.reportsConnection?.nodes,
+      baseContext.data?.report?.id ?? null,
+      projectId ?? null
     ).length;
   }, [
     baseContext.data?.report?.id,
-    copyCardsQuery.data?.project?.draftReports,
+    copyCardsQuery.data?.reportsConnection?.nodes,
+    projectId,
   ]);
 
   const existingCopies = useMemo(() => {
@@ -689,6 +690,7 @@ export default function ReportEditor({
                                 targetTabId={
                                   selectedTabId ?? report.tabs?.[0]?.id ?? 0
                                 }
+                                projectId={projectId ?? null}
                                 draftReportId={report.id ?? null}
                                 demonstrationSketchId={selectedSketchId}
                                 existingCopies={existingCopies}

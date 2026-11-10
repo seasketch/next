@@ -66,8 +66,8 @@ type GroupedCopyableReport<TCard extends CopyableCard> = {
 };
 
 /**
- * Reports to copy from: every draft in the project except the one open in the
- * editor. Sections are keyed by report title. Reports with no cards are omitted.
+ * Reports to copy from: every draft in this project except the one open in
+ * the editor. Sections are keyed by report title. Reports with no cards are omitted.
  */
 export function groupCopyableReports<TCard extends CopyableCard>(
   reports:
@@ -75,6 +75,8 @@ export function groupCopyableReports<TCard extends CopyableCard>(
         | {
             id: number;
             title?: string | null;
+            projectId?: number | null;
+            draftId?: number | null;
             tabs?: ReadonlyArray<
               | {
                   id: number;
@@ -89,12 +91,21 @@ export function groupCopyableReports<TCard extends CopyableCard>(
       >
     | null
     | undefined,
-  currentReportId: number | null
+  currentReportId: number | null,
+  projectId: number | null
 ): GroupedCopyableReport<TCard>[] {
   const result: GroupedCopyableReport<TCard>[] = [];
+  if (projectId == null) {
+    return result;
+  }
 
   for (const report of reports ?? []) {
-    if (!report || report.id === currentReportId) {
+    if (
+      !report ||
+      report.id === currentReportId ||
+      report.projectId !== projectId ||
+      report.draftId != null
+    ) {
       continue;
     }
     const tabs = [...(report.tabs ?? [])]
@@ -134,6 +145,7 @@ export function groupCopyableReports<TCard extends CopyableCard>(
 
 export function CopyCardsFromReportPopover({
   targetTabId,
+  projectId,
   draftReportId,
   demonstrationSketchId,
   existingCopies,
@@ -142,6 +154,7 @@ export function CopyCardsFromReportPopover({
   copyQueryLoading,
 }: {
   targetTabId: number;
+  projectId: number | null;
   /** Draft report open in the editor. Excluded from the list, and refetched after cards change. */
   draftReportId: number | null;
   /** Demonstration sketch used by `ReportDependenciesContextProvider`. */
@@ -170,10 +183,11 @@ export function CopyCardsFromReportPopover({
   const grouped = useMemo(
     () =>
       groupCopyableReports(
-        copyQueryData?.project?.draftReports,
-        draftReportId
+        copyQueryData?.reportsConnection?.nodes,
+        draftReportId,
+        projectId
       ),
-    [copyQueryData?.project?.draftReports, draftReportId]
+    [copyQueryData?.reportsConnection?.nodes, draftReportId, projectId]
   );
 
   const toggleCard = useCallback((id: number) => {

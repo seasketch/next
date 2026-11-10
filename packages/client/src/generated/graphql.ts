@@ -10982,8 +10982,6 @@ export type Project = Node & {
   /** Should be a short length in order to fit in the project header. */
   description?: Maybe<Scalars['String']>;
   downloadableLayersCount?: Maybe<Scalars['Int']>;
-  /** Draft reports for this project, including reports that are not assigned to a sketch class. Published versions are omitted. */
-  draftReports?: Maybe<Array<Report>>;
   draftTableOfContentsHasChanges: Scalars['Boolean'];
   /**
    * Draft layer lists, accessible only to admins. Make edits to the layer list and
@@ -11301,16 +11299,6 @@ export type ProjectDataSourcesForItemsArgs = {
   first?: Maybe<Scalars['Int']>;
   offset?: Maybe<Scalars['Int']>;
   tableOfContentsItemIds?: Maybe<Array<Maybe<Scalars['Int']>>>;
-};
-
-
-/**
- * SeaSketch Project type. This root type contains most of the fields and queries
- * needed to drive the application.
- */
-export type ProjectDraftReportsArgs = {
-  first?: Maybe<Scalars['Int']>;
-  offset?: Maybe<Scalars['Int']>;
 };
 
 
@@ -25376,19 +25364,16 @@ export type BaseDraftReportContextQuery = (
   )> }
 );
 
-export type CopyableReportCardsQueryVariables = Exact<{
-  projectId: Scalars['Int'];
-}>;
+export type CopyableReportCardsQueryVariables = Exact<{ [key: string]: never; }>;
 
 
 export type CopyableReportCardsQuery = (
   { __typename?: 'Query' }
-  & { project?: Maybe<(
-    { __typename?: 'Project' }
-    & Pick<Project, 'id'>
-    & { draftReports?: Maybe<Array<(
+  & { reportsConnection?: Maybe<(
+    { __typename?: 'ReportsConnection' }
+    & { nodes: Array<(
       { __typename?: 'Report' }
-      & Pick<Report, 'id' | 'title'>
+      & Pick<Report, 'id' | 'title' | 'projectId' | 'draftId'>
       & { tabs?: Maybe<Array<(
         { __typename?: 'ReportTab' }
         & Pick<ReportTab, 'id' | 'position' | 'title'>
@@ -25397,7 +25382,7 @@ export type CopyableReportCardsQuery = (
           & Pick<ReportCard, 'id' | 'position' | 'title' | 'body' | 'componentSettings' | 'alternateLanguageSettings'>
         )>> }
       )>> }
-    )>> }
+    )> }
   )> }
 );
 
@@ -40939,12 +40924,13 @@ export type BaseDraftReportContextQueryHookResult = ReturnType<typeof useBaseDra
 export type BaseDraftReportContextLazyQueryHookResult = ReturnType<typeof useBaseDraftReportContextLazyQuery>;
 export type BaseDraftReportContextQueryResult = Apollo.QueryResult<BaseDraftReportContextQuery, BaseDraftReportContextQueryVariables>;
 export const CopyableReportCardsDocument = gql`
-    query CopyableReportCards($projectId: Int!) {
-  project(id: $projectId) {
-    id
-    draftReports {
+    query CopyableReportCards {
+  reportsConnection {
+    nodes {
       id
       title
+      projectId
+      draftId
       tabs {
         id
         position
@@ -40975,11 +40961,10 @@ export const CopyableReportCardsDocument = gql`
  * @example
  * const { data, loading, error } = useCopyableReportCardsQuery({
  *   variables: {
- *      projectId: // value for 'projectId'
  *   },
  * });
  */
-export function useCopyableReportCardsQuery(baseOptions: Apollo.QueryHookOptions<CopyableReportCardsQuery, CopyableReportCardsQueryVariables>) {
+export function useCopyableReportCardsQuery(baseOptions?: Apollo.QueryHookOptions<CopyableReportCardsQuery, CopyableReportCardsQueryVariables>) {
         const options = {...defaultOptions, ...baseOptions}
         return Apollo.useQuery<CopyableReportCardsQuery, CopyableReportCardsQueryVariables>(CopyableReportCardsDocument, options);
       }

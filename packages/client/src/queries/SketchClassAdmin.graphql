@@ -849,12 +849,13 @@ query BaseDraftReportContext($reportId: Int!) {
   }
 }
 
-query CopyableReportCards($projectId: Int!) {
-  project(id: $projectId) {
-    id
-    draftReports {
+query CopyableReportCards {
+  reportsConnection {
+    nodes {
       id
       title
+      projectId
+      draftId
       tabs {
         id
         position
