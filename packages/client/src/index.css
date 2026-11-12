@@ -8270,6 +8270,10 @@ select{
   min-width:100%
 }
 
+.min-w-\[4\.5rem\]{
+  min-width:4.5rem
+}
+
 .\!max-w-128{
   max-width:32rem !important
 }
@@ -16249,6 +16253,11 @@ input[type="checkbox"][indeterminate="true"]:checked {
 }
 
 .data-\[state\=open\]\:bg-gray-50[data-state="open"]{
+  --tw-bg-opacity:1;
+  background-color:rgb(249 250 251 / var(--tw-bg-opacity, 1))
+}
+
+.data-\[state\=checked\]\:bg-gray-50[data-state="checked"]{
   --tw-bg-opacity:1;
   background-color:rgb(249 250 251 / var(--tw-bg-opacity, 1))
 }

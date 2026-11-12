@@ -1,4 +1,10 @@
-import { PlusIcon, TrashIcon } from "@heroicons/react/outline";
+import {
+  CheckIcon,
+  ChevronDownIcon,
+  PlusIcon,
+  TrashIcon,
+} from "@heroicons/react/outline";
+import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
 import gql from "graphql-tag";
 import React from "react";
 import { Trans, useTranslation } from "react-i18next";
@@ -347,7 +353,7 @@ export default function LogicRuleEditor({
                         className="bg-blue-100 border-black border-opacity-10 text-sm rounded-lg overflow-hidden flex items-center w-full border h-8"
                       >
                         <OperatorSelect
-                          className="flex-1 text-xl"
+                          className="h-full min-w-0 w-full flex-1"
                           value={condition.operator}
                           operators={
                             (formElement.type?.supportedOperators ||
@@ -588,7 +594,41 @@ function FormElementSelect({
   );
 }
 
-function OperatorSelect({
+export function operatorDescriptions(
+  operators: FieldRuleOperator[],
+  t: (key: string) => string
+): Partial<Record<FieldRuleOperator, string>> | null {
+  const hasEquality = operators.some(
+    (op) =>
+      op === FieldRuleOperator.Equal || op === FieldRuleOperator.NotEqual
+  );
+  const hasContains = operators.includes(FieldRuleOperator.Contains);
+  if (!hasEquality || !hasContains) {
+    return null;
+  }
+  return {
+    [FieldRuleOperator.Equal]: t(
+      "The answer is exactly this, and nothing else"
+    ),
+    [FieldRuleOperator.NotEqual]: t("The answer is not exactly this"),
+    [FieldRuleOperator.Contains]: t(
+      "Best choice if matching this answer, possibly in addition to other choices"
+    ),
+  };
+}
+
+function operatorLabel(op: FieldRuleOperator, t: (key: string) => string) {
+  switch (op) {
+    case FieldRuleOperator.Contains:
+      return t("Contains");
+    case FieldRuleOperator.IsBlank:
+      return t("Blank");
+    default:
+      return OPERATOR_LABELS[op];
+  }
+}
+
+export function OperatorSelect({
   value,
   operators,
   onChange,
@@ -599,20 +639,57 @@ function OperatorSelect({
   onChange: (operator: FieldRuleOperator) => void;
   className?: string;
 }) {
+  const { t } = useTranslation("admin:surveys");
+  const descriptions = operatorDescriptions(operators, t);
   return (
-    <div className={`${className}`}>
-      <select
-        className={`${adminValueInputCommonClassNames}`}
-        value={value.toString()}
-        onChange={(e) => onChange(e.target.value as FieldRuleOperator)}
-      >
-        {operators.map((op) => (
-          <option key={op.toString()} value={op.toString()}>
-            {OPERATOR_LABELS[op]}
-          </option>
-        ))}
-      </select>
-    </div>
+    <DropdownMenu.Root modal={false}>
+      <DropdownMenu.Trigger asChild>
+        <button
+          type="button"
+          className={`border-none bg-transparent text-center focus:border-none focus:bg-blue-900 focus:bg-opacity-10 focus:outline-none focus:ring-0 inline-flex min-w-[4.5rem] items-center justify-center gap-1 ${
+            className || "w-full"
+          }`}
+          aria-label={t("Comparison")}
+        >
+          <span>{operatorLabel(value, t)}</span>
+          <ChevronDownIcon className="h-3 w-3 flex-none opacity-50" />
+        </button>
+      </DropdownMenu.Trigger>
+      <DropdownMenu.Portal>
+        <DropdownMenu.Content
+          align="start"
+          sideOffset={6}
+          className={`z-[80] overflow-hidden rounded-md border border-black/10 bg-white p-1 text-left shadow-lg ${
+            descriptions ? "w-72" : "min-w-[8rem]"
+          }`}
+        >
+          <DropdownMenu.RadioGroup
+            value={value}
+            onValueChange={(next) => onChange(next as FieldRuleOperator)}
+          >
+            {operators.map((op) => (
+              <DropdownMenu.RadioItem
+                key={op}
+                value={op}
+                className="relative cursor-pointer select-none rounded py-1.5 pl-8 pr-3 outline-none data-[highlighted]:bg-gray-100 data-[state=checked]:bg-gray-50"
+              >
+                <DropdownMenu.ItemIndicator className="absolute left-2 top-2 text-gray-700">
+                  <CheckIcon className="h-4 w-4" />
+                </DropdownMenu.ItemIndicator>
+                <div className="text-sm font-medium text-gray-900">
+                  {operatorLabel(op, t)}
+                </div>
+                {descriptions?.[op] && (
+                  <p className="mt-0.5 text-xs font-normal leading-snug text-gray-500">
+                    {descriptions[op]}
+                  </p>
+                )}
+              </DropdownMenu.RadioItem>
+            ))}
+          </DropdownMenu.RadioGroup>
+        </DropdownMenu.Content>
+      </DropdownMenu.Portal>
+    </DropdownMenu.Root>
   );
 }
 
