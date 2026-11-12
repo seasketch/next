@@ -31,7 +31,7 @@ Locally: `npm run e2e:smoke`, `npm run e2e:enduser`, and `npm run e2e:admin`. `n
 
 ## Shared rules
 
-**Permission matrix.** Who may edit a setting stays in API tests. End-user journeys cover what a visitor, a member, and a participant can see and walk. Admin journeys cover the admin screens. The gates (anonymous visitor, signed-in non-participant, participant) are end-user even when an admin configured them. Every way into a gated project is [Getting into a project](journeys-end-user.md#getting-into-a-project).
+**Permission matrix.** Who may edit a setting stays in API tests. End-user journeys cover what a visitor, a member, and a participant can see and walk. Admin journeys cover the admin screens. The gates (anonymous visitor, signed-in non-participant, participant) are end-user even when an admin configured them. Every way into a gated project is [Getting into a project](journeys-end-user.md#getting-into-a-project). Invite-only entry without an invitation is the formal access request: the visitor files it, and an administrator approves or denies it on Users & Groups. The contact email is a follow-up on the gates that show it.
 
 **Arrange without the other suite.** An end-user journey that needs a forum, a layer, or a hidden toolbar sets that up in the database or through GraphQL. It does not click through the admin UI. An admin journey may open the project map only to confirm the thing it just saved. That confirmation does not make it an end-user test.
 

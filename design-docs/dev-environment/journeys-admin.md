@@ -28,10 +28,10 @@ Intent: the Settings page. The participant-visible result of a flag (a missing t
 
 ## Users, groups, and invites
 
-Intent: the Users & Groups admin. The invitee's accept/join path is end-user. Tag: `@users`.
+Intent: the Users & Groups admin. The visitor's request and the invitee's accept path are end-user. Tag: `@users`.
 
-1. Participants list shows joined users. Admins list shows project admins.
-2. Access requests can be approved or denied from the admin list.
+1. Participants list shows joined users. Admins list shows project admins. Pending invite-only requests stay off the participants list until they are approved.
+2. On an invite-only project, Users & Groups shows Access Requests at `/:slug/admin/users/accessRequests`. A pending Share Profile and Request Access row appears there. Approve lets that person open the map on reload. Deny leaves the row on the list, with Approve access still available, and the visitor has no second request button. The visitor's walk is [Asking to join an invite-only project](journeys-end-user.md#asking-to-join-an-invite-only-project). The tab is hidden unless the project is invite-only.
 3. Draft, sent, and bounced invite tabs show an invite created for this journey.
 4. An admin creates a group, adds a participant, and the membership is saved.
 5. CSV export of participants downloads a file.
