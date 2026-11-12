@@ -10734,17 +10734,28 @@ export enum ParticipationStatus {
   PendingApproval = 'PENDING_APPROVAL'
 }
 
+/** One overlay row that a publish would add, update, or remove. This is the draft-versus-published diff. */
 export type PendingPublishItem = {
   __typename?: 'PendingPublishItem';
+  /** Set when this row publishes as part of a group. A removed folder's bundle id is that folder's stable id, including items deleted with it. Layers that share a changed non-library source use `source:<draft source id>`. Null when the row can be published on its own. */
   bundleId?: Maybe<Scalars['String']>;
+  /** Id of the draft table_of_contents_items row. Null when `kind` is `removed`. */
   draftId?: Maybe<Scalars['Int']>;
+  /** True for members of a bundle other than the row shown as the group's checkbox. That checkbox is the removed folder, or the member with the lowest stable id in a shared-source bundle. */
   includedInBundle?: Maybe<Scalars['Boolean']>;
+  /** True when this row is a folder rather than a layer. */
   isFolder?: Maybe<Scalars['Boolean']>;
+  /** How this row differs from the published overlay list. `added`: a draft row with no published row. `updated`: both copies exist and a publishable field still differs. `removed`: a published row with no draft row. A change that was made and then undone is omitted. */
   kind?: Maybe<Scalars['String']>;
+  /** Stable id of the parent this row would be published under. For a removed row, the parent on the published tree. */
   parentStableId?: Maybe<Scalars['String']>;
+  /** Materialized path of this row in the tree the title came from: the draft tree, or the published tree when `kind` is `removed`. */
   path?: Maybe<Scalars['String']>;
+  /** Other pending rows that must be published with this one. Includes new ancestor folders, moves required to avoid a cycle, and items moved out of a folder before that folder was removed. */
   requiresStableIds?: Maybe<Array<Maybe<Scalars['String']>>>;
+  /** Stable id shared by the draft and published copies of this overlay row. */
   stableId?: Maybe<Scalars['String']>;
+  /** Draft title, or the published title when `kind` is `removed`. */
   title?: Maybe<Scalars['String']>;
 };
 
@@ -11115,7 +11126,7 @@ export type Project = Node & {
    * in this list. Those users can be accessed via `unapprovedParticipants()`
    */
   participants?: Maybe<Array<User>>;
-  /** Reads and enables pagination through a set of `PendingPublishItem`. */
+  /** Overlay rows a publish would add, update, or remove. This is the draft-versus-published diff, so a change that was made and then undone is omitted. See `PendingPublishItem.kind`. */
   pendingPublishItems?: Maybe<Array<PendingPublishItem>>;
   /**
    * Draft polygon overlays that can be used as a Geography base or clipping layer.

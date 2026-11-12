@@ -752,6 +752,83 @@ CREATE TYPE public.pending_publish_item AS (
 
 
 --
+-- Name: TYPE pending_publish_item; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON TYPE public.pending_publish_item IS 'One overlay row that a publish would add, update, or remove. This is the draft-versus-published diff.';
+
+
+--
+-- Name: COLUMN pending_publish_item.stable_id; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.pending_publish_item.stable_id IS 'Stable id shared by the draft and published copies of this overlay row.';
+
+
+--
+-- Name: COLUMN pending_publish_item.kind; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.pending_publish_item.kind IS 'How this row differs from the published overlay list. `added`: a draft row with no published row. `updated`: both copies exist and a publishable field still differs. `removed`: a published row with no draft row. A change that was made and then undone is omitted.';
+
+
+--
+-- Name: COLUMN pending_publish_item.title; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.pending_publish_item.title IS 'Draft title, or the published title when `kind` is `removed`.';
+
+
+--
+-- Name: COLUMN pending_publish_item.is_folder; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.pending_publish_item.is_folder IS 'True when this row is a folder rather than a layer.';
+
+
+--
+-- Name: COLUMN pending_publish_item.parent_stable_id; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.pending_publish_item.parent_stable_id IS 'Stable id of the parent this row would be published under. For a removed row, the parent on the published tree.';
+
+
+--
+-- Name: COLUMN pending_publish_item.path; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.pending_publish_item.path IS 'Materialized path of this row in the tree the title came from: the draft tree, or the published tree when `kind` is `removed`.';
+
+
+--
+-- Name: COLUMN pending_publish_item.requires_stable_ids; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.pending_publish_item.requires_stable_ids IS 'Other pending rows that must be published with this one. Includes new ancestor folders, moves required to avoid a cycle, and items moved out of a folder before that folder was removed.';
+
+
+--
+-- Name: COLUMN pending_publish_item.bundle_id; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.pending_publish_item.bundle_id IS 'Set when this row publishes as part of a group. A removed folder''s bundle id is that folder''s stable id, including items deleted with it. Layers that share a changed non-library source use `source:<draft source id>`. Null when the row can be published on its own.';
+
+
+--
+-- Name: COLUMN pending_publish_item.draft_id; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.pending_publish_item.draft_id IS 'Id of the draft table_of_contents_items row. Null when `kind` is `removed`.';
+
+
+--
+-- Name: COLUMN pending_publish_item.included_in_bundle; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.pending_publish_item.included_in_bundle IS 'True for members of a bundle other than the row shown as the group''s checkbox. That checkbox is the removed folder, or the member with the lowest stable id in a shared-source bundle.';
+
+
+--
 -- Name: post_attachment; Type: TYPE; Schema: public; Owner: -
 --
 
@@ -19801,7 +19878,8 @@ $$;
 -- Name: FUNCTION projects_pending_publish_items(project public.projects); Type: COMMENT; Schema: public; Owner: -
 --
 
-COMMENT ON FUNCTION public.projects_pending_publish_items(project public.projects) IS '@simpleCollections only';
+COMMENT ON FUNCTION public.projects_pending_publish_items(project public.projects) IS '@simpleCollections only
+Overlay rows a publish would add, update, or remove. This is the draft-versus-published diff, so a change that was made and then undone is omitted. See `PendingPublishItem.kind`.';
 
 
 --
