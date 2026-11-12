@@ -333,23 +333,24 @@ test.describe("inbound access @enduser @access", () => {
     });
   });
 
-  // project_public_details returns no row for an unknown slug, so the client
-  // shows "Error Loading Project" instead of "Project Not Found". This fails
-  // until that page links to the project list.
   test("an unknown slug says the project was not found", async ({ page }) => {
     const missing = slug("miss");
     await page.goto(`/${missing}`);
     const gate = page.getByRole("dialog");
-    await expect(gate.getByRole("heading", { name: "Project Not Found" })).toBeVisible();
+    await expect(
+      gate.getByRole("heading", { name: `Project "${missing}" not found.` })
+    ).toBeVisible();
     await expect(gate.getByRole("link", { name: "list of projects" })).toHaveAttribute(
       "href",
       "/projects"
     );
+    await expect(page.locator('meta[name="prerender-status-code"]')).toHaveAttribute(
+      "content",
+      "404"
+    );
     await expectMapHidden(page);
   });
 
-  // A deleted project's old url still opens the project shell. The list
-  // assertion passes. The shell assertion fails until that url stops resolving.
   test("a deleted project leaves the list and its old url does not show the map", async ({
     page,
   }) => {
@@ -369,12 +370,16 @@ test.describe("inbound access @enduser @access", () => {
     await expect(projectLink(page, name)).toHaveCount(0);
 
     await page.goto(`/${row.slug}`);
-    const shell = page.getByRole("button", { name: "Sketches" });
-    const missing = page.getByRole("heading", { name: "Project Not Found" });
-    await expect(shell.or(missing)).toBeVisible({ timeout: 15_000 });
-    await expect(shell).toHaveCount(0);
-    await expect(page.locator(".mapboxgl-map")).toHaveCount(0);
-    await expect(missing).toBeVisible();
+    const gate = page.getByRole("dialog");
+    await expect(
+      gate.getByRole("heading", { name: `Project "${row.slug}" not found.` })
+    ).toBeVisible();
+    await expect(gate.getByRole("link", { name: "list of projects" })).toHaveAttribute(
+      "href",
+      "/projects"
+    );
+    await expect(page.getByRole("button", { name: "Sketches" })).toHaveCount(0);
+    await expectMapHidden(page);
   });
 
   test("a signed-in non-participant sees the map and the join affordances", async ({
@@ -389,8 +394,6 @@ test.describe("inbound access @enduser @access", () => {
     await expectSignedInSketching(page);
   });
 
-  // The ?pj return is handled only in FullSidebar, which is not mounted.
-  // This fails until a mounted screen reads that parameter.
   test("signing in from a project returns to the join form", async ({ page, request }) => {
     const member = await person("prompt");
     await signIn(page, request, member);
@@ -401,7 +404,6 @@ test.describe("inbound access @enduser @access", () => {
     await expect(page.getByText("How will my profile be used?")).toBeVisible();
   });
 
-  // Depends on the ?pj join page above, so it fails with that test.
   test("skip join is remembered on the next visit", async ({ page, request }) => {
     test.setTimeout(120_000);
     const member = await person("skip");
@@ -614,12 +616,11 @@ test.describe("inbound access @enduser @access", () => {
     await expect(page.getByRole("heading", { name: "Email Not Verified" })).toHaveCount(0);
   });
 
-  // The access check grants administrators before it looks at email verification,
-  // so this assertion fails until that order changes. Do not skip it.
-  test("an unverified administrator is stopped on an admins-only project", async ({
+  test("an unverified administrator opens an admins-only project", async ({
     page,
     request,
   }) => {
+    test.setTimeout(120_000);
     const row = await project(request, {
       label: "uva",
       name: "Unverified Admin",
@@ -637,9 +638,9 @@ test.describe("inbound access @enduser @access", () => {
       email: admin.email,
     });
     await signIn(page, request, admin, { emailVerified: false });
-    await page.goto(`/${row.slug}`);
-    await expect(page.getByRole("heading", { name: "Email Not Verified" })).toBeVisible();
-    await expectMapHidden(page);
+    await openMap(page, `/${row.slug}`);
+    await expect(page.getByRole("heading", { name: "Email Not Verified" })).toHaveCount(0);
+    await expect(page.getByRole("heading", { name: "Admins Only" })).toHaveCount(0);
   });
 
   test("an invite to an existing account makes Sign In the primary button", async ({
@@ -906,9 +907,6 @@ test.describe("inbound access @enduser @access", () => {
     await expect(page.getByRole("heading", { name: "Private Project" })).toHaveCount(0);
   });
 
-  // session_has_project_access grants an approved participant before it looks
-  // at the door, so the non-admin still sees the map. That assertion fails
-  // until the check changes. The pending requester and the admin assertions pass.
   test("an invite-only project that becomes admins-only closes the old doors", async ({
     page,
     request,
@@ -943,10 +941,8 @@ test.describe("inbound access @enduser @access", () => {
 
     await asUser(browser, request, member, async (memberPage) => {
       await memberPage.goto(`/${row.slug}`);
-      await expect
-        .soft(memberPage.getByRole("heading", { name: "Admins Only" }))
-        .toBeVisible();
-      await expect.soft(memberPage.locator(".mapboxgl-map")).toHaveCount(0);
+      await expect(memberPage.getByRole("heading", { name: "Admins Only" })).toBeVisible();
+      await expectMapHidden(memberPage);
     });
     await asUser(browser, request, pending, async (pendingPage) => {
       await pendingPage.goto(`/${row.slug}`);

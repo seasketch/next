@@ -43,7 +43,11 @@ test("Project is visible if loaded and granted access", async () => {
 test("Error is shown if project doesn't exist", async () => {
   render(<Error404 />);
   await waitFor(() => {
-    expect(screen.getByText(/Error Loading Project/)).toBeInTheDocument();
+    expect(screen.getByText(/Project "cburt" not found/)).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "list of projects" })).toHaveAttribute(
+      "href",
+      "/projects"
+    );
   });
 });
 
@@ -66,6 +70,7 @@ test("Invite-only projects deny access to unauthorized users", async () => {
   render(<DeniedInviteOnly />);
   await waitFor(() => {
     expect(screen.getByText(/invitation/)).toBeInTheDocument();
+    expect(screen.getByText(/chad@underbluewaters.net/)).toBeInTheDocument();
   });
 });
 

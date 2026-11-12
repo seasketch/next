@@ -14,6 +14,8 @@ import {
 import { Trans, useTranslation } from "react-i18next";
 import Button from "../components/Button";
 import { useAuth0 } from "@auth0/auth0-react";
+import { Helmet } from "react-helmet";
+import { useParams } from "react-router-dom";
 import { AnimatePresence, motion } from "framer-motion";
 import { useGlobalErrorHandler } from "../components/GlobalErrorHandler";
 import useCurrentProjectMetadata from "../useCurrentProjectMetadata";
@@ -32,6 +34,7 @@ export const ProjectAccessGate: React.FunctionComponent<{ admin?: boolean }> = (
   props
 ) => {
   const auth0 = useAuth0();
+  const { slug } = useParams<{ slug?: string }>();
   const onError = useGlobalErrorHandler();
   const { data, loading, error, refetch } = useCurrentProjectMetadata({
     onError,
@@ -73,6 +76,27 @@ export const ProjectAccessGate: React.FunctionComponent<{ admin?: boolean }> = (
   );
   let status: ProjectAccessStatus | null =
     data?.projectPublicDetails?.accessStatus || null;
+  let notFound = false;
+  const projectSlug = slug || data?.projectPublicDetails?.slug || "";
+  const markMissingProject = () => {
+    notFound = true;
+    icon = errorIcon;
+    buttons = <></>;
+    title = (
+      <Trans ns="projectLanding" values={{ slug: projectSlug }}>
+        Project "{{slug}}" not found.
+      </Trans>
+    );
+    body = (
+      <Trans ns="projectLanding">
+        Try browsing our{" "}
+        <a className="underline text-primary-500" href="/projects">
+          list of projects
+        </a>
+        .
+      </Trans>
+    );
+  };
 
   // status = ProjectAccessStatus.DeniedNotRequested;
   // status = ProjectAccessStatus.DeniedNotApproved;
@@ -137,6 +161,8 @@ export const ProjectAccessGate: React.FunctionComponent<{ admin?: boolean }> = (
         );
       }
     }
+  } else if (!error && projectSlug && !data?.projectPublicDetails) {
+    markMissingProject();
   } else if (error || !data) {
     title = <Trans ns="projectLanding">Error Loading Project</Trans>;
     body = error ? (
@@ -161,19 +187,7 @@ export const ProjectAccessGate: React.FunctionComponent<{ admin?: boolean }> = (
   } else {
     switch (status as ProjectAccessStatus) {
       case ProjectAccessStatus.ProjectDoesNotExist:
-        icon = errorIcon;
-        buttons = contactSupport;
-        title = <Trans ns="projectLanding">Project Not Found</Trans>;
-        body = (
-          <Trans ns="projectLanding">
-            SeaSketch does not have a project located at this url. Try browsing
-            our{" "}
-            <a className="underline text-primary-500" href="/projects">
-              list of projects
-            </a>{" "}
-            to find what you are looking for.
-          </Trans>
-        );
+        markMissingProject();
         break;
       case ProjectAccessStatus.DeniedAdminsOnly:
         icon = lockedIcon;
@@ -279,22 +293,36 @@ export const ProjectAccessGate: React.FunctionComponent<{ admin?: boolean }> = (
         );
 
         buttons = (
-          <Button
-            onClick={() => {
-              // setReverseTransition(false);
-              setShowProfileForm(true);
-            }}
-            label={
-              <Trans ns="projectLanding">
-                Share Profile and Request Access
-              </Trans>
-            }
-            buttonClassName="md:w-full"
-            disabled={
-              resendVerificationState.loading ||
-              resendVerificationState.data?.resendVerificationEmail.success
-            }
-          />
+          <>
+            <Button
+              onClick={() => {
+                // setReverseTransition(false);
+                setShowProfileForm(true);
+              }}
+              label={
+                <Trans ns="projectLanding">
+                  Share Profile and Request Access
+                </Trans>
+              }
+              buttonClassName="md:w-full"
+              disabled={
+                resendVerificationState.loading ||
+                resendVerificationState.data?.resendVerificationEmail.success
+              }
+            />
+            <Button
+              mailTo={
+                data.projectPublicDetails.supportEmail || "support@seasketch.org"
+              }
+              label={
+                <Trans ns="projectLanding">
+                  Contact{" "}
+                  {data.projectPublicDetails.supportEmail ||
+                    "support@seasketch.org"}
+                </Trans>
+              }
+            />
+          </>
         );
         break;
       case ProjectAccessStatus.DeniedAnon:
@@ -361,6 +389,22 @@ export const ProjectAccessGate: React.FunctionComponent<{ admin?: boolean }> = (
                 }
               />
             )}
+            {data.projectPublicDetails.accessControl ===
+              ProjectAccessControlSetting.InviteOnly && (
+              <Button
+                mailTo={
+                  data.projectPublicDetails.supportEmail ||
+                  "support@seasketch.org"
+                }
+                label={
+                  <Trans ns="projectLanding">
+                    Contact{" "}
+                    {data.projectPublicDetails.supportEmail ||
+                      "support@seasketch.org"}
+                  </Trans>
+                }
+              />
+            )}
           </>
         );
         break;
@@ -383,6 +427,15 @@ export const ProjectAccessGate: React.FunctionComponent<{ admin?: boolean }> = (
   return (
     <>
       {/* {props.children} */}
+      {notFound && (
+        <Helmet>
+          <title>
+            {t('Project "{{slug}}" not found.', { slug: projectSlug })}
+          </title>
+          <meta name="prerender-status-code" content="404" />
+          <meta name="robots" content="noindex" />
+        </Helmet>
+      )}
       <div
         className="fixed z-50 inset-0 overflow-y-auto overflow-x-hidden max-w-full"
         aria-labelledby="modal-title"

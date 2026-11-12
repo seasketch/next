@@ -150,8 +150,6 @@ test.describe("access @enduser @access", () => {
     }
   });
 
-  // Known bug: the invite-only gate does not show the project's support email.
-  // This assertion fails until that contact path exists. Do not skip it.
   test("an invite-only gate shows the project's support email", async ({
     page,
     request,
