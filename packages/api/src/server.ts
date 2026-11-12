@@ -7,7 +7,6 @@ import { getJWKS, rotateKeys, verify } from "./auth/jwks";
 import authorizationMiddleware from "./middleware/authorizationMiddleware";
 import userAccountMiddlware from "./middleware/userAccountMiddleware";
 import currentProjectMiddlware from "./middleware/currentProjectMiddleware";
-import surveyInviteMiddlware from "./middleware/surveyInviteMiddleware";
 import verifyEmailMiddleware from "./middleware/verifyEmailMiddleware";
 import { unsubscribeFromTopic } from "./activityNotifications/topicNotifications";
 import { graphqlUploadExpress } from "graphql-upload";
@@ -192,10 +191,6 @@ app.use(currentProjectMiddlware);
 // Create new user account if req.user is unrecognized, and assign req.user.id
 app.use(userAccountMiddlware);
 
-// Parse survey invites and populate req.surveyInvite with valid claims
-app.use(surveyInviteMiddlware);
-
-// set email as verified in auth0 db if an emailed token is present in headers
 app.use(verifyEmailMiddleware);
 
 app.use(

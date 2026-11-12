@@ -8,7 +8,6 @@ import {
   createGroup,
   projectTransaction,
   verifyCRUDOpsLimitedToAdmins,
-  asDatabaseOwner,
   asPg,
 } from "./helpers";
 import {
@@ -754,34 +753,6 @@ describe("Sending invites", () => {
     });
   });
 
-  test("SURVEY_INVITE_QUEUED/SENT", async () => {
-    await projectTransaction(
-      pool,
-      "public",
-      async (conn, projectId, adminId, [userA, userB]) => {
-        await createSession(conn, adminId, true, false);
-        const surveyId = await conn.oneFirst(
-          sql`insert into surveys (project_id, name) values (${projectId}, 'Survey') returning id`
-        );
-        const groupId = await createGroup(conn, projectId, "Group A");
-        const invite = await asDatabaseOwner(conn, () => conn.one(
-          sql`select * from create_survey_invites(${surveyId}, true, true, array['Group A'], array[
-                          ('bob@example.com', 'Bob')::survey_invite_options
-                        ])`
-        ));
-        const projectInvites = await conn.any(
-          sql`select * from project_invites where make_admin = true`
-        );
-        expect(projectInvites.length).toBe(1);
-        await createSession(conn, adminId, true, false);
-        let status = await conn.oneFirst(
-          sql`select project_invites_status(project_invites.*) from project_invites`
-        );
-        expect(status).toBe("SURVEY_INVITE_QUEUED");
-      }
-    );
-  });
-
   test(`multiple emails - errors`, async () => {
     await projectTransaction(
       pool,
@@ -1392,37 +1363,6 @@ describe("Accepting Invites", () => {
         }
       );
     });
-    test("confirm_project_invite_with_survey_token can be called if `x-ss-survey-invite-token` is set", async () => {
-      await projectTransaction(
-        pool,
-        "public",
-        async (conn, projectId, adminId, [userA, userB]) => {
-          await createSession(conn, adminId, true, false);
-          const surveyId = await conn.oneFirst(
-            sql`insert into surveys (project_id, name) values (${projectId}, 'Survey') returning id`
-          );
-          const groupId = await createGroup(conn, projectId, "Group A");
-          const invite = await asDatabaseOwner(conn, () => conn.one(
-            sql`select * from create_survey_invites(${surveyId}, true, true, array['Group A'], array[
-                                ('bob@example.com', 'Bob')::survey_invite_options
-                              ])`
-          ));
-          await createSession(conn, userA, true, false, projectId);
-          await conn.any(
-            sql`select set_config('session.survey_invite_email', 'bob@example.com', true)`
-          );
-          const uid = await conn.oneFirst(
-            sql`select * from confirm_project_invite_with_survey_token(${projectId})`
-          );
-          expect(uid).toBeTruthy();
-          await clearSession(conn);
-          const participant = await conn.one(
-            sql`select * from project_participants where user_id = ${userA} and project_id = ${projectId}`
-          );
-          expect(participant.user_id).toBe(userA);
-        }
-      );
-    });
     test(`single invite can only be used once`, async () => {
       await projectTransaction(
         pool,
@@ -1525,33 +1465,6 @@ describe("Accepting Invites", () => {
             sql`select projects_invite(projects.*) from projects where id = ${projectId}`
           );
           expect(details).toBeNull();
-        }
-      );
-    });
-    test("or is set if the user is bearing a survey invite", async () => {
-      await projectTransaction(
-        pool,
-        "public",
-        async (conn, projectId, adminId, [userA, userB]) => {
-          await createSession(conn, adminId, true, false);
-          const surveyId = await conn.oneFirst(
-            sql`insert into surveys (project_id, name) values (${projectId}, 'Survey') returning id`
-          );
-          const groupId = await createGroup(conn, projectId, "Group A");
-          const invite = await asDatabaseOwner(conn, () => conn.one(
-            sql`select * from create_survey_invites(${surveyId}, true, true, array['Group A'], array[
-                                ('bob@example.com', 'Bob')::survey_invite_options
-                              ])`
-          ));
-          await createSession(conn, userA, true, false, projectId);
-          await conn.any(
-            sql`select set_config('session.survey_invite_email', 'bob@example.com', true)`
-          );
-          const details = await conn.oneFirst(
-            sql`select projects_invite(projects.*) from projects where id = ${projectId}`
-          );
-          expect(details).toMatch(/Bob/);
-          expect(details).toMatch(/bob@example.com/);
         }
       );
     });

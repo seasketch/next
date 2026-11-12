@@ -12,7 +12,7 @@ const CanonicalEmailPlugin = makeExtendSchemaPlugin((build) => {
         SeaSketch developers.
 
         This is the email by which users will recieve transactional emails like
-        project and survey invites, and email notifications.
+        project invites and email notifications.
         """
         canonicalEmail: String
       }

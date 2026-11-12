@@ -1362,31 +1362,6 @@ type ConfirmOnboardedPayload {
   ): UsersEdge
 }
 
-"""All input for the `confirmProjectInviteWithSurveyToken` mutation."""
-input ConfirmProjectInviteWithSurveyTokenInput {
-  """
-  An arbitrary string value with no semantic meaning. Will be included in the
-  payload verbatim. May be used to track mutations by the client.
-  """
-  clientMutationId: String
-  projectId: Int
-}
-
-"""The output of our `confirmProjectInviteWithSurveyToken` mutation."""
-type ConfirmProjectInviteWithSurveyTokenPayload {
-  """
-  The exact same `clientMutationId` that was provided in the mutation input,
-  unchanged and unused. May be used by a client to track mutations.
-  """
-  clientMutationId: String
-  integer: Int
-
-  """
-  Our root query field type. Allows us to run any query from our mutation payload.
-  """
-  query: Query
-}
-
 """All input for the `confirmProjectInviteWithVerifiedEmail` mutation."""
 input ConfirmProjectInviteWithVerifiedEmailInput {
   """
@@ -5710,78 +5685,6 @@ input DeleteSurveyInput {
   id: Int!
 }
 
-"""All input for the `deleteSurveyInviteByEmailAndSurveyId` mutation."""
-input DeleteSurveyInviteByEmailAndSurveyIdInput {
-  """
-  An arbitrary string value with no semantic meaning. Will be included in the
-  payload verbatim. May be used to track mutations by the client.
-  """
-  clientMutationId: String
-  email: Email!
-  surveyId: Int!
-}
-
-"""All input for the `deleteSurveyInviteByEmail` mutation."""
-input DeleteSurveyInviteByEmailInput {
-  """
-  An arbitrary string value with no semantic meaning. Will be included in the
-  payload verbatim. May be used to track mutations by the client.
-  """
-  clientMutationId: String
-  email: Email!
-}
-
-"""All input for the `deleteSurveyInviteByNodeId` mutation."""
-input DeleteSurveyInviteByNodeIdInput {
-  """
-  An arbitrary string value with no semantic meaning. Will be included in the
-  payload verbatim. May be used to track mutations by the client.
-  """
-  clientMutationId: String
-
-  """
-  The globally unique `ID` which will identify a single `SurveyInvite` to be deleted.
-  """
-  nodeId: ID!
-}
-
-"""All input for the `deleteSurveyInvite` mutation."""
-input DeleteSurveyInviteInput {
-  """
-  An arbitrary string value with no semantic meaning. Will be included in the
-  payload verbatim. May be used to track mutations by the client.
-  """
-  clientMutationId: String
-  id: Int!
-}
-
-"""The output of our delete `SurveyInvite` mutation."""
-type DeleteSurveyInvitePayload {
-  """
-  The exact same `clientMutationId` that was provided in the mutation input,
-  unchanged and unused. May be used by a client to track mutations.
-  """
-  clientMutationId: String
-  deletedSurveyInviteNodeId: ID
-
-  """
-  Our root query field type. Allows us to run any query from our mutation payload.
-  """
-  query: Query
-
-  """Reads a single `Survey` that is related to this `SurveyInvite`."""
-  survey: Survey
-
-  """The `SurveyInvite` that was deleted by this mutation."""
-  surveyInvite: SurveyInvite
-
-  """An edge for our `SurveyInvite`. May be used by Relay 1."""
-  surveyInviteEdge(
-    """The method to use when ordering `SurveyInvite`."""
-    orderBy: [SurveyInvitesOrderBy!] = [PRIMARY_KEY_ASC]
-  ): SurveyInvitesEdge
-}
-
 """
 All input for the `deleteSurveyInvitedGroupBySurveyIdAndGroupId` mutation.
 """
@@ -6194,7 +6097,7 @@ type EmailNotificationPreference {
   SeaSketch developers.
   
   This is the email by which users will recieve transactional emails like
-  project and survey invites, and email notifications.
+  project invites and email notifications.
   """
   canonicalEmail: String
 
@@ -8461,10 +8364,6 @@ type InviteEmail implements Node {
   
   """
   status: EmailStatus!
-
-  """Reads a single `SurveyInvite` that is related to this `InviteEmail`."""
-  surveyInvite: SurveyInvite
-  surveyInviteId: Int
   toAddress: Email!
 
   """
@@ -8490,9 +8389,6 @@ input InviteEmailCondition {
 
   """Checks for equality with the object’s `status` field."""
   status: EmailStatus
-
-  """Checks for equality with the object’s `surveyInviteId` field."""
-  surveyInviteId: Int
 }
 
 """Methods to use when ordering `InviteEmail`."""
@@ -8506,8 +8402,6 @@ enum InviteEmailsOrderBy {
   PROJECT_INVITE_ID_DESC
   STATUS_ASC
   STATUS_DESC
-  SURVEY_INVITE_ID_ASC
-  SURVEY_INVITE_ID_DESC
 }
 
 enum InviteOrderBy {
@@ -8531,8 +8425,6 @@ enum InviteStatus {
   ERROR
   QUEUED
   SENT
-  SURVEY_INVITE_QUEUED
-  SURVEY_INVITE_SENT
   TOKEN_EXPIRED
   UNCONFIRMED
   UNSENT
@@ -9182,21 +9074,6 @@ type Mutation {
     """JWT string"""
     token: String!
   ): ProjectInviteTokenClaims
-
-  """
-  Project invites can be paired with survey invites so that users can be sent an
-  email inviting them to a survey, then use that survey invite to confirm a 
-  project invitation. This way there are no duplicative emails sent.
-  
-  Clients must set x-ss-survey-invite-token header before calling this mutation.
-  
-  """
-  confirmProjectInviteWithSurveyToken(
-    """
-    The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
-    """
-    input: ConfirmProjectInviteWithSurveyTokenInput!
-  ): ConfirmProjectInviteWithSurveyTokenPayload
 
   """
   Users can confirm project invites without clicking thru an email if they are 
@@ -10036,38 +9913,6 @@ type Mutation {
     input: DeleteSurveyByNodeIdInput!
   ): DeleteSurveyPayload
 
-  """Deletes a single `SurveyInvite` using a unique key."""
-  deleteSurveyInvite(
-    """
-    The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
-    """
-    input: DeleteSurveyInviteInput!
-  ): DeleteSurveyInvitePayload
-
-  """Deletes a single `SurveyInvite` using a unique key."""
-  deleteSurveyInviteByEmail(
-    """
-    The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
-    """
-    input: DeleteSurveyInviteByEmailInput!
-  ): DeleteSurveyInvitePayload
-
-  """Deletes a single `SurveyInvite` using a unique key."""
-  deleteSurveyInviteByEmailAndSurveyId(
-    """
-    The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
-    """
-    input: DeleteSurveyInviteByEmailAndSurveyIdInput!
-  ): DeleteSurveyInvitePayload
-
-  """Deletes a single `SurveyInvite` using its globally unique id."""
-  deleteSurveyInviteByNodeId(
-    """
-    The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
-    """
-    input: DeleteSurveyInviteByNodeIdInput!
-  ): DeleteSurveyInvitePayload
-
   """Deletes a single `SurveyInvitedGroup` using a unique key."""
   deleteSurveyInvitedGroupBySurveyIdAndGroupId(
     """
@@ -10551,15 +10396,6 @@ type Mutation {
     """
     input: SendProjectInvitesInput!
   ): SendProjectInvitesPayload
-
-  """
-  Send a reminder email for a survey invite that has already been sent.
-  Returns the same inviteId if successful.
-  """
-  sendSurveyInviteReminder(
-    """ID of survey invite"""
-    inviteId: Int!
-  ): Int
   setDataUploadTaskChangelog(
     """
     The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
@@ -11372,48 +11208,9 @@ type Mutation {
     input: UpdateSurveyByNodeIdInput!
   ): UpdateSurveyPayload
 
-  """Updates a single `SurveyInvite` using a unique key and a patch."""
-  updateSurveyInvite(
-    """
-    The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
-    """
-    input: UpdateSurveyInviteInput!
-  ): UpdateSurveyInvitePayload
-
-  """Updates a single `SurveyInvite` using a unique key and a patch."""
-  updateSurveyInviteByEmail(
-    """
-    The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
-    """
-    input: UpdateSurveyInviteByEmailInput!
-  ): UpdateSurveyInvitePayload
-
-  """Updates a single `SurveyInvite` using a unique key and a patch."""
-  updateSurveyInviteByEmailAndSurveyId(
-    """
-    The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
-    """
-    input: UpdateSurveyInviteByEmailAndSurveyIdInput!
-  ): UpdateSurveyInvitePayload
-
   """
-  Updates a single `SurveyInvite` using its globally unique id and a patch.
-  """
-  updateSurveyInviteByNodeId(
-    """
-    The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
-    """
-    input: UpdateSurveyInviteByNodeIdInput!
-  ): UpdateSurveyInvitePayload
-
-  """
-  Updates the list of groups that should have access to the given survey. Users
-  in any added groups will get an invite, and the system will create an invite for
-  any users that are added to the group. When removing a group, the system will
-  delete invites for any user that is no longer in an invited group. *Clients
-  should warn admins of this behavior when removing groups for an active survey*.
-  
-  The list of invited groups can be accessed via `Survey.invitedGroups`.
+  Updates the groups whose members can respond to the survey.
+  The list can be read via `Survey.invitedGroups`.
   
   """
   updateSurveyInvitedGroups(
@@ -11835,12 +11632,6 @@ enum OptionalBasemapLayersOrderBy {
 A complete OrganismInfo document for an overlay data table: identity column, value kind, and class-table role mapping. Validated against @seasketch/geostats-types isOrganismInfo.
 """
 scalar OrganismInfo
-
-type OutstandingSurveyInvites {
-  projectId: Int!
-  surveyId: Int!
-  token: String!
-}
 
 type OverlayDataTable implements Node {
   """
@@ -13127,19 +12918,6 @@ type Project implements Node {
   Returns true if the user has admin privileges on this project. Will return true even if the session email is not verified, but permissions will not work until it is.
   """
   sessionIsAdmin: Boolean
-
-  """
-  Invites (and related tokens) for surveys which this user has not yet responded
-  to. Details on how to handle survey invites [can be found on the wiki](https://github.com/seasketch/next/wiki/User-Ingress#survey-invites).
-  
-  """
-  sessionOutstandingSurveyInvites(
-    """Only read the first `n` values of the set."""
-    first: Int
-
-    """Skip the first `n` values."""
-    offset: Int
-  ): [SurveyTokenInfo!]
   sessionParticipationStatus: ParticipationStatus
   showLegendByDefault: Boolean
   showScalebarByDefault: Boolean
@@ -15288,17 +15066,6 @@ type Query implements Node {
     """The method to use when ordering `SurveyConsentDocument`."""
     orderBy: [SurveyConsentDocumentsOrderBy!] = [PRIMARY_KEY_ASC]
   ): SurveyConsentDocumentsConnection
-  surveyInvite(id: Int!): SurveyInvite
-  surveyInviteByEmail(email: Email!): SurveyInvite
-  surveyInviteByEmailAndSurveyId(email: Email!, surveyId: Int!): SurveyInvite
-
-  """Reads a single `SurveyInvite` using its globally unique `ID`."""
-  surveyInviteByNodeId(
-    """
-    The globally unique `ID` to be used in selecting a single `SurveyInvite`.
-    """
-    nodeId: ID!
-  ): SurveyInvite
   surveyInvitedGroupBySurveyIdAndGroupId(groupId: Int!, surveyId: Int!): SurveyInvitedGroup
   surveyResponse(id: Int!): SurveyResponse
 
@@ -15430,18 +15197,6 @@ type Query implements Node {
     """JWT string"""
     token: String!
   ): ProjectInviteTokenVerificationResults
-
-  """
-  Verify whether the an invite token has a valid signature and has not yet
-  expired or been used.
-  
-  Use before starting an invite-only survey. For info on invite handling
-  [see the wiki](https://github.com/seasketch/next/wiki/User-Ingress#survey-invites)
-  """
-  verifySurveyInvite(
-    """JWT string"""
-    token: String!
-  ): SurveyInviteTokenVerificationResults
   visitorByIntervalAndTimestamp(interval: IntervalInput!, timestamp: Datetime!): Visitor
 
   """Reads and enables pagination through a set of `VisitorMetric`."""
@@ -17811,23 +17566,6 @@ type Survey implements Node {
     orderBy: [SurveyInvitedGroupsOrderBy!]
   ): [SurveyInvitedGroup!]!
 
-  """Reads and enables pagination through a set of `SurveyInvite`."""
-  surveyInvites(
-    """
-    A condition to be used in determining which values should be returned by the collection.
-    """
-    condition: SurveyInviteCondition
-
-    """Only read the first `n` values of the set."""
-    first: Int
-
-    """Skip the first `n` values."""
-    offset: Int
-
-    """The method to use when ordering `SurveyInvite`."""
-    orderBy: [SurveyInvitesOrderBy!]
-  ): [SurveyInvite!]!
-
   """Reads and enables pagination through a set of `SurveyResponse`."""
   surveyResponsesConnection(
     """Read all values in the set after (below) this cursor."""
@@ -17943,82 +17681,6 @@ enum SurveyConsentDocumentsOrderBy {
   PRIMARY_KEY_DESC
 }
 
-type SurveyInvite implements Node {
-  createdAt: Datetime!
-  email: Email
-  fullname: String
-  id: Int!
-
-  """Reads and enables pagination through a set of `InviteEmail`."""
-  inviteEmails(
-    """
-    A condition to be used in determining which values should be returned by the collection.
-    """
-    condition: InviteEmailCondition
-
-    """Only read the first `n` values of the set."""
-    first: Int
-
-    """Skip the first `n` values."""
-    offset: Int
-
-    """The method to use when ordering `InviteEmail`."""
-    orderBy: [InviteEmailsOrderBy!]
-  ): [InviteEmail!]!
-
-  """
-  A globally unique identifier. Can be used in various places throughout the system to identify this single value.
-  """
-  nodeId: ID!
-
-  """
-  Indicates the status of the invite, e.g. whether an invite email has been sent, status of those emails, and whether a response has been submitted.
-  """
-  status: InviteStatus
-
-  """Reads a single `Survey` that is related to this `SurveyInvite`."""
-  survey: Survey
-  surveyId: Int!
-  userId: Int
-  wasUsed: Boolean!
-}
-
-"""
-A condition to be used against `SurveyInvite` object types. All fields are
-tested for equality and combined with a logical ‘and.’
-"""
-input SurveyInviteCondition {
-  """Checks for equality with the object’s `email` field."""
-  email: Email
-
-  """Checks for equality with the object’s `id` field."""
-  id: Int
-
-  """Checks for equality with the object’s `surveyId` field."""
-  surveyId: Int
-}
-
-"""
-Represents an update to a `SurveyInvite`. Fields that are set will be updated.
-"""
-input SurveyInvitePatch {
-  fullname: String
-}
-
-type SurveyInviteTokenClaims {
-  email: String
-  fullname: String
-  inviteId: Int!
-  projectId: Int!
-  surveyId: Int!
-  wasUsed: Boolean!
-}
-
-type SurveyInviteTokenVerificationResults {
-  claims: SurveyInviteTokenClaims
-  error: String
-}
-
 type SurveyInvitedGroup {
   groupId: Int!
 
@@ -18050,28 +17712,6 @@ enum SurveyInvitedGroupsOrderBy {
   GROUP_ID_ASC
   GROUP_ID_DESC
   NATURAL
-  SURVEY_ID_ASC
-  SURVEY_ID_DESC
-}
-
-"""A `SurveyInvite` edge in the connection."""
-type SurveyInvitesEdge {
-  """A cursor for use in pagination."""
-  cursor: Cursor
-
-  """The `SurveyInvite` at the end of the edge."""
-  node: SurveyInvite!
-}
-
-"""Methods to use when ordering `SurveyInvite`."""
-enum SurveyInvitesOrderBy {
-  EMAIL_ASC
-  EMAIL_DESC
-  ID_ASC
-  ID_DESC
-  NATURAL
-  PRIMARY_KEY_ASC
-  PRIMARY_KEY_DESC
   SURVEY_ID_ASC
   SURVEY_ID_DESC
 }
@@ -18260,12 +17900,6 @@ enum SurveyResponsesOrderBy {
   SURVEY_ID_DESC
   USER_ID_ASC
   USER_ID_DESC
-}
-
-type SurveyTokenInfo {
-  projectId: Int
-  surveyId: Int
-  token: String
 }
 
 """Methods to use when ordering `Survey`."""
@@ -21187,97 +20821,6 @@ input UpdateSurveyInput {
   An object where the defined keys will be set on the `Survey` being updated.
   """
   patch: SurveyPatch!
-}
-
-"""All input for the `updateSurveyInviteByEmailAndSurveyId` mutation."""
-input UpdateSurveyInviteByEmailAndSurveyIdInput {
-  """
-  An arbitrary string value with no semantic meaning. Will be included in the
-  payload verbatim. May be used to track mutations by the client.
-  """
-  clientMutationId: String
-  email: Email!
-
-  """
-  An object where the defined keys will be set on the `SurveyInvite` being updated.
-  """
-  patch: SurveyInvitePatch!
-  surveyId: Int!
-}
-
-"""All input for the `updateSurveyInviteByEmail` mutation."""
-input UpdateSurveyInviteByEmailInput {
-  """
-  An arbitrary string value with no semantic meaning. Will be included in the
-  payload verbatim. May be used to track mutations by the client.
-  """
-  clientMutationId: String
-  email: Email!
-
-  """
-  An object where the defined keys will be set on the `SurveyInvite` being updated.
-  """
-  patch: SurveyInvitePatch!
-}
-
-"""All input for the `updateSurveyInviteByNodeId` mutation."""
-input UpdateSurveyInviteByNodeIdInput {
-  """
-  An arbitrary string value with no semantic meaning. Will be included in the
-  payload verbatim. May be used to track mutations by the client.
-  """
-  clientMutationId: String
-
-  """
-  The globally unique `ID` which will identify a single `SurveyInvite` to be updated.
-  """
-  nodeId: ID!
-
-  """
-  An object where the defined keys will be set on the `SurveyInvite` being updated.
-  """
-  patch: SurveyInvitePatch!
-}
-
-"""All input for the `updateSurveyInvite` mutation."""
-input UpdateSurveyInviteInput {
-  """
-  An arbitrary string value with no semantic meaning. Will be included in the
-  payload verbatim. May be used to track mutations by the client.
-  """
-  clientMutationId: String
-  id: Int!
-
-  """
-  An object where the defined keys will be set on the `SurveyInvite` being updated.
-  """
-  patch: SurveyInvitePatch!
-}
-
-"""The output of our update `SurveyInvite` mutation."""
-type UpdateSurveyInvitePayload {
-  """
-  The exact same `clientMutationId` that was provided in the mutation input,
-  unchanged and unused. May be used by a client to track mutations.
-  """
-  clientMutationId: String
-
-  """
-  Our root query field type. Allows us to run any query from our mutation payload.
-  """
-  query: Query
-
-  """Reads a single `Survey` that is related to this `SurveyInvite`."""
-  survey: Survey
-
-  """The `SurveyInvite` that was updated by this mutation."""
-  surveyInvite: SurveyInvite
-
-  """An edge for our `SurveyInvite`. May be used by Relay 1."""
-  surveyInviteEdge(
-    """The method to use when ordering `SurveyInvite`."""
-    orderBy: [SurveyInvitesOrderBy!] = [PRIMARY_KEY_ASC]
-  ): SurveyInvitesEdge
 }
 
 """All input for the `updateSurveyInvitedGroups` mutation."""

@@ -1140,29 +1140,6 @@ export type ConfirmOnboardedPayloadUserEdgeArgs = {
   orderBy?: Maybe<Array<UsersOrderBy>>;
 };
 
-/** All input for the `confirmProjectInviteWithSurveyToken` mutation. */
-export type ConfirmProjectInviteWithSurveyTokenInput = {
-  /**
-   * An arbitrary string value with no semantic meaning. Will be included in the
-   * payload verbatim. May be used to track mutations by the client.
-   */
-  clientMutationId?: Maybe<Scalars['String']>;
-  projectId?: Maybe<Scalars['Int']>;
-};
-
-/** The output of our `confirmProjectInviteWithSurveyToken` mutation. */
-export type ConfirmProjectInviteWithSurveyTokenPayload = {
-  __typename?: 'ConfirmProjectInviteWithSurveyTokenPayload';
-  /**
-   * The exact same `clientMutationId` that was provided in the mutation input,
-   * unchanged and unused. May be used by a client to track mutations.
-   */
-  clientMutationId?: Maybe<Scalars['String']>;
-  integer?: Maybe<Scalars['Int']>;
-  /** Our root query field type. Allows us to run any query from our mutation payload. */
-  query?: Maybe<Query>;
-};
-
 /** All input for the `confirmProjectInviteWithVerifiedEmail` mutation. */
 export type ConfirmProjectInviteWithVerifiedEmailInput = {
   /**
@@ -4751,73 +4728,6 @@ export type DeleteSurveyInput = {
   id: Scalars['Int'];
 };
 
-/** All input for the `deleteSurveyInviteByEmailAndSurveyId` mutation. */
-export type DeleteSurveyInviteByEmailAndSurveyIdInput = {
-  /**
-   * An arbitrary string value with no semantic meaning. Will be included in the
-   * payload verbatim. May be used to track mutations by the client.
-   */
-  clientMutationId?: Maybe<Scalars['String']>;
-  email: Scalars['Email'];
-  surveyId: Scalars['Int'];
-};
-
-/** All input for the `deleteSurveyInviteByEmail` mutation. */
-export type DeleteSurveyInviteByEmailInput = {
-  /**
-   * An arbitrary string value with no semantic meaning. Will be included in the
-   * payload verbatim. May be used to track mutations by the client.
-   */
-  clientMutationId?: Maybe<Scalars['String']>;
-  email: Scalars['Email'];
-};
-
-/** All input for the `deleteSurveyInviteByNodeId` mutation. */
-export type DeleteSurveyInviteByNodeIdInput = {
-  /**
-   * An arbitrary string value with no semantic meaning. Will be included in the
-   * payload verbatim. May be used to track mutations by the client.
-   */
-  clientMutationId?: Maybe<Scalars['String']>;
-  /** The globally unique `ID` which will identify a single `SurveyInvite` to be deleted. */
-  nodeId: Scalars['ID'];
-};
-
-/** All input for the `deleteSurveyInvite` mutation. */
-export type DeleteSurveyInviteInput = {
-  /**
-   * An arbitrary string value with no semantic meaning. Will be included in the
-   * payload verbatim. May be used to track mutations by the client.
-   */
-  clientMutationId?: Maybe<Scalars['String']>;
-  id: Scalars['Int'];
-};
-
-/** The output of our delete `SurveyInvite` mutation. */
-export type DeleteSurveyInvitePayload = {
-  __typename?: 'DeleteSurveyInvitePayload';
-  /**
-   * The exact same `clientMutationId` that was provided in the mutation input,
-   * unchanged and unused. May be used by a client to track mutations.
-   */
-  clientMutationId?: Maybe<Scalars['String']>;
-  deletedSurveyInviteNodeId?: Maybe<Scalars['ID']>;
-  /** Our root query field type. Allows us to run any query from our mutation payload. */
-  query?: Maybe<Query>;
-  /** Reads a single `Survey` that is related to this `SurveyInvite`. */
-  survey?: Maybe<Survey>;
-  /** The `SurveyInvite` that was deleted by this mutation. */
-  surveyInvite?: Maybe<SurveyInvite>;
-  /** An edge for our `SurveyInvite`. May be used by Relay 1. */
-  surveyInviteEdge?: Maybe<SurveyInvitesEdge>;
-};
-
-
-/** The output of our delete `SurveyInvite` mutation. */
-export type DeleteSurveyInvitePayloadSurveyInviteEdgeArgs = {
-  orderBy?: Maybe<Array<SurveyInvitesOrderBy>>;
-};
-
 /** All input for the `deleteSurveyInvitedGroupBySurveyIdAndGroupId` mutation. */
 export type DeleteSurveyInvitedGroupBySurveyIdAndGroupIdInput = {
   /**
@@ -5198,7 +5108,7 @@ export type EmailNotificationPreference = {
    * SeaSketch developers.
    *
    * This is the email by which users will recieve transactional emails like
-   * project and survey invites, and email notifications.
+   * project invites and email notifications.
    */
   canonicalEmail?: Maybe<Scalars['String']>;
   /** How often users should be notified of SeaSketch project activity. */
@@ -7081,9 +6991,6 @@ export type InviteEmail = Node & {
   projectInviteId?: Maybe<Scalars['Int']>;
   /** Updated by the mailer processes and SES notifications. */
   status: EmailStatus;
-  /** Reads a single `SurveyInvite` that is related to this `InviteEmail`. */
-  surveyInvite?: Maybe<SurveyInvite>;
-  surveyInviteId?: Maybe<Scalars['Int']>;
   toAddress: Scalars['Email'];
   /**
    * Emails contain a link with an embedded JSON Web Token that is used to authorize
@@ -7105,8 +7012,6 @@ export type InviteEmailCondition = {
   projectInviteId?: Maybe<Scalars['Int']>;
   /** Checks for equality with the object’s `status` field. */
   status?: Maybe<EmailStatus>;
-  /** Checks for equality with the object’s `surveyInviteId` field. */
-  surveyInviteId?: Maybe<Scalars['Int']>;
 };
 
 /** Methods to use when ordering `InviteEmail`. */
@@ -7119,9 +7024,7 @@ export enum InviteEmailsOrderBy {
   ProjectInviteIdAsc = 'PROJECT_INVITE_ID_ASC',
   ProjectInviteIdDesc = 'PROJECT_INVITE_ID_DESC',
   StatusAsc = 'STATUS_ASC',
-  StatusDesc = 'STATUS_DESC',
-  SurveyInviteIdAsc = 'SURVEY_INVITE_ID_ASC',
-  SurveyInviteIdDesc = 'SURVEY_INVITE_ID_DESC'
+  StatusDesc = 'STATUS_DESC'
 }
 
 export enum InviteOrderBy {
@@ -7144,8 +7047,6 @@ export enum InviteStatus {
   Error = 'ERROR',
   Queued = 'QUEUED',
   Sent = 'SENT',
-  SurveyInviteQueued = 'SURVEY_INVITE_QUEUED',
-  SurveyInviteSent = 'SURVEY_INVITE_SENT',
   TokenExpired = 'TOKEN_EXPIRED',
   Unconfirmed = 'UNCONFIRMED',
   Unsent = 'UNSENT',
@@ -7672,14 +7573,6 @@ export type Mutation = {
    */
   confirmProjectInvite?: Maybe<ProjectInviteTokenClaims>;
   /**
-   * Project invites can be paired with survey invites so that users can be sent an
-   * email inviting them to a survey, then use that survey invite to confirm a
-   * project invitation. This way there are no duplicative emails sent.
-   *
-   * Clients must set x-ss-survey-invite-token header before calling this mutation.
-   */
-  confirmProjectInviteWithSurveyToken?: Maybe<ConfirmProjectInviteWithSurveyTokenPayload>;
-  /**
    * Users can confirm project invites without clicking thru an email if they are
    * registered for SeaSketch and their verified email matches that of a project
    * invite. Outstanding (or confirmed) invites can be accessed via the
@@ -7902,14 +7795,6 @@ export type Mutation = {
   deleteSurvey?: Maybe<DeleteSurveyPayload>;
   /** Deletes a single `Survey` using its globally unique id. */
   deleteSurveyByNodeId?: Maybe<DeleteSurveyPayload>;
-  /** Deletes a single `SurveyInvite` using a unique key. */
-  deleteSurveyInvite?: Maybe<DeleteSurveyInvitePayload>;
-  /** Deletes a single `SurveyInvite` using a unique key. */
-  deleteSurveyInviteByEmail?: Maybe<DeleteSurveyInvitePayload>;
-  /** Deletes a single `SurveyInvite` using a unique key. */
-  deleteSurveyInviteByEmailAndSurveyId?: Maybe<DeleteSurveyInvitePayload>;
-  /** Deletes a single `SurveyInvite` using its globally unique id. */
-  deleteSurveyInviteByNodeId?: Maybe<DeleteSurveyInvitePayload>;
   /** Deletes a single `SurveyInvitedGroup` using a unique key. */
   deleteSurveyInvitedGroupBySurveyIdAndGroupId?: Maybe<DeleteSurveyInvitedGroupPayload>;
   /** Deletes a single `SurveyResponse` using a unique key. */
@@ -8036,11 +7921,6 @@ export type Mutation = {
   sendEmailVerification: EmailVerificationStatus;
   /** Send a list of project invites identified by their id. */
   sendProjectInvites?: Maybe<SendProjectInvitesPayload>;
-  /**
-   * Send a reminder email for a survey invite that has already been sent.
-   * Returns the same inviteId if successful.
-   */
-  sendSurveyInviteReminder?: Maybe<Scalars['Int']>;
   setDataUploadTaskChangelog?: Maybe<SetDataUploadTaskChangelogPayload>;
   /** Sets the enable_download flag for all overlays in a project. Note this is only applied to draft items, so will require a publish to impact project users. */
   setEnableDownloadForAllOverlays?: Maybe<SetEnableDownloadForAllOverlaysPayload>;
@@ -8250,22 +8130,9 @@ export type Mutation = {
   updateSurvey?: Maybe<UpdateSurveyPayload>;
   /** Updates a single `Survey` using its globally unique id and a patch. */
   updateSurveyByNodeId?: Maybe<UpdateSurveyPayload>;
-  /** Updates a single `SurveyInvite` using a unique key and a patch. */
-  updateSurveyInvite?: Maybe<UpdateSurveyInvitePayload>;
-  /** Updates a single `SurveyInvite` using a unique key and a patch. */
-  updateSurveyInviteByEmail?: Maybe<UpdateSurveyInvitePayload>;
-  /** Updates a single `SurveyInvite` using a unique key and a patch. */
-  updateSurveyInviteByEmailAndSurveyId?: Maybe<UpdateSurveyInvitePayload>;
-  /** Updates a single `SurveyInvite` using its globally unique id and a patch. */
-  updateSurveyInviteByNodeId?: Maybe<UpdateSurveyInvitePayload>;
   /**
-   * Updates the list of groups that should have access to the given survey. Users
-   * in any added groups will get an invite, and the system will create an invite for
-   * any users that are added to the group. When removing a group, the system will
-   * delete invites for any user that is no longer in an invited group. *Clients
-   * should warn admins of this behavior when removing groups for an active survey*.
-   *
-   * The list of invited groups can be accessed via `Survey.invitedGroups`.
+   * Updates the groups whose members can respond to the survey.
+   * The list can be read via `Survey.invitedGroups`.
    */
   updateSurveyInvitedGroups?: Maybe<UpdateSurveyInvitedGroupsPayload>;
   /** Updates a single `SurveyResponse` using a unique key and a patch. */
@@ -8378,12 +8245,6 @@ export type MutationConfirmOnboardedArgs = {
 /** The root mutation type which contains root level fields which mutate data. */
 export type MutationConfirmProjectInviteArgs = {
   token: Scalars['String'];
-};
-
-
-/** The root mutation type which contains root level fields which mutate data. */
-export type MutationConfirmProjectInviteWithSurveyTokenArgs = {
-  input: ConfirmProjectInviteWithSurveyTokenInput;
 };
 
 
@@ -9053,30 +8914,6 @@ export type MutationDeleteSurveyByNodeIdArgs = {
 
 
 /** The root mutation type which contains root level fields which mutate data. */
-export type MutationDeleteSurveyInviteArgs = {
-  input: DeleteSurveyInviteInput;
-};
-
-
-/** The root mutation type which contains root level fields which mutate data. */
-export type MutationDeleteSurveyInviteByEmailArgs = {
-  input: DeleteSurveyInviteByEmailInput;
-};
-
-
-/** The root mutation type which contains root level fields which mutate data. */
-export type MutationDeleteSurveyInviteByEmailAndSurveyIdArgs = {
-  input: DeleteSurveyInviteByEmailAndSurveyIdInput;
-};
-
-
-/** The root mutation type which contains root level fields which mutate data. */
-export type MutationDeleteSurveyInviteByNodeIdArgs = {
-  input: DeleteSurveyInviteByNodeIdInput;
-};
-
-
-/** The root mutation type which contains root level fields which mutate data. */
 export type MutationDeleteSurveyInvitedGroupBySurveyIdAndGroupIdArgs = {
   input: DeleteSurveyInvitedGroupBySurveyIdAndGroupIdInput;
 };
@@ -9458,12 +9295,6 @@ export type MutationSendEmailVerificationArgs = {
 /** The root mutation type which contains root level fields which mutate data. */
 export type MutationSendProjectInvitesArgs = {
   input: SendProjectInvitesInput;
-};
-
-
-/** The root mutation type which contains root level fields which mutate data. */
-export type MutationSendSurveyInviteReminderArgs = {
-  inviteId: Scalars['Int'];
 };
 
 
@@ -10084,30 +9915,6 @@ export type MutationUpdateSurveyByNodeIdArgs = {
 
 
 /** The root mutation type which contains root level fields which mutate data. */
-export type MutationUpdateSurveyInviteArgs = {
-  input: UpdateSurveyInviteInput;
-};
-
-
-/** The root mutation type which contains root level fields which mutate data. */
-export type MutationUpdateSurveyInviteByEmailArgs = {
-  input: UpdateSurveyInviteByEmailInput;
-};
-
-
-/** The root mutation type which contains root level fields which mutate data. */
-export type MutationUpdateSurveyInviteByEmailAndSurveyIdArgs = {
-  input: UpdateSurveyInviteByEmailAndSurveyIdInput;
-};
-
-
-/** The root mutation type which contains root level fields which mutate data. */
-export type MutationUpdateSurveyInviteByNodeIdArgs = {
-  input: UpdateSurveyInviteByNodeIdInput;
-};
-
-
-/** The root mutation type which contains root level fields which mutate data. */
 export type MutationUpdateSurveyInvitedGroupsArgs = {
   input: UpdateSurveyInvitedGroupsInput;
 };
@@ -10460,13 +10267,6 @@ export enum OptionalBasemapLayersOrderBy {
   PrimaryKeyDesc = 'PRIMARY_KEY_DESC'
 }
 
-
-export type OutstandingSurveyInvites = {
-  __typename?: 'OutstandingSurveyInvites';
-  projectId: Scalars['Int'];
-  surveyId: Scalars['Int'];
-  token: Scalars['String'];
-};
 
 export type OverlayDataTable = Node & {
   __typename?: 'OverlayDataTable';
@@ -11113,11 +10913,6 @@ export type Project = Node & {
   sessionHasPrivilegedAccess?: Maybe<Scalars['Boolean']>;
   /** Returns true if the user has admin privileges on this project. Will return true even if the session email is not verified, but permissions will not work until it is. */
   sessionIsAdmin?: Maybe<Scalars['Boolean']>;
-  /**
-   * Invites (and related tokens) for surveys which this user has not yet responded
-   * to. Details on how to handle survey invites [can be found on the wiki](https://github.com/seasketch/next/wiki/User-Ingress#survey-invites).
-   */
-  sessionOutstandingSurveyInvites?: Maybe<Array<SurveyTokenInfo>>;
   sessionParticipationStatus?: Maybe<ParticipationStatus>;
   showLegendByDefault?: Maybe<Scalars['Boolean']>;
   showScalebarByDefault?: Maybe<Scalars['Boolean']>;
@@ -11562,16 +11357,6 @@ export type ProjectProjectBackgroundJobsArgs = {
   first?: Maybe<Scalars['Int']>;
   offset?: Maybe<Scalars['Int']>;
   orderBy?: Maybe<Array<ProjectBackgroundJobsOrderBy>>;
-};
-
-
-/**
- * SeaSketch Project type. This root type contains most of the fields and queries
- * needed to drive the application.
- */
-export type ProjectSessionOutstandingSurveyInvitesArgs = {
-  first?: Maybe<Scalars['Int']>;
-  offset?: Maybe<Scalars['Int']>;
 };
 
 
@@ -12599,11 +12384,6 @@ export type Query = Node & {
   surveyConsentDocumentByNodeId?: Maybe<SurveyConsentDocument>;
   /** Reads and enables pagination through a set of `SurveyConsentDocument`. */
   surveyConsentDocumentsConnection?: Maybe<SurveyConsentDocumentsConnection>;
-  surveyInvite?: Maybe<SurveyInvite>;
-  surveyInviteByEmail?: Maybe<SurveyInvite>;
-  surveyInviteByEmailAndSurveyId?: Maybe<SurveyInvite>;
-  /** Reads a single `SurveyInvite` using its globally unique `ID`. */
-  surveyInviteByNodeId?: Maybe<SurveyInvite>;
   surveyInvitedGroupBySurveyIdAndGroupId?: Maybe<SurveyInvitedGroup>;
   surveyResponse?: Maybe<SurveyResponse>;
   /** Reads a single `SurveyResponse` using its globally unique `ID`. */
@@ -12640,14 +12420,6 @@ export type Query = Node & {
    * [on the wiki](https://github.com/seasketch/next/wiki/User-Ingress#project-invites)
    */
   verifyProjectInvite?: Maybe<ProjectInviteTokenVerificationResults>;
-  /**
-   * Verify whether the an invite token has a valid signature and has not yet
-   * expired or been used.
-   *
-   * Use before starting an invite-only survey. For info on invite handling
-   * [see the wiki](https://github.com/seasketch/next/wiki/User-Ingress#survey-invites)
-   */
-  verifySurveyInvite?: Maybe<SurveyInviteTokenVerificationResults>;
   visitorByIntervalAndTimestamp?: Maybe<Visitor>;
   /** Reads and enables pagination through a set of `VisitorMetric`. */
   visitorMetrics?: Maybe<Array<VisitorMetric>>;
@@ -13830,31 +13602,6 @@ export type QuerySurveyConsentDocumentsConnectionArgs = {
 
 
 /** The root query type which gives access points into the data universe. */
-export type QuerySurveyInviteArgs = {
-  id: Scalars['Int'];
-};
-
-
-/** The root query type which gives access points into the data universe. */
-export type QuerySurveyInviteByEmailArgs = {
-  email: Scalars['Email'];
-};
-
-
-/** The root query type which gives access points into the data universe. */
-export type QuerySurveyInviteByEmailAndSurveyIdArgs = {
-  email: Scalars['Email'];
-  surveyId: Scalars['Int'];
-};
-
-
-/** The root query type which gives access points into the data universe. */
-export type QuerySurveyInviteByNodeIdArgs = {
-  nodeId: Scalars['ID'];
-};
-
-
-/** The root query type which gives access points into the data universe. */
 export type QuerySurveyInvitedGroupBySurveyIdAndGroupIdArgs = {
   groupId: Scalars['Int'];
   surveyId: Scalars['Int'];
@@ -13991,12 +13738,6 @@ export type QueryUserByNodeIdArgs = {
 
 /** The root query type which gives access points into the data universe. */
 export type QueryVerifyProjectInviteArgs = {
-  token: Scalars['String'];
-};
-
-
-/** The root query type which gives access points into the data universe. */
-export type QueryVerifySurveyInviteArgs = {
   token: Scalars['String'];
 };
 
@@ -16029,8 +15770,6 @@ export type Survey = Node & {
   supportedLanguages: Array<Maybe<Scalars['String']>>;
   /** Reads and enables pagination through a set of `SurveyInvitedGroup`. */
   surveyInvitedGroups: Array<SurveyInvitedGroup>;
-  /** Reads and enables pagination through a set of `SurveyInvite`. */
-  surveyInvites: Array<SurveyInvite>;
   /** Reads and enables pagination through a set of `SurveyResponse`. */
   surveyResponsesConnection: SurveyResponsesConnection;
 };
@@ -16064,14 +15803,6 @@ export type SurveySurveyInvitedGroupsArgs = {
   first?: Maybe<Scalars['Int']>;
   offset?: Maybe<Scalars['Int']>;
   orderBy?: Maybe<Array<SurveyInvitedGroupsOrderBy>>;
-};
-
-
-export type SurveySurveyInvitesArgs = {
-  condition?: Maybe<SurveyInviteCondition>;
-  first?: Maybe<Scalars['Int']>;
-  offset?: Maybe<Scalars['Int']>;
-  orderBy?: Maybe<Array<SurveyInvitesOrderBy>>;
 };
 
 
@@ -16155,67 +15886,6 @@ export enum SurveyConsentDocumentsOrderBy {
   PrimaryKeyDesc = 'PRIMARY_KEY_DESC'
 }
 
-export type SurveyInvite = Node & {
-  __typename?: 'SurveyInvite';
-  createdAt: Scalars['Datetime'];
-  email?: Maybe<Scalars['Email']>;
-  fullname?: Maybe<Scalars['String']>;
-  id: Scalars['Int'];
-  /** Reads and enables pagination through a set of `InviteEmail`. */
-  inviteEmails: Array<InviteEmail>;
-  /** A globally unique identifier. Can be used in various places throughout the system to identify this single value. */
-  nodeId: Scalars['ID'];
-  /** Indicates the status of the invite, e.g. whether an invite email has been sent, status of those emails, and whether a response has been submitted. */
-  status?: Maybe<InviteStatus>;
-  /** Reads a single `Survey` that is related to this `SurveyInvite`. */
-  survey?: Maybe<Survey>;
-  surveyId: Scalars['Int'];
-  userId?: Maybe<Scalars['Int']>;
-  wasUsed: Scalars['Boolean'];
-};
-
-
-export type SurveyInviteInviteEmailsArgs = {
-  condition?: Maybe<InviteEmailCondition>;
-  first?: Maybe<Scalars['Int']>;
-  offset?: Maybe<Scalars['Int']>;
-  orderBy?: Maybe<Array<InviteEmailsOrderBy>>;
-};
-
-/**
- * A condition to be used against `SurveyInvite` object types. All fields are
- * tested for equality and combined with a logical ‘and.’
- */
-export type SurveyInviteCondition = {
-  /** Checks for equality with the object’s `email` field. */
-  email?: Maybe<Scalars['Email']>;
-  /** Checks for equality with the object’s `id` field. */
-  id?: Maybe<Scalars['Int']>;
-  /** Checks for equality with the object’s `surveyId` field. */
-  surveyId?: Maybe<Scalars['Int']>;
-};
-
-/** Represents an update to a `SurveyInvite`. Fields that are set will be updated. */
-export type SurveyInvitePatch = {
-  fullname?: Maybe<Scalars['String']>;
-};
-
-export type SurveyInviteTokenClaims = {
-  __typename?: 'SurveyInviteTokenClaims';
-  email?: Maybe<Scalars['String']>;
-  fullname?: Maybe<Scalars['String']>;
-  inviteId: Scalars['Int'];
-  projectId: Scalars['Int'];
-  surveyId: Scalars['Int'];
-  wasUsed: Scalars['Boolean'];
-};
-
-export type SurveyInviteTokenVerificationResults = {
-  __typename?: 'SurveyInviteTokenVerificationResults';
-  claims?: Maybe<SurveyInviteTokenClaims>;
-  error?: Maybe<Scalars['String']>;
-};
-
 export type SurveyInvitedGroup = {
   __typename?: 'SurveyInvitedGroup';
   groupId: Scalars['Int'];
@@ -16246,28 +15916,6 @@ export enum SurveyInvitedGroupsOrderBy {
   GroupIdAsc = 'GROUP_ID_ASC',
   GroupIdDesc = 'GROUP_ID_DESC',
   Natural = 'NATURAL',
-  SurveyIdAsc = 'SURVEY_ID_ASC',
-  SurveyIdDesc = 'SURVEY_ID_DESC'
-}
-
-/** A `SurveyInvite` edge in the connection. */
-export type SurveyInvitesEdge = {
-  __typename?: 'SurveyInvitesEdge';
-  /** A cursor for use in pagination. */
-  cursor?: Maybe<Scalars['Cursor']>;
-  /** The `SurveyInvite` at the end of the edge. */
-  node: SurveyInvite;
-};
-
-/** Methods to use when ordering `SurveyInvite`. */
-export enum SurveyInvitesOrderBy {
-  EmailAsc = 'EMAIL_ASC',
-  EmailDesc = 'EMAIL_DESC',
-  IdAsc = 'ID_ASC',
-  IdDesc = 'ID_DESC',
-  Natural = 'NATURAL',
-  PrimaryKeyAsc = 'PRIMARY_KEY_ASC',
-  PrimaryKeyDesc = 'PRIMARY_KEY_DESC',
   SurveyIdAsc = 'SURVEY_ID_ASC',
   SurveyIdDesc = 'SURVEY_ID_DESC'
 }
@@ -16394,13 +16042,6 @@ export enum SurveyResponsesOrderBy {
   UserIdAsc = 'USER_ID_ASC',
   UserIdDesc = 'USER_ID_DESC'
 }
-
-export type SurveyTokenInfo = {
-  __typename?: 'SurveyTokenInfo';
-  projectId?: Maybe<Scalars['Int']>;
-  surveyId?: Maybe<Scalars['Int']>;
-  token?: Maybe<Scalars['String']>;
-};
 
 /** Methods to use when ordering `Survey`. */
 export enum SurveysOrderBy {
@@ -18896,80 +18537,6 @@ export type UpdateSurveyInput = {
   id: Scalars['Int'];
   /** An object where the defined keys will be set on the `Survey` being updated. */
   patch: SurveyPatch;
-};
-
-/** All input for the `updateSurveyInviteByEmailAndSurveyId` mutation. */
-export type UpdateSurveyInviteByEmailAndSurveyIdInput = {
-  /**
-   * An arbitrary string value with no semantic meaning. Will be included in the
-   * payload verbatim. May be used to track mutations by the client.
-   */
-  clientMutationId?: Maybe<Scalars['String']>;
-  email: Scalars['Email'];
-  /** An object where the defined keys will be set on the `SurveyInvite` being updated. */
-  patch: SurveyInvitePatch;
-  surveyId: Scalars['Int'];
-};
-
-/** All input for the `updateSurveyInviteByEmail` mutation. */
-export type UpdateSurveyInviteByEmailInput = {
-  /**
-   * An arbitrary string value with no semantic meaning. Will be included in the
-   * payload verbatim. May be used to track mutations by the client.
-   */
-  clientMutationId?: Maybe<Scalars['String']>;
-  email: Scalars['Email'];
-  /** An object where the defined keys will be set on the `SurveyInvite` being updated. */
-  patch: SurveyInvitePatch;
-};
-
-/** All input for the `updateSurveyInviteByNodeId` mutation. */
-export type UpdateSurveyInviteByNodeIdInput = {
-  /**
-   * An arbitrary string value with no semantic meaning. Will be included in the
-   * payload verbatim. May be used to track mutations by the client.
-   */
-  clientMutationId?: Maybe<Scalars['String']>;
-  /** The globally unique `ID` which will identify a single `SurveyInvite` to be updated. */
-  nodeId: Scalars['ID'];
-  /** An object where the defined keys will be set on the `SurveyInvite` being updated. */
-  patch: SurveyInvitePatch;
-};
-
-/** All input for the `updateSurveyInvite` mutation. */
-export type UpdateSurveyInviteInput = {
-  /**
-   * An arbitrary string value with no semantic meaning. Will be included in the
-   * payload verbatim. May be used to track mutations by the client.
-   */
-  clientMutationId?: Maybe<Scalars['String']>;
-  id: Scalars['Int'];
-  /** An object where the defined keys will be set on the `SurveyInvite` being updated. */
-  patch: SurveyInvitePatch;
-};
-
-/** The output of our update `SurveyInvite` mutation. */
-export type UpdateSurveyInvitePayload = {
-  __typename?: 'UpdateSurveyInvitePayload';
-  /**
-   * The exact same `clientMutationId` that was provided in the mutation input,
-   * unchanged and unused. May be used by a client to track mutations.
-   */
-  clientMutationId?: Maybe<Scalars['String']>;
-  /** Our root query field type. Allows us to run any query from our mutation payload. */
-  query?: Maybe<Query>;
-  /** Reads a single `Survey` that is related to this `SurveyInvite`. */
-  survey?: Maybe<Survey>;
-  /** The `SurveyInvite` that was updated by this mutation. */
-  surveyInvite?: Maybe<SurveyInvite>;
-  /** An edge for our `SurveyInvite`. May be used by Relay 1. */
-  surveyInviteEdge?: Maybe<SurveyInvitesEdge>;
-};
-
-
-/** The output of our update `SurveyInvite` mutation. */
-export type UpdateSurveyInvitePayloadSurveyInviteEdgeArgs = {
-  orderBy?: Maybe<Array<SurveyInvitesOrderBy>>;
 };
 
 /** All input for the `updateSurveyInvitedGroups` mutation. */

@@ -1,5 +1,4 @@
 import { Request } from "express";
-import { SurveyInviteTokenClaims } from "../invites/surveyInvites";
 
 type UserClaims = {
   /* auth0 user id */
@@ -28,5 +27,4 @@ export interface IncomingRequest extends Request {
   user?: UserClaims;
   /* Set by currentProjectMiddleware */
   projectId?: number;
-  surveyInvite?: SurveyInviteTokenClaims;
 }
