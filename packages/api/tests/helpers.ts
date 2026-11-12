@@ -132,6 +132,36 @@ export async function clearSession(conn: DatabaseTransactionConnectionType) {
   await conn.any(sql`set role postgres`);
 }
 
+/**
+ * Run a query as the database owner, then restore the previous role.
+ * `create_survey_invites` is not executable by `seasketch_user`. Session GUCs
+ * such as `session.user_id` stay in place, so the function's admin check still
+ * runs.
+ */
+export async function asDatabaseOwner<T>(
+  conn: DatabaseTransactionConnectionType,
+  run: () => Promise<T>
+): Promise<T> {
+  const role = String(await conn.oneFirst(sql`select current_user`));
+  if (role === "postgres") {
+    return run();
+  }
+  await conn.any(sql`set role postgres`);
+  // A failed statement aborts the transaction. Roll back to this savepoint
+  // before restoring the role, or SET ROLE is rejected too.
+  await conn.any(sql`SAVEPOINT as_database_owner`);
+  try {
+    const result = await run();
+    await conn.any(sql`RELEASE SAVEPOINT as_database_owner`);
+    return result;
+  } catch (error) {
+    await conn.any(sql`ROLLBACK TO SAVEPOINT as_database_owner`);
+    throw error;
+  } finally {
+    await conn.any(sql`set role ${sql.identifier([role])}`);
+  }
+}
+
 export async function addParticipant(
   conn: DatabaseTransactionConnectionType,
   userId: number,
@@ -586,11 +616,11 @@ export async function createAndSendSurveyInvite(
       await conn.any(
         sql`update surveys set is_disabled = ${false} where id = ${surveyId}`
       );
-      const invite = await conn.one(
+      const invite = await asDatabaseOwner(conn, () => conn.one(
         sql`select * from create_survey_invites(${surveyId}, false, null, null, array[
                       ('bob@example.com', 'Bob')::survey_invite_options
                     ])`
-      );
+      ));
       const mock = new MockSES();
       mock
         .sendBulkTemplatedEmail()

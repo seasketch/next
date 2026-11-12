@@ -12115,6 +12115,13 @@ $$;
 
 
 --
+-- Name: FUNCTION create_survey_invites("surveyId" integer, "includeProjectInvite" boolean, "makeAdmin" boolean, "groupNames" text[], "surveyInviteOptions" public.survey_invite_options[]); Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON FUNCTION public.create_survey_invites("surveyId" integer, "includeProjectInvite" boolean, "makeAdmin" boolean, "groupNames" text[], "surveyInviteOptions" public.survey_invite_options[]) IS '@omit';
+
+
+--
 -- Name: form_logic_rules; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -23756,40 +23763,17 @@ COMMENT ON FUNCTION public.session_can_access_sketch(skid integer) IS '@omit';
 CREATE FUNCTION public.session_has_project_access(pid integer) RETURNS boolean
     LANGUAGE sql STABLE SECURITY DEFINER PARALLEL SAFE
     AS $$
-    -- Here we give access if the project is public, if the session is an admin,
-    -- or if the session belongs to an approved participant
     select exists(
       select
         1
-      from 
-        projects 
-      where 
-        projects.id = pid and 
-        access_control = 'public'
-    ) or 
-    session_is_admin(pid) or 
-    session_is_approved_participant(pid) or  
-    -- session has a survey invite token with matching projectId
-    exists(
-      select
-        1
       from
-        survey_invites
-      inner join
-        surveys
-      on
-        surveys.id = survey_invites.survey_id
+        projects
       where
-        surveys.project_id = pid and 
-        (
-          survey_invites.user_id = nullif(current_setting('session.user_id', TRUE), '')::int or
-          (
-            survey_invites.email = nullif(current_setting('session.canonical_email', TRUE), '') and
-            current_setting('session.email_verified', true) = 'true'
-          ) or
-          survey_invites.email = nullif(current_setting('session.survey_invite_email', TRUE), '')
-        )            
-    )
+        projects.id = pid and
+        access_control = 'public'
+    ) or
+    session_is_admin(pid) or
+    session_is_approved_participant(pid)
   $$;
 
 
@@ -40867,7 +40851,6 @@ GRANT UPDATE(fullname) ON TABLE public.survey_invites TO seasketch_user;
 --
 
 REVOKE ALL ON FUNCTION public.create_survey_invites("surveyId" integer, "includeProjectInvite" boolean, "makeAdmin" boolean, "groupNames" text[], "surveyInviteOptions" public.survey_invite_options[]) FROM PUBLIC;
-GRANT ALL ON FUNCTION public.create_survey_invites("surveyId" integer, "includeProjectInvite" boolean, "makeAdmin" boolean, "groupNames" text[], "surveyInviteOptions" public.survey_invite_options[]) TO seasketch_user;
 
 
 --

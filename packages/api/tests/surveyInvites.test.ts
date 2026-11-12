@@ -10,6 +10,7 @@ import {
   removeUserFromGroup,
   createAndSendSurveyInvite,
   verifySessionCanAccessSurveyResources,
+  asDatabaseOwner,
   asPg,
   createBody,
   getBodyStr,
@@ -192,12 +193,12 @@ describe("Management operations", () => {
         const surveyId = await conn.oneFirst(
           sql`select id from make_survey('Survey', ${projectId}, null)`
         );
-        const invites = await conn.many(
+        const invites = await asDatabaseOwner(conn, () => conn.many(
           sql`select * from create_survey_invites(${surveyId}, false, null, null, array[
                       ('bob@example.com', 'Bob')::survey_invite_options,
                       ('ed@example.com', 'Ed')::survey_invite_options
                     ])`
-        );
+        ));
         expect(invites.length).toBe(2);
         expect(invites[0].survey_id).toBe(surveyId);
         expect(invites[0].fullname).toBe("Bob");
@@ -214,18 +215,18 @@ describe("Management operations", () => {
         const surveyId = await conn.oneFirst(
           sql`select id from make_survey('Survey', ${projectId}, null)`
         );
-        const invites = await conn.many(
+        const invites = await asDatabaseOwner(conn, () => conn.many(
           sql`select * from create_survey_invites(${surveyId}, false, null, null, array[
                       ('bob@example.com', 'Bob')::survey_invite_options,
                       ('ed@example.com', 'Ed')::survey_invite_options
                     ])`
-        );
+        ));
         expect(invites.length).toBe(2);
-        await conn.any(
+        await asDatabaseOwner(conn, () => conn.any(
           sql`select * from create_survey_invites(${surveyId}, false, null, null, array[
                       ('bob@example.com', 'Bob')::survey_invite_options
                     ])`
-        );
+        ));
         expect(
           await conn.oneFirst(
             sql`select count(*) from survey_invites where survey_id = ${surveyId}`
@@ -260,11 +261,11 @@ describe("Management operations", () => {
         const surveyId = await conn.oneFirst(
           sql`select id from make_survey('Survey', ${projectId}, null)`
         );
-        const invites = await conn.any(
+        const invites = await asDatabaseOwner(conn, () => conn.any(
           sql`select * from create_survey_invites(${surveyId}, false, null, null, array[
                         ('bob@example.com', 'Bob')::survey_invite_options
                       ])`
-        );
+        ));
         expect(invites.length).toBe(1);
         await conn.one(
           sql`update survey_invites set fullname = 'FooBob' where id = ${invites[0].id} returning fullname`
@@ -286,11 +287,11 @@ describe("Management operations", () => {
         const surveyId = await conn.oneFirst(
           sql`select id from make_survey('Survey', ${projectId}, null)`
         );
-        const invite = await conn.one(
+        const invite = await asDatabaseOwner(conn, () => conn.one(
           sql`select * from create_survey_invites(${surveyId}, false, null, null, array[
                         ('bob@example.com', 'Bob')::survey_invite_options
                       ])`
-        );
+        ));
         const deletedId = await conn.oneFirst(
           sql`delete from survey_invites where id = ${invite.id} returning id`
         );
@@ -307,11 +308,11 @@ describe("Management operations", () => {
         const surveyId = await conn.oneFirst(
           sql`select id from make_survey('Survey', ${projectId}, null)`
         );
-        const invite = await conn.one(
+        const invite = await asDatabaseOwner(conn, () => conn.one(
           sql`select * from create_survey_invites(${surveyId}, false, null, null, array[
                         ('bob@example.com', 'Bob')::survey_invite_options
                       ])`
-        );
+        ));
         const deletedId = await conn.oneFirst(
           sql`delete from survey_invites where id = ${invite.id} returning id`
         );
@@ -330,11 +331,11 @@ describe("Management operations", () => {
           sql`select id from make_survey('Survey', ${projectId}, null)`
         );
         const groupId = await createGroup(conn, projectId, "Group A");
-        const invite = await conn.one(
+        const invite = await asDatabaseOwner(conn, () => conn.one(
           sql`select * from create_survey_invites(${surveyId}, true, true, array['Group A'], array[
                           ('bob@example.com', 'Bob')::survey_invite_options
                         ])`
-        );
+        ));
         const projectInvites = await conn.any(
           sql`select * from project_invites where make_admin = true`
         );
@@ -585,12 +586,12 @@ describe("db.surveyInvites.sendQueuedSurveyInvites(limit)", () => {
           sql`update surveys set is_disabled = ${false} where id = ${surveyId}`
         );
 
-        const invites = await conn.many(
+        const invites = await asDatabaseOwner(conn, () => conn.many(
           sql`select * from create_survey_invites(${surveyId}, false, null, null, array[
                         ('bob@example.com', 'Bob')::survey_invite_options,
                         ('ed@example.com', 'Ed')::survey_invite_options
                       ])`
-        );
+        ));
         expect(invites.length).toBe(2);
         const mock = new MockSES();
         mock
@@ -641,12 +642,12 @@ describe("db.surveyInvites.sendQueuedSurveyInvites(limit)", () => {
         await conn.any(
           sql`update surveys set is_disabled = ${false} where id = ${surveyId}`
         );
-        let invites = await conn.many(
+        let invites = await asDatabaseOwner(conn, () => conn.many(
           sql`select * from create_survey_invites(${surveyId}, false, null, null, array[
                         ('bob@example.com', 'Bob')::survey_invite_options,
                         ('ed@example.com', 'Ed')::survey_invite_options
                       ])`
-        );
+        ));
         const groupA = await createGroup(conn, projectId, "Group A");
         await addUserToGroup(conn, userA, groupA);
         const groupB = await createGroup(conn, projectId, "Group B");
@@ -822,11 +823,11 @@ describe("db.surveyInvites.sendQueuedSurveyInvites(limit)", () => {
           sql`update surveys set is_disabled = ${false} where id = ${surveyId}`
         );
 
-        const invite = await conn.one(
+        const invite = await asDatabaseOwner(conn, () => conn.one(
           sql`select * from create_survey_invites(${surveyId}, false, null, null, array[
                         ('bob@example.com', 'Bob')::survey_invite_options
                       ])`
-        );
+        ));
         const mock = new MockSES();
         mock
           .sendBulkTemplatedEmail()
@@ -875,11 +876,11 @@ describe("db.surveyInvites.sendQueuedSurveyInvites(limit)", () => {
           sql`update surveys set is_disabled = ${false} where id = ${surveyId}`
         );
 
-        const invite = await conn.one(
+        const invite = await asDatabaseOwner(conn, () => conn.one(
           sql`select * from create_survey_invites(${surveyId}, false, null, null, array[
                           ('bob@example.com', 'Bob')::survey_invite_options
                         ])`
-        );
+        ));
         const mock = new MockSES();
         mock
           .sendBulkTemplatedEmail()
@@ -922,11 +923,11 @@ describe("db.surveyInvites.sendQueuedSurveyInvites(limit)", () => {
           sql`update surveys set is_disabled = ${false} where id = ${surveyId}`
         );
 
-        const invite = await conn.one(
+        const invite = await asDatabaseOwner(conn, () => conn.one(
           sql`select * from create_survey_invites(${surveyId}, false, null, null, array[
                             ('bob@example.com', 'Bob')::survey_invite_options
                           ])`
-        );
+        ));
         const mock = new MockSES();
         mock
           .sendBulkTemplatedEmail()
@@ -990,12 +991,12 @@ describe("Sent invite status", () => {
           sql`update surveys set is_disabled = ${false} where id = ${surveyId}`
         );
 
-        const invites = await conn.many(
+        const invites = await asDatabaseOwner(conn, () => conn.many(
           sql`select * from create_survey_invites(${surveyId}, false, null, null, array[
                         ('bob@example.com', 'Bob')::survey_invite_options,
                         ('ed@example.com', 'Ed')::survey_invite_options
                       ])`
-        );
+        ));
         expect(invites.length).toBe(2);
         const mock = new MockSES();
         mock
@@ -1058,11 +1059,11 @@ describe("Sent invite status", () => {
             sql`update surveys set is_disabled = ${false} where id = ${surveyId}`
           );
 
-          const inviteId = await conn.oneFirst(
+          const inviteId = await asDatabaseOwner(conn, () => conn.oneFirst(
             sql`select id from create_survey_invites(${surveyId}, false, null, null, array[
                           ('bob@example.com', 'Bob')::survey_invite_options
                         ])`
-          );
+          ));
           await clearSession(conn);
           let status = await conn.oneFirst(
             sql`select survey_invites_status(survey_invites.*) from survey_invites where id = ${inviteId}`
@@ -1087,11 +1088,11 @@ describe("Sent invite status", () => {
             sql`update surveys set is_disabled = ${false} where id = ${surveyId}`
           );
 
-          const inviteId = await conn.oneFirst(
+          const inviteId = await asDatabaseOwner(conn, () => conn.oneFirst(
             sql`select id from create_survey_invites(${surveyId}, false, null, null, array[
                           ('bob@example.com', 'Bob')::survey_invite_options
                         ])`
-          );
+          ));
           await clearSession(conn);
           const mock = new MockSES();
           mock
@@ -1131,11 +1132,11 @@ describe("Sent invite status", () => {
             sql`update surveys set is_disabled = ${false} where id = ${surveyId}`
           );
 
-          const inviteId = await conn.oneFirst(
+          const inviteId = await asDatabaseOwner(conn, () => conn.oneFirst(
             sql`select id from create_survey_invites(${surveyId}, false, null, null, array[
                           ('bob@example.com', 'Bob')::survey_invite_options
                         ])`
-          );
+          ));
           await clearSession(conn);
           const mock = new MockSES();
           mock
@@ -1180,11 +1181,11 @@ describe("Sent invite status", () => {
             sql`update surveys set is_disabled = ${false} where id = ${surveyId}`
           );
 
-          const inviteId = await conn.oneFirst(
+          const inviteId = await asDatabaseOwner(conn, () => conn.oneFirst(
             sql`select id from create_survey_invites(${surveyId}, false, null, null, array[
                           ('bob@example.com', 'Bob')::survey_invite_options
                         ])`
-          );
+          ));
           await clearSession(conn);
           const mock = new MockSES();
           mock
@@ -1229,11 +1230,11 @@ describe("Sent invite status", () => {
             sql`update surveys set is_disabled = ${false} where id = ${surveyId}`
           );
 
-          const inviteId = await conn.oneFirst(
+          const inviteId = await asDatabaseOwner(conn, () => conn.oneFirst(
             sql`select id from create_survey_invites(${surveyId}, false, null, null, array[
                           ('bob@example.com', 'Bob')::survey_invite_options
                         ])`
-          );
+          ));
           await clearSession(conn);
           const mock = new MockSES();
           mock
@@ -1278,11 +1279,11 @@ describe("Sent invite status", () => {
             sql`update surveys set is_disabled = ${false} where id = ${surveyId}`
           );
 
-          const inviteId = await conn.oneFirst(
+          const inviteId = await asDatabaseOwner(conn, () => conn.oneFirst(
             sql`select id from create_survey_invites(${surveyId}, false, null, null, array[
                           ('bob@example.com', 'Bob')::survey_invite_options
                         ])`
-          );
+          ));
           await clearSession(conn);
           const mock = new MockSES();
           mock
@@ -1631,11 +1632,11 @@ describe("content access", () => {
           )}, 'ShortText', 'field2') returning id`
         );
         // add user to survey_invites
-        const invite = await conn.one(
+        const invite = await asDatabaseOwner(conn, () => conn.one(
           sql`select * from create_survey_invites(${surveyId}, false, null, null, array[
                             ('bob@example.com', 'Bob')::survey_invite_options
                           ])`
-        );
+        ));
         const mock = new MockSES();
         mock
           .sendBulkTemplatedEmail()
@@ -1698,11 +1699,11 @@ describe("content access", () => {
           )}, 'ShortText', 'field2') returning id`
         );
         // add user to survey_invites
-        const invite = await conn.one(
+        const invite = await asDatabaseOwner(conn, () => conn.one(
           sql`select * from create_survey_invites(${surveyId}, false, null, null, array[
                             ('bob@example.com', 'Bob')::survey_invite_options
                           ])`
-        );
+        ));
         const mock = new MockSES();
         mock
           .sendBulkTemplatedEmail()

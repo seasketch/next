@@ -8,6 +8,7 @@ import {
   createGroup,
   projectTransaction,
   verifyCRUDOpsLimitedToAdmins,
+  asDatabaseOwner,
   asPg,
 } from "./helpers";
 import {
@@ -763,11 +764,11 @@ describe("Sending invites", () => {
           sql`insert into surveys (project_id, name) values (${projectId}, 'Survey') returning id`
         );
         const groupId = await createGroup(conn, projectId, "Group A");
-        const invite = await conn.one(
+        const invite = await asDatabaseOwner(conn, () => conn.one(
           sql`select * from create_survey_invites(${surveyId}, true, true, array['Group A'], array[
                           ('bob@example.com', 'Bob')::survey_invite_options
                         ])`
-        );
+        ));
         const projectInvites = await conn.any(
           sql`select * from project_invites where make_admin = true`
         );
@@ -1401,11 +1402,11 @@ describe("Accepting Invites", () => {
             sql`insert into surveys (project_id, name) values (${projectId}, 'Survey') returning id`
           );
           const groupId = await createGroup(conn, projectId, "Group A");
-          const invite = await conn.one(
+          const invite = await asDatabaseOwner(conn, () => conn.one(
             sql`select * from create_survey_invites(${surveyId}, true, true, array['Group A'], array[
                                 ('bob@example.com', 'Bob')::survey_invite_options
                               ])`
-          );
+          ));
           await createSession(conn, userA, true, false, projectId);
           await conn.any(
             sql`select set_config('session.survey_invite_email', 'bob@example.com', true)`
@@ -1537,11 +1538,11 @@ describe("Accepting Invites", () => {
             sql`insert into surveys (project_id, name) values (${projectId}, 'Survey') returning id`
           );
           const groupId = await createGroup(conn, projectId, "Group A");
-          const invite = await conn.one(
+          const invite = await asDatabaseOwner(conn, () => conn.one(
             sql`select * from create_survey_invites(${surveyId}, true, true, array['Group A'], array[
                                 ('bob@example.com', 'Bob')::survey_invite_options
                               ])`
-          );
+          ));
           await createSession(conn, userA, true, false, projectId);
           await conn.any(
             sql`select set_config('session.survey_invite_email', 'bob@example.com', true)`

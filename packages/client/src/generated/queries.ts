@@ -2500,33 +2500,6 @@ export type CreateSurveyInvitedGroupPayload = {
   surveyInvitedGroup?: Maybe<SurveyInvitedGroup>;
 };
 
-/** All input for the `createSurveyInvites` mutation. */
-export type CreateSurveyInvitesInput = {
-  /**
-   * An arbitrary string value with no semantic meaning. Will be included in the
-   * payload verbatim. May be used to track mutations by the client.
-   */
-  clientMutationId?: Maybe<Scalars['String']>;
-  groupNames?: Maybe<Array<Maybe<Scalars['String']>>>;
-  includeProjectInvite?: Maybe<Scalars['Boolean']>;
-  makeAdmin?: Maybe<Scalars['Boolean']>;
-  surveyId?: Maybe<Scalars['Int']>;
-  surveyInviteOptions?: Maybe<Array<Maybe<SurveyInviteOptionsInput>>>;
-};
-
-/** The output of our `createSurveyInvites` mutation. */
-export type CreateSurveyInvitesPayload = {
-  __typename?: 'CreateSurveyInvitesPayload';
-  /**
-   * The exact same `clientMutationId` that was provided in the mutation input,
-   * unchanged and unused. May be used by a client to track mutations.
-   */
-  clientMutationId?: Maybe<Scalars['String']>;
-  /** Our root query field type. Allows us to run any query from our mutation payload. */
-  query?: Maybe<Query>;
-  surveyInvites?: Maybe<Array<SurveyInvite>>;
-};
-
 /** All input for the `createSurveyJumpRule` mutation. */
 export type CreateSurveyJumpRuleInput = {
   booleanOperator?: Maybe<FormLogicOperator>;
@@ -7807,7 +7780,6 @@ export type Mutation = {
   createSketchFolder?: Maybe<CreateSketchFolderPayload>;
   /** Creates a single `SurveyInvitedGroup`. */
   createSurveyInvitedGroup?: Maybe<CreateSurveyInvitedGroupPayload>;
-  createSurveyInvites?: Maybe<CreateSurveyInvitesPayload>;
   /** Initializes a new FormLogicRule with a single condition and command=JUMP. */
   createSurveyJumpRule?: Maybe<CreateSurveyJumpRulePayload>;
   createSurveyResponse?: Maybe<CreateSurveyResponsePayload>;
@@ -8696,12 +8668,6 @@ export type MutationCreateSketchFolderArgs = {
 /** The root mutation type which contains root level fields which mutate data. */
 export type MutationCreateSurveyInvitedGroupArgs = {
   input: CreateSurveyInvitedGroupInput;
-};
-
-
-/** The root mutation type which contains root level fields which mutate data. */
-export type MutationCreateSurveyInvitesArgs = {
-  input: CreateSurveyInvitesInput;
 };
 
 
@@ -16227,11 +16193,6 @@ export type SurveyInviteCondition = {
   id?: Maybe<Scalars['Int']>;
   /** Checks for equality with the object’s `surveyId` field. */
   surveyId?: Maybe<Scalars['Int']>;
-};
-
-export type SurveyInviteOptionsInput = {
-  email?: Maybe<Scalars['Email']>;
-  fullname?: Maybe<Scalars['String']>;
 };
 
 /** Represents an update to a `SurveyInvite`. Fields that are set will be updated. */
