@@ -2,14 +2,9 @@ name: Integration tests
 # End-user and admin Playwright suites. Create Deployment does not wait on
 # this workflow, and these jobs are not a deploy gate.
 #
-# Runs on every push to master, and when someone starts this workflow on a
-# branch (Actions → Integration tests → Run workflow). That is how the phase 4
-# branch is exercised. It does not run on every pull request.
-on:
-  push:
-    branches:
-      - master
-  workflow_dispatch:
+# Runs on every branch push, the same trigger as Unit Tests, and when someone
+# starts this workflow by hand. Smoke stays the short job in unit-tests.yml.
+on: [push, workflow_dispatch]
 
 permissions:
   contents: read
