@@ -2,7 +2,7 @@ import { expect, test } from "@playwright/test";
 import { personas } from "../src/config";
 import { signIn, visibleButton } from "../src/project";
 
-test.describe("new forum topic title", () => {
+test.describe("new forum topic title @enduser @forums", () => {
   test("the composer explains the title limit before posting", async ({ page, request }) => {
     test.setTimeout(120_000);
     await signIn(page, request, personas.admin);

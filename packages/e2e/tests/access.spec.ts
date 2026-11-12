@@ -34,7 +34,7 @@ function slug(label: string) {
   return `e2e-${label}-${Date.now().toString(36)}`.slice(0, 24);
 }
 
-test.describe("access @access", () => {
+test.describe("access @enduser @access", () => {
   test("an anonymous visitor opens a public project from the list", async ({ page }) => {
     test.setTimeout(90_000);
     await page.goto("/projects");

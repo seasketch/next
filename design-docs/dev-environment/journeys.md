@@ -27,7 +27,7 @@ Existing Playwright coverage is noted in italics. An unmarked item is not yet a 
 
 A journey has one suite tag. `@enduser` and `@admin` are never combined. Theme tags (`@sketching`, `@surveys`, `@uploads`, …) are for running one heading locally, not for another CI job. `@bundler` is additive. `@auth0` is the signup journey that needs tenant secrets and stays out of the Auth0-free jobs. `@production` is the read-only probe and never runs against the local stack.
 
-Locally, once the scripts land: `npm run e2e:smoke`, `npm run e2e:enduser`, `npm run e2e:admin`. `npm run e2e` runs the folder. CI triggers are in [integration testing](integration-testing.md).
+Locally: `npm run e2e:smoke`, `npm run e2e:enduser`, and `npm run e2e:admin`. `npm run e2e` runs the folder. CI triggers are in [integration testing](integration-testing.md). None of these jobs are part of Create Deployment.
 
 ## Shared rules
 

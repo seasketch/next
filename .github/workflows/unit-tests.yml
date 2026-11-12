@@ -226,6 +226,8 @@ jobs:
           cache-dependency-path: package-lock.json
       - name: Install dependencies
         run: npm ci --no-audit --no-fund
+      - name: Check suite tags
+        run: node packages/e2e/scripts/check-suite-tags.mjs
       - name: Install Playwright browser
         working-directory: ./packages/e2e
         run: npx playwright install --with-deps chromium
@@ -258,7 +260,7 @@ jobs:
         run: docker compose --profile data build spatial-uploads
       - name: Run smoke tests
         id: smoke
-        run: npm run e2e
+        run: npm run e2e:smoke
       - name: Smoke test report
         uses: dorny/test-reporter@v3
         if: ${{ !cancelled() && steps.smoke.outcome != 'skipped' }}

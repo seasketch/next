@@ -4,7 +4,7 @@ The product lists are the [end-user catalog](../../design-docs/dev-environment/j
 
 This file is the implementation note for tests that already landed under `packages/e2e/tests`. When a catalog item is implemented, mark it *Covered* in the catalog. Fixture setup, selectors, and teardown stay here or in the spec.
 
-The three `@smoke` journeys stay as they are: an anonymous visitor opens `demo-samoa` and sees the map, `e2e|member` opens `e2e-private` and sees only the Members Forum, and `e2e|admin` opens the `demo-samoa` admin page. They are the only `@smoke` tests, and they are not also `@enduser` or `@admin`. Everything else belongs to one of those two integration jobs.
+The three `@smoke` journeys stay as they are: an anonymous visitor opens `demo-samoa` and sees the map, `e2e|member` opens `e2e-private` and sees only the Members Forum, and `e2e|admin` opens the `demo-samoa` admin page. They are the only `@smoke` tests, and they are not also `@enduser` or `@admin`. Every other spec's `describe` carries `@enduser` or `@admin`. `local-reports.spec.ts` keeps one `describe` and puts the suite tag on each test, because the sketch journey is end-user and the CSV data table is admin. `node packages/e2e/scripts/check-suite-tags.mjs` requires exactly one suite tag. CI runs `npm run e2e:smoke` on every push, and `npm run e2e:enduser` / `npm run e2e:admin` from the Integration tests workflow on `master` and on workflow dispatch. Those jobs are not part of Create Deployment.
 
 Reads use `demo-samoa`. A signed-in user starts mutating journeys as a non-participant unless the spec says otherwise. Joining happens in the test. Each run starts from a restored `seasketch_e2e` snapshot.
 

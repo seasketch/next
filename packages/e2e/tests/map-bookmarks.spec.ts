@@ -2,7 +2,7 @@ import { expect, test } from "@playwright/test";
 import { personas } from "../src/config";
 import { openMap, signIn, visibleButton } from "../src/project";
 
-test.describe("demo-samoa map bookmarks", () => {
+test.describe("demo-samoa map bookmarks @enduser @forums", () => {
   test("a participant posts a map bookmark and can view both images", async ({
     page,
     request,

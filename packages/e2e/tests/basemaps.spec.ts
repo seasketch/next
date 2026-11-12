@@ -47,7 +47,7 @@ function satelliteRaster(sources: StyleSource[] | null) {
   );
 }
 
-test.describe("demo-samoa basemaps", () => {
+test.describe("demo-samoa basemaps @enduser @basemaps", () => {
   test("an anonymous visitor can switch from Light to Satellite", async ({ page }) => {
     test.setTimeout(90_000);
     await openMap(page, "/demo-samoa/app");

@@ -9,7 +9,7 @@
 Three consumers need a running SeaSketch, and they get it from the same commands:
 
 1. **Local development** — the common case, and the one that has to work every morning.
-2. **CI** — the pull-request `@smoke` job, and separate end-user and admin integration jobs on `master`, dispatch, and the phase 4 pull request.
+2. **CI** — `@smoke` on every push. End-user and admin integration on push to `master` and on workflow dispatch. Those jobs are not part of Create Deployment.
 3. **Cloud agents** — Cursor cloud agents or any equivalent: a clean Linux VM with the repo, Docker, and a secret environment. No editor, no personal shell profile.
 
 There is one contract. CI and agents are not a separate design. This campaign does not add a hosted staging server; cloud agents running these commands are the isolated place to try a change.
@@ -35,7 +35,7 @@ From a clean checkout, with Docker running and secrets injected ([secrets](secre
 | `npm run dev` | Start the **core** profile in the foreground: Postgres and Redis through Compose, then the API and client plus the watchers a person editing code needs (API TypeScript, Graphile Migrate, GraphQL codegen, Tailwind), and the data-tables, spatial-uploads, and subdivision workers. Restart a process when its code changes. Exit non-zero if any process in the profile dies |
 | `npm run dev -- --profile data` | Core plus the [data profile](local-services.md) |
 | `npm run dev -- --ci` | The same profile without watchers. The API runs from `dist`, so build first. The data-tables and spatial-uploads servers start once, and subdivision is built and started once. The client starts last, after those ports are open |
-| `npm run e2e` | Restore the golden snapshot into `seasketch_e2e` (`setup --reset` for that database only), build the API, and run the Playwright folder. The suite starts `--profile e2e`: API on port 13857 and client on port 13000, Redis logical database 1. It does not attach to `npm run dev` and does not write to the `seasketch` database. Chromium is a separate download from `npm install`. Once per machine, and again after a Playwright upgrade: `npm exec --workspace @seasketch/e2e -- playwright install chromium`. Phase 3 adds `npm run e2e:smoke` (`--grep @smoke`), `npm run e2e:enduser` (`--grep @enduser`), and `npm run e2e:admin` (`--grep @admin`). Until then the Smoke tests job still runs this command |
+| `npm run e2e` | Restore the golden snapshot into `seasketch_e2e` (`setup --reset` for that database only), build the API, and run the Playwright folder. The suite starts `--profile e2e`: API on port 13857 and client on port 13000, Redis logical database 1. It does not attach to `npm run dev` and does not write to the `seasketch` database. Chromium is a separate download from `npm install`. Once per machine, and again after a Playwright upgrade: `npm exec --workspace @seasketch/e2e -- playwright install chromium`. `npm run e2e:smoke`, `npm run e2e:enduser`, and `npm run e2e:admin` pass `--grep` for `@smoke`, `@enduser`, and `@admin` |
 | `npm run dev -- --only <service>` | One service, raw output, no Compose and no log file. What each editor pane runs |
 | `npm run logs [-- <service>]` | Follow `.logs/<service>.log`, or every service |
 | `npm run status` | One line per service that has a readiness URL, then `docker compose ps` |

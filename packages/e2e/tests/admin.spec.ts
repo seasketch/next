@@ -2,7 +2,7 @@ import { expect, test } from "@playwright/test";
 import { personas } from "../src/config";
 import { signIn, visibleNavLink } from "../src/project";
 
-test.describe("demo-samoa project admin", () => {
+test.describe("demo-samoa project admin @admin", () => {
   test("an admin can open the seeded data, geography, sketch class, and report", async ({
     page,
     request,

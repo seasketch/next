@@ -91,7 +91,7 @@ test.describe("local reports and data tables", () => {
     await resetAiCartographerChoice(personas.admin.sub);
   });
 
-  test("a drawn sketch shows seamount and EBSA overlap from local workers", async ({
+  test("a drawn sketch shows seamount and EBSA overlap from local workers @enduser @reports", async ({
     page,
     request,
   }) => {
@@ -167,7 +167,7 @@ test.describe("local reports and data tables", () => {
     ).toBeVisible();
   });
 
-  test("a CSV data table is hosted on local storage", async ({ page, request }) => {
+  test("a CSV data table is hosted on local storage @admin @tables", async ({ page, request }) => {
     test.setTimeout(240_000);
     const tocId = await withDb(async (client) => {
       await client.query(

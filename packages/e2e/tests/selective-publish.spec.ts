@@ -49,7 +49,7 @@ async function openSelectivePublish(page: Page) {
   return page.getByRole("dialog", { name: "Selective publish" });
 }
 
-test.describe("selective overlay publish", () => {
+test.describe("selective overlay publish @admin @layers", () => {
   test("an admin publishes one renamed layer and leaves the other for a later publish", async ({
     page,
     request,

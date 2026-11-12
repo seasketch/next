@@ -1,7 +1,7 @@
 import { expect, test } from "@playwright/test";
 import { isMapboxGlStyle, waitForMapboxStyle } from "../src/project";
 
-test.describe("homepage", () => {
+test.describe("homepage @enduser @homepage", () => {
   test("an anonymous visitor can open Demo Samoa from the project list", async ({
     page,
   }) => {
