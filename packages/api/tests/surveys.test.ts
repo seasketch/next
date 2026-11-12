@@ -7,7 +7,6 @@ import { createPool } from "./pool";
 import {
   createSession,
   clearSession,
-  createGroup,
   projectTransaction,
   verifyCRUDOpsLimitedToAdmins,
   createBody,
@@ -100,35 +99,13 @@ describe("Surveys", () => {
       async (conn, projectId, adminId, [userA, userB]) => {
         await createSession(conn, adminId, true, false, projectId);
         const surveyId = await conn.oneFirst(
-          sql`insert into surveys (name, project_id, access_type, is_disabled) values ('Survey A', ${projectId}, 'PUBLIC', ${true}) returning id`
+          sql`insert into surveys (name, project_id, is_disabled) values ('Survey A', ${projectId}, ${true}) returning id`
         );
         await expect(
           conn.any(
             sql`update surveys set is_disabled = ${false} where id = ${surveyId}`
           )
         ).rejects.toThrow(/form/i);
-      }
-    );
-  });
-
-  test("only project admins can invite groups to a survey", async () => {
-    await projectTransaction(
-      pool,
-      "public",
-      async (conn, projectId, adminId, userIds) => {
-        await createSession(conn, adminId, true, false, projectId);
-        const surveyId = await conn.oneFirst(
-          sql`select id from make_survey('Survey A', ${projectId}, null)`
-        );
-        const groupId = await createGroup(conn, projectId, "Group A", [
-          userIds[0],
-        ]);
-        await createSession(conn, userIds[1], true, false, projectId);
-        await expect(
-          conn.any(
-            sql`insert into survey_invited_groups (survey_id, group_id) values (${surveyId}, ${groupId}) returning *`
-          )
-        ).rejects.toThrow();
       }
     );
   });
@@ -158,9 +135,6 @@ describe("Surveys", () => {
           );
           const formId = await conn.oneFirst(
             sql`select id from forms where survey_id = ${surveyId}`
-          );
-          await conn.any(
-            sql`update surveys set access_type = 'PUBLIC' where id = ${surveyId}`
           );
           await conn.any(
             sql`update surveys set is_disabled = ${false} where id = ${surveyId}`
@@ -200,131 +174,6 @@ describe("Surveys", () => {
       );
     });
 
-    test("Invite-only surveys are accessible to admins", async () => {
-      await projectTransaction(
-        pool,
-        "public",
-        async (conn, projectId, adminId, [userA, userB]) => {
-          await createSession(conn, adminId, true, false, projectId);
-          const surveyId = await conn.oneFirst(
-            sql`select id from make_survey('Survey A', ${projectId}, null)`
-          );
-          const formId = await conn.oneFirst(
-            sql`select id from forms where survey_id = ${surveyId}`
-          );
-          await conn.any(
-            sql`update surveys set access_type = 'INVITE_ONLY' where id = ${surveyId}`
-          );
-          await conn.any(
-            sql`update surveys set is_disabled = ${false} where id = ${surveyId}`
-          );
-          await clearSession(conn);
-          await createSession(conn, adminId, true, false, projectId);
-          const fieldId = await conn.oneFirst(
-            sql`insert into form_elements (body, type_id, form_id, export_id) values (${createBody(
-              "field a"
-            )}, 'ShortText', ${formId}, 'field_a') returning id`
-          );
-          expect(
-            (await conn.any(sql`select * from surveys where id = ${surveyId}`))
-              .length
-          ).toBe(1);
-          await createSession(conn, adminId, true, false, projectId);
-          expect(
-            (await conn.any(sql`select * from surveys where id = ${surveyId}`))
-              .length
-          ).toBe(1);
-          expect(
-            (
-              await conn.any(
-                sql`select * from forms where survey_id = ${surveyId}`
-              )
-            ).length
-          ).toBe(1);
-          expect(
-            (
-              await conn.any(
-                sql`select * from form_elements where form_id = ${formId}`
-              )
-            ).length
-          ).toBeGreaterThan(0);
-        }
-      );
-    });
-
-    test("Invite-only surveys are accessible to chosen user groups", async () => {
-      await projectTransaction(
-        pool,
-        "public",
-        async (conn, projectId, adminId, [userA, userB]) => {
-          await createSession(conn, adminId, true, false, projectId);
-          const surveyId = await conn.oneFirst(
-            sql`select id from make_survey('Survey A', ${projectId}, null)`
-          );
-          const formId = await conn.oneFirst(
-            sql`select id from forms where survey_id = ${surveyId}`
-          );
-          await conn.any(
-            sql`update surveys set access_type = 'INVITE_ONLY' where id = ${surveyId}`
-          );
-          await conn.any(
-            sql`update surveys set is_disabled = ${false} where id = ${surveyId}`
-          );
-          await clearSession(conn);
-          await createSession(conn, adminId, true, false, projectId);
-          const fieldId = await conn.oneFirst(
-            sql`insert into form_elements (body, type_id, form_id, export_id) values (${createBody(
-              "field a"
-            )}, 'ShortText', ${formId}, 'field_a') returning id`
-          );
-          const groupId = await createGroup(conn, projectId, "Group A", [
-            userA,
-          ]);
-          await conn.any(
-            sql`insert into survey_invited_groups (survey_id, group_id) values (${surveyId}, ${groupId})`
-          );
-          await createSession(conn, userA, false, false, projectId);
-          expect(
-            (await conn.any(sql`select * from surveys where id = ${surveyId}`))
-              .length
-          ).toBe(1);
-          expect(
-            (
-              await conn.any(
-                sql`select * from forms where survey_id = ${surveyId}`
-              )
-            ).length
-          ).toBe(1);
-          expect(
-            (
-              await conn.any(
-                sql`select * from form_elements where form_id = ${formId}`
-              )
-            ).length
-          ).toBeGreaterThan(0);
-          await createSession(conn, userB, true, false, projectId);
-          expect(
-            (await conn.any(sql`select * from surveys where id = ${surveyId}`))
-              .length
-          ).toBe(0);
-          expect(
-            (
-              await conn.any(
-                sql`select * from forms where survey_id = ${surveyId}`
-              )
-            ).length
-          ).toBe(0);
-          expect(
-            (
-              await conn.any(
-                sql`select * from form_elements where form_id = ${formId}`
-              )
-            ).length
-          ).toBe(0);
-        }
-      );
-    });
-
     test("Disabled surveys are not visible to end-users", async () => {
       await projectTransaction(
         pool,
@@ -337,20 +186,11 @@ describe("Surveys", () => {
           const formId = await conn.oneFirst(
             sql`select id from forms where survey_id = ${surveyId}`
           );
-          await conn.any(
-            sql`update surveys set access_type = 'INVITE_ONLY' where id = ${surveyId}`
-          );
           await createSession(conn, adminId, true, false, projectId);
           const fieldId = await conn.oneFirst(
             sql`insert into form_elements (body, type_id, form_id, export_id) values (${createBody(
               "field a"
             )}, 'ShortText', ${formId}, 'field_a') returning id`
-          );
-          const groupId = await createGroup(conn, projectId, "Group A", [
-            userA,
-          ]);
-          await conn.any(
-            sql`insert into survey_invited_groups (survey_id, group_id) values (${surveyId}, ${groupId})`
           );
           await createSession(conn, userA, false, false, projectId);
           expect(
@@ -401,7 +241,6 @@ describe("Surveys", () => {
     test("Admins cannot delete surveys with more than 5 responses from users other than themselves", async () => {
       await surveyTransaction(
         pool,
-        "PUBLIC",
         async (
           conn,
           projectId,
@@ -433,7 +272,6 @@ describe("Surveys", () => {
     test("updated_at field automatically set", async () => {
       await surveyTransaction(
         pool,
-        "PUBLIC",
         async (
           conn,
           projectId,
@@ -463,7 +301,6 @@ describe("Surveys", () => {
     test("only admins can change draft from false -> true", async () => {
       await surveyTransaction(
         pool,
-        "PUBLIC",
         async (conn, projectId, adminId, surveyId, userA, userB) => {
           await createSession(conn, userA, true, false, projectId);
           const responseA = await conn.one(
@@ -484,7 +321,6 @@ describe("Surveys", () => {
     test("outside_geofence set on insert and cannot be updated", async () => {
       await surveyTransaction(
         pool,
-        "PUBLIC",
         async (
           conn,
           projectId,
@@ -514,7 +350,6 @@ describe("Surveys", () => {
       test("Users can create responses to public surveys", async () => {
         await surveyTransaction(
           pool,
-          "PUBLIC",
           async (
             conn,
             projectId,
@@ -537,7 +372,6 @@ describe("Surveys", () => {
       test("Anonymous users can create responses to public surveys", async () => {
         await surveyTransaction(
           pool,
-          "PUBLIC",
           async (
             conn,
             projectId,
@@ -557,41 +391,9 @@ describe("Surveys", () => {
         );
       });
 
-      test("Users can create responses if they are in an invited group", async () => {
-        await surveyTransaction(
-          pool,
-          "INVITE_ONLY",
-          async (
-            conn,
-            projectId,
-            adminId,
-            surveyId,
-            invitedUser,
-            uninvitedUser
-          ) => {
-            await createSession(conn, invitedUser, true, false, projectId);
-            const response = await conn.one(
-              sql`select * from create_survey_response(${surveyId}, ${sql.json(
-                {}
-              )}, false, false ,false, false, null)`
-            );
-            expect(response).toBeTruthy();
-            await createSession(conn, uninvitedUser, true, false, projectId);
-            await expect(
-              conn.one(
-                sql`select * from create_survey_response(${surveyId}, ${sql.json(
-                  {}
-                )}, false, false ,false, false, null)`
-              )
-            ).rejects.toThrow();
-          }
-        );
-      });
-
       test("Users can't update responses if not in draft mode", async () => {
         await surveyTransaction(
           pool,
-          "PUBLIC",
           async (
             conn,
             projectId,
@@ -621,7 +423,6 @@ describe("Surveys", () => {
       test("Users can delete their own responses (if draft)", async () => {
         await surveyTransaction(
           pool,
-          "PUBLIC",
           async (
             conn,
             projectId,
@@ -652,7 +453,6 @@ describe("Surveys", () => {
       test("Admins can delete responses", async () => {
         await surveyTransaction(
           pool,
-          "PUBLIC",
           async (
             conn,
             projectId,
@@ -679,7 +479,6 @@ describe("Surveys", () => {
       test("Users can only see their own responses", async () => {
         await surveyTransaction(
           pool,
-          "PUBLIC",
           async (conn, projectId, adminId, surveyId, userA, userB) => {
             await createSession(conn, userA, true, false, projectId);
             const responseA = await conn.one(
@@ -704,7 +503,6 @@ describe("Surveys", () => {
       test("Admins can view submitted (but not draft) responses", async () => {
         await surveyTransaction(
           pool,
-          "PUBLIC",
           async (conn, projectId, adminId, surveyId, userA, userB) => {
             await createSession(conn, userA, true, false, projectId);
             const responseA = await conn.one(
@@ -739,7 +537,6 @@ describe("Surveys", () => {
       test("Admins can put a submitted response back into draft status", async () => {
         await surveyTransaction(
           pool,
-          "PUBLIC",
           async (conn, projectId, adminId, surveyId, userA, userB) => {
             await createSession(conn, userA, true, false, projectId);
             const responseA = await conn.one(
@@ -761,7 +558,6 @@ describe("Surveys", () => {
       test("submitting a response creates a new survey_response_network_addresses entry", async () => {
         await surveyTransaction(
           pool,
-          "PUBLIC",
           async (conn, projectId, adminId, surveyId, userA, userB) => {
             await createSession(conn, userA, true, false, projectId);
             const responseA = await conn.one(
@@ -781,7 +577,6 @@ describe("Surveys", () => {
       test("repeated submissions from the same IP set response.is_duplicate_ip", async () => {
         await surveyTransaction(
           pool,
-          "PUBLIC",
           async (conn, projectId, adminId, surveyId, userA, userB) => {
             await createSession(conn, userA, true, false, projectId);
             const responseA = await conn.one(
@@ -808,7 +603,6 @@ describe("Surveys", () => {
       test("nobody can alter response.is_duplicate_ip", async () => {
         await surveyTransaction(
           pool,
-          "PUBLIC",
           async (conn, projectId, adminId, surveyId, userA, userB) => {
             await createSession(conn, userA, true, false, projectId);
             const responseA = await conn.one(
@@ -836,7 +630,6 @@ describe("Surveys", () => {
       test("bypassed_duplicate_submission_control cannot be updated by anyone", async () => {
         await surveyTransaction(
           pool,
-          "PUBLIC",
           async (conn, projectId, adminId, surveyId, userA, userB) => {
             await createSession(conn, userA, true, false, projectId);
             const responseA = await conn.one(
@@ -891,14 +684,13 @@ test("is_required_for_surveys questions cannot be removed", async () => {
 
 async function surveyTransaction(
   pool: DatabasePoolType,
-  accessType: "PUBLIC" | "INVITE_ONLY",
   func: (
     conn: DatabaseTransactionConnectionType,
     projectId: number,
     adminId: number,
     surveyId: number,
-    invitedUser: number,
-    uninvitedUser: number
+    userA: number,
+    userB: number
   ) => Promise<void>
 ) {
   await projectTransaction(
@@ -909,21 +701,9 @@ async function surveyTransaction(
       const surveyId = await conn.oneFirst(
         sql`select id from make_survey('Survey A', ${projectId}, null)`
       );
-      const formId = await conn.oneFirst(
-        sql`select id from forms where survey_id = ${surveyId}`
-      );
-      await conn.any(
-        sql`update surveys set access_type = ${accessType} where id = ${surveyId}`
-      );
       await conn.any(
         sql`update surveys set is_disabled = ${false} where id = ${surveyId}`
       );
-      if (accessType === "INVITE_ONLY") {
-        const groupId = await createGroup(conn, projectId, "Group A", [userA]);
-        await conn.any(
-          sql`insert into survey_invited_groups (survey_id, group_id) values (${surveyId}, ${groupId})`
-        );
-      }
       await clearSession(conn);
       await func(conn, projectId, adminId, surveyId as number, userA, userB);
     }
@@ -934,7 +714,6 @@ describe("Handling of sketches", () => {
   test("embedded sketches are moved to their own table", async () => {
     await surveyTransaction(
       pool,
-      "PUBLIC",
       async (conn, projectId, adminId, surveyId) => {
         const formId = await conn.oneFirst<number>(
           sql`select id from forms where survey_id = ${surveyId}`
@@ -1001,7 +780,6 @@ describe("Handling of sketches", () => {
   test("embeded sketches must be a feature collection", async () => {
     await surveyTransaction(
       pool,
-      "PUBLIC",
       async (conn, projectId, adminId, surveyId) => {
         const formId = await conn.oneFirst<number>(
           sql`select id from forms where survey_id = ${surveyId}`

@@ -33,7 +33,6 @@ export default {
 
       // Survey mutations
       "makeResponseDraft",
-      "updateSurveyInvitedGroups",
 
       // SketchClass mutations
       "addValidChildSketchClass",
@@ -247,15 +246,6 @@ Use \`addGroupToAcl()\`/\`removeGroupFromAcl()\` mutations to edit these permiss
     "CreateProjectInvitesInput.projectInviteOptions": `List of emails (required) and fullnames`,
     "CreateProjectInvitesInput.groupNames": `List of group **names** (not ids)`,
     "CreateProjectInvitesInput.sendEmailNow": `If set to true, emails will be QUEUED for sending immediately`,
-    SurveyAccessType: "Controls who has access to respond to a survey",
-    "SurveyAccessType.PUBLIC": "Anyone can respond",
-    "SurveyAccessType.INVITE_ONLY":
-      "Only members of a group listed on the survey can respond",
-    "Survey.invitedGroups": `
-Groups whose members can respond to this survey when access is limited to those groups.
-
-Use \`updateSurveyInvitedGroups()\` to modify.
-`,
     "Survey.surveyResponsesConnection": `Responses related to this survey. End-users will have access to their own submitted or draft responses. Administrators will have access to their own, plus all submitted responses.`,
     "User.emailNotificationPreference": `Email notification preferences can be read and set by the current user session.
     These settings cannot be accessed by other users or SeaSketch project admins.`,

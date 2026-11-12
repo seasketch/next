@@ -2452,33 +2452,6 @@ export type CreateSketchFolderPayloadSketchFolderEdgeArgs = {
   orderBy?: Maybe<Array<SketchFoldersOrderBy>>;
 };
 
-/** All input for the create `SurveyInvitedGroup` mutation. */
-export type CreateSurveyInvitedGroupInput = {
-  /**
-   * An arbitrary string value with no semantic meaning. Will be included in the
-   * payload verbatim. May be used to track mutations by the client.
-   */
-  clientMutationId?: Maybe<Scalars['String']>;
-  /** The `SurveyInvitedGroup` to be created by this mutation. */
-  surveyInvitedGroup: SurveyInvitedGroupInput;
-};
-
-/** The output of our create `SurveyInvitedGroup` mutation. */
-export type CreateSurveyInvitedGroupPayload = {
-  __typename?: 'CreateSurveyInvitedGroupPayload';
-  /**
-   * The exact same `clientMutationId` that was provided in the mutation input,
-   * unchanged and unused. May be used by a client to track mutations.
-   */
-  clientMutationId?: Maybe<Scalars['String']>;
-  /** Our root query field type. Allows us to run any query from our mutation payload. */
-  query?: Maybe<Query>;
-  /** Reads a single `Survey` that is related to this `SurveyInvitedGroup`. */
-  survey?: Maybe<Survey>;
-  /** The `SurveyInvitedGroup` that was created by this mutation. */
-  surveyInvitedGroup?: Maybe<SurveyInvitedGroup>;
-};
-
 /** All input for the `createSurveyJumpRule` mutation. */
 export type CreateSurveyJumpRuleInput = {
   booleanOperator?: Maybe<FormLogicOperator>;
@@ -4728,34 +4701,6 @@ export type DeleteSurveyInput = {
    */
   clientMutationId?: Maybe<Scalars['String']>;
   id: Scalars['Int'];
-};
-
-/** All input for the `deleteSurveyInvitedGroupBySurveyIdAndGroupId` mutation. */
-export type DeleteSurveyInvitedGroupBySurveyIdAndGroupIdInput = {
-  /**
-   * An arbitrary string value with no semantic meaning. Will be included in the
-   * payload verbatim. May be used to track mutations by the client.
-   */
-  clientMutationId?: Maybe<Scalars['String']>;
-  groupId: Scalars['Int'];
-  surveyId: Scalars['Int'];
-};
-
-/** The output of our delete `SurveyInvitedGroup` mutation. */
-export type DeleteSurveyInvitedGroupPayload = {
-  __typename?: 'DeleteSurveyInvitedGroupPayload';
-  /**
-   * The exact same `clientMutationId` that was provided in the mutation input,
-   * unchanged and unused. May be used by a client to track mutations.
-   */
-  clientMutationId?: Maybe<Scalars['String']>;
-  deletedSurveyInvitedGroupNodeId?: Maybe<Scalars['ID']>;
-  /** Our root query field type. Allows us to run any query from our mutation payload. */
-  query?: Maybe<Query>;
-  /** Reads a single `Survey` that is related to this `SurveyInvitedGroup`. */
-  survey?: Maybe<Survey>;
-  /** The `SurveyInvitedGroup` that was deleted by this mutation. */
-  surveyInvitedGroup?: Maybe<SurveyInvitedGroup>;
 };
 
 /** The output of our delete `Survey` mutation. */
@@ -7673,8 +7618,6 @@ export type Mutation = {
   createSketch?: Maybe<Sketch>;
   createSketchClassFromTemplate?: Maybe<CreateSketchClassFromTemplatePayload>;
   createSketchFolder?: Maybe<CreateSketchFolderPayload>;
-  /** Creates a single `SurveyInvitedGroup`. */
-  createSurveyInvitedGroup?: Maybe<CreateSurveyInvitedGroupPayload>;
   /** Initializes a new FormLogicRule with a single condition and command=JUMP. */
   createSurveyJumpRule?: Maybe<CreateSurveyJumpRulePayload>;
   createSurveyResponse?: Maybe<CreateSurveyResponsePayload>;
@@ -7797,8 +7740,6 @@ export type Mutation = {
   deleteSurvey?: Maybe<DeleteSurveyPayload>;
   /** Deletes a single `Survey` using its globally unique id. */
   deleteSurveyByNodeId?: Maybe<DeleteSurveyPayload>;
-  /** Deletes a single `SurveyInvitedGroup` using a unique key. */
-  deleteSurveyInvitedGroupBySurveyIdAndGroupId?: Maybe<DeleteSurveyInvitedGroupPayload>;
   /** Deletes a single `SurveyResponse` using a unique key. */
   deleteSurveyResponse?: Maybe<DeleteSurveyResponsePayload>;
   /** Deletes a single `SurveyResponse` using its globally unique id. */
@@ -8132,11 +8073,6 @@ export type Mutation = {
   updateSurvey?: Maybe<UpdateSurveyPayload>;
   /** Updates a single `Survey` using its globally unique id and a patch. */
   updateSurveyByNodeId?: Maybe<UpdateSurveyPayload>;
-  /**
-   * Updates the groups whose members can respond to the survey.
-   * The list can be read via `Survey.invitedGroups`.
-   */
-  updateSurveyInvitedGroups?: Maybe<UpdateSurveyInvitedGroupsPayload>;
   /** Updates a single `SurveyResponse` using a unique key and a patch. */
   updateSurveyResponse?: Maybe<UpdateSurveyResponsePayload>;
   /** Updates a single `SurveyResponse` using its globally unique id and a patch. */
@@ -8529,12 +8465,6 @@ export type MutationCreateSketchFolderArgs = {
 
 
 /** The root mutation type which contains root level fields which mutate data. */
-export type MutationCreateSurveyInvitedGroupArgs = {
-  input: CreateSurveyInvitedGroupInput;
-};
-
-
-/** The root mutation type which contains root level fields which mutate data. */
 export type MutationCreateSurveyJumpRuleArgs = {
   input: CreateSurveyJumpRuleInput;
 };
@@ -8912,12 +8842,6 @@ export type MutationDeleteSurveyArgs = {
 /** The root mutation type which contains root level fields which mutate data. */
 export type MutationDeleteSurveyByNodeIdArgs = {
   input: DeleteSurveyByNodeIdInput;
-};
-
-
-/** The root mutation type which contains root level fields which mutate data. */
-export type MutationDeleteSurveyInvitedGroupBySurveyIdAndGroupIdArgs = {
-  input: DeleteSurveyInvitedGroupBySurveyIdAndGroupIdInput;
 };
 
 
@@ -9913,12 +9837,6 @@ export type MutationUpdateSurveyArgs = {
 /** The root mutation type which contains root level fields which mutate data. */
 export type MutationUpdateSurveyByNodeIdArgs = {
   input: UpdateSurveyByNodeIdInput;
-};
-
-
-/** The root mutation type which contains root level fields which mutate data. */
-export type MutationUpdateSurveyInvitedGroupsArgs = {
-  input: UpdateSurveyInvitedGroupsInput;
 };
 
 
@@ -12386,7 +12304,6 @@ export type Query = Node & {
   surveyConsentDocumentByNodeId?: Maybe<SurveyConsentDocument>;
   /** Reads and enables pagination through a set of `SurveyConsentDocument`. */
   surveyConsentDocumentsConnection?: Maybe<SurveyConsentDocumentsConnection>;
-  surveyInvitedGroupBySurveyIdAndGroupId?: Maybe<SurveyInvitedGroup>;
   surveyResponse?: Maybe<SurveyResponse>;
   /** Reads a single `SurveyResponse` using its globally unique `ID`. */
   surveyResponseByNodeId?: Maybe<SurveyResponse>;
@@ -13600,13 +13517,6 @@ export type QuerySurveyConsentDocumentsConnectionArgs = {
   last?: Maybe<Scalars['Int']>;
   offset?: Maybe<Scalars['Int']>;
   orderBy?: Maybe<Array<SurveyConsentDocumentsOrderBy>>;
-};
-
-
-/** The root query type which gives access points into the data universe. */
-export type QuerySurveyInvitedGroupBySurveyIdAndGroupIdArgs = {
-  groupId: Scalars['Int'];
-  surveyId: Scalars['Int'];
 };
 
 
@@ -15726,8 +15636,6 @@ export type SubscriptionUpdatedMapBookmarkArgs = {
 
 export type Survey = Node & {
   __typename?: 'Survey';
-  /** PUBLIC or INVITE_ONLY */
-  accessType: SurveyAccessType;
   archivedResponseCount?: Maybe<Scalars['Int']>;
   /** Reads and enables pagination through a set of `Basemap`. */
   basemaps?: Maybe<Array<Basemap>>;
@@ -15741,12 +15649,7 @@ export type Survey = Node & {
   /** If set, responses that originate from an IP address outside this fence will be flagged. */
   geofence?: Maybe<GeographyPolygon>;
   id: Scalars['Int'];
-  /** Reads and enables pagination through a set of `Group`. */
-  invitedGroups?: Maybe<Array<Group>>;
-  /**
-   * Disabled surveys will not be accessible to non-admins. Invite email sending will
-   * be paused.
-   */
+  /** Disabled surveys will not be accessible to non-admins. */
   isDisabled: Scalars['Boolean'];
   isSpatial?: Maybe<Scalars['Boolean']>;
   isTemplate?: Maybe<Scalars['Boolean']>;
@@ -15763,15 +15666,10 @@ export type Survey = Node & {
   responsesSpatialExtent?: Maybe<Scalars['String']>;
   showFacilitationOption: Scalars['Boolean'];
   showProgress: Scalars['Boolean'];
-  /**
-   * Only applicable for public surveys. Show tools to respondants for sharing the
-   * survey on social media to encourage responses.
-   */
+  /** Show tools to respondents for sharing the survey on social media to encourage responses. */
   showSocialMediaButtons?: Maybe<Scalars['Boolean']>;
   submittedResponseCount?: Maybe<Scalars['Int']>;
   supportedLanguages: Array<Maybe<Scalars['String']>>;
-  /** Reads and enables pagination through a set of `SurveyInvitedGroup`. */
-  surveyInvitedGroups: Array<SurveyInvitedGroup>;
   /** Reads and enables pagination through a set of `SurveyResponse`. */
   surveyResponsesConnection: SurveyResponsesConnection;
 };
@@ -15794,20 +15692,6 @@ export type SurveyFormsConnectionArgs = {
 };
 
 
-export type SurveyInvitedGroupsArgs = {
-  first?: Maybe<Scalars['Int']>;
-  offset?: Maybe<Scalars['Int']>;
-};
-
-
-export type SurveySurveyInvitedGroupsArgs = {
-  condition?: Maybe<SurveyInvitedGroupCondition>;
-  first?: Maybe<Scalars['Int']>;
-  offset?: Maybe<Scalars['Int']>;
-  orderBy?: Maybe<Array<SurveyInvitedGroupsOrderBy>>;
-};
-
-
 export type SurveySurveyResponsesConnectionArgs = {
   after?: Maybe<Scalars['Cursor']>;
   before?: Maybe<Scalars['Cursor']>;
@@ -15817,11 +15701,6 @@ export type SurveySurveyResponsesConnectionArgs = {
   offset?: Maybe<Scalars['Int']>;
   orderBy?: Maybe<Array<SurveyResponsesOrderBy>>;
 };
-
-export enum SurveyAccessType {
-  InviteOnly = 'INVITE_ONLY',
-  Public = 'PUBLIC'
-}
 
 /** A condition to be used against `Survey` object types. All fields are tested for equality and combined with a logical ‘and.’ */
 export type SurveyCondition = {
@@ -15888,51 +15767,12 @@ export enum SurveyConsentDocumentsOrderBy {
   PrimaryKeyDesc = 'PRIMARY_KEY_DESC'
 }
 
-export type SurveyInvitedGroup = {
-  __typename?: 'SurveyInvitedGroup';
-  groupId: Scalars['Int'];
-  /** Reads a single `Survey` that is related to this `SurveyInvitedGroup`. */
-  survey?: Maybe<Survey>;
-  surveyId: Scalars['Int'];
-};
-
-/**
- * A condition to be used against `SurveyInvitedGroup` object types. All fields are
- * tested for equality and combined with a logical ‘and.’
- */
-export type SurveyInvitedGroupCondition = {
-  /** Checks for equality with the object’s `groupId` field. */
-  groupId?: Maybe<Scalars['Int']>;
-  /** Checks for equality with the object’s `surveyId` field. */
-  surveyId?: Maybe<Scalars['Int']>;
-};
-
-/** An input for mutations affecting `SurveyInvitedGroup` */
-export type SurveyInvitedGroupInput = {
-  groupId: Scalars['Int'];
-  surveyId: Scalars['Int'];
-};
-
-/** Methods to use when ordering `SurveyInvitedGroup`. */
-export enum SurveyInvitedGroupsOrderBy {
-  GroupIdAsc = 'GROUP_ID_ASC',
-  GroupIdDesc = 'GROUP_ID_DESC',
-  Natural = 'NATURAL',
-  SurveyIdAsc = 'SURVEY_ID_ASC',
-  SurveyIdDesc = 'SURVEY_ID_DESC'
-}
-
 /** Represents an update to a `Survey`. Fields that are set will be updated. */
 export type SurveyPatch = {
-  /** PUBLIC or INVITE_ONLY */
-  accessType?: Maybe<SurveyAccessType>;
   /** If set, responses that originate from an IP address outside this fence will be flagged. */
   geofence?: Maybe<Scalars['GeoJSON']>;
   id?: Maybe<Scalars['Int']>;
-  /**
-   * Disabled surveys will not be accessible to non-admins. Invite email sending will
-   * be paused.
-   */
+  /** Disabled surveys will not be accessible to non-admins. */
   isDisabled?: Maybe<Scalars['Boolean']>;
   limitResponseAccessToListedUsers?: Maybe<Array<Maybe<Scalars['String']>>>;
   /** If set, there can only be one response with matching contact information. The app will also discourage multiple submissions from the same browser session. */
@@ -15941,10 +15781,7 @@ export type SurveyPatch = {
   projectId?: Maybe<Scalars['Int']>;
   showFacilitationOption?: Maybe<Scalars['Boolean']>;
   showProgress?: Maybe<Scalars['Boolean']>;
-  /**
-   * Only applicable for public surveys. Show tools to respondants for sharing the
-   * survey on social media to encourage responses.
-   */
+  /** Show tools to respondents for sharing the survey on social media to encourage responses. */
   showSocialMediaButtons?: Maybe<Scalars['Boolean']>;
   supportedLanguages?: Maybe<Array<Maybe<Scalars['String']>>>;
 };
@@ -18541,30 +18378,6 @@ export type UpdateSurveyInput = {
   patch: SurveyPatch;
 };
 
-/** All input for the `updateSurveyInvitedGroups` mutation. */
-export type UpdateSurveyInvitedGroupsInput = {
-  /**
-   * An arbitrary string value with no semantic meaning. Will be included in the
-   * payload verbatim. May be used to track mutations by the client.
-   */
-  clientMutationId?: Maybe<Scalars['String']>;
-  groupIds?: Maybe<Array<Maybe<Scalars['Int']>>>;
-  surveyId?: Maybe<Scalars['Int']>;
-};
-
-/** The output of our `updateSurveyInvitedGroups` mutation. */
-export type UpdateSurveyInvitedGroupsPayload = {
-  __typename?: 'UpdateSurveyInvitedGroupsPayload';
-  /**
-   * The exact same `clientMutationId` that was provided in the mutation input,
-   * unchanged and unused. May be used by a client to track mutations.
-   */
-  clientMutationId?: Maybe<Scalars['String']>;
-  groups?: Maybe<Array<Group>>;
-  /** Our root query field type. Allows us to run any query from our mutation payload. */
-  query?: Maybe<Query>;
-};
-
 /** The output of our update `Survey` mutation. */
 export type UpdateSurveyPayload = {
   __typename?: 'UpdateSurveyPayload';
@@ -19290,11 +19103,7 @@ export type LogicRuleEditorRuleFragment = (
 
 export type NewSurveyFragment = (
   { __typename?: 'Survey' }
-  & Pick<Survey, 'id' | 'accessType' | 'isDisabled' | 'limitToSingleResponse' | 'name' | 'submittedResponseCount' | 'projectId'>
-  & { invitedGroups?: Maybe<Array<(
-    { __typename?: 'Group' }
-    & Pick<Group, 'id' | 'name'>
-  )>> }
+  & Pick<Survey, 'id' | 'isDisabled' | 'limitToSingleResponse' | 'name' | 'submittedResponseCount' | 'projectId'>
 );
 
 export type NewGroupFragment = (
@@ -25826,11 +25635,7 @@ export type RetryFailedSpatialMetricsMutation = (
 
 export type SurveyListDetailsFragment = (
   { __typename?: 'Survey' }
-  & Pick<Survey, 'id' | 'accessType' | 'showProgress' | 'isDisabled' | 'limitToSingleResponse' | 'name' | 'submittedResponseCount' | 'practiceResponseCount' | 'projectId' | 'isTemplate' | 'showFacilitationOption' | 'supportedLanguages' | 'limitResponseAccessToListedUsers'>
-  & { invitedGroups?: Maybe<Array<(
-    { __typename?: 'Group' }
-    & Pick<Group, 'id' | 'name'>
-  )>> }
+  & Pick<Survey, 'id' | 'showProgress' | 'isDisabled' | 'limitToSingleResponse' | 'name' | 'submittedResponseCount' | 'practiceResponseCount' | 'projectId' | 'isTemplate' | 'showFacilitationOption' | 'supportedLanguages' | 'limitResponseAccessToListedUsers'>
 );
 
 export type SurveysQueryVariables = Exact<{
@@ -26656,7 +26461,7 @@ export type SurveyAppFormElementFragment = (
 
 export type SurveyAppSurveyFragment = (
   { __typename?: 'Survey' }
-  & Pick<Survey, 'id' | 'name' | 'accessType' | 'isDisabled' | 'showProgress' | 'showFacilitationOption' | 'supportedLanguages'>
+  & Pick<Survey, 'id' | 'name' | 'isDisabled' | 'showProgress' | 'showFacilitationOption' | 'supportedLanguages'>
   & { basemaps?: Maybe<Array<(
     { __typename?: 'Basemap' }
     & BasemapDetailsFragment
@@ -27617,11 +27422,6 @@ export const LogicRuleEditorRuleFragmentDoc = gql`
 export const NewSurveyFragmentDoc = gql`
     fragment NewSurvey on Survey {
   id
-  accessType
-  invitedGroups {
-    id
-    name
-  }
   isDisabled
   limitToSingleResponse
   name
@@ -29461,12 +29261,7 @@ export const MinimalSpatialMetricDetailsFragmentDoc = gql`
 export const SurveyListDetailsFragmentDoc = gql`
     fragment SurveyListDetails on Survey {
   id
-  accessType
   showProgress
-  invitedGroups {
-    id
-    name
-  }
   isDisabled
   limitToSingleResponse
   name
@@ -29653,7 +29448,6 @@ export const SurveyAppSurveyFragmentDoc = gql`
     fragment SurveyAppSurvey on Survey {
   id
   name
-  accessType
   isDisabled
   showProgress
   showFacilitationOption

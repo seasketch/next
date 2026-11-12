@@ -1,11 +1,6 @@
 fragment SurveyListDetails on Survey {
   id
-  accessType
   showProgress
-  invitedGroups {
-    id
-    name
-  }
   isDisabled
   limitToSingleResponse
   name
