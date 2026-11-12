@@ -8,6 +8,7 @@ mutation UpdateProjectSettings(
   $isFeatured: Boolean
   $mapboxPublicKey: String
   $customDocLink: String
+  $supportEmail: String
 ) {
   updateProjectBySlug(
     input: {
@@ -21,6 +22,7 @@ mutation UpdateProjectSettings(
         isFeatured: $isFeatured
         mapboxPublicKey: $mapboxPublicKey
         customDocLink: $customDocLink
+        supportEmail: $supportEmail
       }
     }
   ) {
@@ -35,6 +37,7 @@ mutation UpdateProjectSettings(
       mapboxSecretKey
       isFeatured
       customDocLink
+      supportEmail
     }
   }
 }

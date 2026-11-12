@@ -541,6 +541,68 @@ describe("Access control", () => {
       });
     });
 
+    describe("support email", () => {
+      test("project admins can replace the contact email", async () => {
+        await pool.transaction(async (conn) => {
+          const { id: userId, email } = await insertUser(conn);
+          await beginUserSession(conn, userId, email);
+          const slug = uniqueSlug();
+          const pid = await conn.oneFirst(
+            sql`select id from create_project(${slug}, ${slug})`
+          );
+          const updated = await conn.oneFirst(
+            sql`update projects set support_email = 'planning@example.org' where id = ${pid} returning support_email`
+          );
+          expect(updated).toBe("planning@example.org");
+          await conn.any(sql`ROLLBACK;`);
+        });
+      });
+
+      test("a contact email must look like an email address", async () => {
+        await pool.transaction(async (conn) => {
+          const { id: userId, email } = await insertUser(conn);
+          await beginUserSession(conn, userId, email);
+          const slug = uniqueSlug();
+          const pid = await conn.oneFirst(
+            sql`select id from create_project(${slug}, ${slug})`
+          );
+          await expect(
+            conn.any(
+              sql`update projects set support_email = 'not-an-email' where id = ${pid}`
+            )
+          ).rejects.toThrow(/support_email_format/);
+          await conn.any(sql`ROLLBACK;`);
+        });
+      });
+
+      test("participants who are not admins cannot change the contact email", async () => {
+        await pool.transaction(async (conn) => {
+          const owner = await insertUser(conn);
+          await beginUserSession(conn, owner.id, owner.email);
+          const slug = uniqueSlug();
+          const pid = await conn.oneFirst(
+            sql`select id from create_project(${slug}, ${slug})`
+          );
+          await conn.any(sql`SET ROLE postgres`);
+          const member = await insertUser(conn);
+          await conn.any(
+            sql`insert into project_participants (user_id, project_id, is_admin, approved) values (${member.id}, ${pid}, false, true)`
+          );
+          await beginUserSession(conn, member.id, member.email);
+          const updated = await conn.any(
+            sql`update projects set support_email = 'other@example.org' where id = ${pid} returning support_email`
+          );
+          expect(updated).toHaveLength(0);
+          await conn.any(sql`SET ROLE postgres`);
+          const stored = await conn.oneFirst(
+            sql`select support_email from projects where id = ${pid}`
+          );
+          expect(stored).toBe(owner.email);
+          await conn.any(sql`ROLLBACK;`);
+        });
+      });
+    });
+
     describe("public", () => {
       test("Public projects cannot be unlisted", async () => {
         await pool.transaction(async (conn) => {

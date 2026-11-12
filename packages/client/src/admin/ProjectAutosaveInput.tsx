@@ -14,6 +14,11 @@ export default function ProjectAutosaveInput(props: {
   description?: string | ReactNode;
   mutation?: DocumentNode;
   additionalVariables?: any;
+  type?: "text" | "email";
+  /** Return a message to block the save. Called with the normalized value. */
+  validate?: (value: string) => string | undefined;
+  /** Applied before validation and before the value is sent. */
+  normalize?: (value: string) => string;
 }) {
   const [value, setValue] = useState(props.value);
   const debouncedValue = useDebounce(value, 500);
@@ -22,23 +27,31 @@ export default function ProjectAutosaveInput(props: {
   );
   // const [mutation, mutationStatus] = useUpdateProjectSettingsMutation();
   const [changeSinceError, setChangeSinceError] = useState<boolean>(false);
+  const nextValue = props.normalize
+    ? props.normalize(debouncedValue)
+    : debouncedValue;
+  const validationMessage = props.validate?.(nextValue);
 
   useEffect(() => {
+    if (validationMessage) {
+      return;
+    }
     if (
       !mutationStatus.loading &&
-      ((!mutationStatus.error && props.value !== debouncedValue) ||
+      ((!mutationStatus.error && props.value !== nextValue) ||
         (mutationStatus.error && changeSinceError))
     ) {
       setChangeSinceError(false);
       const variables: any = { slug: props.slug, ...props.additionalVariables };
-      variables[props.propName] =
-        debouncedValue.length === 0 ? null : debouncedValue;
+      variables[props.propName] = nextValue.length === 0 ? null : nextValue;
       mutation({
         variables,
-      }).catch((e) => { });
+      }).catch((e) => {});
     }
   }, [
     debouncedValue,
+    nextValue,
+    validationMessage,
     props.propName,
     props.value,
     props.slug,
@@ -57,18 +70,21 @@ export default function ProjectAutosaveInput(props: {
     <TextInput
       placeholder={props.placeholder}
       name={props.propName}
+      type={props.type}
       label={props.label}
       value={value}
       description={props.description}
       onChange={setValue}
-      error={mutationStatus.error?.message}
+      error={validationMessage || mutationStatus.error?.message}
       autocomplete="off"
       state={
-        mutationStatus.called
-          ? mutationStatus.loading
-            ? "SAVING"
-            : "SAVED"
-          : "NONE"
+        validationMessage
+          ? "NONE"
+          : mutationStatus.called
+            ? mutationStatus.loading
+              ? "SAVING"
+              : "SAVED"
+            : "NONE"
       }
     />
   );

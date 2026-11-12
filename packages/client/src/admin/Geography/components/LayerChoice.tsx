@@ -23,6 +23,10 @@ import type {
 import { GeostatsLayer } from "@seasketch/geostats-types";
 import bytes from "bytes";
 import InputBlock from "../../../components/InputBlock";
+import {
+  SEASKETCH_SUPPORT_EMAIL,
+  mailtoHref,
+} from "../../../components/contactEmail";
 import Switch from "../../../components/Switch";
 import {
   isExpression,
@@ -499,8 +503,13 @@ export default function LayerChoice({
                     Geographies. If you need to create a Geography that has more
                     than one polygon, use desktop GIS to create a MultiPolygon
                     layer. Contact{" "}
-                    <a target="_blank" className="underline">
-                      support@seasketch.org
+                    <a
+                      target="_blank"
+                      rel="noreferrer"
+                      className="underline"
+                      href={mailtoHref(SEASKETCH_SUPPORT_EMAIL)}
+                    >
+                      {SEASKETCH_SUPPORT_EMAIL}
                     </a>{" "}
                     if you need help.
                   </Trans>

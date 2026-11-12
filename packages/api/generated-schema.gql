@@ -12912,6 +12912,10 @@ type Project implements Node {
     """Skip the first `n` values."""
     offset: Int
   ): [Sprite!]
+
+  """
+  Inbox for questions about this project. Shown when access is denied or pending, included in invitation emails, and offered as the project administrator contact. This is not the SeaSketch software support address.
+  """
   supportEmail: String!
   supportedLanguages: [String]!
 
@@ -13518,6 +13522,11 @@ input ProjectPatch {
   region: GeoJSON
   showLegendByDefault: Boolean
   showScalebarByDefault: Boolean
+
+  """
+  Inbox for questions about this project. Shown when access is denied or pending, included in invitation emails, and offered as the project administrator contact. This is not the SeaSketch software support address.
+  """
+  supportEmail: String
   translatedProps: JSON
 }
 

@@ -3948,7 +3948,8 @@ CREATE TABLE public.projects (
     CONSTRAINT disallow_unlisted_public_projects CHECK (((access_control <> 'public'::public.project_access_control_setting) OR (is_listed = true))),
     CONSTRAINT is_public_key CHECK (((mapbox_public_key IS NULL) OR (mapbox_public_key ~* '^pk\..+'::text))),
     CONSTRAINT is_secret CHECK (((mapbox_secret_key IS NULL) OR (mapbox_secret_key ~* '^sk\..+'::text))),
-    CONSTRAINT name_min_length CHECK ((length(name) >= 4))
+    CONSTRAINT name_min_length CHECK ((length(name) >= 4)),
+    CONSTRAINT support_email_format CHECK ((support_email ~* '^[^@[:space:]]+@[^@[:space:]]+\.[^@[:space:]]+$'::text))
 );
 
 
@@ -4031,6 +4032,13 @@ COMMENT ON COLUMN public.projects.is_deleted IS '@omit';
 --
 
 COMMENT ON COLUMN public.projects.deleted_at IS '@omit';
+
+
+--
+-- Name: COLUMN projects.support_email; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.projects.support_email IS 'Inbox for questions about this project. Shown when access is denied or pending, included in invitation emails, and offered as the project administrator contact. This is not the SeaSketch software support address.';
 
 
 --
@@ -37669,6 +37677,7 @@ GRANT SELECT(invite_email_subject),UPDATE(invite_email_subject) ON TABLE public.
 --
 
 GRANT SELECT(support_email) ON TABLE public.projects TO anon;
+GRANT UPDATE(support_email) ON TABLE public.projects TO seasketch_user;
 
 
 --

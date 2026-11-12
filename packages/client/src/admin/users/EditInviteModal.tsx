@@ -17,6 +17,10 @@ import {
 } from "../../generated/graphql";
 import MultiSelect from "./GroupMultiSelect";
 import InviteIcon from "./InviteIcon";
+import {
+  SEASKETCH_SUPPORT_EMAIL,
+  mailtoHref,
+} from "../../components/contactEmail";
 import gql from "graphql-tag";
 import { useSubscription } from "@apollo/client";
 import useDialog from "../../components/useDialog";
@@ -467,7 +471,14 @@ export default function EditInviteModal({
                 <Trans ns="admin">
                   Recipient is awaiting approval of their project access
                   request. (This should not happen for invite recipients! Please
-                  contact support@seasketch.org)
+                  contact{" "}
+                  <a
+                    className="underline"
+                    href={mailtoHref(SEASKETCH_SUPPORT_EMAIL)}
+                  >
+                    {SEASKETCH_SUPPORT_EMAIL}
+                  </a>
+                  )
                 </Trans>
               </p>
             )}

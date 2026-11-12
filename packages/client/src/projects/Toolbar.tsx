@@ -23,6 +23,7 @@ import { ParticipationStatus } from "../generated/graphql";
 import { useAuth0 } from "@auth0/auth0-react";
 import { useSketchUIState } from "./Sketches/SketchUIStateContextProvider";
 import { useTranslatedProps } from "../components/TranslatedPropControl";
+import ContactChooser from "../components/ContactChooser";
 import { HAS_SKIPPED_JOIN_PROJECT_PROMPT_LOCALSTORAGE_KEY } from "../auth/JoinProject";
 import UserSessionCard from "./UserSessionCard";
 import { useContext, useEffect, useLayoutEffect, useState } from "react";
@@ -441,12 +442,20 @@ export default function Toolbar({
                   >
                     {t("Terms of Use")}
                   </a>
-                  <a
+                  <ContactChooser
                     className="focus:outline-0 focus-visible:ring-2 ring-blue-500"
-                    href="mailto:support@seasketch.org"
+                    project={
+                      data?.project?.supportEmail
+                        ? {
+                            name:
+                              getTranslatedProp("name") || data.project.name,
+                            email: data.project.supportEmail,
+                          }
+                        : undefined
+                    }
                   >
                     {t("Contact Us")}
-                  </a>
+                  </ContactChooser>
                   <Link
                     className="focus:outline-0 focus-visible:ring-2 ring-blue-500"
                     to="./app/accessibility"
