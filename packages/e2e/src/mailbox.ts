@@ -31,6 +31,51 @@ export async function waitForInvitePath(
   );
 }
 
+/**
+ * The verification message from Resend verification email. The link is the
+ * API's /verify-email route. Test mode does not call Auth0.
+ */
+export async function waitForVerificationUrl(
+  destination: string,
+  sentAt: number
+): Promise<string> {
+  const deadline = Date.now() + 20_000;
+  while (Date.now() < deadline) {
+    const url = readVerificationUrl(destination, sentAt);
+    if (url) {
+      return url;
+    }
+    await new Promise((resolve) => setTimeout(resolve, 250));
+  }
+  throw new Error(`No verification email for ${destination} in ${mailboxDir}`);
+}
+
+function readVerificationUrl(destination: string, sentAt: number): string | null {
+  if (!fs.existsSync(mailboxDir)) {
+    return null;
+  }
+  let newest: { mtimeMs: number; url: string } | null = null;
+  for (const file of fs.readdirSync(mailboxDir)) {
+    if (!file.endsWith(".json")) {
+      continue;
+    }
+    const filePath = path.join(mailboxDir, file);
+    const mtimeMs = fs.statSync(filePath).mtimeMs;
+    if (mtimeMs + 1000 < sentAt) {
+      continue;
+    }
+    const mail = JSON.parse(fs.readFileSync(filePath, "utf8")) as Mail;
+    if (mail.destination !== destination) {
+      continue;
+    }
+    const match = mail.textEmail?.match(/https?:\/\/\S+\/verify-email\?verification=\S+/);
+    if (match && (!newest || mtimeMs > newest.mtimeMs)) {
+      newest = { mtimeMs, url: match[0].replace(/[)>.,]+$/, "") };
+    }
+  }
+  return newest?.url ?? null;
+}
+
 /** Token query param on a path from `waitForInvitePath`. */
 export function inviteToken(invitePath: string): string {
   const token = new URL(invitePath, "http://localhost").searchParams.get("token");

@@ -24,7 +24,8 @@ export type IssuedToken = {
  */
 export async function issueToken(
   request: APIRequestContext,
-  persona: { sub: string; superuser: boolean }
+  persona: { sub: string; superuser: boolean },
+  options?: { emailVerified?: boolean }
 ): Promise<IssuedToken> {
   let response;
   try {
@@ -33,7 +34,7 @@ export async function issueToken(
         passphrase: e2ePassphrase,
         sub: persona.sub,
         superuser: persona.superuser,
-        emailVerified: true,
+        emailVerified: options?.emailVerified !== false,
       },
     });
   } catch (error) {

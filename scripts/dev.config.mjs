@@ -80,6 +80,9 @@ export const services = [
       ADMIN_DATABASE_URL: e2eStack.databaseUrl("postgres"),
       CLIENT_DOMAIN: `localhost:${e2eStack.clientPort}`,
       REDIS_DB: String(e2eStack.redisDb),
+      // Verification mail links at this API. Without it the link host is the
+      // unset API_ROOT and the suite cannot follow the message it just wrote.
+      API_ROOT: `http://127.0.0.1:${e2eStack.apiPort}`,
     },
     ready: "http-get://127.0.0.1:3857/graphiql",
     e2eReady: `http-get://127.0.0.1:${e2eStack.apiPort}/graphiql`,
