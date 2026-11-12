@@ -8,6 +8,7 @@ import clsx from "clsx";
 import * as Popover from "@radix-ui/react-popover";
 import * as Tooltip from "@radix-ui/react-tooltip";
 import { MouseEvent, ReactNode, useState } from "react";
+import { TFunction } from "i18next";
 import { Trans, useTranslation } from "react-i18next";
 import ProfilePhoto from "../users/ProfilePhoto";
 import {
@@ -23,9 +24,11 @@ import {
   PublishBadgeDetailContent,
 } from "./publishBadgeDetails";
 import {
+  alignPublishSummaryWithPendingItems,
   buildPublishChangeSummary,
   DraftTocItemForPublishSummary,
   oldestChangeLogId,
+  PendingPublishItemForSummary,
   PublishBadgeKey,
   PublishSummaryRow,
   PublishZOrderSummary,
@@ -65,6 +68,23 @@ function formatRelativeTimeAgo(iso: string): string {
     duration /= division.amount;
   }
   return relFormatter.format(0, "seconds");
+}
+
+export function summarizedChangeCountLabel(count: number, t: TFunction) {
+  return count === 1 ? t("1 change") : t("{{count}} changes", { count });
+}
+
+/** Under a minute, "just now". Otherwise "last 5 minutes ago" and similar. */
+export function summarizedRecencyLabel(
+  iso: string,
+  t: TFunction,
+  now = Date.now()
+) {
+  const then = new Date(iso).getTime();
+  if (Number.isNaN(then) || Math.abs(then - now) < 60 * 1000) {
+    return t("just now");
+  }
+  return t("last {{time}}", { time: formatRelativeTimeAgo(iso) });
 }
 
 /** Absolute wall time for native tooltip (`title`) on relative-time labels */
@@ -131,22 +151,27 @@ export default function PublishSummarizedChangesPanel({
   changeLogs,
   draftItems,
   tableOfContentsLastPublished,
+  pendingPublishItems,
   listOrderPending = false,
 }: {
   changeLogs: ChangeLogDetailsFragment[];
   draftItems: DraftTocItemForPublishSummary[];
   tableOfContentsLastPublished?: string | null;
+  pendingPublishItems: readonly PendingPublishItemForSummary[];
   /** True when sibling order differs even if no list-order changelog was written. */
   listOrderPending?: boolean;
 }) {
   const { t } = useTranslation("admin:data");
   const { t: adminT } = useTranslation("admin");
 
-  const summaryModel = buildPublishChangeSummary({
-    changeLogs,
-    draftItems,
-    tableOfContentsLastPublished,
-  });
+  const summaryModel = alignPublishSummaryWithPendingItems(
+    buildPublishChangeSummary({
+      changeLogs,
+      draftItems,
+      tableOfContentsLastPublished,
+    }),
+    pendingPublishItems
+  );
 
   const [metadataModal, setMetadataModal] = useState<{
     tocId: number;
@@ -159,24 +184,33 @@ export default function PublishSummarizedChangesPanel({
 
   const listOrderFromLog = Boolean(summaryModel.listOrderSummary);
   const showListOrder = listOrderFromLog || listOrderPending;
+  const hasShipRows =
+    summaryModel.added.length +
+      summaryModel.updated.length +
+      summaryModel.removed.length >
+    0;
 
-  if (!changeLogs.length && !showListOrder) {
+  if (!hasShipRows && !summaryModel.zOrderSummary && !showListOrder) {
     const daysSinceIntroduction = Math.floor(
       (Date.now() - CHANGE_LOG_INTRODUCTION_DATE.getTime()) /
         (1000 * 60 * 60 * 24)
     );
+    const emptyMessage =
+      changeLogs.length > 0
+        ? t("No unpublished changes were found.")
+        : daysSinceIntroduction < 90
+        ? t(
+            "No unpublished changes were found. Change logging was introduced on {{date}}, so any changes made before that date were not logged. In the future, you can look forward to seeing detailed change history for layer list updates.",
+            {
+              date: CHANGE_LOG_INTRODUCTION_DATE.toLocaleDateString(),
+            }
+          )
+        : t(
+            "No unpublished changes were found in the changelog. There may still be changes not recorded by the changelog system, such as changes to z-order or list position."
+          );
     return (
       <div className="rounded-lg border border-gray-200 bg-gray-50 px-4 py-6 text-center text-sm text-gray-500">
-        {daysSinceIntroduction < 90
-          ? t(
-              "No unpublished changes were found. Change logging was introduced on {{date}}, so any changes made before that date were not logged. In the future, you can look forward to seeing detailed change history for layer list updates.",
-              {
-                date: CHANGE_LOG_INTRODUCTION_DATE.toLocaleDateString(),
-              }
-            )
-          : t(
-              "No unpublished changes were found in the changelog. There may still be changes not recorded by the changelog system, such as changes to z-order or list position."
-            )}
+        {emptyMessage}
       </div>
     );
   }
@@ -216,9 +250,8 @@ export default function PublishSummarizedChangesPanel({
         <div className="flex flex-col gap-3">
           <p className="text-sm leading-relaxed text-slate-600 pb-2">
             <Trans ns="admin:data">
-              This list includes all changes to the layers list since the last
-              publication. Review them before publishing to your project's
-              users.
+              These are the overlay changes that will be published. Review them
+              before publishing to your project's users.
             </Trans>
           </p>
         </div>
@@ -231,7 +264,7 @@ export default function PublishSummarizedChangesPanel({
           >
             {summaryModel.removed.map((row) => (
               <SummarizedRow
-                key={row.entityId}
+                key={row.stableId ?? String(row.entityId)}
                 row={row}
                 t={t}
                 removed
@@ -252,7 +285,7 @@ export default function PublishSummarizedChangesPanel({
           >
             {summaryModel.added.map((row) => (
               <SummarizedRow
-                key={row.entityId}
+                key={row.stableId ?? String(row.entityId)}
                 row={row}
                 t={t}
                 onOpenMetadata={(tocId, initialId) =>
@@ -272,7 +305,7 @@ export default function PublishSummarizedChangesPanel({
           >
             {summaryModel.updated.map((row) => (
               <SummarizedRow
-                key={row.entityId}
+                key={row.stableId ?? String(row.entityId)}
                 row={row}
                 t={t}
                 onOpenMetadata={(tocId, initialId) =>
@@ -466,7 +499,7 @@ export function SummaryMetaRow({
         {METADATA_BULLET}
       </span>
       <span className="shrink-0">
-        {adminT("{{count}} changes", { count: changeCount })}
+        {summarizedChangeCountLabel(changeCount, adminT)}
       </span>
       <span className="shrink-0 text-slate-300" aria-hidden>
         {METADATA_BULLET}
@@ -475,9 +508,7 @@ export function SummaryMetaRow({
         className="shrink-0 cursor-default whitespace-nowrap text-slate-400"
         title={formatExactTimestampTitle(lastChangeAt)}
       >
-        {adminT("last {{time}}", {
-          time: formatRelativeTimeAgo(lastChangeAt),
-        })}
+        {summarizedRecencyLabel(lastChangeAt, adminT)}
       </span>
     </div>
   );
@@ -541,16 +572,28 @@ function SummarizedRow({
   onOpenMetadata: (tocId: number, initialId?: string) => void;
   onOpenCartography: (tocId: number, initialId?: string) => void;
 }) {
-  const metaRow = (
-    <SummaryMetaRow
-      editors={row.editors}
-      primaryEditor={row.primaryEditor}
-      changeCount={row.changeCount}
-      lastChangeAt={row.lastChangeAt}
-      dataLibraryTemplateId={row.dataLibraryTemplateId}
-      t={t}
-    />
-  );
+  const metaRow =
+    row.changeCount > 0 && row.lastChangeAt ? (
+      <SummaryMetaRow
+        editors={row.editors}
+        primaryEditor={row.primaryEditor}
+        changeCount={row.changeCount}
+        lastChangeAt={row.lastChangeAt}
+        dataLibraryTemplateId={row.dataLibraryTemplateId}
+        t={t}
+      />
+    ) : null;
+  const otherChanges =
+    row.logs.length === 0 ? (
+      <span
+        className="inline-flex items-center rounded-full bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-600"
+        title={t(
+          "This item differs from its published copy in a way the change history does not describe."
+        )}
+      >
+        {t("Other changes")}
+      </span>
+    ) : null;
 
   if (removed) {
     return (
@@ -569,7 +612,10 @@ function SummarizedRow({
               <span className="min-w-0 truncate">{row.title}</span>
             )}
           </p>
-          <div className="shrink-0 sm:text-right">{metaRow}</div>
+          <div className="flex shrink-0 flex-wrap items-center gap-2 sm:justify-end">
+            {otherChanges}
+            {metaRow}
+          </div>
         </div>
       </li>
     );
@@ -593,6 +639,7 @@ function SummarizedRow({
             )}
           </p>
           {metaRow}
+          {otherChanges}
         </div>
         {row.badges.length > 0 ? (
           <div className="flex shrink-0 flex-wrap gap-1.5 lg:max-w-[min(24rem,48%)] lg:justify-end lg:pt-0.5">

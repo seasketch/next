@@ -47,6 +47,18 @@ function foldersCount(t: TFunction, count: number) {
   return count === 1 ? t("1 folder") : `${count} ${t("folders")}`;
 }
 
+function showAllLabel(t: TFunction, items: PublishedLayerName[]) {
+  const layers = items.filter((item) => !item.isFolder).length;
+  const folders = items.length - layers;
+  if (folders === 0) {
+    return `${t("Show all")} ${layers}`;
+  }
+  if (layers === 0) {
+    return `${t("Show all")} ${foldersCount(t, folders)}`;
+  }
+  return `${t("Show all")} ${layersCount(t, layers)}, ${foldersCount(t, folders)}`;
+}
+
 function PublishedLayersDialog({
   items,
   onClose,
@@ -238,7 +250,7 @@ export default function PublishedLayerNames({
                     setModalOpen(true);
                   }}
                 >
-                  {t("Show all")} {items.length}
+                  {showAllLabel(t, items)}
                 </button>
               </div>
             ) : null}

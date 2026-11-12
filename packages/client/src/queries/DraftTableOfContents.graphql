@@ -725,7 +725,10 @@ mutation UpdateDataSource($id: Int!, $attribution: String) {
   }
 }
 
-mutation UpdateDataSourceTemporal($dataSourceId: Int!, $temporal: TemporalInfo) {
+mutation UpdateDataSourceTemporal(
+  $dataSourceId: Int!
+  $temporal: TemporalInfo
+) {
   updateDataSourceTemporal(dataSourceId: $dataSourceId, temporal: $temporal) {
     id
     temporal
@@ -1331,6 +1334,14 @@ query LayerCartographyChanges($id: Int!) {
   }
 }
 
+fragment PendingPublishItemDetails on PendingPublishItem {
+  stableId
+  kind
+  title
+  isFolder
+  draftId
+}
+
 query ChangeLogsSinceLastPublish($slug: String!) {
   projectBySlug(slug: $slug) {
     id
@@ -1338,6 +1349,9 @@ query ChangeLogsSinceLastPublish($slug: String!) {
     listOrderPending
     commentsSinceLastPublish {
       ...ResolvableLayerCommentThread
+    }
+    pendingPublishItems {
+      ...PendingPublishItemDetails
     }
     draftTableOfContentsItems {
       id

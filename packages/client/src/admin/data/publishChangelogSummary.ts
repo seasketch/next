@@ -88,6 +88,8 @@ export type DraftTocItemForPublishSummary = {
 
 export type PublishSummaryRow = {
   entityId: number;
+  /** Draft-vs-published identity, when this row came from pendingPublishItems. */
+  stableId?: string;
   title: string;
   isFolder: boolean;
   category: "added" | "updated" | "removed";
@@ -408,6 +410,141 @@ export function buildPublishChangeSummary({
     updated,
     removed,
     tocEntityCount: byEntity.size,
+  };
+}
+
+export type PendingPublishItemForSummary = {
+  stableId?: string | null;
+  kind?: string | null;
+  title?: string | null;
+  isFolder?: boolean | null;
+  draftId?: number | null;
+};
+
+function isPendingKind(
+  value: string
+): value is PublishSummaryRow["category"] {
+  return value === "added" || value === "updated" || value === "removed";
+}
+
+function withPendingIdentity(
+  row: PublishSummaryRow,
+  item: {
+    stableId: string;
+    title: string;
+    isFolder: boolean;
+    category: PublishSummaryRow["category"];
+  }
+): PublishSummaryRow {
+  if (
+    row.category === item.category &&
+    row.title === item.title &&
+    row.isFolder === item.isFolder
+  ) {
+    return { ...row, stableId: item.stableId };
+  }
+  const next = rowFromLogs(
+    row.entityId,
+    item.title,
+    item.isFolder,
+    item.category,
+    row.logs
+  );
+  return {
+    ...next,
+    stableId: item.stableId,
+    dataLibraryTemplateId: row.dataLibraryTemplateId,
+  };
+}
+
+function undocumentedRow(
+  item: {
+    stableId: string;
+    title: string;
+    isFolder: boolean;
+    draftId?: number | null;
+  },
+  category: PublishSummaryRow["category"]
+): PublishSummaryRow {
+  return {
+    entityId: item.draftId ?? 0,
+    stableId: item.stableId,
+    title: item.title,
+    isFolder: item.isFolder,
+    category,
+    logs: [],
+    changeCount: 0,
+    lastChangeAt: "",
+    editors: [],
+    primaryEditor: null,
+    badges: [],
+  };
+}
+
+/**
+ * Added, updated, and removed rows are the draft-vs-published diff.
+ * Changelog rows only annotate those items. A diff with no log still appears.
+ * Z-order and list-order summaries are left as they are.
+ */
+export function alignPublishSummaryWithPendingItems(
+  summaryModel: PublishChangeSummary,
+  pending: readonly PendingPublishItemForSummary[]
+): PublishChangeSummary {
+  const liveByDraftId = new Map<number, PublishSummaryRow>();
+  for (const row of [...summaryModel.added, ...summaryModel.updated]) {
+    liveByDraftId.set(row.entityId, row);
+  }
+  const unusedRemoved = [...summaryModel.removed];
+  const added: PublishSummaryRow[] = [];
+  const updated: PublishSummaryRow[] = [];
+  const removed: PublishSummaryRow[] = [];
+
+  for (const item of pending) {
+    if (!item.stableId || !item.kind || !isPendingKind(item.kind)) {
+      continue;
+    }
+    const title = item.title ?? "";
+    const isFolder = item.isFolder === true;
+    const pendingItem = {
+      stableId: item.stableId,
+      title,
+      isFolder,
+      draftId: item.draftId,
+    };
+    const identity = {
+      ...pendingItem,
+      category: item.kind,
+    };
+    if (item.kind === "removed") {
+      const index = unusedRemoved.findIndex(
+        (row) => row.title === title && row.isFolder === isFolder
+      );
+      const match = index >= 0 ? unusedRemoved.splice(index, 1)[0] : undefined;
+      removed.push(
+        match
+          ? withPendingIdentity(match, identity)
+          : undocumentedRow(pendingItem, "removed")
+      );
+      continue;
+    }
+    const logged =
+      item.draftId != null ? liveByDraftId.get(item.draftId) : undefined;
+    const row = logged
+      ? withPendingIdentity(logged, identity)
+      : undocumentedRow(pendingItem, item.kind);
+    if (item.kind === "added") {
+      added.push(row);
+    } else {
+      updated.push(row);
+    }
+  }
+
+  return {
+    ...summaryModel,
+    added,
+    updated,
+    removed,
+    tocEntityCount: added.length + updated.length + removed.length,
   };
 }
 

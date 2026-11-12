@@ -22429,6 +22429,11 @@ export type LayerCartographyChangesQuery = (
   )> }
 );
 
+export type PendingPublishItemDetailsFragment = (
+  { __typename?: 'PendingPublishItem' }
+  & Pick<PendingPublishItem, 'stableId' | 'kind' | 'title' | 'isFolder' | 'draftId'>
+);
+
 export type ChangeLogsSinceLastPublishQueryVariables = Exact<{
   slug: Scalars['String'];
 }>;
@@ -22442,6 +22447,9 @@ export type ChangeLogsSinceLastPublishQuery = (
     & { commentsSinceLastPublish?: Maybe<Array<(
       { __typename?: 'ResolvableLayerComment' }
       & ResolvableLayerCommentThreadFragment
+    )>>, pendingPublishItems?: Maybe<Array<(
+      { __typename?: 'PendingPublishItem' }
+      & PendingPublishItemDetailsFragment
     )>>, draftTableOfContentsItems?: Maybe<Array<(
       { __typename?: 'TableOfContentsItem' }
       & Pick<TableOfContentsItem, 'id' | 'title' | 'isFolder'>
@@ -28836,6 +28844,15 @@ export const MetadataXmlFileFragmentDoc = gql`
   filename
   size
   isCustomUpload
+}
+    `;
+export const PendingPublishItemDetailsFragmentDoc = gql`
+    fragment PendingPublishItemDetails on PendingPublishItem {
+  stableId
+  kind
+  title
+  isFolder
+  draftId
 }
     `;
 export const ForumListDetailsFragmentDoc = gql`
@@ -35707,6 +35724,9 @@ export const ChangeLogsSinceLastPublishDocument = gql`
     commentsSinceLastPublish {
       ...ResolvableLayerCommentThread
     }
+    pendingPublishItems {
+      ...PendingPublishItemDetails
+    }
     draftTableOfContentsItems {
       id
       title
@@ -35732,6 +35752,7 @@ export const ChangeLogsSinceLastPublishDocument = gql`
   }
 }
     ${ResolvableLayerCommentThreadFragmentDoc}
+${PendingPublishItemDetailsFragmentDoc}
 ${ChangeLogDetailsFragmentDoc}`;
 
 /**
@@ -45977,6 +45998,7 @@ export const namedOperations = {
     ResolvableLayerCommentThread: 'ResolvableLayerCommentThread',
     FullAdminOverlay: 'FullAdminOverlay',
     MetadataXmlFile: 'MetadataXmlFile',
+    PendingPublishItemDetails: 'PendingPublishItemDetails',
     ForumListDetails: 'ForumListDetails',
     AuthorProfile: 'AuthorProfile',
     ForumPost: 'ForumPost',

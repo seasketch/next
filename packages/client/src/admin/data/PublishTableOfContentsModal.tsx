@@ -24,8 +24,10 @@ import clsx from "clsx";
 import ResolvableComment from "./TableOfContentsItemEditor/ResolvableComment";
 import { LayerEditingContext } from "./LayerEditingContext";
 import {
+  alignPublishSummaryWithPendingItems,
   buildPublishChangeSummary,
   oldestChangeLogId,
+  PendingPublishItemForSummary,
   PublishSummaryRow,
   TOC_ENTITY_TYPE,
 } from "./publishChangelogSummary";
@@ -305,6 +307,9 @@ export default function PublishTableOfContentsModal(props: {
                 changeLogs={changeLogs}
                 draftItems={draftTableOfContentsItems}
                 tableOfContentsLastPublished={tableOfContentsLastPublished}
+                pendingPublishItems={
+                  publishProject?.pendingPublishItems ?? []
+                }
                 listOrderPending={Boolean(publishProject?.listOrderPending)}
               />
             )}
@@ -343,6 +348,7 @@ export default function PublishTableOfContentsModal(props: {
               loading={loading}
               changeLogs={changeLogs}
               draftItems={draftTableOfContentsItems}
+              pendingPublishItems={publishProject?.pendingPublishItems ?? []}
               commentsSinceLastPublish={commentsSinceLastPublish}
               tableOfContentsLastPublished={tableOfContentsLastPublished}
               onOpenLayerEditor={openLayerEditor}
@@ -378,6 +384,7 @@ function UnresolvedCommentsPanel({
   loading,
   changeLogs,
   draftItems,
+  pendingPublishItems,
   commentsSinceLastPublish,
   tableOfContentsLastPublished,
   onOpenLayerEditor,
@@ -396,6 +403,7 @@ function UnresolvedCommentsPanel({
       ChangeLogsSinceLastPublishQuery["projectBySlug"]
     >["draftTableOfContentsItems"]
   >;
+  pendingPublishItems: readonly PendingPublishItemForSummary[];
   commentsSinceLastPublish: ResolvableLayerCommentThreadFragment[];
   tableOfContentsLastPublished?: string | null;
   onOpenLayerEditor: (item: {
@@ -463,11 +471,14 @@ function UnresolvedCommentsPanel({
     );
   }
 
-  const summaryModel = buildPublishChangeSummary({
-    changeLogs,
-    draftItems,
-    tableOfContentsLastPublished,
-  });
+  const summaryModel = alignPublishSummaryWithPendingItems(
+    buildPublishChangeSummary({
+      changeLogs,
+      draftItems,
+      tableOfContentsLastPublished,
+    }),
+    pendingPublishItems
+  );
   const summaryRows = new Map<number, PublishSummaryRow>();
   for (const row of [
     ...summaryModel.added,

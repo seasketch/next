@@ -22427,6 +22427,11 @@ export type LayerCartographyChangesQuery = (
   )> }
 );
 
+export type PendingPublishItemDetailsFragment = (
+  { __typename?: 'PendingPublishItem' }
+  & Pick<PendingPublishItem, 'stableId' | 'kind' | 'title' | 'isFolder' | 'draftId'>
+);
+
 export type ChangeLogsSinceLastPublishQueryVariables = Exact<{
   slug: Scalars['String'];
 }>;
@@ -22440,6 +22445,9 @@ export type ChangeLogsSinceLastPublishQuery = (
     & { commentsSinceLastPublish?: Maybe<Array<(
       { __typename?: 'ResolvableLayerComment' }
       & ResolvableLayerCommentThreadFragment
+    )>>, pendingPublishItems?: Maybe<Array<(
+      { __typename?: 'PendingPublishItem' }
+      & PendingPublishItemDetailsFragment
     )>>, draftTableOfContentsItems?: Maybe<Array<(
       { __typename?: 'TableOfContentsItem' }
       & Pick<TableOfContentsItem, 'id' | 'title' | 'isFolder'>
@@ -28836,6 +28844,15 @@ export const MetadataXmlFileFragmentDoc = /*#__PURE__*/ gql`
   isCustomUpload
 }
     `;
+export const PendingPublishItemDetailsFragmentDoc = /*#__PURE__*/ gql`
+    fragment PendingPublishItemDetails on PendingPublishItem {
+  stableId
+  kind
+  title
+  isFolder
+  draftId
+}
+    `;
 export const ForumListDetailsFragmentDoc = /*#__PURE__*/ gql`
     fragment ForumListDetails on Forum {
   id
@@ -32036,6 +32053,9 @@ export const ChangeLogsSinceLastPublishDocument = /*#__PURE__*/ gql`
     commentsSinceLastPublish {
       ...ResolvableLayerCommentThread
     }
+    pendingPublishItems {
+      ...PendingPublishItemDetails
+    }
     draftTableOfContentsItems {
       id
       title
@@ -32061,6 +32081,7 @@ export const ChangeLogsSinceLastPublishDocument = /*#__PURE__*/ gql`
   }
 }
     ${ResolvableLayerCommentThreadFragmentDoc}
+${PendingPublishItemDetailsFragmentDoc}
 ${ChangeLogDetailsFragmentDoc}`;
 export const CreateResolvableCommentDocument = /*#__PURE__*/ gql`
     mutation CreateResolvableComment($projectId: Int!, $tableOfContentsItemId: Int!, $comment: JSON!, $parentCommentId: Int, $setResolved: Boolean) {
@@ -35898,6 +35919,7 @@ export const namedOperations = {
     ResolvableLayerCommentThread: 'ResolvableLayerCommentThread',
     FullAdminOverlay: 'FullAdminOverlay',
     MetadataXmlFile: 'MetadataXmlFile',
+    PendingPublishItemDetails: 'PendingPublishItemDetails',
     ForumListDetails: 'ForumListDetails',
     AuthorProfile: 'AuthorProfile',
     ForumPost: 'ForumPost',

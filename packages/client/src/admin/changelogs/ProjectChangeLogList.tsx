@@ -64,7 +64,7 @@ function DayHeader({ label, count }: { label: string; count: number }) {
         {label}
       </h3>
       <span className="shrink-0 text-xs font-medium tabular-nums text-slate-500">
-        {t("{{count}} changes", { count })}
+        {count === 1 ? t("1 change") : t("{{count}} changes", { count })}
       </span>
     </header>
   );
