@@ -26,18 +26,15 @@ import { DBClient } from "../src/dbClient";
 
 import SES from "aws-sdk/clients/ses";
 import sendEmail from "../src/invites/sendEmail";
-import { sendBulkTemplatedInviteEmail } from "../src/invites/surveyInvites";
 
 // tests/helpers mocks SES with one shared instance. It has no sendEmail, so
 // add one here to assert it is not called.
 const sesInstance = new (SES as any)() as {
   sendEmail?: jest.Mock;
-  sendBulkTemplatedEmail: jest.Mock;
   promise: jest.Mock;
 };
 sesInstance.sendEmail = jest.fn().mockReturnThis();
 const mockSendEmail = sesInstance.sendEmail;
-const mockSendBulkTemplatedEmail = sesInstance.sendBulkTemplatedEmail;
 
 const pool = createPool("test");
 
@@ -136,7 +133,6 @@ describe("E2E_TEST_MODE", () => {
       }
     }
     mockSendEmail.mockClear();
-    mockSendBulkTemplatedEmail.mockClear();
   });
 
   describe("configuration", () => {
@@ -485,50 +481,5 @@ describe("E2E_TEST_MODE", () => {
       expect(mail[0].textEmail).toContain("https://example.test/invite");
     });
 
-    test("survey invites write each destination and do not call SES", async () => {
-      enableTestMode();
-      const first = `survey-a-${Date.now()}@example.test`;
-      const second = `survey-b-${Date.now()}@example.test`;
-
-      const response = await sendBulkTemplatedInviteEmail({
-        Source: "noreply@example.test",
-        Template: "SeaSketchSurveyInvite",
-        Destinations: [first, second].map((address) => ({
-          Destination: { ToAddresses: [address] },
-          ReplacementTags: [
-            {
-              Name: "inviteLink",
-              Value: `https://example.test/auth/surveyInvite?token=${address}`,
-            },
-            { Name: "surveyName", Value: "Ocean uses" },
-          ],
-        })),
-      });
-      expect(mockSendBulkTemplatedEmail).not.toHaveBeenCalled();
-      expect(response.Status).toHaveLength(2);
-      expect(response.Status.every((s) => s.Status === "Success")).toBe(true);
-
-      for (const address of [first, second]) {
-        const mail = takeMail(address);
-        expect(mail).toHaveLength(1);
-        expect(mail[0].template).toBe("SeaSketchSurveyInvite");
-        expect(mail[0].replacementTags.inviteLink).toBe(
-          `https://example.test/auth/surveyInvite?token=${address}`
-        );
-        expect(mail[0].textEmail).toContain(address);
-      }
-    });
-
-    test("survey invites still use SES when the mode is off", async () => {
-      enableTestMode();
-      delete process.env.E2E_TEST_MODE;
-      sesInstance.promise.mockResolvedValueOnce({ Status: [] });
-      await sendBulkTemplatedInviteEmail({
-        Source: "noreply@example.test",
-        Template: "SeaSketchSurveyInvite",
-        Destinations: [],
-      });
-      expect(mockSendBulkTemplatedEmail).toHaveBeenCalledTimes(1);
-    });
   });
 });

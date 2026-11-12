@@ -18,8 +18,10 @@ import {
 } from "../../generated/graphql";
 import { Fragment, useEffect, useMemo, useState } from "react";
 import Skeleton from "../../components/Skeleton";
-import { OPERATOR_LABELS } from "../surveys/LogicRuleEditor";
-import { AdminValueInput } from "../surveys/LogicRuleEditor";
+import {
+  AdminValueInput,
+  OperatorSelect,
+} from "../surveys/LogicRuleEditor";
 import { TrashIcon } from "@heroicons/react/outline";
 import { gql } from "@apollo/client";
 import { MutationStateIndicator } from "../../components/MutationStateIndicator";
@@ -564,24 +566,21 @@ function LogicRuleConditionEditor({
         ))}
       </select>
       <div className="flex w-full bg-blue-100 rounded border border-blue-900 border-opacity-20">
-        <select
+        <OperatorSelect
+          className="w-auto shrink-0 px-3"
           value={condition.operator}
-          className="border-none bg-transparent text-center"
-          onChange={(e) => {
+          operators={(subjectType.supportedOperators || []).filter(
+            (operator): operator is FieldRuleOperator => Boolean(operator)
+          )}
+          onChange={(operator) => {
             mutate({
               variables: {
                 id: condition.id,
-                operator: e.target.value as any,
+                operator,
               },
             });
           }}
-        >
-          {(subjectType.supportedOperators || []).map((operator) => (
-            <option key={operator} value={operator!}>
-              {OPERATOR_LABELS[operator!]}
-            </option>
-          ))}
-        </select>
+        />
         <AdminValueInput
           value={condition.value}
           componentName={subject.typeId}

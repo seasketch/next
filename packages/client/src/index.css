@@ -8222,6 +8222,10 @@ select{
   min-width:36rem
 }
 
+.min-w-\[4\.5rem\]{
+  min-width:4.5rem
+}
+
 .min-w-\[40px\]{
   min-width:40px
 }
@@ -16243,6 +16247,11 @@ input[type="checkbox"][indeterminate="true"]:checked {
   background-color:rgb(255 255 255 / var(--tw-bg-opacity, 1))
 }
 
+.data-\[state\=checked\]\:bg-gray-50[data-state="checked"]{
+  --tw-bg-opacity:1;
+  background-color:rgb(249 250 251 / var(--tw-bg-opacity, 1))
+}
+
 .data-\[state\=open\]\:bg-gray-100[data-state="open"]{
   --tw-bg-opacity:1;
   background-color:rgb(243 244 246 / var(--tw-bg-opacity, 1))
@@ -16380,10 +16389,6 @@ input[type="checkbox"][indeterminate="true"]:checked {
 
   .sm\:ml-4{
     margin-left:1rem
-  }
-
-  .sm\:ml-6{
-    margin-left:1.5rem
   }
 
   .sm\:ml-auto{

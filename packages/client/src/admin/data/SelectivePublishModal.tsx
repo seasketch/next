@@ -52,6 +52,20 @@ import {
   uncheckUnit,
 } from "./selectivePublishSelection";
 
+const DRAFT_CHANGES_SINCE_WINDOW_MS = 48 * 60 * 60 * 1000;
+
+/** Date and time within 48 hours of the last publish; the date alone after that. */
+export function draftChangesSinceDate(lastPublished: Date, now = Date.now()) {
+  const includeTime =
+    now - lastPublished.getTime() <= DRAFT_CHANGES_SINCE_WINDOW_MS;
+  return includeTime
+    ? lastPublished.toLocaleString(undefined, {
+        dateStyle: "medium",
+        timeStyle: "short",
+      })
+    : lastPublished.toLocaleDateString(undefined, { dateStyle: "medium" });
+}
+
 type PendingRow = NonNullable<
   NonNullable<
     NonNullable<SelectivePublishDetailsQuery["projectBySlug"]>["pendingPublishItems"]
@@ -305,6 +319,10 @@ export default function SelectivePublishModal({
   const lastPublished = project?.tableOfContentsLastPublished
     ? new Date(project.tableOfContentsLastPublished)
     : null;
+  const sinceDate =
+    lastPublished && !Number.isNaN(lastPublished.getTime())
+      ? draftChangesSinceDate(lastPublished)
+      : null;
 
   const flash = (ids: string[]) => {
     if (!ids.length) {
@@ -415,12 +433,10 @@ export default function SelectivePublishModal({
                   but not included in this update will remain unchanged.
                 </Trans>
               </p>
-              {lastPublished && !Number.isNaN(lastPublished.getTime()) ? (
+              {sinceDate ? (
                 <p className="text-xs text-slate-500">
                   {t("Draft changes since {{date}}.", {
-                    date: lastPublished.toLocaleDateString(undefined, {
-                      dateStyle: "medium",
-                    }),
+                    date: sinceDate,
                   })}
                 </p>
               ) : null}

@@ -14,8 +14,6 @@ export const getPgSettings = (req: IncomingRequest) => {
     "session.canonical_email": req.user?.canonicalEmail,
     "session.user_id": req.user?.id,
     "session.request_ip": req.ip,
-    "session.survey_invite_email": req.surveyInvite?.email,
-    "session.survey_invite_id": req.surveyInvite?.inviteId,
   };
 };
 

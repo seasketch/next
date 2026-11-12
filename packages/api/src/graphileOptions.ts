@@ -1,7 +1,6 @@
 import { makePluginHook } from "postgraphile";
 import PgSimplifyInflectorPlugin from "@graphile-contrib/pg-simplify-inflector";
 import ProjectInvitesPlugin from "./plugins/projectInvitesPlugin";
-import SurveyInvitesPlugin from "./plugins/surveyInvitesPlugin";
 import postgisPlugin from "@graphile/postgis";
 import CanonicalEmailPlugin from "./plugins/canonicalEmailPlugin";
 import ProjectInviteStateSubscriptionPlugin from "./plugins/ProjectInviteStateSubscriptionPlugin";
@@ -84,7 +83,6 @@ export default function graphileOptions(): PostGraphileOptions {
       FileUploadPlugin,
       FileUploadRateLimiterPlugin,
       ProjectInvitesPlugin,
-      SurveyInvitesPlugin,
       CanonicalEmailPlugin,
       DataSourcePlugin,
       ExportIdPlugin,

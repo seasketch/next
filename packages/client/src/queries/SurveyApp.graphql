@@ -58,7 +58,6 @@ fragment SurveyAppFormElement on FormElement {
 fragment SurveyAppSurvey on Survey {
   id
   name
-  accessType
   isDisabled
   showProgress
   showFacilitationOption

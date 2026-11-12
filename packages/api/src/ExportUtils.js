@@ -15113,11 +15113,6 @@ var LogicRuleEditorRuleFragmentDoc = import_client.gql`
 var NewSurveyFragmentDoc = import_client.gql`
     fragment NewSurvey on Survey {
   id
-  accessType
-  invitedGroups {
-    id
-    name
-  }
   isDisabled
   limitToSingleResponse
   name
@@ -15990,12 +15985,7 @@ var ProjectSketchesFragmentDoc = import_client.gql`
 var SurveyListDetailsFragmentDoc = import_client.gql`
     fragment SurveyListDetails on Survey {
   id
-  accessType
   showProgress
-  invitedGroups {
-    id
-    name
-  }
   isDisabled
   limitToSingleResponse
   name
@@ -16179,7 +16169,6 @@ var SurveyAppSurveyFragmentDoc = import_client.gql`
     fragment SurveyAppSurvey on Survey {
   id
   name
-  accessType
   isDisabled
   showProgress
   showFacilitationOption

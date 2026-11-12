@@ -14,7 +14,6 @@ export default {
       "leaveProject",
       "confirmProjectInvite",
       "confirmProjectInviteWithVerifiedEmail",
-      "confirmProjectInviteWithSurveyToken",
 
       // Admin user administration
       "approveParticipant",
@@ -34,8 +33,6 @@ export default {
 
       // Survey mutations
       "makeResponseDraft",
-      "updateSurveyInvitedGroups",
-      "sendSurveyInviteReminder",
 
       // SketchClass mutations
       "addValidChildSketchClass",
@@ -62,7 +59,6 @@ export default {
       "projectsConnection",
       "templateForms",
       "verifyProjectInvite",
-      "verifySurveyInvite",
       "survey",
     ],
     Project: [
@@ -83,7 +79,6 @@ export default {
       "sessionIsAdmin",
       "sessionParticipationStatus",
       "invite",
-      "sessionOutstandingSurveyInvites",
       "sessionHasPosts",
       "myFolders",
       "mySketches",
@@ -201,36 +196,20 @@ Groups to be assigned to the user once the invite is confirmed. Existing invite 
     "ProjectInvite.inviteEmails": `Listing of all emails related to this invite.`,
     "ProjectInvite.status": `Status derived from the state of invite emails as well as token expiration`,
     "InviteStatus.UNSENT": `**Project Invites only**. Invites may be created but not sent immediately. This way admins can collaboratively update a project invite list before mass-sending invites when a project is first published.`,
-    "InviteStatus.QUEUED": `
-#### Project Invites    
-Admin has sent the invite, but the mail delivery subsystem has not yet sent the invite.
-
-#### Survey Invites
-Invite has been created but email has not yet been sent. Emails will be sent automatically by a periodic backend process (approx every 20 seconds).
-`,
+    "InviteStatus.QUEUED": `Admin has sent the invite, but the mail delivery subsystem has not yet sent the invite.`,
     "InviteStatus.SENT": `Invite email has been sent but not yet delivered to the user's mail server`,
     "InviteStatus.DELIVERED": `Delivered to the user's mail server`,
     "InviteStatus.BOUNCED": `Emails may be bounced due to a full inbox, misconfigured mail server, or other reasons. See [AWS SES documentation](https://docs.aws.amazon.com/ses/latest/DeveloperGuide/monitor-using-event-publishing.html#event-publishing-terminology).`,
     "InviteStatus.COMPLAINT": `User has reported SeaSketch as sending Spam in this or another project. SeaSketch will no longer send emails to this user in any project.`,
     "InviteStatus.UNCONFIRMED": `Unused enum value.`,
-    "InviteStatus.CONFIRMED": `
-#### Project Invites
-User has accepted the invite.
-
-#### Survey Invites
-User has responded to the survey.`,
-    "InviteStatus.TOKEN_EXPIRED": `
-For **project invites**, Invite JSON Web Tokens are set to expire in 14 (admins) or 60 days. **Survey invites** expire after 60 days for invite_only surveys, and after 2 years for public surveys. Invites should be resent if still necessary`,
+    "InviteStatus.CONFIRMED": `User has accepted the invite.`,
+    "InviteStatus.TOKEN_EXPIRED": `Invite JSON Web Tokens are set to expire in 14 (admins) or 60 days. Invites should be resent if still necessary`,
     "InviteStatus.ERROR": `SeaSketch application error when sending invite emails. Refer to email status`,
     "InviteStatus.UNSUBSCRIBED": `
 The user has unsubscribed from all emails originating from SeaSketch.
 
 If this happens SeaSketch will not be able to send any invitations to the user.
 `,
-    "InviteStatus.SURVEY_INVITE_QUEUED":
-      "Project invites have this status when a survey invite is queued for sending in this project. Users can be invited to a survey + have an un-sent project invite that they can confirm using `confirmProjectInviteWithSurveyToken()`. This way users do not need to simultaneously be sent both a project and survey invite.",
-    "InviteStatus.SURVEY_INVITE_SENT":
-      "Survey invite for this project and email has already been sent. See InviteStatus.SURVEY_INVITE_QUEUED for more details.",
     "EmailStatus.QUEUED": `Admin has sent the invite, but the mail delivery subsystem has not yet sent the invite`,
     "EmailStatus.SENT": `Invite email has been sent but not yet delivered to the user's mail server`,
     "EmailStatus.DELIVERED": `Delivered to the user's mail server`,
@@ -267,25 +246,11 @@ Use \`addGroupToAcl()\`/\`removeGroupFromAcl()\` mutations to edit these permiss
     "CreateProjectInvitesInput.projectInviteOptions": `List of emails (required) and fullnames`,
     "CreateProjectInvitesInput.groupNames": `List of group **names** (not ids)`,
     "CreateProjectInvitesInput.sendEmailNow": `If set to true, emails will be QUEUED for sending immediately`,
-    SurveyAccessType: "Controls who has access to respond to a survey",
-    "SurveyAccessType.PUBLIC": "Anyone can respond",
-    "SurveyAccessType.INVITE_ONLY":
-      "Only users part of an invited group or email invitation can respond",
-    "Survey.invitedGroups": `
-Listing of groups whose users should be invited to participate in the survey.
-
-Use \`updateSurveyInvitedGroups()\` mutation to modify.
-`,
-    "Survey.surveyInvites": `All related survey invites. Survey invites will be automatically created for users in the groups specified by \`surveyInvitedGroups\`.`,
     "Survey.surveyResponsesConnection": `Responses related to this survey. End-users will have access to their own submitted or draft responses. Administrators will have access to their own, plus all submitted responses.`,
     "User.emailNotificationPreference": `Email notification preferences can be read and set by the current user session.
     These settings cannot be accessed by other users or SeaSketch project admins.`,
-    "SurveyTokenInfo.token":
-      "Signed token that can be used for accessing the survey",
-    "SurveyTokenInfo.surveyId": "ID of related survey",
-    "SurveyTokenInfo.projectId": "ID of related project",
     "Query.survey":
-      "Note that when requesting a survey and related resources (project, forms & fields) from an invite link when anonymous, the `x-ss-survey-invite-token` header will need to be set in order to gain access to protected resources. For more details [see the wiki](https://github.com/seasketch/next/wiki/User-Ingress#survey-invites)",
+      "Reads a survey, including related project, forms, and fields when the session can access them.",
     "Mutation.deleteTopic":
       "Can be performed by project admins at any time. Can only be performed by original author within 5 minutes of posting.",
     "Mutation.deletePost":

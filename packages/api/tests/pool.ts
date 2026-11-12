@@ -8,9 +8,9 @@ export function createPool(tableName: string): DatabasePoolType {
   const pool = cPool(DB_URL + tableName);
   // slonik 23.0 opened a fresh connection for every pool.transaction() and
   // closed it afterwards. Later 23.x releases return the connection to the
-  // pool, and Postgres then reports a custom GUC one test defined (for
-  // example session.survey_invite_email) as '' instead of NULL in the next
-  // test that reuses the connection, which breaks casts such as ::email.
+  // pool, and Postgres then reports a custom session GUC one test defined as
+  // '' instead of NULL in the next test that reuses the connection, which
+  // breaks casts such as ::email.
   // Explicit connections are still closed after use, so route transactions
   // through pool.connect() to keep each test's session isolated.
   return {

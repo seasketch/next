@@ -12,18 +12,15 @@ class CustomSequencer extends Sequencer {
     });
     const withold = [];
     const resorted = [];
-    const tail = [];
     for (const item of sorted) {
       if (/jwks/.test(item.path)) {
         withold.push(item);
-      } else if (/surveyInviteMiddleware/.test(item.path)) {
-        tail.push(item);
       } else {
         resorted.push(item);
       }
     }
 
-    return [...withold, ...resorted, ...tail].reverse();
+    return [...withold, ...resorted].reverse();
   }
 }
 module.exports = CustomSequencer;

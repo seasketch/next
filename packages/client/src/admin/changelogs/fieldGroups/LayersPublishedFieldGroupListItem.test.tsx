@@ -149,4 +149,28 @@ describe("LayersPublishedFieldGroupListItem", () => {
     });
     expect(within(dialog).getByText("No matching layers")).toBeTruthy();
   });
+
+  it("counts layers and folders separately in the show-all label", () => {
+    const items = [
+      ...Array.from({ length: 12 }, (_, index) =>
+        item(`layer-${index}`, `Layer ${index + 1}`)
+      ),
+      item("folder", "Global Mangrove Watch", true),
+    ];
+    render(
+      <LayersPublishedFieldGroupListItem
+        scope="project"
+        changeLog={changeLog({
+          fullOverlayPublish: true,
+          toSummary: { layer_count: 12 },
+          publishedOverlayItems: items,
+        })}
+      />
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Show published layers" }));
+    expect(
+      screen.getByRole("button", { name: "Show all 12 layers, 1 folder" })
+    ).toBeTruthy();
+  });
 });
