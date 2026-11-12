@@ -9,7 +9,7 @@
 Three consumers need a running SeaSketch, and they get it from the same commands:
 
 1. **Local development** — the common case, and the one that has to work every morning.
-2. **CI** — `@smoke`, `@enduser`, and `@admin` on every branch push. End-user and admin are separate jobs and can also be started with workflow dispatch. Those jobs are not part of Create Deployment.
+2. **CI** — `@smoke`, `@enduser`, and `@admin` on every branch push, as separate jobs in the Unit Tests workflow. Those jobs are not part of Create Deployment.
 3. **Cloud agents** — Cursor cloud agents or any equivalent: a clean Linux VM with the repo, Docker, and a secret environment. No editor, no personal shell profile.
 
 There is one contract. CI and agents are not a separate design. This campaign does not add a hosted staging server; cloud agents running these commands are the isolated place to try a change.
