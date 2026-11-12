@@ -21,9 +21,9 @@ isProject: false
 
 This file is a working sketch for implementation. The decision record is the [2026 development-environment campaign](../../design-docs/dev-environment/README.md), in particular [integration testing](../../design-docs/dev-environment/integration-testing.md) and the [strategy](../../design-docs/dev-environment/strategy.md). Refresh this sketch when Phase 1 starts. Leave the campaign folder as an archive when that campaign ends.
 
-The phase numbers below predate the strategy. Map them as follows: sketch phases 0 and 1 are strategy Phase 1 (smoke on the current toolchain); sketch phase 2 is strategy Phase 3 (access journeys); sketch phase 3 is strategy Phase 5 (agent recipe). Strategy Phase 2 (Node LTS, workspaces, and the post-deploy production probe) and Phase 4 (client build) sit between those.
+The phase numbers below predate the strategy. Map them as follows: sketch phases 0 and 1 are strategy Phase 1 (smoke on the current toolchain); sketch phase 2 (the JOURNEYS.md backlog) is now the [catalog](../../design-docs/dev-environment/journeys.md) in strategy Phase 3 (comprehensive journeys plus the smoke/full CI split); sketch phase 3 (agent recipe) is also strategy Phase 3. There is no strategy Phase 5 and no staging server. Strategy Phase 2 (Node LTS, workspaces, production probe) and Phase 4 (CRA replacement) sit around Phase 3 as in the [strategy](../../design-docs/dev-environment/strategy.md).
 
-Where this sketch conflicts with the record, the record wins. Known conflicts: test-mode tokens are signed by the API's own JWKS keys under a test-only issuer, and Auth0 Management calls are faked in test mode; the snapshot is never built from a production dump; the production probe starts in strategy Phase 2, not Phase 5.
+Where this sketch conflicts with the record, the record wins. Known conflicts: test-mode tokens are signed by the API's own JWKS keys under a test-only issuer, and Auth0 Management calls are faked in test mode; the snapshot is never built from a production dump; the production probe starts in strategy Phase 2; breadth lives in the catalog, not a later phase.
 
 Startup, logs, and editor tasks are specified in [env-setup.md](../../design-docs/dev-environment/env-setup.md). The bullets below that say to document `db:start` plus `db:bootstrap`, and to add a VS Code task after `db:start`, are superseded. Do not revive folder-open tasks.
 
@@ -232,7 +232,7 @@ Mine:
 - Existing Cypress smokes (project listing, survey creation, user onboarding)
 - Product risk areas (sketching, surveys/SAP, invites/access control, data layers/table, reports)
 
-Produce `packages/e2e/JOURNEYS.md` — numbered checklist with: slug prefix, seed needs, `@tag`, screenshot checkpoints, L1-vs-L2 note (API Jest vs browser).
+The product list is [design-docs/dev-environment/journeys.md](../../design-docs/dev-environment/journeys.md). Iterate that catalog, then farm tests. `packages/e2e/JOURNEYS.md` is the implementation note for specs that already landed. Each catalog unit needs: slug prefix, seed needs, `@tag`, screenshot checkpoints, L1-vs-L2 note (API Jest vs browser).
 
 ### 2.2 Priority tiers (implement in order)
 
@@ -268,7 +268,7 @@ Each journey: unique project slug, GraphQL/SQL arrange, UI act/assert, hard-dele
 
 After P0 journeys are green: archive/delete `packages/client/cypress`, remove root Cypress deps, delete commented CI jobs, fix README claims.
 
-**Phase 2 exit criteria:** P0+P1 journeys green in CI (full suite nightly or on `main`; `@smoke` subset on PR); `JOURNEYS.md` is the source of truth; Cypress gone.
+**Sketch phase 2 / strategy Phase 3 exit:** The catalog is the list. `@smoke` is the push job and stays fast. The full suite is green on CRA (including bundler-risk). Cypress leftover specs are gone. See [strategy](../../design-docs/dev-environment/strategy.md).
 
 ---
 

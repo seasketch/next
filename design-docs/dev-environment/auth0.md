@@ -6,7 +6,7 @@
 
 ## Intent
 
-Every human login outside the production site — laptops, cloud agents, staging — goes to a non-production Auth0 tenant. No development credential can read or modify production users, and no token minted outside production is accepted by the production API.
+Every human login outside the production site — laptops and cloud agents — goes to a non-production Auth0 tenant. No development credential can read or modify production users, and no token minted outside production is accepted by the production API.
 
 Automated tests go further and do not touch Auth0 at all. That mechanism is `E2E_TEST_MODE`, described in [integration testing](integration-testing.md). The API side of this document — booting without Auth0, and one place that talks to the Management API — is what makes test mode possible.
 
@@ -26,7 +26,7 @@ SeaSketch-specific claims come from an Auth0 rule or Action: `https://seasketch.
 
 Sharing the tenant means:
 
-- A development or staging signup creates a production user.
+- A development signup creates a production user.
 - Verifying an email from a local API writes to the production user record.
 - Changing the rule to try a new claim changes production login.
 - A development token carries the production issuer and audience, so the production API accepts it.
@@ -40,13 +40,13 @@ A second _application_ in the production tenant fixes none of this. The user dir
 
 |                   | Production                  | Non-production                                                                           |
 | ----------------- | --------------------------- | ---------------------------------------------------------------------------------------- |
-| Used by           | The deployed API and client | Laptops, cloud agents, staging                                                           |
+| Used by           | The deployed API and client | Laptops and cloud agents                                                                 |
 | Issuer            | `seasketch.auth0.com`       | A different Auth0 domain                                                                 |
 | Audience          | `https://api.seasketch.org` | A different identifier, so a copied token fails the production audience check on its own |
 | Management client | Production deploy only      | Shared development secret, scoped to the non-production directory                        |
-| SPA callbacks     | Production origins          | `localhost` origins, plus staging when it exists                                         |
+| SPA callbacks     | Production origins          | `localhost` origins                                                                      |
 
-One non-production tenant serves laptops and staging. Start with one SPA application and one API identifier in it. Creating that tenant, or a tenant for an install outside this one, is [AUTH0.md](../../AUTH0.md).
+One non-production tenant serves laptops and agents. Start with one SPA application and one API identifier in it. Creating that tenant, or a tenant for an install outside this one, is [AUTH0.md](../../AUTH0.md).
 
 **Claims keep their names.** Recreate the rule or Action on the new tenant with the same `https://seasketch.org/…` claim names. The namespace is an identifier shared by every install, not the site's hostname. Issuer and audience are what differ. Staff who need superuser for development are marked superuser in the non-production tenant.
 
@@ -56,15 +56,13 @@ One non-production tenant serves laptops and staging. Start with one SPA applica
 
 **User ids do not carry over.** `sub` is per tenant. A developer's existing local database has users created by production logins. After the cutover, a non-production login creates a new user row. Old rows can be ignored. Fixture projects in the golden snapshot are owned by synthetic users, not by a staff `sub`. A person administers them by being superuser in the non-production tenant, or by being added locally as a project admin. See [integration testing](integration-testing.md).
 
-**The preview workflow is unchanged.** `.github/workflows/preview-build.yml` builds a client against a shared API with the production tenant. It stays that way while that API is production. It is not a reason for development to use production keys, and it is not staging.
+**The preview workflow is unchanged.** `.github/workflows/preview-build.yml` builds a client against a shared API with the production tenant. It stays that way while that API is production. It is not a reason for development to use production keys, and it is not a staging environment.
 
 ## Sequencing
 
 The smoke job does not wait for the new tenant, because it uses test mode. It must still never receive the production management secret.
 
 The tenant is a phase 1 exit criterion. No cloud agent or new laptop gets a default profile containing production Auth0 values. Until the tenant exists, existing laptops may keep their current keys as a temporary exception. Those keys are not copied into CI or into any agent's secret store.
-
-Staging, in phase 5, uses the same non-production tenant.
 
 ## Decisions
 
@@ -73,7 +71,7 @@ Staging, in phase 5, uses the same non-production tenant.
 - _(September 2026)_ The API starts without Auth0 management configured. All Management API calls go through `packages/api/src/auth/auth0.ts` (`getManagementClient()`). Covered by `tests/auth0Management.test.ts`.
 - Automated tests hold no Auth0 secrets or user passwords.
 - Claim names stay `https://seasketch.org/…`. Issuer and audience change per install.
-- One non-production tenant for laptops, agents, and staging. A future production install on another domain would get its own production tenant ([second production install](second-install.md)).
+- One non-production tenant for laptops and agents. A future production install on another domain would get its own production tenant ([second production install](second-install.md)).
 - *(September 2026)* No shared developer account. Each person signs up on the non-production tenant. Superuser is a claim on named staff accounts. Anyone else can be added as a demo-project admin on their own database; that membership is not part of the snapshot.
 - *(October 2026)* The development tenant is `seasketch-dev` (`seasketch-dev.us.auth0.com`), audience `https://api.nonprod.seasketch.org`. The production rule stays disabled. A post-login Action sets the claims. Templates carry the public identifiers. The management secret stays out of git and out of CI.
 
@@ -93,4 +91,4 @@ None for phase 1.
 ## Exit criteria
 
 - **Phase 1:** The API starts with Auth0 management unset. *Done, September 2026.* The smoke job holds no Auth0 secrets. The default profile for a new machine or agent is the non-production tenant. Setup refuses production Auth0 identifiers outside a production deploy. *Done, October 2026.* The tenant is `seasketch-dev` in the US, domain `seasketch-dev.us.auth0.com`, audience `https://api.nonprod.seasketch.org`. The post-login Action `add-claims` sets the three `https://seasketch.org/…` claims on the access token and the ID token. Superuser is the role `seasketch_superuser`, assigned after a person signs up. The snapshot does not include those accounts.
-- **Phase 5:** Staging login uses the non-production tenant. The production tenant is unchanged.
+- **Phase 3:** The Auth0 signup journey in the [catalog](journeys.md) is the one local test allowed to call this tenant. It does not run in the Auth0-free CI jobs.

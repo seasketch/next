@@ -12,7 +12,7 @@ It is a constraint on the choices the campaign does make. When a decision would 
 
 ## What a second install would be
 
-The same build artifacts, deployed with a different profile: its own domain, Auth0 tenant, database, object storage, queues, and email identity. It shares nothing mutable with `seasketch.org`. It is not a multi-tenant mode inside the current production process, and it is not staging. Staging is a non-production stack of the current install ([environment setup](env-setup.md)).
+The same build artifacts, deployed with a different profile: its own domain, Auth0 tenant, database, object storage, queues, and email identity. It shares nothing mutable with `seasketch.org`. It is not a multi-tenant mode inside the current production process, and it is not a staging server. This campaign does not add staging ([environment setup](env-setup.md)).
 
 The client bakes public URLs in at build time, so a second install is a second client build with its own profile — the model we already use. Do not add a runtime configuration service for this.
 

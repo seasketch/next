@@ -69,15 +69,14 @@ Uploads, tile archives, and ACL documents live in object storage even for local 
 - *(October 2026)* The data profile's results queue is ElasticMQ, not a per-developer AWS queue, so that AWS credentials leave the default profile. ([local data services](local-data-services.md))
 - *(October 2026)* `pmtiles-server` in the data profile serves from local R2 under Miniflare, not from fixture archives, so the Worker runs its production code against the same binding API. Fixtures keep their production URLs.
 - *(October 2026)* The spatial-uploads image splits into a prebuilt runtime stage published to the GitHub Container Registry and an application stage that builds in seconds, which is what makes the container usable in pull-request CI.
-- *(October 2026)* Fragment creation and subdivision get local entry points in the data profile rather than waiting for phase 5: `FRAGMENT_WORKER_DEV_HANDLER` with a new `server.ts`, and `SUBDIVISION_WORKER_DEV_HANDLER` against the existing container.
+- *(October 2026)* Fragment creation and subdivision get local entry points in the data profile: `FRAGMENT_WORKER_DEV_HANDLER` with a new `server.ts`, and `SUBDIVISION_WORKER_DEV_HANDLER` against the existing container.
 
 ## Open questions
 
-- *(Phase 3)* None remaining here. The data path's open questions are tracked in [local data services](local-data-services.md).
-- *(Phase 5)* Whether the PII classifier and the AI data analyst need local entry points. Fragment and subdivision were resolved in October 2026 (see Decisions).
+- *(Phase 3)* None remaining here. The data path's open questions are tracked in [local data services](local-data-services.md). The PII classifier and AI data analyst stay optional add-ons: uploads already mock them. They get a local entry point when a [catalog](journeys.md) item needs the real service instead of the mock.
 
 ## Exit criteria
 
 - **Phase 1:** The core profile starts with no production Lambda ARNs, queue URLs, or Auth0 management credentials, and the features that need them report themselves unavailable. *Done, September 2026.*
-- **Phase 3:** The data profile runs uploads, data-table processing, tile serving, and report calculation locally against development storage and queues. A developer changes those packages and sees the result without `cdk deploy`. CI data-path journeys use this profile. *Done, November 2026.* This is the data profile. Access, invite, and project-entry journeys stay with the phase 3 exit in [strategy](strategy.md).
+- **Phase 3:** The data profile runs uploads, data-table processing, tile serving, and report calculation locally against development storage and queues. A developer changes those packages and sees the result without `cdk deploy`. CI data-path journeys use this profile. *Done, November 2026.* Remaining [catalog](journeys.md) items that need uploads, tiles, or reports use this profile.
 - **Throughout:** The production override for each integration is documented for a person debugging production, and absent from CI.
