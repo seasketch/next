@@ -16391,10 +16391,6 @@ input[type="checkbox"][indeterminate="true"]:checked {
     margin-left:1rem
   }
 
-  .sm\:ml-6{
-    margin-left:1.5rem
-  }
-
   .sm\:ml-auto{
     margin-left:auto
   }

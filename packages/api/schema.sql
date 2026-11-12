@@ -622,9 +622,7 @@ CREATE TYPE public.invite_status AS ENUM (
     'CONFIRMED',
     'TOKEN_EXPIRED',
     'ERROR',
-    'UNSUBSCRIBED',
-    'SURVEY_INVITE_QUEUED',
-    'SURVEY_INVITE_SENT'
+    'UNSUBSCRIBED'
 );
 
 
@@ -1120,34 +1118,6 @@ CREATE TYPE public.sprite_type AS ENUM (
     'icon',
     'fill',
     'line'
-);
-
-
---
--- Name: survey_access_type; Type: TYPE; Schema: public; Owner: -
---
-
-CREATE TYPE public.survey_access_type AS ENUM (
-    'PUBLIC',
-    'INVITE_ONLY'
-);
-
-
---
--- Name: survey_invite_options; Type: DOMAIN; Schema: public; Owner: -
---
-
-CREATE DOMAIN public.survey_invite_options AS public.project_invite_options;
-
-
---
--- Name: survey_token_info; Type: TYPE; Schema: public; Owner: -
---
-
-CREATE TYPE public.survey_token_info AS (
-	token text,
-	survey_id integer,
-	project_id integer
 );
 
 
@@ -1965,7 +1935,6 @@ CREATE TABLE public.surveys (
     project_id integer NOT NULL,
     name text NOT NULL,
     is_disabled boolean DEFAULT true NOT NULL,
-    access_type public.survey_access_type DEFAULT 'PUBLIC'::public.survey_access_type NOT NULL,
     limit_to_single_response boolean DEFAULT true NOT NULL,
     geofence public.geography(Polygon,4326) DEFAULT NULL::public.geography,
     show_social_media_buttons boolean DEFAULT true,
@@ -1993,17 +1962,7 @@ COMMENT ON TABLE public.surveys IS '
 --
 
 COMMENT ON COLUMN public.surveys.is_disabled IS '
-Disabled surveys will not be accessible to non-admins. Invite email sending will
-be paused.
-';
-
-
---
--- Name: COLUMN surveys.access_type; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON COLUMN public.surveys.access_type IS '
-PUBLIC or INVITE_ONLY
+Disabled surveys will not be accessible to non-admins.
 ';
 
 
@@ -2026,8 +1985,7 @@ COMMENT ON COLUMN public.surveys.geofence IS 'If set, responses that originate f
 --
 
 COMMENT ON COLUMN public.surveys.show_social_media_buttons IS '
-Only applicable for public surveys. Show tools to respondants for sharing the 
-survey on social media to encourage responses.
+Show tools to respondents for sharing the survey on social media to encourage responses.
 ';
 
 
@@ -4476,42 +4434,6 @@ COMMENT ON FUNCTION public.add_user_to_group("groupId" integer, "userId" integer
 
 
 --
--- Name: add_user_to_group_update_survey_invites_trigger(); Type: FUNCTION; Schema: public; Owner: -
---
-
-CREATE FUNCTION public.add_user_to_group_update_survey_invites_trigger() RETURNS trigger
-    LANGUAGE plpgsql
-    AS $$
-BEGIN
-  -- Add survey invites for any surveys that are part of this group that they don't already have
-  insert into survey_invites (
-    user_id,
-    was_added_from_group,
-    survey_id
-  ) select
-    NEW.user_id,
-    true,
-    survey_id
-  from
-    survey_invited_groups
-  where
-    survey_invited_groups.group_id = NEW.group_id and
-    not exists (
-      select
-        1
-      from
-        survey_invites
-      where
-        survey_invites.was_added_from_group = true and 
-        survey_invites.survey_id = survey_invited_groups.survey_id and
-        survey_invites.user_id = NEW.user_id
-    );
-	RETURN NEW;
-END;
-$$;
-
-
---
 -- Name: add_valid_child_sketch_class(integer, integer); Type: FUNCTION; Schema: public; Owner: -
 --
 
@@ -4766,29 +4688,6 @@ CREATE FUNCTION public.after_project_background_jobs_insert_or_update_notify_sub
   return NEW;
   END;
 $$;
-
-
---
--- Name: after_response_submission(); Type: FUNCTION; Schema: public; Owner: -
---
-
-CREATE FUNCTION public.after_response_submission() RETURNS trigger
-    LANGUAGE plpgsql SECURITY DEFINER
-    AS $$
-    begin
-      update
-        survey_invites
-      set 
-        was_used = true
-      where
-        survey_invites.survey_id = NEW.survey_id and (
-          survey_invites.user_id = nullif(current_setting('session.user_id', TRUE), '')::int or
-          survey_invites.email = nullif(current_setting('session.canonical_email', TRUE), '') or
-          survey_invites.email = nullif(current_setting('session.survey_invite_email', TRUE), '')
-        );
-      return NEW;
-    end;
-  $$;
 
 
 --
@@ -6145,16 +6044,14 @@ CREATE FUNCTION public.before_invite_emails_insert() RETURNS trigger
     LANGUAGE plpgsql
     AS $$
   begin
-    -- assigning to_address
     if NEW.project_invite_id is not null then
       NEW.to_address = (select email from project_invites where id = NEW.project_invite_id);
     end if;
 
-    -- check if user has compained in any other emails
     if exists (
-      select 
+      select
         1
-      from 
+      from
         invite_emails
       where
         to_address = NEW.to_address and
@@ -6165,17 +6062,8 @@ CREATE FUNCTION public.before_invite_emails_insert() RETURNS trigger
 
     if NEW.project_invite_id is not null then
       if exists (
-        select 1 from invite_emails 
+        select 1 from invite_emails
         where project_invite_id = new.project_invite_id and
-        status = 'QUEUED'
-      ) then
-        return NULL;
-      end if;
-    end if;
-    if NEW.survey_invite_id is not null then
-      if exists (
-        select 1 from invite_emails where 
-        survey_invite_id = new.survey_invite_id and
         status = 'QUEUED'
       ) then
         return NULL;
@@ -6419,22 +6307,6 @@ CREATE FUNCTION public.before_survey_delete() RETURNS trigger
       raise exception 'Preventing deletion. Survey has 5 or more responses from other users. Contact support@seasketch.org or simply disable survey.';
     end if;
     return OLD;
-  end;
-$$;
-
-
---
--- Name: before_survey_invited_groups_insert(); Type: FUNCTION; Schema: public; Owner: -
---
-
-CREATE FUNCTION public.before_survey_invited_groups_insert() RETURNS trigger
-    LANGUAGE plpgsql
-    AS $$
-  begin
-    if not exists (select id from project_groups where id = NEW.group_id and project_id = (select project_id from surveys where id = NEW.survey_id)) then
-      raise exception 'Surveys may only invite participant groups from the same project';
-    end if;
-    return new;
   end;
 $$;
 
@@ -8340,47 +8212,6 @@ CREATE FUNCTION public.confirm_project_invite(invite_id integer) RETURNS integer
 --
 
 COMMENT ON FUNCTION public.confirm_project_invite(invite_id integer) IS '@omit';
-
-
---
--- Name: confirm_project_invite_with_survey_token(integer); Type: FUNCTION; Schema: public; Owner: -
---
-
-CREATE FUNCTION public.confirm_project_invite_with_survey_token("projectId" integer) RETURNS integer
-    LANGUAGE plpgsql SECURITY DEFINER
-    AS $$
-    begin
-      -- check that there is a user logged in with a verified email
-      if nullif(current_setting('session.user_id', TRUE), '')::int is not null and nullif(current_setting('session.survey_invite_email', TRUE), '')::text is not null then
-        -- check if there is an invite that matches that email
-        if exists(select 1 from project_invites where email = nullif(current_setting('session.survey_invite_email', TRUE), '')) then
-          -- if so, run confirm_project_invite(invite_id)
-          return (
-            select confirm_project_invite((
-              select id from project_invites where email = nullif(current_setting('session.survey_invite_email', TRUE), '')
-            ))
-          );
-        else
-          raise exception 'No sent invite matching your email found';
-        end if;
-      else
-        raise exception 'Must be logged in with a verified email and have x-ss-survey-invite-token header set';
-      end if;
-    end;
-  $$;
-
-
---
--- Name: FUNCTION confirm_project_invite_with_survey_token("projectId" integer); Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON FUNCTION public.confirm_project_invite_with_survey_token("projectId" integer) IS '
-Project invites can be paired with survey invites so that users can be sent an
-email inviting them to a survey, then use that survey invite to confirm a 
-project invitation. This way there are no duplicative emails sent.
-
-Clients must set x-ss-survey-invite-token header before calling this mutation.
-';
 
 
 --
@@ -12041,80 +11872,6 @@ COMMENT ON FUNCTION public.create_stable_id() IS '@omit';
 
 
 --
--- Name: survey_invites; Type: TABLE; Schema: public; Owner: -
---
-
-CREATE TABLE public.survey_invites (
-    id integer NOT NULL,
-    survey_id integer NOT NULL,
-    created_at timestamp with time zone DEFAULT timezone('utc'::text, now()) NOT NULL,
-    was_used boolean DEFAULT false NOT NULL,
-    fullname text,
-    email public.email,
-    was_added_from_group boolean DEFAULT false NOT NULL,
-    user_id integer
-);
-
-
---
--- Name: TABLE survey_invites; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON TABLE public.survey_invites IS '@omit all';
-
-
---
--- Name: COLUMN survey_invites.was_added_from_group; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON COLUMN public.survey_invites.was_added_from_group IS '
-@omit
-Indicates that the invite was created due to user membership of a group and not manually added. Manually added users are not removed by group membership-related triggers
-';
-
-
---
--- Name: create_survey_invites(integer, boolean, boolean, text[], public.survey_invite_options[]); Type: FUNCTION; Schema: public; Owner: -
---
-
-CREATE FUNCTION public.create_survey_invites("surveyId" integer, "includeProjectInvite" boolean, "makeAdmin" boolean, "groupNames" text[], "surveyInviteOptions" public.survey_invite_options[]) RETURNS SETOF public.survey_invites
-    LANGUAGE plpgsql SECURITY DEFINER
-    AS $$
-  declare
-    invite_ids int[];
-    pid int;
-  begin
-    select project_id into pid from surveys where id = "surveyId";
-    if (select session_is_admin(pid)) = false then
-      raise exception 'Must be project administrator';
-    end if;
-
-    
-    with ins as (
-    insert into survey_invites (
-      survey_id,
-      email,
-      fullname
-    ) 
-    select 
-      "surveyId",
-      email, 
-      fullname 
-    from 
-      unnest("surveyInviteOptions")
-    on conflict do nothing
-    returning id
-     ) select array_agg(id) into invite_ids from ins;
-
-    if "includeProjectInvite" is true then
-      perform create_project_invites(pid, false, "makeAdmin", "groupNames", "surveyInviteOptions");
-    end if;
-    return query select * from survey_invites where id = any(invite_ids);
-  end;
-$$;
-
-
---
 -- Name: form_logic_rules; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -12173,29 +11930,25 @@ CREATE FUNCTION public.create_survey_response("surveyId" integer, response_data 
     LANGUAGE plpgsql SECURITY DEFINER
     AS $$
     declare
-      access_type survey_access_type;
       is_disabled boolean;
       pid int;
       response survey_responses;
     begin
-      select 
-        surveys.project_id, 
-        surveys.access_type, 
-        surveys.is_disabled 
-      into 
-        pid, 
-        access_type, 
-        is_disabled 
-      from 
-        surveys 
-      where 
+      select
+        surveys.project_id,
+        surveys.is_disabled
+      into
+        pid,
+        is_disabled
+      from
+        surveys
+      where
         surveys.id = "surveyId";
-      -- TODO: improve access control to consider group membership
-      if session_is_admin(pid) or (is_disabled = false and (access_type = 'PUBLIC'::survey_access_type) or (access_type = 'INVITE_ONLY'::survey_access_type and session_member_of_group((select array_agg(group_id) from survey_invited_groups where survey_id = "surveyId")))) then
+      if session_is_admin(pid) or is_disabled = false then
         insert into survey_responses (survey_id, data, user_id, is_draft, is_facilitated, bypassed_duplicate_submission_control, is_practice, offline_id) values ("surveyId", response_data, nullif(current_setting('session.user_id', TRUE), '')::int, draft, facilitated, bypassed_submission_control, practice, offline_id) returning * into response;
         return response;
       else
-        raise exception 'Access denied to % survey. is_disabled = %', access_type, is_disabled;
+        raise exception 'Access denied. is_disabled = %', is_disabled;
       end if;
     end;
   $$;
@@ -12209,30 +11962,25 @@ CREATE FUNCTION public.create_survey_response_v2("surveyId" integer, response_da
     LANGUAGE plpgsql SECURITY DEFINER
     AS $$
     declare
-      access_type survey_access_type;
       is_disabled boolean;
       pid int;
-      response survey_responses;
       response_id int;
     begin
-      select 
-        surveys.project_id, 
-        surveys.access_type, 
-        surveys.is_disabled 
-      into 
-        pid, 
-        access_type, 
-        is_disabled 
-      from 
-        surveys 
-      where 
+      select
+        surveys.project_id,
+        surveys.is_disabled
+      into
+        pid,
+        is_disabled
+      from
+        surveys
+      where
         surveys.id = "surveyId";
-      -- TODO: improve access control to consider group membership
-      if session_is_admin(pid) or (is_disabled = false and (access_type = 'PUBLIC'::survey_access_type) or (access_type = 'INVITE_ONLY'::survey_access_type and session_member_of_group((select array_agg(group_id) from survey_invited_groups where survey_id = "surveyId")))) then
+      if session_is_admin(pid) or is_disabled = false then
         insert into survey_responses (survey_id, data, user_id, is_draft, is_facilitated, bypassed_duplicate_submission_control, is_practice, offline_id) values ("surveyId", response_data, nullif(current_setting('session.user_id', TRUE), '')::int, draft, facilitated, bypassed_submission_control, practice, offline_id) returning id into response_id;
         return response_id as id;
       else
-        raise exception 'Access denied to % survey. is_disabled = %', access_type, is_disabled;
+        raise exception 'Access denied. is_disabled = %', is_disabled;
       end if;
     end;
   $$;
@@ -18523,40 +18271,9 @@ CREATE FUNCTION public.project_invites_status(invite public.project_invites) RET
       email_status invite_status;
       expired boolean;
       has_complaint boolean;
-      survey_invite_status invite_status;
     begin
       select exists(select 1 from invite_emails where to_address = invite.email and status = 'COMPLAINT') into has_complaint;
-      -- check for sent survey invites
-      select 
-        status 
-      into
-        survey_invite_status
-      from 
-        invite_emails 
-      where 
-        invite_emails.to_address = invite.email and
-        invite_emails.survey_invite_id = any(select id from surveys where surveys.project_id = invite.project_id);
-      if survey_invite_status is not null then
-        if survey_invite_status in ('SENT', 'DELIVERED', 'CONFIRMED') then
-          return 'SURVEY_INVITE_SENT';
-        else
-          return survey_invite_status;
-        end if;
-      elseif exists(
-        select
-          1
-        from
-          survey_invites
-        inner join
-          surveys
-        on
-          survey_invites.survey_id = surveys.id
-        where
-          survey_invites.email = invite.email and
-          surveys.project_id = invite.project_id
-      ) then
-        return 'SURVEY_INVITE_QUEUED';
-      elseif invite.was_used = true then 
+      if invite.was_used = true then
         return 'CONFIRMED';
       elseif has_complaint then
         return 'COMPLAINT';
@@ -18582,7 +18299,7 @@ CREATE FUNCTION public.project_invites_status(invite public.project_invites) RET
           return email_status::invite_status;
         end if;
       end if;
-    end;      
+    end;
   $$;
 
 
@@ -19322,21 +19039,18 @@ CREATE FUNCTION public.projects_imported_arcgis_services(p public.projects) RETU
 CREATE FUNCTION public.projects_invite(p public.projects) RETURNS public.project_invites
     LANGUAGE sql STABLE SECURITY DEFINER
     AS $$
-    select 
+    select
       *
-    from 
-      project_invites 
-    where 
-      project_id = p.id and ((
-        email = current_setting('session.canonical_email', TRUE)::email and
-        exists(
-          select 1 from invite_emails 
-          where status != 'QUEUED' and 
-          project_invite_id = project_invites.id
-        )
-      ) or (
-        email = current_setting('session.survey_invite_email', TRUE)::email
-      ))
+    from
+      project_invites
+    where
+      project_id = p.id and
+      email = current_setting('session.canonical_email', TRUE)::email and
+      exists(
+        select 1 from invite_emails
+        where status != 'QUEUED' and
+        project_invite_id = project_invites.id
+      )
     limit 1;
   $$;
 
@@ -19389,13 +19103,13 @@ Breakdown of number of invites per status. Used to display counts in overview li
 CREATE FUNCTION public.projects_invites(p public.projects, statuses public.invite_status[], "orderBy" public.invite_order_by, direction public.sort_by_direction) RETURNS SETOF public.project_invites
     LANGUAGE sql STABLE
     AS $$
-    select 
-      * 
-    from 
-      project_invites 
-    where 
-      session_is_admin(p.id) and 
-      project_id = p.id and 
+    select
+      *
+    from
+      project_invites
+    where
+      session_is_admin(p.id) and
+      project_id = p.id and
       (array_length(statuses, 1) is null or project_invites_status(project_invites.*) = any (statuses))
     order by
       (CASE WHEN "orderBy" = 'EMAIL' and "direction" = 'ASC' THEN email
@@ -20003,49 +19717,6 @@ CREATE FUNCTION public.projects_session_is_admin(p public.projects) RETURNS bool
 --
 
 COMMENT ON FUNCTION public.projects_session_is_admin(p public.projects) IS 'Returns true if the user has admin privileges on this project. Will return true even if the session email is not verified, but permissions will not work until it is.';
-
-
---
--- Name: projects_session_outstanding_survey_invites(public.projects); Type: FUNCTION; Schema: public; Owner: -
---
-
-CREATE FUNCTION public.projects_session_outstanding_survey_invites(project public.projects) RETURNS SETOF public.survey_token_info
-    LANGUAGE sql STABLE SECURITY DEFINER
-    AS $$
-    select 
-      invite_emails.token, 
-      survey_invites.survey_id,
-      surveys.project_id
-    from
-      invite_emails
-    inner join
-      survey_invites
-    on
-      survey_invites.id = invite_emails.survey_invite_id
-    inner join
-      surveys
-    on
-      surveys.id = survey_invites.survey_id
-    where
-      surveys.project_id = project.id and
-      survey_invites.was_used = false and 
-      invite_emails.token_expires_at > now() and
-      (
-        invite_emails.to_address = nullif(current_setting('session.canonical_email', TRUE), '') or
-        it_me(survey_invites.user_id)
-      )
-  $$;
-
-
---
--- Name: FUNCTION projects_session_outstanding_survey_invites(project public.projects); Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON FUNCTION public.projects_session_outstanding_survey_invites(project public.projects) IS '
-@simpleCollections only
-Invites (and related tokens) for surveys which this user has not yet responded
-to. Details on how to handle survey invites [can be found on the wiki](https://github.com/seasketch/next/wiki/User-Ingress#survey-invites).
-';
 
 
 --
@@ -21543,54 +21214,6 @@ CREATE FUNCTION public.remove_user_from_group("groupId" integer, "userId" intege
 --
 
 COMMENT ON FUNCTION public.remove_user_from_group("groupId" integer, "userId" integer) IS 'Remove the given user from a group. Must be an administrator of the project.';
-
-
---
--- Name: remove_user_from_group_update_survey_invites_trigger(); Type: FUNCTION; Schema: public; Owner: -
---
-
-CREATE FUNCTION public.remove_user_from_group_update_survey_invites_trigger() RETURNS trigger
-    LANGUAGE plpgsql
-    AS $$
-BEGIN
-  -- Remove survey invites where was_added_from_group but user is no longer in relevant groups
-  with for_deletion as (
-    select
-      survey_invites.*
-    from
-      survey_invites
-    inner join
-      surveys
-    on
-      surveys.id = survey_invites.survey_id
-    where
-      survey_invites.user_id = OLD.user_id and
-      was_added_from_group = true and
-      surveys.project_id = (
-        select
-          project_id
-        from
-          project_groups
-        where
-          project_groups.id = OLD.group_id
-        limit 1
-      ) and 
-      -- user isn't in any acceptible group
-      not exists (
-        select 1 from
-          survey_invited_groups
-        where
-          survey_invited_groups.group_id = any (select group_id from project_group_members where user_id = OLD.user_id) and
-          survey_invited_groups.survey_id = survey_invites.survey_id
-      )
-  )
-  delete from
-    survey_invites
-  where
-    survey_invites.id in (select id from for_deletion);
-	RETURN OLD;
-END;
-$$;
 
 
 --
@@ -23558,7 +23181,6 @@ CREATE TABLE public.invite_emails (
     id integer NOT NULL,
     to_address public.email NOT NULL,
     project_invite_id integer,
-    survey_invite_id integer,
     message_id text,
     status public.email_status DEFAULT 'QUEUED'::public.email_status NOT NULL,
     created_at timestamp with time zone DEFAULT timezone('utc'::text, now()) NOT NULL,
@@ -23566,7 +23188,7 @@ CREATE TABLE public.invite_emails (
     token_expires_at timestamp with time zone,
     token text,
     error text,
-    CONSTRAINT invite_email_has_related_model CHECK (((((survey_invite_id IS NOT NULL))::integer + ((project_invite_id IS NOT NULL))::integer) = 1))
+    CONSTRAINT invite_email_has_project_invite CHECK ((project_invite_id IS NOT NULL))
 );
 
 
@@ -23692,16 +23314,15 @@ Send a list of project invites identified by their id.
 CREATE FUNCTION public.session_can_access_form(fid integer) RETURNS boolean
     LANGUAGE sql STABLE SECURITY DEFINER
     AS $$
-    select session_is_admin((select project_id_for_form_id(fid))) or 
-    session_has_survey_invite((select survey_id from forms where id = fid)) or
+    select session_is_admin((select project_id_for_form_id(fid))) or
     (
       session_has_project_access((select project_id_for_form_id(fid))) and (
         session_on_acl((
-          select 
-            id 
-          from 
-            access_control_lists 
-          where 
+          select
+            id
+          from
+            access_control_lists
+          where
             access_control_lists.sketch_class_id is not null and
             access_control_lists.sketch_class_id = (select sketch_class_id from forms where id = fid)
         )) or (
@@ -23712,11 +23333,7 @@ CREATE FUNCTION public.session_can_access_form(fid integer) RETURNS boolean
               surveys
             where
               id = (select survey_id from forms where forms.id = fid) and
-              (
-                is_disabled = false and (
-                  access_type = 'PUBLIC' or session_in_group(survey_group_ids(surveys.id))
-                )
-              )
+              is_disabled = false
           )
         )
       )
@@ -23756,40 +23373,17 @@ COMMENT ON FUNCTION public.session_can_access_sketch(skid integer) IS '@omit';
 CREATE FUNCTION public.session_has_project_access(pid integer) RETURNS boolean
     LANGUAGE sql STABLE SECURITY DEFINER PARALLEL SAFE
     AS $$
-    -- Here we give access if the project is public, if the session is an admin,
-    -- or if the session belongs to an approved participant
     select exists(
       select
         1
-      from 
-        projects 
-      where 
-        projects.id = pid and 
-        access_control = 'public'
-    ) or 
-    session_is_admin(pid) or 
-    session_is_approved_participant(pid) or  
-    -- session has a survey invite token with matching projectId
-    exists(
-      select
-        1
       from
-        survey_invites
-      inner join
-        surveys
-      on
-        surveys.id = survey_invites.survey_id
+        projects
       where
-        surveys.project_id = pid and 
-        (
-          survey_invites.user_id = nullif(current_setting('session.user_id', TRUE), '')::int or
-          (
-            survey_invites.email = nullif(current_setting('session.canonical_email', TRUE), '') and
-            current_setting('session.email_verified', true) = 'true'
-          ) or
-          survey_invites.email = nullif(current_setting('session.survey_invite_email', TRUE), '')
-        )            
-    )
+        projects.id = pid and
+        access_control = 'public'
+    ) or
+    session_is_admin(pid) or
+    session_is_approved_participant(pid)
   $$;
 
 
@@ -23798,38 +23392,6 @@ CREATE FUNCTION public.session_has_project_access(pid integer) RETURNS boolean
 --
 
 COMMENT ON FUNCTION public.session_has_project_access(pid integer) IS '@omit';
-
-
---
--- Name: session_has_survey_invite(integer); Type: FUNCTION; Schema: public; Owner: -
---
-
-CREATE FUNCTION public.session_has_survey_invite(survey_id integer) RETURNS boolean
-    LANGUAGE sql SECURITY DEFINER
-    AS $$
-    select exists (
-      select
-        1
-      from
-        survey_invites
-      where
-        survey_invites.survey_id = survey_id and (
-          survey_invites.user_id = nullif(current_setting('session.user_id', TRUE), '')::int or
-          (
-            survey_invites.email = nullif(current_setting('session.canonical_email', TRUE), '') and
-            current_setting('session.email_verified', true) = 'true'
-          ) or
-          survey_invites.email = nullif(current_setting('session.survey_invite_email', TRUE), '')
-        )
-    )
-  $$;
-
-
---
--- Name: FUNCTION session_has_survey_invite(survey_id integer); Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON FUNCTION public.session_has_survey_invite(survey_id integer) IS '@omit';
 
 
 --
@@ -25596,136 +25158,6 @@ $$;
 
 
 --
--- Name: survey_group_ids(integer); Type: FUNCTION; Schema: public; Owner: -
---
-
-CREATE FUNCTION public.survey_group_ids(id integer) RETURNS integer[]
-    LANGUAGE sql STABLE SECURITY DEFINER
-    AS $$
-    select array_agg(group_id) from survey_invited_groups where survey_id = id
-$$;
-
-
---
--- Name: FUNCTION survey_group_ids(id integer); Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON FUNCTION public.survey_group_ids(id integer) IS '@omit';
-
-
---
--- Name: survey_invite_before_insert_trigger(); Type: FUNCTION; Schema: public; Owner: -
---
-
-CREATE FUNCTION public.survey_invite_before_insert_trigger() RETURNS trigger
-    LANGUAGE plpgsql
-    AS $$
-    begin
-      if NEW.user_id is null and NEW.email is null then
-        raise exception 'Must specific either user_id or email';
-      end if;
-      if NEW.user_id is not null and (NEW.email is not null or NEW.fullname is not null) then
-        raise exception 'Invites created from group lists should not have an email or fullname';
-      end if;
-      if NEW.email is null and NEW.was_added_from_group = false then
-        raise exception 'was_added_from_group should be true if email is blank';
-      end if;
-      return NEW;
-    end;
-  $$;
-
-
---
--- Name: survey_invite_before_update_trigger(); Type: FUNCTION; Schema: public; Owner: -
---
-
-CREATE FUNCTION public.survey_invite_before_update_trigger() RETURNS trigger
-    LANGUAGE plpgsql
-    AS $$
-    begin
-      if NEW.user_id is null and NEW.email is null then
-        raise exception 'Must specific either user_id or email';
-      end if;
-      if NEW.email is null and NEW.was_added_from_group = false then
-        raise exception 'was_added_from_group should be true if email is blank';
-      end if;
-      return NEW;
-    end;
-  $$;
-
-
---
--- Name: survey_invite_was_used(integer); Type: FUNCTION; Schema: public; Owner: -
---
-
-CREATE FUNCTION public.survey_invite_was_used(invite_id integer) RETURNS boolean
-    LANGUAGE sql STABLE SECURITY DEFINER
-    AS $$
-    select was_used from survey_invites where id = invite_id;
-  $$;
-
-
---
--- Name: FUNCTION survey_invite_was_used(invite_id integer); Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON FUNCTION public.survey_invite_was_used(invite_id integer) IS '@omit';
-
-
---
--- Name: survey_invites_status(public.survey_invites); Type: FUNCTION; Schema: public; Owner: -
---
-
-CREATE FUNCTION public.survey_invites_status(invite public.survey_invites) RETURNS public.invite_status
-    LANGUAGE plpgsql STABLE SECURITY DEFINER
-    AS $$
-    declare
-      email_status invite_status;
-      expired boolean;
-      has_complaint boolean;
-      has_responded boolean;
-    begin
-      select exists(select 1 from invite_emails where to_address = invite.email and status = 'COMPLAINT') into has_complaint;
-      select exists(select 1 from survey_responses where user_id = invite.user_id and survey_id = invite.survey_id) into has_responded;
-      if invite.was_used = true or has_responded = true then 
-        return 'CONFIRMED';
-      end if;
-      if has_complaint then
-        return 'COMPLAINT';
-      else
-        select
-          now() > token_expires_at as expired,
-          status
-        into
-          expired,
-          email_status
-        from
-          invite_emails
-        where
-          survey_invite_id = invite.id
-        order by
-          created_at desc
-        limit 1;
-        if expired = true then
-          return 'TOKEN_EXPIRED';
-        elsif email_status is null then
-          return 'QUEUED';
-        else
-          return email_status::invite_status;
-        end if;
-      end if;
-    end;      
-  $$;
-
-
---
--- Name: FUNCTION survey_invites_status(invite public.survey_invites); Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON FUNCTION public.survey_invites_status(invite public.survey_invites) IS 'Indicates the status of the invite, e.g. whether an invite email has been sent, status of those emails, and whether a response has been submitted.';
-
-
---
 -- Name: survey_response_mvt(integer, integer, integer, integer); Type: FUNCTION; Schema: public; Owner: -
 --
 
@@ -25850,36 +25282,6 @@ CREATE FUNCTION public.surveys_basemaps(survey public.surveys) RETURNS SETOF pub
 --
 
 COMMENT ON FUNCTION public.surveys_basemaps(survey public.surveys) IS '@simpleCollections only';
-
-
---
--- Name: surveys_invited_groups(public.surveys); Type: FUNCTION; Schema: public; Owner: -
---
-
-CREATE FUNCTION public.surveys_invited_groups(survey public.surveys) RETURNS SETOF public.project_groups
-    LANGUAGE plpgsql STABLE SECURITY DEFINER
-    AS $$
-    begin
-      if session_is_admin(survey.project_id) = false then
-        raise exception 'Must be project admin';
-      end if;
-      return query select 
-        * 
-      from 
-        project_groups
-      where
-        id = any( select group_id from survey_invited_groups where survey_id = survey.id);
-    end;
-  $$;
-
-
---
--- Name: FUNCTION surveys_invited_groups(survey public.surveys); Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON FUNCTION public.surveys_invited_groups(survey public.surveys) IS '
-@simpleCollections only
-';
 
 
 --
@@ -29468,114 +28870,6 @@ CREATE FUNCTION public.update_sketch_parent(id integer, "folderId" integer, "col
 
 
 --
--- Name: update_survey_group_invites(integer); Type: FUNCTION; Schema: public; Owner: -
---
-
-CREATE FUNCTION public.update_survey_group_invites(surveyid integer) RETURNS void
-    LANGUAGE plpgsql SECURITY DEFINER
-    AS $$
-    begin
-      -- delete group-related invites for users that do not belong to any of the groups
-      delete from
-        survey_invites
-      where
-        survey_invites.was_added_from_group = true and
-        survey_invites.survey_id = surveyid and
-        not exists (
-          select 
-            1 
-          from 
-            project_group_members 
-          where
-            project_group_members.user_id = survey_invites.user_id and
-            project_group_members.group_id = any (
-              select
-                group_id
-              from
-                survey_invited_groups
-              where
-                survey_invited_groups.survey_id = surveyid
-              
-            )
-        );
-      -- find users in related groups who are lacking an invite and add them
-      insert into survey_invites (
-        user_id,
-        survey_id,
-        was_added_from_group
-      ) select
-        distinct user_id,
-        surveyid,
-        true
-      from
-        project_group_members
-      where
-        project_group_members.group_id = any (
-          select
-            group_id
-          from
-            survey_invited_groups
-          where
-            survey_invited_groups.survey_id = surveyid
-        ) and not exists (
-          select 1 from 
-            survey_invites
-          where
-            survey_id = surveyid and
-            user_id = project_group_members.user_id
-        );
-    end;
-$$;
-
-
---
--- Name: FUNCTION update_survey_group_invites(surveyid integer); Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON FUNCTION public.update_survey_group_invites(surveyid integer) IS '
-Not for use in graphql api. Is called by update functions and triggers related
-to group membership and survey invited groups to update the list of invitations.
-';
-
-
---
--- Name: update_survey_invited_groups(integer, integer[]); Type: FUNCTION; Schema: public; Owner: -
---
-
-CREATE FUNCTION public.update_survey_invited_groups("surveyId" integer, "groupIds" integer[]) RETURNS SETOF public.project_groups
-    LANGUAGE plpgsql SECURITY DEFINER
-    AS $$
-    declare
-      pid int;
-    begin
-      select project_id into pid from surveys where id = "surveyId";
-      if session_is_admin(pid) = false then
-        raise exception 'Must be project admin';
-      end if;
-      delete from survey_invited_groups where survey_id = "surveyId";
-      insert into survey_invited_groups (survey_id, group_id) select "surveyId", id from project_groups where project_id = pid and id = any("groupIds");
-      perform update_survey_group_invites("surveyId");
-      return query select * from project_groups where id = any("groupIds");
-    end;
-  $$;
-
-
---
--- Name: FUNCTION update_survey_invited_groups("surveyId" integer, "groupIds" integer[]); Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON FUNCTION public.update_survey_invited_groups("surveyId" integer, "groupIds" integer[]) IS '
-Updates the list of groups that should have access to the given survey. Users
-in any added groups will get an invite, and the system will create an invite for
-any users that are added to the group. When removing a group, the system will
-delete invites for any user that is no longer in an invited group. *Clients
-should warn admins of this behavior when removing groups for an active survey*.
-
-The list of invited groups can be accessed via `Survey.invitedGroups`.
-';
-
-
---
 -- Name: update_table_of_contents_item_children(integer, integer[]); Type: FUNCTION; Schema: public; Owner: -
 --
 
@@ -31532,40 +30826,6 @@ ALTER TABLE public.survey_consent_documents ALTER COLUMN id ADD GENERATED BY DEF
 
 
 --
--- Name: survey_invited_groups; Type: TABLE; Schema: public; Owner: -
---
-
-CREATE TABLE public.survey_invited_groups (
-    survey_id integer NOT NULL,
-    group_id integer NOT NULL
-);
-
-
---
--- Name: TABLE survey_invited_groups; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON TABLE public.survey_invited_groups IS '
-@omit all
-@simpleCollections only
-';
-
-
---
--- Name: survey_invites_id_seq; Type: SEQUENCE; Schema: public; Owner: -
---
-
-ALTER TABLE public.survey_invites ALTER COLUMN id ADD GENERATED BY DEFAULT AS IDENTITY (
-    SEQUENCE NAME public.survey_invites_id_seq
-    START WITH 1
-    INCREMENT BY 1
-    NO MINVALUE
-    NO MAXVALUE
-    CACHE 1
-);
-
-
---
 -- Name: survey_response_network_addresses; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -31931,14 +31191,6 @@ ALTER TABLE ONLY public.deleted_geojson_objects
 
 ALTER TABLE ONLY public.email_notification_preferences
     ADD CONSTRAINT email_notification_preferences_user_id_key UNIQUE (user_id);
-
-
---
--- Name: survey_invites email_unique; Type: CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.survey_invites
-    ADD CONSTRAINT email_unique UNIQUE (email);
 
 
 --
@@ -32517,30 +31769,6 @@ ALTER TABLE ONLY public.survey_consent_documents
 
 
 --
--- Name: survey_invited_groups survey_invited_groups_survey_id_group_id_key; Type: CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.survey_invited_groups
-    ADD CONSTRAINT survey_invited_groups_survey_id_group_id_key UNIQUE (survey_id, group_id);
-
-
---
--- Name: survey_invites survey_invites_email_survey_id_key; Type: CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.survey_invites
-    ADD CONSTRAINT survey_invites_email_survey_id_key UNIQUE (email, survey_id);
-
-
---
--- Name: survey_invites survey_invites_pkey; Type: CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.survey_invites
-    ADD CONSTRAINT survey_invites_pkey PRIMARY KEY (id);
-
-
---
 -- Name: survey_responses survey_responses_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -33066,20 +32294,6 @@ CREATE INDEX invite_emails_status_idx ON public.invite_emails USING btree (statu
 
 
 --
--- Name: invite_emails_survey_invite_id_idx; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX invite_emails_survey_invite_id_idx ON public.invite_emails USING btree (survey_invite_id);
-
-
---
--- Name: invite_emails_survey_invite_id_to_address_idx; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX invite_emails_survey_invite_id_to_address_idx ON public.invite_emails USING btree (survey_invite_id, to_address);
-
-
---
 -- Name: invite_emails_token_idx; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -33577,20 +32791,6 @@ CREATE INDEX sprites_project_id_idx ON public.sprites USING btree (project_id);
 
 
 --
--- Name: survey_invited_groups_group_id_idx; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX survey_invited_groups_group_id_idx ON public.survey_invited_groups USING btree (group_id);
-
-
---
--- Name: survey_invites_survey_id_idx; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX survey_invites_survey_id_idx ON public.survey_invites USING btree (survey_id);
-
-
---
 -- Name: survey_response_network_addresses_ip_hash_idx; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -33787,13 +32987,6 @@ CREATE TRIGGER acl_update_draft_toc_has_changes_trigger AFTER UPDATE ON public.a
 
 
 --
--- Name: project_group_members after_add_user_to_group_update_survey_invites; Type: TRIGGER; Schema: public; Owner: -
---
-
-CREATE TRIGGER after_add_user_to_group_update_survey_invites AFTER INSERT ON public.project_group_members FOR EACH ROW EXECUTE FUNCTION public.add_user_to_group_update_survey_invites_trigger();
-
-
---
 -- Name: data_layers after_data_layers_update_or_delete_set_draft_table_of_contents_; Type: TRIGGER; Schema: public; Owner: -
 --
 
@@ -33819,20 +33012,6 @@ CREATE TRIGGER after_map_bookmark_insert_screenshot_map AFTER INSERT ON public.m
 --
 
 CREATE TRIGGER after_post_insert_trigger AFTER INSERT ON public.posts FOR EACH ROW EXECUTE FUNCTION public.after_post_insert();
-
-
---
--- Name: project_group_members after_remove_user_from_group_update_survey_invites; Type: TRIGGER; Schema: public; Owner: -
---
-
-CREATE TRIGGER after_remove_user_from_group_update_survey_invites AFTER DELETE ON public.project_group_members FOR EACH ROW EXECUTE FUNCTION public.remove_user_from_group_update_survey_invites_trigger();
-
-
---
--- Name: survey_responses after_response_submission; Type: TRIGGER; Schema: public; Owner: -
---
-
-CREATE TRIGGER after_response_submission AFTER INSERT OR UPDATE ON public.survey_responses FOR EACH ROW EXECUTE FUNCTION public.after_response_submission();
 
 
 --
@@ -33987,13 +33166,6 @@ CREATE TRIGGER before_sketch_insert_or_update_trigger BEFORE INSERT OR UPDATE ON
 --
 
 CREATE TRIGGER before_survey_delete_trigger BEFORE DELETE ON public.surveys FOR EACH ROW EXECUTE FUNCTION public.before_survey_delete();
-
-
---
--- Name: survey_invited_groups before_survey_invited_groups_insert_trigger; Type: TRIGGER; Schema: public; Owner: -
---
-
-CREATE TRIGGER before_survey_invited_groups_insert_trigger BEFORE INSERT ON public.survey_invited_groups FOR EACH ROW EXECUTE FUNCTION public.before_survey_invited_groups_insert();
 
 
 --
@@ -34169,20 +33341,6 @@ CREATE TRIGGER sketch_classes_before_update BEFORE UPDATE ON public.sketch_class
 --
 
 CREATE TRIGGER sketch_classes_prohibit_delete_t BEFORE DELETE ON public.sketch_classes FOR EACH ROW EXECUTE FUNCTION public.sketch_classes_prohibit_delete();
-
-
---
--- Name: survey_invites survey_invites_before_insert; Type: TRIGGER; Schema: public; Owner: -
---
-
-CREATE TRIGGER survey_invites_before_insert BEFORE INSERT ON public.survey_invites FOR EACH ROW EXECUTE FUNCTION public.survey_invite_before_insert_trigger();
-
-
---
--- Name: survey_invites survey_invites_before_update; Type: TRIGGER; Schema: public; Owner: -
---
-
-CREATE TRIGGER survey_invites_before_update BEFORE UPDATE ON public.survey_invites FOR EACH ROW EXECUTE FUNCTION public.survey_invite_before_update_trigger();
 
 
 --
@@ -34950,23 +34108,6 @@ ALTER TABLE ONLY public.invite_emails
 --
 
 COMMENT ON CONSTRAINT invite_emails_project_invite_id_fkey ON public.invite_emails IS '@simpleCollections only';
-
-
---
--- Name: invite_emails invite_emails_survey_invite_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.invite_emails
-    ADD CONSTRAINT invite_emails_survey_invite_id_fkey FOREIGN KEY (survey_invite_id) REFERENCES public.survey_invites(id) ON DELETE CASCADE;
-
-
---
--- Name: CONSTRAINT invite_emails_survey_invite_id_fkey ON invite_emails; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON CONSTRAINT invite_emails_survey_invite_id_fkey ON public.invite_emails IS '
-@simpleCollections only
-';
 
 
 --
@@ -35764,54 +34905,6 @@ ALTER TABLE ONLY public.survey_consent_documents
 
 
 --
--- Name: survey_invited_groups survey_invited_groups_group_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.survey_invited_groups
-    ADD CONSTRAINT survey_invited_groups_group_id_fkey FOREIGN KEY (group_id) REFERENCES public.project_groups(id) ON DELETE CASCADE;
-
-
---
--- Name: CONSTRAINT survey_invited_groups_group_id_fkey ON survey_invited_groups; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON CONSTRAINT survey_invited_groups_group_id_fkey ON public.survey_invited_groups IS '@omit';
-
-
---
--- Name: survey_invited_groups survey_invited_groups_survey_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.survey_invited_groups
-    ADD CONSTRAINT survey_invited_groups_survey_id_fkey FOREIGN KEY (survey_id) REFERENCES public.surveys(id) ON DELETE CASCADE;
-
-
---
--- Name: survey_invites survey_invites_survey_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.survey_invites
-    ADD CONSTRAINT survey_invites_survey_id_fkey FOREIGN KEY (survey_id) REFERENCES public.surveys(id) ON DELETE CASCADE;
-
-
---
--- Name: CONSTRAINT survey_invites_survey_id_fkey ON survey_invites; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON CONSTRAINT survey_invites_survey_id_fkey ON public.survey_invites IS '
-@simpleCollections only
-';
-
-
---
--- Name: survey_invites survey_invites_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.survey_invites
-    ADD CONSTRAINT survey_invites_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id);
-
-
---
 -- Name: survey_response_network_addresses survey_response_network_addresses_survey_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -36411,12 +35504,9 @@ ALTER TABLE public.invite_emails ENABLE ROW LEVEL SECURITY;
 -- Name: invite_emails invite_emails_admin; Type: POLICY; Schema: public; Owner: -
 --
 
-CREATE POLICY invite_emails_admin ON public.invite_emails FOR SELECT TO seasketch_user USING ((public.session_is_admin(( SELECT project_invites.project_id
+CREATE POLICY invite_emails_admin ON public.invite_emails FOR SELECT TO seasketch_user USING (public.session_is_admin(( SELECT project_invites.project_id
    FROM public.project_invites
-  WHERE (project_invites.id = invite_emails.project_invite_id))) OR public.session_is_admin(( SELECT surveys.project_id
-   FROM (public.survey_invites
-     JOIN public.surveys ON ((surveys.id = survey_invites.survey_id)))
-  WHERE (survey_invites.id = invite_emails.survey_invite_id)))));
+  WHERE (project_invites.id = invite_emails.project_invite_id))));
 
 
 --
@@ -36892,47 +35982,6 @@ CREATE POLICY survey_consent_documents_admin_access ON public.survey_consent_doc
 
 
 --
--- Name: survey_invited_groups; Type: ROW SECURITY; Schema: public; Owner: -
---
-
-ALTER TABLE public.survey_invited_groups ENABLE ROW LEVEL SECURITY;
-
---
--- Name: survey_invites; Type: ROW SECURITY; Schema: public; Owner: -
---
-
-ALTER TABLE public.survey_invites ENABLE ROW LEVEL SECURITY;
-
---
--- Name: survey_invites survey_invites_admin_delete; Type: POLICY; Schema: public; Owner: -
---
-
-CREATE POLICY survey_invites_admin_delete ON public.survey_invites FOR DELETE TO seasketch_user USING (public.session_is_admin(( SELECT surveys.project_id
-   FROM public.surveys
-  WHERE (surveys.id = survey_invites.survey_id))));
-
-
---
--- Name: survey_invites survey_invites_admin_select; Type: POLICY; Schema: public; Owner: -
---
-
-CREATE POLICY survey_invites_admin_select ON public.survey_invites FOR SELECT TO seasketch_user USING (public.session_is_admin(( SELECT surveys.project_id
-   FROM public.surveys
-  WHERE (surveys.id = survey_invites.survey_id))));
-
-
---
--- Name: survey_invites survey_invites_admin_update; Type: POLICY; Schema: public; Owner: -
---
-
-CREATE POLICY survey_invites_admin_update ON public.survey_invites FOR UPDATE TO seasketch_user USING (public.session_is_admin(( SELECT surveys.project_id
-   FROM public.surveys
-  WHERE (surveys.id = survey_invites.survey_id)))) WITH CHECK (public.session_is_admin(( SELECT surveys.project_id
-   FROM public.surveys
-  WHERE (surveys.id = survey_invites.survey_id))));
-
-
---
 -- Name: survey_responses; Type: ROW SECURITY; Schema: public; Owner: -
 --
 
@@ -36981,21 +36030,10 @@ CREATE POLICY surveys_admin ON public.surveys TO seasketch_user USING (public.se
 
 
 --
--- Name: survey_invited_groups surveys_invited_groups_admin; Type: POLICY; Schema: public; Owner: -
---
-
-CREATE POLICY surveys_invited_groups_admin ON public.survey_invited_groups TO seasketch_user USING (public.session_is_admin(( SELECT surveys.project_id
-   FROM public.surveys
-  WHERE (surveys.id = survey_invited_groups.survey_id)))) WITH CHECK (public.session_is_admin(( SELECT surveys.project_id
-   FROM public.surveys
-  WHERE (surveys.id = survey_invited_groups.survey_id))));
-
-
---
 -- Name: surveys surveys_select; Type: POLICY; Schema: public; Owner: -
 --
 
-CREATE POLICY surveys_select ON public.surveys FOR SELECT TO anon USING ((public.session_is_admin(project_id) OR public.session_has_survey_invite(id) OR (public.session_has_project_access(project_id) AND (is_disabled = false) AND ((access_type = 'PUBLIC'::public.survey_access_type) OR public.session_in_group(public.survey_group_ids(id))))));
+CREATE POLICY surveys_select ON public.surveys FOR SELECT TO anon USING ((public.session_is_admin(project_id) OR (public.session_has_project_access(project_id) AND (is_disabled = false))));
 
 
 --
@@ -38808,13 +37846,6 @@ GRANT ALL ON FUNCTION public.add_user_to_group("groupId" integer, "userId" integ
 
 
 --
--- Name: FUNCTION add_user_to_group_update_survey_invites_trigger(); Type: ACL; Schema: public; Owner: -
---
-
-REVOKE ALL ON FUNCTION public.add_user_to_group_update_survey_invites_trigger() FROM PUBLIC;
-
-
---
 -- Name: FUNCTION add_valid_child_sketch_class(parent integer, child integer); Type: ACL; Schema: public; Owner: -
 --
 
@@ -38904,13 +37935,6 @@ REVOKE ALL ON FUNCTION public.after_post_insert_notify_subscriptions() FROM PUBL
 --
 
 REVOKE ALL ON FUNCTION public.after_project_background_jobs_insert_or_update_notify_subscript() FROM PUBLIC;
-
-
---
--- Name: FUNCTION after_response_submission(); Type: ACL; Schema: public; Owner: -
---
-
-REVOKE ALL ON FUNCTION public.after_response_submission() FROM PUBLIC;
 
 
 --
@@ -39378,13 +38402,6 @@ REVOKE ALL ON FUNCTION public.before_sketch_insert_or_update() FROM PUBLIC;
 --
 
 REVOKE ALL ON FUNCTION public.before_survey_delete() FROM PUBLIC;
-
-
---
--- Name: FUNCTION before_survey_invited_groups_insert(); Type: ACL; Schema: public; Owner: -
---
-
-REVOKE ALL ON FUNCTION public.before_survey_invited_groups_insert() FROM PUBLIC;
 
 
 --
@@ -40091,14 +39108,6 @@ GRANT ALL ON FUNCTION public.confirm_onboarded() TO seasketch_user;
 
 REVOKE ALL ON FUNCTION public.confirm_project_invite(invite_id integer) FROM PUBLIC;
 GRANT ALL ON FUNCTION public.confirm_project_invite(invite_id integer) TO anon;
-
-
---
--- Name: FUNCTION confirm_project_invite_with_survey_token("projectId" integer); Type: ACL; Schema: public; Owner: -
---
-
-REVOKE ALL ON FUNCTION public.confirm_project_invite_with_survey_token("projectId" integer) FROM PUBLIC;
-GRANT ALL ON FUNCTION public.confirm_project_invite_with_survey_token("projectId" integer) TO seasketch_user;
 
 
 --
@@ -40846,28 +39855,6 @@ GRANT ALL ON FUNCTION public.create_sprite("projectId" integer, _md5 text, _type
 
 REVOKE ALL ON FUNCTION public.create_stable_id() FROM PUBLIC;
 GRANT ALL ON FUNCTION public.create_stable_id() TO anon;
-
-
---
--- Name: TABLE survey_invites; Type: ACL; Schema: public; Owner: -
---
-
-GRANT SELECT,DELETE ON TABLE public.survey_invites TO seasketch_user;
-
-
---
--- Name: COLUMN survey_invites.fullname; Type: ACL; Schema: public; Owner: -
---
-
-GRANT UPDATE(fullname) ON TABLE public.survey_invites TO seasketch_user;
-
-
---
--- Name: FUNCTION create_survey_invites("surveyId" integer, "includeProjectInvite" boolean, "makeAdmin" boolean, "groupNames" text[], "surveyInviteOptions" public.survey_invite_options[]); Type: ACL; Schema: public; Owner: -
---
-
-REVOKE ALL ON FUNCTION public.create_survey_invites("surveyId" integer, "includeProjectInvite" boolean, "makeAdmin" boolean, "groupNames" text[], "surveyInviteOptions" public.survey_invite_options[]) FROM PUBLIC;
-GRANT ALL ON FUNCTION public.create_survey_invites("surveyId" integer, "includeProjectInvite" boolean, "makeAdmin" boolean, "groupNames" text[], "surveyInviteOptions" public.survey_invite_options[]) TO seasketch_user;
 
 
 --
@@ -44837,14 +43824,6 @@ GRANT ALL ON FUNCTION public.projects_session_is_admin(p public.projects) TO ano
 
 
 --
--- Name: FUNCTION projects_session_outstanding_survey_invites(project public.projects); Type: ACL; Schema: public; Owner: -
---
-
-REVOKE ALL ON FUNCTION public.projects_session_outstanding_survey_invites(project public.projects) FROM PUBLIC;
-GRANT ALL ON FUNCTION public.projects_session_outstanding_survey_invites(project public.projects) TO anon;
-
-
---
 -- Name: FUNCTION projects_session_participation_status(p public.projects); Type: ACL; Schema: public; Owner: -
 --
 
@@ -45132,13 +44111,6 @@ GRANT ALL ON FUNCTION public.remove_group_from_acl("aclId" integer, "groupId" in
 
 REVOKE ALL ON FUNCTION public.remove_user_from_group("groupId" integer, "userId" integer) FROM PUBLIC;
 GRANT ALL ON FUNCTION public.remove_user_from_group("groupId" integer, "userId" integer) TO seasketch_user;
-
-
---
--- Name: FUNCTION remove_user_from_group_update_survey_invites_trigger(); Type: ACL; Schema: public; Owner: -
---
-
-REVOKE ALL ON FUNCTION public.remove_user_from_group_update_survey_invites_trigger() FROM PUBLIC;
 
 
 --
@@ -45478,13 +44450,6 @@ GRANT SELECT(project_invite_id) ON TABLE public.invite_emails TO seasketch_user;
 
 
 --
--- Name: COLUMN invite_emails.survey_invite_id; Type: ACL; Schema: public; Owner: -
---
-
-GRANT SELECT(survey_invite_id) ON TABLE public.invite_emails TO seasketch_user;
-
-
---
 -- Name: COLUMN invite_emails.status; Type: ACL; Schema: public; Owner: -
 --
 
@@ -45564,14 +44529,6 @@ GRANT ALL ON FUNCTION public.session_can_access_sketch(skid integer) TO anon;
 
 REVOKE ALL ON FUNCTION public.session_has_project_access(pid integer) FROM PUBLIC;
 GRANT ALL ON FUNCTION public.session_has_project_access(pid integer) TO anon;
-
-
---
--- Name: FUNCTION session_has_survey_invite(survey_id integer); Type: ACL; Schema: public; Owner: -
---
-
-REVOKE ALL ON FUNCTION public.session_has_survey_invite(survey_id integer) FROM PUBLIC;
-GRANT ALL ON FUNCTION public.session_has_survey_invite(survey_id integer) TO anon;
 
 
 --
@@ -48827,44 +47784,6 @@ REVOKE ALL ON FUNCTION public.subpath(public.ltree, integer, integer) FROM PUBLI
 
 
 --
--- Name: FUNCTION survey_group_ids(id integer); Type: ACL; Schema: public; Owner: -
---
-
-REVOKE ALL ON FUNCTION public.survey_group_ids(id integer) FROM PUBLIC;
-GRANT ALL ON FUNCTION public.survey_group_ids(id integer) TO anon;
-
-
---
--- Name: FUNCTION survey_invite_before_insert_trigger(); Type: ACL; Schema: public; Owner: -
---
-
-REVOKE ALL ON FUNCTION public.survey_invite_before_insert_trigger() FROM PUBLIC;
-
-
---
--- Name: FUNCTION survey_invite_before_update_trigger(); Type: ACL; Schema: public; Owner: -
---
-
-REVOKE ALL ON FUNCTION public.survey_invite_before_update_trigger() FROM PUBLIC;
-
-
---
--- Name: FUNCTION survey_invite_was_used(invite_id integer); Type: ACL; Schema: public; Owner: -
---
-
-REVOKE ALL ON FUNCTION public.survey_invite_was_used(invite_id integer) FROM PUBLIC;
-GRANT ALL ON FUNCTION public.survey_invite_was_used(invite_id integer) TO anon;
-
-
---
--- Name: FUNCTION survey_invites_status(invite public.survey_invites); Type: ACL; Schema: public; Owner: -
---
-
-REVOKE ALL ON FUNCTION public.survey_invites_status(invite public.survey_invites) FROM PUBLIC;
-GRANT ALL ON FUNCTION public.survey_invites_status(invite public.survey_invites) TO seasketch_user;
-
-
---
 -- Name: FUNCTION survey_response_mvt("formElementId" integer, x integer, y integer, z integer); Type: ACL; Schema: public; Owner: -
 --
 
@@ -48910,14 +47829,6 @@ GRANT ALL ON FUNCTION public.surveys_archived_response_count(survey public.surve
 
 REVOKE ALL ON FUNCTION public.surveys_basemaps(survey public.surveys) FROM PUBLIC;
 GRANT ALL ON FUNCTION public.surveys_basemaps(survey public.surveys) TO anon;
-
-
---
--- Name: FUNCTION surveys_invited_groups(survey public.surveys); Type: ACL; Schema: public; Owner: -
---
-
-REVOKE ALL ON FUNCTION public.surveys_invited_groups(survey public.surveys) FROM PUBLIC;
-GRANT ALL ON FUNCTION public.surveys_invited_groups(survey public.surveys) TO seasketch_user;
 
 
 --
@@ -49799,21 +48710,6 @@ GRANT ALL ON FUNCTION public.update_sketch_parent(id integer, "folderId" integer
 
 
 --
--- Name: FUNCTION update_survey_group_invites(surveyid integer); Type: ACL; Schema: public; Owner: -
---
-
-REVOKE ALL ON FUNCTION public.update_survey_group_invites(surveyid integer) FROM PUBLIC;
-
-
---
--- Name: FUNCTION update_survey_invited_groups("surveyId" integer, "groupIds" integer[]); Type: ACL; Schema: public; Owner: -
---
-
-REVOKE ALL ON FUNCTION public.update_survey_invited_groups("surveyId" integer, "groupIds" integer[]) FROM PUBLIC;
-GRANT ALL ON FUNCTION public.update_survey_invited_groups("surveyId" integer, "groupIds" integer[]) TO seasketch_user;
-
-
---
 -- Name: FUNCTION update_table_of_contents_item_children("parentId" integer, "childIds" integer[]); Type: ACL; Schema: public; Owner: -
 --
 
@@ -50349,13 +49245,6 @@ GRANT SELECT ON TABLE public.sprite_images TO anon;
 --
 
 GRANT SELECT ON TABLE public.survey_consent_documents TO seasketch_user;
-
-
---
--- Name: TABLE survey_invited_groups; Type: ACL; Schema: public; Owner: -
---
-
-GRANT SELECT,INSERT,DELETE ON TABLE public.survey_invited_groups TO seasketch_user;
 
 
 --

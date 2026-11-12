@@ -1,4 +1,3 @@
-import MockSES from "aws-sdk/clients/ses";
 import {
   sql,
   DatabaseTransactionConnectionType,
@@ -12,7 +11,6 @@ import { randomUUID } from "crypto";
 import { QueryResult } from "pg";
 // @ts-ignore
 import { raw } from "slonik-sql-tag-raw";
-import { sendQueuedSurveyInvites } from "../src/invites/surveyInvites";
 import auth0 from "auth0";
 jest.mock("auth0");
 // @ts-ignore
@@ -547,76 +545,6 @@ export async function removeUserFromGroup(
 ): Promise<void> {
   await conn.any(sql`select remove_user_from_group(${groupId}, ${userId})`);
   return;
-}
-
-export async function createAndSendSurveyInvite(
-  pool: DatabasePoolType,
-  accessType: "PUBLIC" | "INVITE_ONLY",
-  callback: (
-    conn: DatabaseTransactionConnectionType,
-    projectId: number,
-    adminId: number,
-    userA: number,
-    surveyId: number,
-    inviteId: number
-  ) => Promise<void>
-) {
-  return projectTransaction(
-    pool,
-    "public",
-    async (conn, projectId, adminId, [userA, userB]) => {
-      await createSession(conn, adminId, true, false);
-      const templateExists = await conn.oneFirst(
-        sql`select count(id) from forms where template_name = 'Basic Template'`
-      );
-      if (!templateExists) {
-        await pool.any(
-          sql`insert into forms (is_template, template_name, template_type) values (true, 'Basic Template', 'SURVEYS') returning id`
-        );
-      }
-      const surveyId = await conn.oneFirst<number>(
-        sql`select id from make_survey('Survey', ${projectId}, null)`
-      );
-      const formId = await conn.oneFirst(
-        sql`select id from forms where survey_id = ${surveyId}`
-      );
-      await conn.any(
-        sql`update surveys set access_type = ${accessType} where id = ${surveyId}`
-      );
-      await conn.any(
-        sql`update surveys set is_disabled = ${false} where id = ${surveyId}`
-      );
-      const invite = await conn.one(
-        sql`select * from create_survey_invites(${surveyId}, false, null, null, array[
-                      ('bob@example.com', 'Bob')::survey_invite_options
-                    ])`
-      );
-      const mock = new MockSES();
-      mock
-        .sendBulkTemplatedEmail()
-        // @ts-ignore
-        .promise.mockImplementationOnce((d) => {
-          return {
-            Status: [
-              {
-                Status: "Success",
-                MessageId: "123abc",
-              },
-            ],
-          };
-        });
-      await clearSession(conn);
-      await sendQueuedSurveyInvites(asPg(conn));
-      await callback(
-        conn,
-        projectId,
-        adminId,
-        userA,
-        surveyId,
-        invite.id as number
-      );
-    }
-  );
 }
 
 export async function verifySessionCanAccessSurveyResources(

@@ -1,4 +1,3 @@
-import { UsersIcon } from "@heroicons/react/solid";
 import { useTranslation } from "react-i18next";
 import { Link, useParams } from "react-router-dom";
 import Badge from "../../components/Badge";
@@ -38,22 +37,6 @@ export default function SurveyList() {
                       {survey.isTemplate && (
                         <Badge variant="warning">{t("Template")}</Badge>
                       )}
-                    </div>
-                  </div>
-                  <div className="mt-2 sm:flex sm:justify-between">
-                    <div className="sm:flex">
-                      <p className="flex items-center text-sm text-gray-500">
-                        <UsersIcon
-                          className="flex-shrink-0 mr-1.5 h-5 w-5 text-gray-400"
-                          aria-hidden="true"
-                        />
-                        {survey.accessType}
-                      </p>
-                      <p className="mt-2 flex items-center text-sm text-gray-500 sm:mt-0 sm:ml-6">
-                        {survey.invitedGroups?.map((g) => (
-                          <Badge>{g.name}</Badge>
-                        ))}
-                      </p>
                     </div>
                   </div>
                 </div>

@@ -138,7 +138,6 @@ async function main() {
     await client.query(
       `update surveys
        set is_disabled = false,
-           access_type = 'PUBLIC',
            supported_languages = '{}',
            limit_to_single_response = false
        where id = $1`,

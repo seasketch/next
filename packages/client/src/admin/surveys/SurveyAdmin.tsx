@@ -62,11 +62,6 @@ export default function SurveyAdmin() {
                                     fragment: gql`
                                       fragment NewSurvey on Survey {
                                         id
-                                        accessType
-                                        invitedGroups {
-                                          id
-                                          name
-                                        }
                                         isDisabled
                                         limitToSingleResponse
                                         name
