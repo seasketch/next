@@ -134,7 +134,7 @@ Not temporary, and kept with their reasons: `@types/express` 4.17.25 and `@types
 
 CRA blocks a modern client: the legacy OpenSSL build, a slow dev server, Jest pinned by `react-scripts`, ESLint tied to `eslint-config-react-app`, and pressure on imported packages to stay CRA-compatible.
 
-**Vite is the candidate**, not a commitment made before a spike. The spike succeeds when all of the following hold with phase 3's full catalog, including bundler-risk, already green on CRA:
+**Vite is the candidate**, not a commitment made before a spike. The spike succeeds when all of the following hold with phase 3's end-user suite, and the admin bundler-risk rows, already green on CRA:
 
 - The dev server hot-reloads and proxies the local GraphQL API.
 - The production build runs without `--openssl-legacy-provider` and produces the static assets the preview and deploy workflows publish, including the source maps the Sentry release step uploads.
@@ -148,7 +148,7 @@ If the spike fails on a dependency that cannot be wrapped, record the blocker in
 
 *(October 2026)* The spike may start on a throwaway branch while phase 3 is underway, so the worker, WASM, and environment-variable problems are known before the journeys that gate them exist. It does not merge until those journeys are green on CRA.
 
-The journeys are the acceptance test. They do not import `react-scripts`, so they carry over unchanged. *(November 2026)* Bundler-risk items live in the [catalog](journeys.md) as ordinary rows that also carry `@bundler`; they are not a separate mini-suite. Before the first production deploy, the client preview workflow publishes the new build to a real host. The full catalog, not only `@smoke`, is what must be green on the new build.
+The journeys are the acceptance test. They do not import `react-scripts`, so they carry over unchanged. *(November 2026)* Bundler-risk items live in the [end-user](journeys-end-user.md) or [admin](journeys-admin.md) catalog, whichever owns the screen, and also carry `@bundler`. They are not a separate mini-suite. Before the first production deploy, the client preview workflow publishes the new build to a real host. Smoke and the end-user suite must be green on the new build. Admin bundler-risk must be green on the admin job.
 
 *(October 2026)* The phase 4 pull request deletes every row in *Pins carried into phase 4*, and the consolidation rules above apply to the client's own dependencies as the pins come off: newest release within the same major, journeys as the test.
 
@@ -189,4 +189,4 @@ Workers, Lambda containers, and CDK's esbuild keep their build tools. "Consisten
 
 - **Phase 2a:** One Node Active LTS across local, CI, the GraphQL image, and Lambdas, deployed to production, with the probe passing.
 - **Phase 2b:** Lerna is gone. There is one root lockfile, with every exception named here. CI and deploy install from the root. The GraphQL image and Lambda bundles build from the workspace. One `graphql`, one `pg`, one copy of each shared library, one range per tool, and every surviving override in the carried-pins table. `tsc -b` of a package builds only its dependencies, and CI builds the target it tests. Smoke is green, and its install time is recorded against the Lerna baseline. A no-product-change deploy passes the production probe. *Install, lockfile, and build paths landed October 2026. The smoke job's install is one root `npm ci`. Consolidation and project references are the open checkpoints under Phase 2b. The production probe is the deploy workflow's check on the first deploy of this change.*
-- **Phase 4:** CRA and `--openssl-legacy-provider` are gone. Smoke and the full catalog, including bundler-risk, pass on the new dev server and production build. ESLint and client tests no longer depend on CRA. The client CI build and dev-server startup are materially faster. The preview and deploy workflows publish the new output.
+- **Phase 4:** CRA and `--openssl-legacy-provider` are gone. Smoke and the end-user suite pass on the new dev server and production build, as does admin bundler-risk. ESLint and client tests no longer depend on CRA. The client CI build and dev-server startup are materially faster. The preview and deploy workflows publish the new output.

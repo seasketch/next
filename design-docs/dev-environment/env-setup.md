@@ -9,7 +9,7 @@
 Three consumers need a running SeaSketch, and they get it from the same commands:
 
 1. **Local development** — the common case, and the one that has to work every morning.
-2. **CI** — the pull-request `@smoke` job and the full-suite job on `master`, dispatch, and the phase 4 pull request.
+2. **CI** — the pull-request `@smoke` job, and separate end-user and admin integration jobs on `master`, dispatch, and the phase 4 pull request.
 3. **Cloud agents** — Cursor cloud agents or any equivalent: a clean Linux VM with the repo, Docker, and a secret environment. No editor, no personal shell profile.
 
 There is one contract. CI and agents are not a separate design. This campaign does not add a hosted staging server; cloud agents running these commands are the isolated place to try a change.
@@ -35,14 +35,14 @@ From a clean checkout, with Docker running and secrets injected ([secrets](secre
 | `npm run dev` | Start the **core** profile in the foreground: Postgres and Redis through Compose, then the API and client plus the watchers a person editing code needs (API TypeScript, Graphile Migrate, GraphQL codegen, Tailwind), and the data-tables, spatial-uploads, and subdivision workers. Restart a process when its code changes. Exit non-zero if any process in the profile dies |
 | `npm run dev -- --profile data` | Core plus the [data profile](local-services.md) |
 | `npm run dev -- --ci` | The same profile without watchers. The API runs from `dist`, so build first. The data-tables and spatial-uploads servers start once, and subdivision is built and started once. The client starts last, after those ports are open |
-| `npm run e2e` | Restore the golden snapshot into `seasketch_e2e` (`setup --reset` for that database only), build the API, and run the full Playwright catalog. The suite starts `--profile e2e`: API on port 13857 and client on port 13000, Redis logical database 1. It does not attach to `npm run dev` and does not write to the `seasketch` database. Chromium is a separate download from `npm install`. Once per machine, and again after a Playwright upgrade: `npm exec --workspace @seasketch/e2e -- playwright install chromium`. Phase 3 adds `npm run e2e:smoke` (`playwright test --grep @smoke`) as the push job; until then the Smoke tests job still runs this command |
+| `npm run e2e` | Restore the golden snapshot into `seasketch_e2e` (`setup --reset` for that database only), build the API, and run the Playwright folder. The suite starts `--profile e2e`: API on port 13857 and client on port 13000, Redis logical database 1. It does not attach to `npm run dev` and does not write to the `seasketch` database. Chromium is a separate download from `npm install`. Once per machine, and again after a Playwright upgrade: `npm exec --workspace @seasketch/e2e -- playwright install chromium`. Phase 3 adds `npm run e2e:smoke` (`--grep @smoke`), `npm run e2e:enduser` (`--grep @enduser`), and `npm run e2e:admin` (`--grep @admin`). Until then the Smoke tests job still runs this command |
 | `npm run dev -- --only <service>` | One service, raw output, no Compose and no log file. What each editor pane runs |
 | `npm run logs [-- <service>]` | Follow `.logs/<service>.log`, or every service |
 | `npm run status` | One line per service that has a readiness URL, then `docker compose ps` |
 
 `setup` never drops a database that already exists. A clean slate is a separate, explicit command (`npm run setup -- --reset`), because people and agents both need one and both need to avoid wiping a database they meant to keep.
 
-CI and cloud agents run `bootstrap`, install Playwright's Chromium, then the Playwright command for that job: `npm run e2e:smoke` on every push, `npm run e2e` for the full catalog. An agent runs `dev` in a background shell and reads `.logs/`. They do not use VS Code tasks.
+CI and cloud agents run `bootstrap`, install Playwright's Chromium, then the Playwright command for that job: `npm run e2e:smoke` on every push, `npm run e2e:enduser` and `npm run e2e:admin` for the two integration jobs. An agent runs `dev` in a background shell and reads `.logs/`. They do not use VS Code tasks.
 
 ## Process supervision
 
@@ -98,5 +98,5 @@ This campaign does not stand up a shared staging server. Phase 1 already proved 
 
 - **Phase 1:** On a clean machine, `bootstrap`, `setup`, then `dev` reaches a fixture project in the browser. Postgres is ready before the API starts. Logs are filterable by service. CI runs the same `setup` before Playwright. A cloud agent follows the README without anyone exporting variables by hand. *Done, October 2026.*
 - **Phase 2:** `bootstrap` is plain `npm install` at the root. *Done, October 2026.*
-- **Phase 3:** `npm run dev -- --profile data` starts the [data profile](local-services.md) with no port collisions. *Done, November 2026.* The push job runs `npm run e2e:smoke`; the full catalog is `npm run e2e`.
-- **Phase 4:** Smoke and the full catalog run against the new client dev server (and, if switched, the production bundle). The client-only preview workflow publishes that build.
+- **Phase 3:** `npm run dev -- --profile data` starts the [data profile](local-services.md) with no port collisions. *Done, November 2026.* The push job runs `npm run e2e:smoke`. End-user and admin integration are `npm run e2e:enduser` and `npm run e2e:admin`.
+- **Phase 4:** Those three commands run against the new client dev server (and, if switched, the production bundle). The client-only preview workflow publishes that build.

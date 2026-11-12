@@ -1,10 +1,10 @@
 # Implemented journeys
 
-The product list of journeys to write is the [campaign catalog](../../design-docs/dev-environment/journeys.md). Iterate that file before farming tests. Offline support in particular waits on a downstream plan named there.
+The product lists are the [end-user catalog](../../design-docs/dev-environment/journeys-end-user.md) and the [admin catalog](../../design-docs/dev-environment/journeys-admin.md). [journeys.md](../../design-docs/dev-environment/journeys.md) is the index, including smoke. Iterate the catalog that matches the interface before farming those tests. End-user is the critical suite (`@enduser`). Admin is separate (`@admin`) and a more forgiving bar. Smoke stays `@smoke` only and is not tagged as either. Offline support waits on a downstream plan named in the index.
 
 This file is the implementation note for tests that already landed under `packages/e2e/tests`. When a catalog item is implemented, mark it *Covered* in the catalog. Fixture setup, selectors, and teardown stay here or in the spec.
 
-The three `@smoke` journeys stay as they are: an anonymous visitor opens `demo-samoa` and sees the map, `e2e|member` opens `e2e-private` and sees only the Members Forum, and `e2e|admin` opens the `demo-samoa` admin page. They are the only `@smoke` tests. Everything else is the full suite.
+The three `@smoke` journeys stay as they are: an anonymous visitor opens `demo-samoa` and sees the map, `e2e|member` opens `e2e-private` and sees only the Members Forum, and `e2e|admin` opens the `demo-samoa` admin page. They are the only `@smoke` tests, and they are not also `@enduser` or `@admin`. Everything else belongs to one of those two integration jobs.
 
 Reads use `demo-samoa`. A signed-in user starts mutating journeys as a non-participant unless the spec says otherwise. Joining happens in the test. Each run starts from a restored `seasketch_e2e` snapshot.
 

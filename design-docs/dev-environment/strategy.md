@@ -10,7 +10,7 @@ Four outcomes that only work together:
 
 - A clean machine — a developer laptop, a GitHub Actions runner, or a cloud agent VM — can install, load a useful database, and start SeaSketch from documented commands.
 - That default stack does not read credentials for, or write to, production systems.
-- Browser tests cover the product's surface — access, sketching, surveys, data, reports, and the rest of the [journey catalog](journeys.md). Every push runs a tiny `@smoke` set designed to finish quickly. The full tagged suite may take 20–30 minutes or longer and runs on `master`, on demand, and on the phase 4 pull request. The production probe is a smaller read-only check of the live site.
+- Browser tests cover the product's surface. Every push runs a tiny `@smoke` set that is not split by audience. End-user journeys and admin journeys are separate catalogs and separate CI jobs. The end-user job is the critical one. The admin job matters and is a more forgiving bar. Either integration job may take 20–30 minutes or longer and runs on `master`, on demand, and on the phase 4 pull request. The production probe is a smaller read-only check of the live site. ([journeys](journeys.md))
 - Large refactors of the client build can be implemented, and those tests show whether they work before they merge.
 
 ## Starting point (2026)
@@ -50,7 +50,7 @@ flowchart LR
   smoke --> ws --> journeys --> bundler
 ```
 
-Phase 1 is allowed to be slow. Its job is to exist and to fail when the core app does not boot. Phase 2 makes that job cheap enough to keep and to grow. Phase 3 writes the catalog, splits CI into smoke versus the full suite, and fills the catalog on Create React App. Phase 4 is the dangerous compiler change, and it lands only while phase 3's full suite is already green. There is no phase 5 and no staging server.
+Phase 1 is allowed to be slow. Its job is to exist and to fail when the core app does not boot. Phase 2 makes that job cheap enough to keep and to grow. Phase 3 writes the two catalogs, splits CI into smoke, end-user, and admin, and fills them on Create React App. Phase 4 is the dangerous compiler change, and it lands only while the end-user suite is already green. There is no phase 5 and no staging server.
 
 ## Phases at a glance
 
@@ -58,8 +58,8 @@ Phase 1 is allowed to be slow. Its job is to exist and to fail when the core app
 | --- | --- | --- | --- |
 | 1. Smoke | Golden snapshot, root `setup` / `dev`, `E2E_TEST_MODE`, three `@smoke` journeys, a CI job on push | Lerna, CRA, deploy | Smoke runs on push and is green; a clean VM boots the core profile |
 | 2. Workspaces | Node Active LTS everywhere; npm workspaces; production build paths moved onto the workspace; dependency consolidation within majors; TypeScript project references; post-deploy production probe | CRA, product behavior | Smoke green on workspaces; the consolidation checkpoints hold; a no-product-change deploy succeeds and passes the probe |
-| 3. Journeys | [Catalog](journeys.md) iterated then implemented; CI split into `@smoke` versus the full suite; remaining Cypress scenarios ported; bundler-risk items included in the catalog; agent recipe | Bundler, workspace layout | Catalog agreed; smoke job runs only `@smoke` and stays fast; full suite green on CRA, including bundler-risk; data-path packages still testable without a deploy |
-| 4. Client build | Replace CRA (Vite candidate); client tests and lint off CRA; the carried CRA pins deleted | Journey assertions, workspace layout | Smoke and the full suite green on the new dev server and production build |
+| 3. Journeys | [End-user](journeys-end-user.md) and [admin](journeys-admin.md) catalogs iterated then implemented; CI split into `@smoke`, `@enduser`, and `@admin`; remaining Cypress scenarios ported; bundler-risk included in whichever catalog owns the screen; agent recipe | Bundler, workspace layout | Both catalogs agreed; smoke job runs only `@smoke` and stays fast; end-user suite green on CRA; admin suite green or its gaps recorded; bundler-risk green in the suite that owns it |
+| 4. Client build | Replace CRA (Vite candidate); client tests and lint off CRA; the carried CRA pins deleted | Journey assertions, workspace layout | Smoke and the end-user suite green on the new build. Admin bundler-risk green. The rest of the admin suite green, or a recorded gap that does not hold the migration |
 
 ## Phase details
 
@@ -80,7 +80,7 @@ Phase 1 is allowed to be slow. Its job is to exist and to fail when the core app
 4. `packages/e2e` with three `@smoke` journeys.
    - Done locally, October 2026. `npm run e2e` runs them headless, `npm run e2e:headed` shows the browser, and `npm run e2e:ui` opens Playwright's interactive runner. Sign-in writes the Auth0 SPA localStorage cache and session cookie; the client bundle is unchanged and Auth0 is not called. The API has to be in test mode.
 5. A CI job that restores, builds, and runs `@smoke` with the other test jobs.
-   - Done, October 2026. The Smoke tests job in `.github/workflows/unit-tests.yml` runs on push. It restores the golden snapshot, builds the API, and runs `npm run e2e` against the client dev server. It is not part of the deploy workflow. The run's Smoke Test Output check lists the journeys. The `playwright-report` artifact has the HTML report, and screenshots, video, and traces when a journey fails. *(November 2026)* That job currently runs the whole Playwright folder. Phase 3 narrows it to `--grep @smoke` and adds a full-suite job.
+   - Done, October 2026. The Smoke tests job in `.github/workflows/unit-tests.yml` runs on push. It restores the golden snapshot, builds the API, and runs `npm run e2e` against the client dev server. It is not part of the deploy workflow. The run's Smoke Test Output check lists the journeys. The `playwright-report` artifact has the HTML report, and screenshots, video, and traces when a journey fails. *(November 2026)* That job currently runs the whole Playwright folder. Phase 3 narrows it to `--grep @smoke` and adds two integration jobs, `@enduser` and `@admin`. Smoke stays one job and is not split by audience.
 
 **Alongside, not blocking the gate:** the non-production Auth0 tenant ([Auth0](auth0.md)) and the first slice of the secrets manifest and its fail-closed check ([secrets](secrets-management.md)). They are phase 1 exit criteria because a cloud agent should not be handed secrets until they exist, but the smoke job does not wait for them. Both shipped October 2026. Process supervision shipped October 2026 ([environment setup](env-setup.md)): Compose for containers, `concurrently` for host processes.
 
@@ -106,13 +106,13 @@ A single pull request for workspaces and the bundler was considered and rejected
 
 **Exit.** Smoke is green on the workspace layout, and its install time is recorded against the Lerna baseline. The consolidation checkpoints in [monorepo and build](monorepo-and-build-upgrade.md) hold. A deploy with no product change succeeds through the normal workflow and passes the probe. Day-to-day `npm install` at the root replaces per-package bootstraps.
 
-If this phase slips, new journeys do not pile onto the pull-request smoke job. They live in the full suite.
+If this phase slips, new journeys do not pile onto the pull-request smoke job. End-user journeys go to the end-user job. Admin journeys go to the admin job.
 
 ### Phase 3 — Comprehensive journeys
 
-**Changes.** Iterate the [journey catalog](journeys.md), then implement it as Playwright tests on Create React App. Split CI so the push job runs only `@smoke` and a second job runs the full tagged suite. Port the remaining Cypress scenarios (Auth0 signup is the last access hole). Include the bundler-risk items in the catalog, not as a separate mini-suite. Write the agent recipe so a later change ships with a journey. Offline support gets a downstream plan before those items are farmed. ([integration testing](integration-testing.md), [journeys](journeys.md))
+**Changes.** Iterate the [end-user catalog](journeys-end-user.md) and the [admin catalog](journeys-admin.md), then implement them as Playwright tests on Create React App. Fill the end-user catalog first. Split CI into three jobs: `@smoke` on every push, then `@enduser` and `@admin` as separate integration runs. Smoke is not tagged as either audience. Port the remaining Cypress scenarios (Auth0 signup is the last access hole; it is an end-user journey). Bundler-risk items stay in the catalog that owns the screen. Write the agent recipe so a later change ships with a journey in the right suite. Offline support gets a downstream plan before those items are farmed, end-user offline first. ([integration testing](integration-testing.md), [journeys](journeys.md))
 
-*(October–November 2026)* Access gates, local data services, uploads, overlay reports, and several map-shell journeys already exist. They count toward the catalog. Phase 3 is filling the rest and teaching CI the difference between smoke and full, not starting from zero.
+*(October–November 2026)* Access gates, local data services, uploads, overlay reports, and several map-shell journeys already exist. Access, forums, surveys, and the participant report count as end-user. Uploads, changelog, selective publish, and the admin seed lists count as admin. Phase 3 is filling the rest and teaching CI the three jobs, not starting from zero.
 
 *(October 2026)* The data profile's production groundwork (raw uploads on R2, self-contained storage URLs) and the local stand-ins (uploads, tiles, overlay, fragments, sketch preprocessing) already shipped. They stay the runtime the data, sketch, and report journeys use. ([local data services](local-data-services.md))
 
@@ -120,23 +120,23 @@ The Vite spike may begin on a throwaway branch during this phase so its findings
 
 **Holds still.** The client bundler and the workspace layout.
 
-**Exit.** The catalog has been iterated and is the list agents implement against. The push job runs only `@smoke` and finishes quickly. The full suite is green on Create React App, including every bundler-risk item (or a recorded decision to drop one, such as offline surveys). Cypress leftovers are gone once their catalog items exist. The agent recipe is linked from `AGENTS.md`. A change to spatial uploads, data tables, or report calculation can still be tried without deploying a Lambda.
+**Exit.** Both catalogs have been iterated and are the lists agents implement against. The push job runs only `@smoke` and finishes quickly. The end-user suite is green on Create React App, including its bundler-risk rows (or a recorded decision to drop one, such as offline surveys). The admin suite is green, or a gap is written into the admin catalog and is not treated as blocking the end-user gate. Admin bundler-risk (uploads, style editor, metadata, report-card insertion) is green. Cypress leftovers are gone once their catalog items exist. The agent recipe is linked from `AGENTS.md`. A change to spatial uploads, data tables, or report calculation can still be tried without deploying a Lambda.
 
-This is the gate to have in place before large multi-level admin changes merge, and before phase 4 begins.
+The end-user suite is the gate before phase 4. Participant-facing access changes need it too. Admin-screen work uses the admin job and does not have to be as strict.
 
 ### Phase 4 — Client build replacement
 
-**Changes.** Replace Create React App; Vite is the candidate. Client unit tests and ESLint move off CRA's configuration. The same `@smoke` set and the full catalog run against the new dev server and the new production build. *(October 2026)* The pull request deletes the pins phase 2 carried for webpack 4 and Jest 26, and moves the client's own dependencies to current releases within their majors as those pins come off. ([monorepo and build](monorepo-and-build-upgrade.md))
+**Changes.** Replace Create React App; Vite is the candidate. Client unit tests and ESLint move off CRA's configuration. Smoke, the end-user suite, and the admin suite run as the same three jobs against the new dev server and the new production build. *(October 2026)* The pull request deletes the pins phase 2 carried for webpack 4 and Jest 26, and moves the client's own dependencies to current releases within their majors as those pins come off. ([monorepo and build](monorepo-and-build-upgrade.md))
 
 **Holds still.** Journey assertions and the workspace layout. A pull request in this phase does not restructure packages.
 
-**Exit.** Smoke and the full suite, including bundler-risk, are green on the new build. The client preview workflow has published the new build to a real host before the first production deploy. `--openssl-legacy-provider` is gone, and the carried-pins table is empty. The client dev server and the CI client build are materially faster.
+**Exit.** Smoke and the end-user suite are green on the new build, including end-user bundler-risk. Admin bundler-risk is green. The rest of the admin suite is green, or a recorded gap remains a gap and does not hold the migration. The client preview workflow has published the new build to a real host before the first production deploy. `--openssl-legacy-provider` is gone, and the carried-pins table is empty. The client dev server and the CI client build are materially faster.
 
 ## Risk without a staging server
 
 Phases 2 and 4 change production artifacts. This campaign does not add a staging environment. The mitigations are what already exists plus what phase 2 added:
 
-- The full journey suite, on Create React App before the bundler changes and on the new build after, is the characterization test. Smoke is only the fast gate.
+- The end-user suite, on Create React App before the bundler changes and on the new build after, is the characterization test for the product people use. The admin suite is the separate check for the admin UI, including the editors a bundler swap breaks. Smoke is only the fast gate, and it is not split into those two audiences.
 - The client preview workflow publishes each build to a real host.
 - The deploy workflow's `api_ready_gate` already refuses to publish a client whose operations the live API rejects.
 - From phase 2, the `@production` probe runs after every deploy and every 30 minutes.
@@ -147,11 +147,11 @@ A hosted staging stack is out of scope. Cloud agents running `setup` and `dev` f
 ## Rules
 
 - A pull request changes one axis. Node, workspaces, and the client bundler never share a pull request. A journey and a large refactor share one only when the journey is the characterization test for that refactor. *(October 2026)* Dependency versions within a major, regenerated artifacts, and TypeScript project references are part of the workspaces axis, not a fourth one; they ride with it.
-- *(November 2026)* `@smoke` runs on every push, with a report and a trace when it fails. It is a handful of fast journeys, not the whole Playwright folder. The full suite runs on `master`, on workflow dispatch, and on the phase 4 pull request. Neither job is a branch-protection rule. Failing smoke is something a reviewer looks at. It is not skipped to make a migration look green.
+- *(November 2026)* `@smoke` runs on every push, with a report and a trace when it fails. It is three journeys, not split into end-user and admin. The end-user job (`@enduser`) and the admin job (`@admin`) are separate runs on `master`, on workflow dispatch, and on the phase 4 pull request. A red end-user job is the one reviewers treat as the product being broken. A red admin job is a separate regression and a more forgiving bar. None of the three is a branch-protection rule yet. When one is added, it is smoke and end-user, not admin. Failing smoke is not skipped to make a migration look green.
 - A journey depends only on services the root start command runs for its profile. A journey that needs a production Lambda is not a local test.
 - The default configuration never points at production. A production override is explicit, per integration ([local services](local-services.md)), and absent from CI.
 - Agents are normal consumers of the contract. Commands are non-interactive, logs are attributable to a service, and failure paths are written down. Agents may restore the golden snapshot; they may not publish one unless the task is a snapshot refresh.
-- Choices left open — the exact Vite setup, the offline-support harness — are settled by a short spike at the start of the work that needs them, against the criteria in the topic file, and then recorded there. The process supervisor was settled in October 2026 ([environment setup](env-setup.md)). Offline journeys are not farmed until that plan exists ([journeys](journeys.md#offline-support)).
+- Choices left open — the exact Vite setup, the offline-support harness — are settled by a short spike at the start of the work that needs them, against the criteria in the topic file, and then recorded there. The process supervisor was settled in October 2026 ([environment setup](env-setup.md)). Offline journeys are not farmed until that plan exists ([journeys](journeys.md)). End-user offline is planned before admin tile packages.
 - When a choice would force a fork to run a second production SeaSketch, prefer "same revision, different configuration" ([second production install](second-install.md)).
 
 ## What this campaign leaves alone

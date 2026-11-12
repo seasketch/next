@@ -43,7 +43,7 @@ Workspace packages load from their gitignored `dist/` output, so a fresh install
 
 `npm run logs` follows every service. `npm run logs -- api` follows one. Files are `.logs/<service>.log`, rotated at 20 MB. `npm run status` prints which services are listening. `npm run setup -- --reset` replaces the local database with the golden snapshot and clears the local object storage with it.
 
-`npm run e2e` runs the Playwright suite in `packages/e2e`. It restores the golden snapshot into `seasketch_e2e` and starts its own API, client, and data services on separate ports, so it can run beside `npm run dev`. The upload journeys in that suite go through the same containers and local storage a developer uses. The list of journeys to cover is [design-docs/dev-environment/journeys.md](./design-docs/dev-environment/journeys.md); iterate that catalog before adding tests. Chromium is a separate download from `npm install`. Once per machine, and again after a Playwright upgrade:
+`npm run e2e` runs the Playwright suite in `packages/e2e`. It restores the golden snapshot into `seasketch_e2e` and starts its own API, client, and data services on separate ports, so it can run beside `npm run dev`. The upload journeys in that suite go through the same containers and local storage a developer uses. End-user journeys are [design-docs/dev-environment/journeys-end-user.md](./design-docs/dev-environment/journeys-end-user.md). Admin journeys are [design-docs/dev-environment/journeys-admin.md](./design-docs/dev-environment/journeys-admin.md). Iterate the matching list before adding tests. Chromium is a separate download from `npm install`. Once per machine, and again after a Playwright upgrade:
 
 ```sh
 npm exec --workspace @seasketch/e2e -- playwright install chromium
