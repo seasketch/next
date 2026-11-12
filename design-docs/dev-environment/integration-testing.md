@@ -38,7 +38,7 @@ Journeys are tagged for three filters: **suite**, **theme**, and **bundler risk*
 
 **Theme.** `@access`, `@sketching`, `@surveys`, `@forums`, `@overlays`, `@reports`, `@uploads`, `@layers`, `@settings`, `@users`, and the rest named in each catalog. A person or an agent runs one heading with `--grep @sketching`. Theme tags are not CI jobs.
 
-**Bundler.** `@bundler` is additive: a spatial upload is `@admin @uploads @bundler`. A forum reply is `@enduser @forums @bundler`. `@production` is the read-only probe and never runs against the local stack. `@auth0` marks the signup journey and excludes it from Auth0-free jobs.
+**Bundler.** `@bundler` is additive: a spatial upload is `@admin @uploads @bundler`. A forum reply is `@enduser @forums @bundler`. `@production` is the read-only probe and never runs against the local stack. Sign-in and signup use the test-mode session. No journey calls Auth0.
 
 *(November 2026)* The Smoke tests job runs `npm run e2e:smoke`. End-user and admin are separate jobs in the same `.github/workflows/unit-tests.yml` run, on every branch push. Create Deployment does not reference that workflow. Existing specs carry `@enduser` or `@admin`. Smoke's describe stays `@smoke` only. `packages/e2e/scripts/check-suite-tags.mjs` fails the push if a test has no suite tag or more than one.
 

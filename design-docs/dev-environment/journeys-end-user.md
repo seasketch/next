@@ -12,7 +12,7 @@ Setup that an admin would click through (a hidden toolbar, a group-limited forum
 
 ## Public site and accounts
 
-Intent: a person can find a project, create one, and manage the account that owns it. Auth0 signup is the one remaining onboarding hole. Tag: `@homepage`. The signup item also carries `@auth0`.
+Intent: a person can find a project, create one, and manage the account that owns it. How a new account comes back to a gated project is [Getting into a project](#getting-into-a-project). Tag: `@homepage`. Sign-in and signup in this suite use the test-mode session and do not call Auth0.
 
 ### Homepage and listing
 
@@ -21,41 +21,88 @@ Intent: a person can find a project, create one, and manage the account that own
 3. A signed-in user whose email is not verified cannot create a project: the form reports that email must be verified.
 4. A signed-in verified user creates a project from `/new-project` (name, slug, geography from a template) and lands in that project.
 5. Creating a project with a slug that already exists stays on the form and says the URL is already in use.
-6. Who sees an unlisted project on `/projects` is [Project access and discovery](#project-access-and-discovery).
+6. Who sees a project on `/projects`, and what a direct link does, is [Getting into a project](#getting-into-a-project).
 
 ### Account
 
-1. `/signin` sends an anonymous visitor into the Auth0 flow (the journey follows as far as the tenant page, then stops; it does not complete a password login).
-2. A new visitor **signs up through Auth0** on the non-production tenant, returns to SeaSketch, and can open `/projects`. This is the remaining Cypress onboarding scenario. It is the one local journey allowed to call Auth0. It does not run in the Auth0-free CI jobs. Tag `@auth0` as well as `@enduser`.
+1. `/signin` is how an anonymous visitor starts sign-in. The suite plants the test-mode session and does not open an Auth0 page.
+2. A new visitor who signs up and comes back can open `/projects`. The return onto a gated project is [Signup, then the project](#signup-then-the-project). The suite inserts the user and plants the test-mode session. It does not call Auth0.
 3. `/account-settings` asks an anonymous visitor to sign in, and shows cache settings to a signed-in user.
 4. A signed-in user can set email notification preferences (forum replies, project invites) and see them persist after reload.
 5. **bundler-risk.** A value that reaches the client through `REACT_APP_*` today is visible in the running app, so the phase 4 rename is checked by a test and not by reading the bundle.
 
 ---
 
-## Project access and discovery
+## Getting into a project
 
-Intent: who can find a project on the SeaSketch project list, and what a direct link does for someone who should or should not walk in. The people are an anonymous visitor, a project administrator, and participants who may belong to different groups. The gates are the project's access setting (public, admins-only, or invite-only), whether it is listed, and the visitor's role. Group membership does not decide the list or the door. The `project_access_status` combinations stay in API tests. This is a few screens, not that matrix. Tag: `@access`.
+Intent: every way a person arrives at a project, and either gets in or is stopped with an obvious next step. A visitor who should enter reaches the map they asked for. A visitor who should not enter never sees it, and is not left on a blank page. The doors are public, invite-only, and admins-only, plus whether the project is listed. The people are an anonymous visitor, a signed-in non-participant, someone waiting on approval, an approved participant, and an administrator. Group membership does not open the door. What a group hides is inside the project, in [Forums](#forums). Who may edit a setting stays out of this list. The admin screens are in the [admin catalog](journeys-admin.md#project-settings). These journeys are what the visitor sees. Tag: `@access`. Sign-in and signup use the test-mode session. This suite does not open Auth0.
 
-1. An anonymous visitor opens `/projects`, sees listed Demo Samoa, and does not see an unlisted project. Opening Demo Samoa loads the map, and Sign in is still available. *Covered: `tests/access.spec.ts` and `tests/homepage.spec.ts`.*
-2. A project administrator sees their unlisted admins-only project on `/projects` and opens the map from that card. An anonymous visitor and a signed-in user who is not an admin of that project do not see it on the list. A direct link stops both of them: only administrators may enter, Sign in is offered, Create an account is not, and the map is not shown. The administrator's link opens the map. *The hidden list row and both closed doors are covered in `tests/access.spec.ts`. The administrator finding the project on `/projects` is not.*
-3. An approved participant sees an unlisted invite-only project they belong to on `/projects` and opens the map from that card. An anonymous visitor does not see it on the list. A direct link tells that visitor an invitation is required, offers Sign in and Create an account, and does not show the map. *The anonymous list and the direct-link door are covered in `tests/access.spec.ts`. The participant finding their own project on `/projects` is not.*
-4. Two approved participants of that same unlisted project belong to different groups. Both see it on `/projects`, and both open the map from a direct link. A group does not decide whether the project is listed or whether the door opens. What a group hides is inside the project, in [Forums](#forums).
+The admins-only Contact button uses the project creator's account email, stored when the project is created. No admin screen edits it.
 
-## Joining a project
+**Known bug.** The invite-only gate shows no email address. Signed in, the only control is Share Profile and Request Access. Signed out, the controls are Sign in and Create an account. Invite-only visitors have no way to contact the project. The admins-only gate shows a Contact button with the project's email once the visitor is signed in. This needs to be fixed. `tests/access.spec.ts` asserts the invite-only gate shows that email, and the test fails until the gate does.
 
-Intent: asking to join, accepting an invite, and saving a profile. These are the walks after the door, not the listing. Who may edit a setting stays in API tests. Tag: `@access`. *Mostly covered: `tests/access.spec.ts`.*
+### The list and a direct link
 
-1. A signed-in non-participant can share a profile and request access. The request stays pending until it is approved. A reload then shows the map. The approval itself may be a test helper; the admin list UI is in the [admin catalog](journeys-admin.md#users-groups-and-invites). *Covered.*
-2. `e2e|member` follows an invite email in `e2e-emails/`, lands on Join Project, skips the profile, opens the map, and the invite status is CONFIRMED. *Covered.*
-3. Opened while signed out, that link stays on the invite page, offers Sign In and Create an Account, and leaves the invite unconfirmed. *Covered.*
-4. An invite with admin privileges lets `e2e|member` past an admins-only gate. Joining and sharing a profile opens the project. *Covered.*
-5. Opened signed out, an admin invite to an email with no account offers Create an Account first. The suite then inserts that `e2e|` user the way a first login does, and the confirm URL lets them join. *Covered.*
-6. A signed-in account whose email is not the invite's is told the invitation was sent to the other address, and can accept as themselves. The logout-and-sign-in button is shown and not followed. *Covered.*
-7. An invite whose token is already expired shows the expired message and stays unconfirmed. *Covered.*
-8. A signed-in non-participant can skip join (localStorage) and still see the public map, with sketching and posting gated.
-9. Join with an empty Full Name stays on the page, marks Full Name as Required, and does not join. *Covered as part of `tests/forums.spec.ts`.*
-10. After joining, `/:slug/profile` opens the profile modal and a name change is saved.
+1. **Listed public project.** An anonymous visitor opens `/projects`, sees Demo Samoa, and does not see an unlisted project. Opening Demo Samoa loads the map, and Sign in is still available. *Covered: `tests/access.spec.ts` and `tests/homepage.spec.ts`.*
+2. **Listed invite-only project.** The card is on `/projects` for an anonymous visitor and for a signed-in non-participant. Opening it shows the invitation gate and does not show the map. The signed-in visitor can share a profile and request access. The anonymous visitor can sign in or create an account.
+3. **Listed admins-only project.** The card is on `/projects`. Opening it says only administrators may enter, offers Sign in, does not offer Create an account, and does not show the map. A signed-in non-admin sees Admins Only and a Contact button. The administrator opens the map.
+4. **Unlisted admins-only project.** An anonymous visitor and a signed-in non-admin do not see it on `/projects`. A direct link stops both of them the same way as the listed project. The administrator sees the card and opens the map from it. *The hidden row and both closed doors are covered in `tests/access.spec.ts`. The administrator finding the card is not.*
+5. **Unlisted invite-only project.** An anonymous visitor and a signed-in non-participant do not see it on `/projects`. A direct link tells the anonymous visitor an invitation is required and offers Sign in and Create an account. The signed-in non-participant gets Share Profile and Request Access. An approved participant sees the card and opens the map from it. *The anonymous list, the direct-link door, and the request button are covered in `tests/access.spec.ts`. The participant's card is not.*
+6. **Group membership is not the door.** Two approved participants of that unlisted project belong to different groups. Both see it on `/projects`, and both open the map from a direct link.
+7. **Deep link.** A direct link to a forum, a sketch, or another path under `/:slug/app` stops at the same gate as the project root. When the person is allowed in, they land on that path.
+8. **Missing or deleted project.** An unknown slug says the project was not found and links to the project list. A deleted project is absent from `/projects`, and its old url does not show the map.
+
+### A public project after sign-in
+
+9. **Map without membership.** A signed-in non-participant on a public project sees the map. Sketching and posting ask them to join, and do not let them create a sketch or reply.
+10. **Join prompt.** Signing in from that project returns them to Join this Project, with the profile form, rather than dropping them on the homepage.
+11. **Skip join.** They click Skip for now. The browser remembers the choice. They see the public map. Sketching and posting stay closed. A later visit is not sent back to Join.
+12. **Required name.** Join with an empty Full Name stays on the page, marks Full Name as Required, and does not join. *Covered as part of `tests/forums.spec.ts`.*
+13. **Saved profile.** After joining, `/:slug/profile` opens the profile modal and a name change is saved.
+14. **Already joined.** A participant who opens `/:slug/join` is told they already belong and is sent on to the project.
+15. **Admin area wants a profile.** An administrator who has not shared a profile, opening `/:slug/admin`, is asked to join before the admin pages. Skip for now from that prompt lands on the map, not the admin page.
+
+### Asking to join an invite-only project
+
+16. **Request, then approval.** A signed-in non-participant shares a profile and requests access. The request stays pending, the map stays hidden, and a reload says the request is awaiting approval and offers the project contact email. After an admin approves, a reload shows the map. The approval may be a test helper. The admin list is in the [admin catalog](journeys-admin.md#users-groups-and-invites). *Covered: `tests/access.spec.ts`.*
+17. **Incomplete request.** Sending the request with an empty Full Name stays on the profile form and does not create a pending request.
+18. **Denied request.** After an admin denies the request, a reload of the direct link still does not show the map. There is no second request button. The contact email is on the gate.
+19. **Approved, email not verified.** An approved participant whose email is not verified sees Email Not Verified, can resend, and does not see the map. The message is written to `e2e-emails/`. The same gate stops an unverified administrator on an admins-only project.
+
+### An invitation
+
+20. **Member accepts.** `e2e|member` follows an invite email in `e2e-emails/`, lands on Join Project, skips the profile, opens the map, and the invite status is CONFIRMED. *Covered.*
+21. **Signed out.** Opened while signed out, that link stays on the invite page, offers Sign In and Create an Account, and leaves the invite unconfirmed. *Covered.*
+22. **Existing account is the primary button.** When the invite email already belongs to an account, Sign In is primary and Create an Account is not.
+23. **New account is the primary button.** Opened signed out, an admin invite to an email with no account offers Create an Account first. The suite inserts that `e2e|` user the way a first login does, and the confirm URL lets them join. *Covered.*
+24. **Admin invite.** An invite with admin privileges lets `e2e|member` past an admins-only gate. Joining and sharing a profile opens the project, including the admin dashboard. *Covered.*
+25. **Different email.** A signed-in account whose email is not the invite's is told the invitation was sent to the other address, and can accept as themselves. The other-account button is shown and not followed. *Covered.*
+26. **Expired invite.** An invite whose token is already expired shows the expired message, offers the project contact email, and stays unconfirmed. *Covered.*
+27. **Bad token.** A link with a missing or unreadable token shows an error and does not confirm an invite.
+28. **Already used.** Opening an invite that was already accepted says so and links to the project. It does not confirm a second time.
+29. **Invite names a group.** Accepting an invite that names a group opens the map, shows the forum limited to that group, and does not show a forum limited to a different group. The group does not decide whether the door opens.
+
+### Signup, then the project
+
+30. **Signup returns to a public project.** A new visitor starts from a public project, and the account that comes back is signed in there with the map open. The suite inserts the user and plants the test-mode session. It does not open the Auth0 form, and it does not call Auth0.
+31. **Signup does not approve an invite-only project.** The same return onto an invite-only project shows Share Profile and Request Access. The map stays hidden until an admin approves the request.
+32. **Signup is not a way into an admins-only project.** That gate has no Create an account button. Signing in as someone who is not an admin still shows Admins Only and no map.
+
+### Coming back
+
+33. **Participant returns.** An approved participant opens the project from `/projects` and from a direct link. There is no gate and no join form. The map loads.
+34. **Skipped visitor returns.** A signed-in non-participant who already skipped join opens the public project again, sees the map, still cannot sketch or post, and is not sent to Join.
+35. **Pending request returns.** A person with a pending request opens the invite-only project again and sees the awaiting-approval gate, not the map and not a blank page.
+
+### When an admin changes the door
+
+The Settings and Users screens are the [admin catalog](journeys-admin.md#project-settings). Here the setting is arranged for the journey, and the visitor walks the result.
+
+36. **Public becomes invite-only.** A stranger who could open the map now gets the invitation gate. An approved participant still opens the map.
+37. **Invite-only becomes admins-only.** A participant who is not an admin loses the map. The administrator still opens it.
+38. **Admins-only becomes public.** The stranger's direct link shows the map again. Sign in is still available.
+39. **Unlisting.** An invite-only project that becomes unlisted disappears from a stranger's `/projects` and stays on the approved participant's list. A public project cannot be unlisted, and it stays on the list.
+40. **Promotion opens an admins-only project.** A signed-in person who was stopped by the admins-only gate, after they are made an administrator, opens the map from the same link.
 
 ---
 

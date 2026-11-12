@@ -91,4 +91,4 @@ None for phase 1.
 ## Exit criteria
 
 - **Phase 1:** The API starts with Auth0 management unset. *Done, September 2026.* The smoke job holds no Auth0 secrets. The default profile for a new machine or agent is the non-production tenant. Setup refuses production Auth0 identifiers outside a production deploy. *Done, October 2026.* The tenant is `seasketch-dev` in the US, domain `seasketch-dev.us.auth0.com`, audience `https://api.nonprod.seasketch.org`. The post-login Action `add-claims` sets the three `https://seasketch.org/…` claims on the access token and the ID token. Superuser is the role `seasketch_superuser`, assigned after a person signs up. The snapshot does not include those accounts.
-- **Phase 3:** The Auth0 signup journey in the [end-user catalog](journeys-end-user.md) is the one local test allowed to call this tenant. It carries `@auth0` and does not run in the Auth0-free CI jobs.
+- **Phase 3:** Signup and sign-in in the [end-user catalog](journeys-end-user.md#getting-into-a-project) use the test-mode session. No journey calls this tenant.

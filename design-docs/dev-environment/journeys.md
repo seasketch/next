@@ -25,13 +25,13 @@ Existing Playwright coverage is noted in italics. An unmarked item is not yet a 
 
 **Admin integration.** Every item in [journeys-admin.md](journeys-admin.md), tagged `@admin` plus a theme tag. Every branch push, as its own job, so an admin failure cannot hide an end-user failure and the two can be retried on their own. Admin coverage still gets written. A red admin job is a real regression in the admin UI, and it does not carry the same weight as a red end-user job: phase 4 does not wait on an unfinished admin form the way it waits on sketching, surveys, or the map. Bundler-risk that lives in the admin UI (uploads, the style editor, metadata, inserting a report card) is the exception: those rows are part of the phase 4 acceptance test and are called out in each file.
 
-A journey has one suite tag. `@enduser` and `@admin` are never combined. Theme tags (`@sketching`, `@surveys`, `@uploads`, …) are for running one heading locally, not for another CI job. `@bundler` is additive. `@auth0` is the signup journey that needs tenant secrets and stays out of the Auth0-free jobs. `@production` is the read-only probe and never runs against the local stack.
+A journey has one suite tag. `@enduser` and `@admin` are never combined. Theme tags (`@sketching`, `@surveys`, `@uploads`, …) are for running one heading locally, not for another CI job. `@bundler` is additive. Sign-in and signup use the test-mode session. No journey calls Auth0 or carries `@auth0`. `@production` is the read-only probe and never runs against the local stack.
 
 Locally: `npm run e2e:smoke`, `npm run e2e:enduser`, and `npm run e2e:admin`. `npm run e2e` runs the folder. CI triggers are in [integration testing](integration-testing.md). None of these jobs are part of Create Deployment.
 
 ## Shared rules
 
-**Permission matrix.** Who may edit a setting stays in API tests. End-user journeys cover what a visitor, a member, and a participant can see and walk. Admin journeys cover the admin screens. The gates (anonymous visitor, signed-in non-participant, participant) are end-user even when an admin configured them.
+**Permission matrix.** Who may edit a setting stays in API tests. End-user journeys cover what a visitor, a member, and a participant can see and walk. Admin journeys cover the admin screens. The gates (anonymous visitor, signed-in non-participant, participant) are end-user even when an admin configured them. Every way into a gated project is [Getting into a project](journeys-end-user.md#getting-into-a-project).
 
 **Arrange without the other suite.** An end-user journey that needs a forum, a layer, or a hidden toolbar sets that up in the database or through GraphQL. It does not click through the admin UI. An admin journey may open the project map only to confirm the thing it just saved. That confirmation does not make it an end-user test.
 
