@@ -10,8 +10,7 @@ module.exports = {
     "public/**/*.html",
     "src/**/*.css",
     // Output of css:build/css:watch. Scanning it re-extracts utilities from
-    // the previous machine's generate, so watch mode reorders classes and
-    // keeps stale ones alive. That is the home-vs-work index.css drift.
+    // the previous generate and keeps classes the sources no longer use.
     "!src/index.css",
   ],
   theme: {
