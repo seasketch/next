@@ -5,7 +5,9 @@ import {
   currentUserId,
   inviteMember,
 } from "../src/accessProject";
+import { issueToken } from "../src/auth";
 import { personas } from "../src/config";
+import { graphql } from "../src/graphql";
 import {
   createE2EUser,
   deleteE2EUser,
@@ -143,6 +145,57 @@ test.describe("access @enduser @access", () => {
         memberGate.getByRole("button", { name: "Share Profile and Request Access" })
       ).toBeVisible();
       await expect(memberPage.locator(".mapboxgl-map")).toHaveCount(0);
+    } finally {
+      await memberContext.close();
+    }
+  });
+
+  // Known bug: the invite-only gate does not show the project's support email.
+  // This assertion fails until that contact path exists. Do not skip it.
+  test("an invite-only gate shows the project's support email", async ({
+    page,
+    request,
+    browser,
+  }) => {
+    test.setTimeout(90_000);
+    const name = "Access Invite Contact";
+    const project = await createAccessProject(request, {
+      name,
+      slug: slug("invite-mail"),
+      accessControl: "INVITE_ONLY",
+      isListed: false,
+    });
+    created.push(project.slug);
+
+    const admin = await issueToken(request, personas.admin);
+    const details = await graphql<{
+      projectBySlug: { supportEmail: string } | null;
+    }>(
+      request,
+      admin.accessToken,
+      `query ($slug: String!) {
+        projectBySlug(slug: $slug) { supportEmail }
+      }`,
+      { slug: project.slug }
+    );
+    const supportEmail = details.projectBySlug?.supportEmail ?? "";
+    expect(supportEmail).toContain("@");
+
+    await page.goto(`/${project.slug}`);
+    const anonGate = page.getByRole("dialog");
+    await expect(anonGate.getByRole("heading", { name: "Private Project" })).toBeVisible();
+    await expect(anonGate.getByText(supportEmail)).toBeVisible();
+
+    const memberContext = await browser.newContext();
+    try {
+      const memberPage = await memberContext.newPage();
+      await signIn(memberPage, request, personas.member);
+      await memberPage.goto(`/${project.slug}`);
+      const memberGate = memberPage.getByRole("dialog");
+      await expect(
+        memberGate.getByRole("button", { name: "Share Profile and Request Access" })
+      ).toBeVisible();
+      await expect(memberGate.getByText(supportEmail)).toBeVisible();
     } finally {
       await memberContext.close();
     }
