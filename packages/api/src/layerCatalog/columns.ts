@@ -354,11 +354,7 @@ function dynamicMetadataEndpoint(layer: CatalogLayer): string {
   if (!layer.sourceType || !DYNAMIC_METADATA_SOURCE_TYPES.has(layer.sourceType)) {
     return "";
   }
-  const url = serviceUrl(layer);
-  if (!url || /[?&]f=/i.test(url)) {
-    return url;
-  }
-  return url.includes("?") ? `${url}&f=json` : `${url}?f=json`;
+  return serviceUrl(layer);
 }
 
 function uploadedFileType(layer: CatalogLayer): string {

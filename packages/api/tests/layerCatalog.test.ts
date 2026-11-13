@@ -286,16 +286,7 @@ describe("layer catalog columns", () => {
       sourceUrl: "https://gis.example.gov/arcgis/rest/services/Habitat/MapServer",
     });
     expect(dynamic["Metadata"]).toBe(
-      "https://gis.example.gov/arcgis/rest/services/Habitat/MapServer/3?f=json"
-    );
-
-    const alreadyFormatted = record({
-      metadata: null,
-      sourceType: "arcgis-raster-tiles",
-      sourceUrl: "https://tiles.example.gov/MapServer?f=json",
-    });
-    expect(alreadyFormatted["Metadata"]).toBe(
-      "https://tiles.example.gov/MapServer?f=json"
+      "https://gis.example.gov/arcgis/rest/services/Habitat/MapServer/3"
     );
 
     const withToken = record({
@@ -304,7 +295,7 @@ describe("layer catalog columns", () => {
       sourceUrl: "https://services.arcgis.com/abc/FeatureServer/0?token=abc",
     });
     expect(withToken["Metadata"]).toBe(
-      "https://services.arcgis.com/abc/FeatureServer/0?token=abc&f=json"
+      "https://services.arcgis.com/abc/FeatureServer/0?token=abc"
     );
 
     const placeholder = record({
