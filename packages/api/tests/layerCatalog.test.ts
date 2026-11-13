@@ -473,6 +473,16 @@ describe("layer catalog routes", () => {
     expect(stored.status).toBe(200);
     expect(JSON.parse(stored.body)).toEqual({ type: "doc", content: [] });
 
+    const html = await request(`${base}/layers/demo/kelpLayer/metadata?format=html`, {
+      authorization: "Bearer admin",
+    });
+    expect(html.status).toBe(200);
+    expect(String(html.headers["content-disposition"])).toBe(
+      'attachment; filename="kelpLayer.html"'
+    );
+    expect(String(html.headers["x-content-type-options"])).toBe("nosniff");
+    expect(html.body).toContain("<article>");
+
     expect(
       (await request(`${base}/layers/demo/kelpLayer/metadata?format=pdf`, {
         authorization: "Bearer admin",

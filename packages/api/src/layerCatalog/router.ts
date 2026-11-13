@@ -150,6 +150,9 @@ async function sendResource(
   }
   const body = renderMetadata(document, format);
   if (format === "html") {
+    const filename = `${safeDownloadName(record.stableId)}.html`;
+    res.set("Content-Disposition", `attachment; filename="${filename}"`);
+    res.set("X-Content-Type-Options", "nosniff");
     res.type("html").send(body);
     return;
   }
@@ -203,6 +206,11 @@ async function callerIsAdmin(
     return true;
   }
   return store.isProjectAdmin(projectId, user.id);
+}
+
+function safeDownloadName(value: string): string {
+  const cleaned = value.replace(/[^A-Za-z0-9._-]+/g, "_").replace(/^\.+/, "");
+  return cleaned || "layer";
 }
 
 function catalogSlug(req: Request): string | null {
