@@ -61,10 +61,13 @@ function callEnsure(
   stableId: string,
   nextCamera = camera,
   basemapId: number,
+  draft = false,
+  refresh = true,
 ) {
   return conn.one(sql`
-    select id, kind::text, subject_stable_id, image_id, screenshot_job_status::text,
-      visible_data_layers, is_public, camera_options, layer_names
+    select id, kind::text, subject_stable_id, subject_is_draft, image_id,
+      screenshot_job_status::text, visible_data_layers, is_public, camera_options,
+      layer_names
     from ensure_layer_link(
       ${slug},
       ${stableId},
@@ -74,7 +77,9 @@ function callEnsure(
       ${sql.json(nextCamera)},
       ${sql.array([1200, 800], "int4")},
       'Ocean',
-      ${sql.json({ [stableId]: "Rockfish" })}
+      ${sql.json({ [stableId]: "Rockfish" })},
+      ${draft},
+      ${refresh}
     )`);
 }
 
@@ -108,6 +113,7 @@ describe("layer links", () => {
         const created = await callEnsure(conn, slug, stableId, camera, basemapId);
         expect(created.kind).toBe("layer_link");
         expect(created.subject_stable_id).toBe(stableId);
+        expect(created.subject_is_draft).toBe(false);
         expect(created.visible_data_layers).toEqual([stableId]);
         expect(created.is_public).toBe(true);
         expect(created.screenshot_job_status).toBe("queued");
@@ -300,6 +306,97 @@ describe("layer links", () => {
             },
           ],
         });
+      },
+    );
+  });
+
+  test("admin links are a second bookmark and stay hidden from other people", async () => {
+    await projectTransaction(
+      pool,
+      "public",
+      async (conn, projectId, adminId, [member]) => {
+        await createSession(conn, adminId, true, false, projectId);
+        const slug = (await conn.oneFirst(
+          sql`select slug from projects where id = ${projectId}`,
+        )) as string;
+        const basemapId = Number(
+          await conn.oneFirst(sql`
+            insert into basemaps (project_id, name, type, url, thumbnail)
+            values (
+              ${projectId}, 'Ocean', 'MAPBOX',
+              'mapbox://my-map/id', 'https://thumbnail.org/1.png'
+            ) returning id`),
+        );
+        const stableId = await createDraftLayer(
+          conn,
+          projectId,
+          "Rockfish",
+          null,
+          null,
+        );
+        const draftLink = await callEnsure(
+          conn,
+          slug,
+          stableId,
+          camera,
+          basemapId,
+          true,
+        );
+        expect(draftLink.subject_is_draft).toBe(true);
+        expect(draftLink.is_public).toBe(false);
+
+        await conn.any(sql`savepoint before_published_link`);
+        await expect(
+          callEnsure(conn, slug, stableId, camera, basemapId, false),
+        ).rejects.toThrow(/Publish this layer/);
+        await conn.any(sql`rollback to savepoint before_published_link`);
+
+        await publish(conn, projectId, [stableId]);
+        const published = await callEnsure(
+          conn,
+          slug,
+          stableId,
+          camera,
+          basemapId,
+          false,
+        );
+        expect(published.id).not.toBe(draftLink.id);
+        expect(published.subject_is_draft).toBe(false);
+
+        await conn.any(sql`set role postgres`);
+        await conn.any(sql`
+          update map_bookmarks
+          set image_id = 'img_published', screenshot_job_status = 'finished'
+          where id = ${published.id}`);
+        await createSession(conn, adminId, true, false, projectId);
+        const untouched = await callEnsure(
+          conn,
+          slug,
+          stableId,
+          { center: [9, 9], zoom: 2, bearing: 0, pitch: 0 },
+          basemapId,
+          false,
+          false,
+        );
+        expect(untouched.id).toBe(published.id);
+        expect(untouched.image_id).toBe("img_published");
+        expect(untouched.camera_options).toEqual(camera);
+
+        await createSession(conn, member, true, false, projectId);
+        const hidden = await conn.oneFirst(sql`
+          select (bookmark_by_id(${draftLink.id})).id`);
+        expect(hidden).toBeNull();
+        expect(
+          await conn.oneFirst(sql`select layer_link_access(${draftLink.id})`),
+        ).toBe("admins_only");
+
+        await createSession(conn, adminId, true, false, projectId);
+        const visible = await conn.oneFirst(sql`
+          select (bookmark_by_id(${draftLink.id})).id`);
+        expect(visible).toBe(draftLink.id);
+        expect(
+          await conn.oneFirst(sql`select layer_link_access(${draftLink.id})`),
+        ).toBe("ok");
       },
     );
   });

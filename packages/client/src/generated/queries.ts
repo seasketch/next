@@ -5252,8 +5252,10 @@ export type EnsureLayerLinkInput = {
    * payload verbatim. May be used to track mutations by the client.
    */
   clientMutationId?: Maybe<Scalars['String']>;
+  draft?: Maybe<Scalars['Boolean']>;
   layerNames?: Maybe<Scalars['JSON']>;
   mapDimensions?: Maybe<Array<Maybe<Scalars['Int']>>>;
+  refresh?: Maybe<Scalars['Boolean']>;
   selectedBasemap?: Maybe<Scalars['Int']>;
   slug?: Maybe<Scalars['String']>;
   stableId?: Maybe<Scalars['String']>;
@@ -7330,7 +7332,7 @@ export type MapBookmark = {
   imageId?: Maybe<Scalars['String']>;
   isPublic: Scalars['Boolean'];
   job?: Maybe<WorkerJob>;
-  /** forum rows are map views attached to forum posts. layer_link rows are the shareable link for one published overlay. */
+  /** forum rows are map views attached to forum posts. layer_link rows are the shareable link for one overlay. */
   kind: MapBookmarkKind;
   layerNames?: Maybe<Scalars['JSON']>;
   mapDimensions: Array<Maybe<Scalars['Int']>>;
@@ -7342,7 +7344,9 @@ export type MapBookmark = {
   sketchNames?: Maybe<Scalars['JSON']>;
   sprites?: Maybe<Sprite>;
   style: Scalars['JSON'];
-  /** For layer_link rows, the published table_of_contents stable_id. Null for forum bookmarks. */
+  /** True when a layer_link opens the admin draft of the layer. Those rows are visible only to project administrators. */
+  subjectIsDraft: Scalars['Boolean'];
+  /** For layer_link rows, the table_of_contents stable_id. Null for forum bookmarks. */
   subjectStableId?: Maybe<Scalars['String']>;
   userId: Scalars['Int'];
   visibleDataLayers: Array<Maybe<Scalars['String']>>;
@@ -7811,7 +7815,7 @@ export type Mutation = {
   /** Re-enable discussion forum posting for a user that was previously banned. */
   enableForumPosting?: Maybe<EnableForumPostingPayload>;
   enableOfflineSupport?: Maybe<EnableOfflineSupportPayload>;
-  /** Create or refresh the shareable bookmark for one published layer. Admins only. The bookmark id is stable for the layer. */
+  /** Create or refresh the shareable bookmark for one layer. Admins only. draft stores the admin copy. The bookmark id is stable for that layer and audience. */
   ensureLayerLink?: Maybe<EnsureLayerLinkPayload>;
   failDataUpload?: Maybe<FailDataUploadPayload>;
   /**
@@ -12126,6 +12130,7 @@ export type Query = Node & {
   basemapByNodeId?: Maybe<Basemap>;
   /** Reads and enables pagination through a set of `Basemap`. */
   basemapsConnection?: Maybe<BasemapsConnection>;
+  /** Fetch one map bookmark. Draft layer links are returned only to project administrators. */
   bookmarkById?: Maybe<MapBookmark>;
   /**
    * GraphQL server software build identifier. During a deployment, if changes are not detected in software modules some may be skipped. So, client and server version could differ.
@@ -12246,6 +12251,8 @@ export type Query = Node & {
   /** Reads a single `InviteEmail` using its globally unique `ID`. */
   inviteEmailByNodeId?: Maybe<InviteEmail>;
   isMyEmailVerified: Scalars['Boolean'];
+  /** ok, admins_only, or missing. Draft layer links are admins_only until the caller is a project administrator. */
+  layerLinkAccess?: Maybe<Scalars['String']>;
   /** Admin-only summary of who can open a layer link: project access, attribution, folder path, and non-public ACLs on the layer and its parent folders. */
   layerLinkSharing?: Maybe<Scalars['JSON']>;
   lcfirst?: Maybe<Scalars['String']>;
@@ -13057,6 +13064,12 @@ export type QueryInviteEmailArgs = {
 /** The root query type which gives access points into the data universe. */
 export type QueryInviteEmailByNodeIdArgs = {
   nodeId: Scalars['ID'];
+};
+
+
+/** The root query type which gives access points into the data universe. */
+export type QueryLayerLinkAccessArgs = {
+  id?: Maybe<Scalars['UUID']>;
 };
 
 
@@ -22335,7 +22348,7 @@ export type JobFragment = (
 
 export type MapBookmarkDetailsFragment = (
   { __typename?: 'MapBookmark' }
-  & Pick<MapBookmark, 'id' | 'imageId' | 'createdAt' | 'basemapOptionalLayerStates' | 'cameraOptions' | 'projectId' | 'selectedBasemap' | 'visibleDataLayers' | 'mapDimensions' | 'visibleSketches' | 'screenshotJobStatus' | 'basemapName' | 'layerNames' | 'sketchNames' | 'clientGeneratedThumbnail' | 'dataTableStates' | 'kind' | 'subjectStableId'>
+  & Pick<MapBookmark, 'id' | 'imageId' | 'createdAt' | 'basemapOptionalLayerStates' | 'cameraOptions' | 'projectId' | 'selectedBasemap' | 'visibleDataLayers' | 'mapDimensions' | 'visibleSketches' | 'screenshotJobStatus' | 'basemapName' | 'layerNames' | 'sketchNames' | 'clientGeneratedThumbnail' | 'dataTableStates' | 'kind' | 'subjectStableId' | 'subjectIsDraft'>
   & { job?: Maybe<(
     { __typename?: 'WorkerJob' }
     & JobFragment
@@ -22821,6 +22834,16 @@ export type LayerLinkSharingQuery = (
   & Pick<Query, 'layerLinkSharing'>
 );
 
+export type LayerLinkAccessQueryVariables = Exact<{
+  id: Scalars['UUID'];
+}>;
+
+
+export type LayerLinkAccessQuery = (
+  { __typename?: 'Query' }
+  & Pick<Query, 'layerLinkAccess'>
+);
+
 export type EnsureLayerLinkMutationVariables = Exact<{
   slug: Scalars['String'];
   stableId: Scalars['String'];
@@ -22831,6 +22854,8 @@ export type EnsureLayerLinkMutationVariables = Exact<{
   mapDimensions: Array<Scalars['Int']> | Scalars['Int'];
   basemapName: Scalars['String'];
   layerNames: Scalars['JSON'];
+  draft: Scalars['Boolean'];
+  refresh: Scalars['Boolean'];
 }>;
 
 
@@ -28356,6 +28381,7 @@ export const MapBookmarkDetailsFragmentDoc = /*#__PURE__*/ gql`
   dataTableStates
   kind
   subjectStableId
+  subjectIsDraft
 }
     ${JobFragmentDoc}`;
 export const FileUploadDetailsFragmentDoc = /*#__PURE__*/ gql`
@@ -32075,10 +32101,15 @@ export const LayerLinkSharingDocument = /*#__PURE__*/ gql`
   layerLinkSharing(slug: $slug, stableId: $stableId)
 }
     `;
+export const LayerLinkAccessDocument = /*#__PURE__*/ gql`
+    query LayerLinkAccess($id: UUID!) {
+  layerLinkAccess(id: $id)
+}
+    `;
 export const EnsureLayerLinkDocument = /*#__PURE__*/ gql`
-    mutation EnsureLayerLink($slug: String!, $stableId: String!, $style: JSON!, $selectedBasemap: Int!, $basemapOptionalLayerStates: JSON, $cameraOptions: JSON!, $mapDimensions: [Int!]!, $basemapName: String!, $layerNames: JSON!) {
+    mutation EnsureLayerLink($slug: String!, $stableId: String!, $style: JSON!, $selectedBasemap: Int!, $basemapOptionalLayerStates: JSON, $cameraOptions: JSON!, $mapDimensions: [Int!]!, $basemapName: String!, $layerNames: JSON!, $draft: Boolean!, $refresh: Boolean!) {
   ensureLayerLink(
-    input: {slug: $slug, stableId: $stableId, style: $style, selectedBasemap: $selectedBasemap, basemapOptionalLayerStates: $basemapOptionalLayerStates, cameraOptions: $cameraOptions, mapDimensions: $mapDimensions, basemapName: $basemapName, layerNames: $layerNames}
+    input: {slug: $slug, stableId: $stableId, style: $style, selectedBasemap: $selectedBasemap, basemapOptionalLayerStates: $basemapOptionalLayerStates, cameraOptions: $cameraOptions, mapDimensions: $mapDimensions, basemapName: $basemapName, layerNames: $layerNames, draft: $draft, refresh: $refresh}
   ) {
     mapBookmark {
       ...MapBookmarkDetails
@@ -35032,6 +35063,7 @@ export const namedOperations = {
     OverlaysForGeography: 'OverlaysForGeography',
     OverlayForGeographyDetails: 'OverlayForGeographyDetails',
     LayerLinkSharing: 'LayerLinkSharing',
+    LayerLinkAccess: 'LayerLinkAccess',
     GetBasemapsAndRegion: 'GetBasemapsAndRegion',
     OfflineSurveys: 'OfflineSurveys',
     SurveysById: 'SurveysById',

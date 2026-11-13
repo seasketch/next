@@ -83,16 +83,62 @@ export function isLayerLinkSharing(value: unknown): value is LayerLinkSharing {
   return true;
 }
 
-export function layerLinkPath(slug: string, bookmarkId: string) {
+export function layerLinkPath(
+  slug: string,
+  bookmarkId: string,
+  draft = false
+) {
+  if (draft) {
+    // eslint-disable-next-line i18next/no-literal-string
+    return `/${slug}/admin/data?layerLink=${bookmarkId}`;
+  }
   // eslint-disable-next-line i18next/no-literal-string
   return `/${slug}/layers/${bookmarkId}`;
 }
 
-export function layerLinkUrl(slug: string, bookmarkId: string) {
+export function layerLinkUrl(
+  slug: string,
+  bookmarkId: string,
+  draft = false
+) {
+  const path = layerLinkPath(slug, bookmarkId, draft);
   if (typeof window === "undefined") {
-    return layerLinkPath(slug, bookmarkId);
+    return path;
   }
-  return `${window.location.origin}${layerLinkPath(slug, bookmarkId)}`;
+  return `${window.location.origin}${path}`;
+}
+
+/**
+ * How the create dialog behaves. The published map never offers the admin
+ * copy. The admin list defaults to that copy, and offers the published link
+ * only when the layer has been published.
+ */
+export function layerLinkCreatorChoices(input: {
+  place: "admin" | "published";
+  publishedVersion: boolean;
+  draftTarget: boolean;
+}): {
+  showSwitch: boolean;
+  targetDraft: boolean;
+  refresh: boolean;
+  warnAdminsOnly: boolean;
+} {
+  if (input.place !== "admin") {
+    return {
+      showSwitch: false,
+      targetDraft: false,
+      refresh: true,
+      warnAdminsOnly: false,
+    };
+  }
+  const showSwitch = input.publishedVersion;
+  const targetDraft = showSwitch ? input.draftTarget : true;
+  return {
+    showSwitch,
+    targetDraft,
+    refresh: targetDraft,
+    warnAdminsOnly: targetDraft,
+  };
 }
 
 /**

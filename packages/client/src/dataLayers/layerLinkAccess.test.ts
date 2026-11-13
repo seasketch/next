@@ -1,6 +1,7 @@
 import { describe, expect, it } from "@jest/globals";
 import {
   isLayerLinkSharing,
+  layerLinkCreatorChoices,
   layerLinkNotices,
   layerLinkPath,
 } from "./layerLinkAccess";
@@ -101,5 +102,67 @@ describe("layerLinkPath", () => {
     expect(layerLinkPath("great-bear", "11111111-2222-3333-4444-555555555555")).toBe(
       "/great-bear/layers/11111111-2222-3333-4444-555555555555"
     );
+  });
+
+  it("builds the admin data route for a draft link", () => {
+    expect(
+      layerLinkPath("great-bear", "11111111-2222-3333-4444-555555555555", true)
+    ).toBe(
+      "/great-bear/admin/data?layerLink=11111111-2222-3333-4444-555555555555"
+    );
+  });
+});
+
+describe("layerLinkCreatorChoices", () => {
+  it("leaves the published map on the published link", () => {
+    expect(
+      layerLinkCreatorChoices({
+        place: "published",
+        publishedVersion: true,
+        draftTarget: true,
+      })
+    ).toEqual({
+      showSwitch: false,
+      targetDraft: false,
+      refresh: true,
+      warnAdminsOnly: false,
+    });
+  });
+
+  it("defaults the admin list to the draft and can switch when published", () => {
+    expect(
+      layerLinkCreatorChoices({
+        place: "admin",
+        publishedVersion: true,
+        draftTarget: true,
+      })
+    ).toEqual({
+      showSwitch: true,
+      targetDraft: true,
+      refresh: true,
+      warnAdminsOnly: true,
+    });
+    expect(
+      layerLinkCreatorChoices({
+        place: "admin",
+        publishedVersion: true,
+        draftTarget: false,
+      }).warnAdminsOnly
+    ).toBe(false);
+  });
+
+  it("keeps a draft-only layer on the admin link", () => {
+    expect(
+      layerLinkCreatorChoices({
+        place: "admin",
+        publishedVersion: false,
+        draftTarget: false,
+      })
+    ).toEqual({
+      showSwitch: false,
+      targetDraft: true,
+      refresh: true,
+      warnAdminsOnly: true,
+    });
   });
 });

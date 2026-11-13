@@ -249,6 +249,7 @@ fragment MapBookmarkDetails on MapBookmark {
   dataTableStates
   kind
   subjectStableId
+  subjectIsDraft
 }
 
 query GetBookmark($id: UUID!) {

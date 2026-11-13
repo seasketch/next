@@ -1,9 +1,10 @@
--- Shareable links to a single published overlay.
+-- Shareable links to one overlay, published or still in the admin draft.
 --
 -- A layer link is a map_bookmarks row (kind = layer_link) that stores one
 -- layer, the basemap that was on screen when an admin created the link, and a
 -- camera fitted to the layer's extent. The existing screenshot worker renders
--- the thumbnail. Forum bookmarks stay kind = forum.
+-- the thumbnail. Forum bookmarks stay kind = forum. subject_is_draft marks a
+-- link that opens the admin copy and is readable only by project admins.
 
 do $$ begin
   create type public.map_bookmark_kind as enum ('forum', 'layer_link');
@@ -13,21 +14,34 @@ end $$;
 
 alter table public.map_bookmarks
   add column if not exists kind public.map_bookmark_kind not null default 'forum',
-  add column if not exists subject_stable_id text;
+  add column if not exists subject_stable_id text,
+  add column if not exists subject_is_draft boolean not null default false;
 
 comment on column public.map_bookmarks.kind is
-  'forum rows are map views attached to forum posts. layer_link rows are the shareable link for one published overlay.';
+  'forum rows are map views attached to forum posts. layer_link rows are the shareable link for one overlay.';
 
 comment on column public.map_bookmarks.subject_stable_id is
-  'For layer_link rows, the published table_of_contents stable_id. Null for forum bookmarks.';
+  'For layer_link rows, the table_of_contents stable_id. Null for forum bookmarks.';
 
-create unique index if not exists map_bookmarks_layer_link_uidx
-  on public.map_bookmarks (project_id, subject_stable_id)
+comment on column public.map_bookmarks.subject_is_draft is
+  'True when a layer_link opens the admin draft of the layer. Those rows are visible only to project administrators.';
+
+drop index if exists public.map_bookmarks_layer_link_uidx;
+create unique index map_bookmarks_layer_link_uidx
+  on public.map_bookmarks (project_id, subject_stable_id, subject_is_draft)
   where kind = 'layer_link';
 
--- One canonical link per published layer. Opening the dialog again with the
+-- One canonical link per layer and audience. Opening the dialog again with the
 -- same basemap, camera, and style returns the existing row. A change requeues
--- the screenshot and keeps the same id, so the URL does not move.
+-- the screenshot and keeps the same id, so the URL does not move. refresh
+-- false returns the existing row without recapturing, which is how the admin
+-- dialog shows the published link without writing the draft map over it.
+drop function if exists public.ensure_layer_link(
+  text, text, jsonb, integer, jsonb, jsonb, integer[], text, jsonb
+);
+drop function if exists public.ensure_layer_link(
+  text, text, jsonb, integer, jsonb, jsonb, integer[], text, jsonb, boolean, boolean
+);
 create or replace function public.ensure_layer_link(
   slug text,
   "stableId" text,
@@ -37,7 +51,9 @@ create or replace function public.ensure_layer_link(
   "cameraOptions" jsonb,
   "mapDimensions" integer[],
   "basemapName" text,
-  "layerNames" jsonb
+  "layerNames" jsonb,
+  draft boolean default false,
+  refresh boolean default true
 ) returns public.map_bookmarks
 language plpgsql
 security definer
@@ -59,11 +75,11 @@ begin
   from table_of_contents_items
   where project_id = pid
     and stable_id = "stableId"
-    and is_draft = false
+    and is_draft = ensure_layer_link.draft
     and is_folder = false;
 
   if item_id is null then
-    if exists (
+    if ensure_layer_link.draft is not true and exists (
       select 1
       from table_of_contents_items
       where project_id = pid
@@ -83,6 +99,7 @@ begin
   where project_id = pid
     and subject_stable_id = "stableId"
     and kind = 'layer_link'
+    and subject_is_draft = ensure_layer_link.draft
   for update;
 
   if bookmark.id is null then
@@ -104,11 +121,12 @@ begin
         sketch_names,
         data_table_states,
         kind,
-        subject_stable_id
+        subject_stable_id,
+        subject_is_draft
       ) values (
         pid,
         uid,
-        true,
+        ensure_layer_link.draft is not true,
         ensure_layer_link.style,
         array["stableId"],
         "selectedBasemap",
@@ -122,7 +140,8 @@ begin
         '{}'::jsonb,
         '{}'::jsonb,
         'layer_link',
-        "stableId"
+        "stableId",
+        ensure_layer_link.draft
       ) returning * into bookmark;
       return bookmark;
     exception
@@ -132,8 +151,13 @@ begin
         where project_id = pid
           and subject_stable_id = "stableId"
           and kind = 'layer_link'
+          and subject_is_draft = ensure_layer_link.draft
         for update;
     end;
+  end if;
+
+  if bookmark.id is not null and ensure_layer_link.refresh is not true then
+    return bookmark;
   end if;
 
   style_changed :=
@@ -161,7 +185,8 @@ begin
     visible_data_layers = array["stableId"],
     visible_sketches = '{}'::int[],
     sidebar_state = '{"open": false, "width": 0, "isSmall": false}'::jsonb,
-    is_public = true,
+    is_public = ensure_layer_link.draft is not true,
+    subject_is_draft = ensure_layer_link.draft,
     user_id = case when style_changed then uid else user_id end,
     image_id = case when style_changed then null else image_id end,
     screenshot_job_status = case
@@ -197,8 +222,10 @@ comment on function public.ensure_layer_link(
   "cameraOptions" jsonb,
   "mapDimensions" integer[],
   "basemapName" text,
-  "layerNames" jsonb
-) is 'Create or refresh the shareable bookmark for one published layer. Admins only. The bookmark id is stable for the layer.';
+  "layerNames" jsonb,
+  draft boolean,
+  refresh boolean
+) is 'Create or refresh the shareable bookmark for one layer. Admins only. draft stores the admin copy. The bookmark id is stable for that layer and audience.';
 
 revoke all on function public.ensure_layer_link(
   slug text,
@@ -209,7 +236,9 @@ revoke all on function public.ensure_layer_link(
   "cameraOptions" jsonb,
   "mapDimensions" integer[],
   "basemapName" text,
-  "layerNames" jsonb
+  "layerNames" jsonb,
+  draft boolean,
+  refresh boolean
 ) from public;
 grant all on function public.ensure_layer_link(
   slug text,
@@ -220,7 +249,9 @@ grant all on function public.ensure_layer_link(
   "cameraOptions" jsonb,
   "mapDimensions" integer[],
   "basemapName" text,
-  "layerNames" jsonb
+  "layerNames" jsonb,
+  draft boolean,
+  refresh boolean
 ) to seasketch_user;
 
 -- What an admin should tell people about who can open the link.
@@ -361,3 +392,72 @@ comment on function public.layer_link_sharing(slug text, "stableId" text) is
 
 revoke all on function public.layer_link_sharing(slug text, "stableId" text) from public;
 grant all on function public.layer_link_sharing(slug text, "stableId" text) to seasketch_user;
+
+-- Draft layer links are for project administrators. Anyone else gets no row,
+-- so the stored style and camera are not readable from the public bookmark query.
+create or replace function public.bookmark_by_id(id uuid)
+returns public.map_bookmarks
+language plpgsql
+stable
+security definer
+set search_path to 'public', 'pg_temp'
+as $$
+declare
+  bookmark public.map_bookmarks;
+begin
+  select * into bookmark
+  from map_bookmarks
+  where map_bookmarks.id = bookmark_by_id.id;
+
+  if bookmark.id is null then
+    return null;
+  end if;
+
+  if bookmark.kind = 'layer_link'
+     and bookmark.subject_is_draft
+     and session_is_admin(bookmark.project_id) is not true then
+    return null;
+  end if;
+
+  return bookmark;
+end;
+$$;
+
+comment on function public.bookmark_by_id(id uuid) is
+  'Fetch one map bookmark. Draft layer links are returned only to project administrators.';
+
+-- Tells the client why a layer-link id cannot be opened, without returning the bookmark.
+create or replace function public.layer_link_access(id uuid)
+returns text
+language plpgsql
+stable
+security definer
+set search_path to 'public', 'pg_temp'
+as $$
+declare
+  bookmark public.map_bookmarks;
+begin
+  select * into bookmark
+  from map_bookmarks
+  where map_bookmarks.id = layer_link_access.id;
+
+  if bookmark.id is null then
+    return 'missing';
+  end if;
+
+  if bookmark.kind = 'layer_link' and bookmark.subject_is_draft then
+    if session_is_admin(bookmark.project_id) is true then
+      return 'ok';
+    end if;
+    return 'admins_only';
+  end if;
+
+  return 'ok';
+end;
+$$;
+
+comment on function public.layer_link_access(id uuid) is
+  'ok, admins_only, or missing. Draft layer links are admins_only until the caller is a project administrator.';
+
+revoke all on function public.layer_link_access(id uuid) from public;
+grant execute on function public.layer_link_access(id uuid) to seasketch_user, anon;

@@ -2,6 +2,10 @@ query LayerLinkSharing($slug: String!, $stableId: String!) {
   layerLinkSharing(slug: $slug, stableId: $stableId)
 }
 
+query LayerLinkAccess($id: UUID!) {
+  layerLinkAccess(id: $id)
+}
+
 mutation EnsureLayerLink(
   $slug: String!
   $stableId: String!
@@ -12,6 +16,8 @@ mutation EnsureLayerLink(
   $mapDimensions: [Int!]!
   $basemapName: String!
   $layerNames: JSON!
+  $draft: Boolean!
+  $refresh: Boolean!
 ) {
   ensureLayerLink(
     input: {
@@ -24,6 +30,8 @@ mutation EnsureLayerLink(
       mapDimensions: $mapDimensions
       basemapName: $basemapName
       layerNames: $layerNames
+      draft: $draft
+      refresh: $refresh
     }
   ) {
     mapBookmark {

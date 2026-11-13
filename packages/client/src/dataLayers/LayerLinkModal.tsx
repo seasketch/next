@@ -1,6 +1,7 @@
 import {
   ChevronDownIcon,
   ClipboardCopyIcon,
+  LockClosedIcon,
   XIcon,
 } from "@heroicons/react/outline";
 import {
@@ -17,6 +18,7 @@ import {
   useState,
 } from "react";
 import { createPortal } from "react-dom";
+import { useHistory } from "react-router-dom";
 import { Trans, useTranslation } from "react-i18next";
 import { useAuth0 } from "@auth0/auth0-react";
 import { useToast, ToastViewport } from "../components/Toast";
@@ -26,6 +28,7 @@ import {
   useEnsureLayerLinkMutation,
   useGetBookmarkQuery,
   useGetMetadataQuery,
+  useLayerLinkAccessQuery,
   useLayerLinkSharingQuery,
   useMapBookmarkSubscription,
   useProjectMetadataQuery,
@@ -43,7 +46,9 @@ import {
 } from "./MapContextManager";
 import {
   isLayerLinkSharing,
+  layerLinkCreatorChoices,
   layerLinkNotices,
+  layerLinkPath,
   layerLinkUrl,
   LayerLinkNotice,
   LayerLinkSharing,
@@ -295,25 +300,83 @@ function LayerLinkMetadata({
   );
 }
 
+function AdminOnlyNote() {
+  const { t } = useTranslation("mapBookmarks");
+  return (
+    <p className="flex items-start gap-2 rounded-lg bg-amber-50 px-3 py-2 text-sm leading-snug text-amber-950">
+      <LockClosedIcon className="mt-0.5 h-4 w-4 shrink-0 text-amber-700" />
+      <span>
+        {t(
+          "This link requires signing in. Only project administrators can open it."
+        )}
+      </span>
+    </p>
+  );
+}
+
+function VersionSwitch({
+  draftTarget,
+  onChange,
+}: {
+  draftTarget: boolean;
+  onChange: (draft: boolean) => void;
+}) {
+  const { t } = useTranslation("mapBookmarks");
+  const option = (draft: boolean, label: string) => {
+    const selected = draftTarget === draft;
+    return (
+      <button
+        type="button"
+        aria-pressed={selected}
+        onClick={() => onChange(draft)}
+        className={`rounded-full px-3.5 py-1 text-sm font-medium transition ${
+          selected
+            ? "bg-white text-slate-900 shadow-sm"
+            : "text-slate-600 hover:text-slate-900"
+        }`}
+      >
+        {label}
+      </button>
+    );
+  };
+  return (
+    <div className="flex items-center justify-between gap-3">
+      <span className="text-sm text-slate-500">{t("Link to")}</span>
+      <div
+        role="group"
+        aria-label={t("Which version this link opens")}
+        className="flex rounded-full bg-slate-100 p-0.5 ring-1 ring-inset ring-slate-200/80"
+      >
+        {option(true, t("Admin"))}
+        {option(false, t("Published"))}
+      </div>
+    </div>
+  );
+}
+
 export default function LayerLinkModal({
   mode,
+  place = "published",
   stableId,
   bookmarkId,
   onClose,
 }: {
   mode: "create" | "view";
+  place?: "admin" | "published";
   stableId?: string;
   bookmarkId?: string;
   onClose: () => void;
 }) {
   const { t } = useTranslation("mapBookmarks");
   const { toast } = useToast();
+  const history = useHistory();
   const auth0 = useAuth0();
   const slug = getSlug();
   const client = useApolloClient() as ApolloClient<NormalizedCacheObject>;
   const { manager, ready } = useContext(MapManagerContext);
   const overlay = useContext(MapOverlayContext);
   const [createdId, setCreatedId] = useState<string | null>(null);
+  const [draftTarget, setDraftTarget] = useState(true);
   const [boundsNote, setBoundsNote] = useState(false);
   const [createError, setCreateError] = useState<string | null>(null);
   const [creating, setCreating] = useState(mode === "create");
@@ -329,8 +392,15 @@ export default function LayerLinkModal({
   });
   const bookmark = bookmarkQuery.data?.bookmarkById;
   const status = bookmark?.screenshotJobStatus;
+  const accessGate = useLayerLinkAccessQuery({
+    variables: { id: bookmarkId || "" },
+    skip: mode !== "view" || !bookmarkId,
+  });
+  const gate = accessGate.data?.layerLinkAccess;
   const waitingForImage = Boolean(
     activeId &&
+      gate !== "admins_only" &&
+      gate !== "missing" &&
       !bookmark?.imageId &&
       status !== WorkerJobStatus.Failed &&
       status !== WorkerJobStatus.Error &&
@@ -344,9 +414,22 @@ export default function LayerLinkModal({
     skip: !activeId || !waitingForImage,
   });
 
+  const tocQuery = usePublishedTableOfContentsQuery({
+    variables: { slug },
+    skip: !slug || (place !== "admin" && mode !== "view"),
+  });
+  const publishedVersion = useMemo(() => {
+    const items = tocQuery.data?.projectBySlug?.tableOfContentsItems || [];
+    return items.some((item) => item.stableId === stableId && !item.isFolder);
+  }, [tocQuery.data, stableId]);
+  const choices = layerLinkCreatorChoices({
+    place,
+    publishedVersion,
+    draftTarget,
+  });
   const sharingQuery = useLayerLinkSharingQuery({
     variables: { slug, stableId: stableId || "" },
-    skip: mode !== "create" || !stableId,
+    skip: mode !== "create" || !stableId || choices.targetDraft,
   });
   const sharing = isLayerLinkSharing(sharingQuery.data?.layerLinkSharing)
     ? sharingQuery.data?.layerLinkSharing
@@ -354,10 +437,6 @@ export default function LayerLinkModal({
   const notices = sharing ? layerLinkNotices(sharing) : null;
 
   const metadata = useProjectMetadataQuery({
-    variables: { slug },
-    skip: !slug,
-  });
-  const tocQuery = usePublishedTableOfContentsQuery({
     variables: { slug },
     skip: !slug,
   });
@@ -381,6 +460,7 @@ export default function LayerLinkModal({
     }
     let cancelled = false;
     setCreating(true);
+    setCreatedId(null);
     setCreateError(null);
     (async () => {
       try {
@@ -400,6 +480,8 @@ export default function LayerLinkModal({
             mapDimensions: draft.mapDimensions,
             basemapName: draft.basemapName,
             layerNames: draft.layerNames,
+            draft: choices.targetDraft,
+            refresh: choices.refresh,
           },
         });
         const id = result.data?.ensureLayerLink?.mapBookmark?.id;
@@ -424,25 +506,29 @@ export default function LayerLinkModal({
     return () => {
       cancelled = true;
     };
-    // ensureLink is stable enough for this one-shot capture.
+    // ensureLink is stable enough for this capture. Switching version recaptures.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [mode, stableId, manager, ready, slug]);
+  }, [mode, stableId, manager, ready, slug, choices.targetDraft, choices.refresh]);
 
   const subjectId =
     bookmark?.subjectStableId ||
     stableId ||
     (bookmark?.visibleDataLayers && bookmark.visibleDataLayers[0]) ||
     null;
-  const tocItems = useMemo(
-    () =>
+  const tocItems = useMemo(() => {
+    if (place === "admin") {
+      return overlay.tableOfContentsItems || [];
+    }
+    return (
       tocQuery.data?.projectBySlug?.tableOfContentsItems ||
       overlay.tableOfContentsItems ||
-      [],
-    [
-      tocQuery.data?.projectBySlug?.tableOfContentsItems,
-      overlay.tableOfContentsItems,
-    ]
-  );
+      []
+    );
+  }, [
+    place,
+    tocQuery.data?.projectBySlug?.tableOfContentsItems,
+    overlay.tableOfContentsItems,
+  ]);
   const subjectItem = tocItems.find((item) => item.stableId === subjectId);
   const canSeeLayer = Boolean(
     subjectId && tocItems.some((item) => item.stableId === subjectId)
@@ -470,12 +556,25 @@ export default function LayerLinkModal({
     return source?.attribution || null;
   }, [sharing?.attribution, tocItems, subjectId, overlay.dataLayers, overlay.dataSources]);
 
-  const url = activeId ? layerLinkUrl(slug, activeId) : "";
+  const linkIsDraft =
+    mode === "create" ? choices.targetDraft : Boolean(bookmark?.subjectIsDraft);
+  const url = activeId ? layerLinkUrl(slug, activeId, linkIsDraft) : "";
   const isLayerLink =
     !bookmark || bookmark.kind === MapBookmarkKind.LayerLink || mode === "create";
   const failed =
     status === WorkerJobStatus.Failed || status === WorkerJobStatus.Error;
   const signedIn = Boolean(metadata.data?.me);
+  const sessionIsAdmin = Boolean(metadata.data?.project?.sessionIsAdmin);
+  useEffect(() => {
+    if (
+      place === "published" &&
+      bookmark?.subjectIsDraft &&
+      sessionIsAdmin &&
+      bookmark.id
+    ) {
+      history.replace(layerLinkPath(slug, bookmark.id, true));
+    }
+  }, [place, bookmark?.subjectIsDraft, bookmark?.id, sessionIsAdmin, history, slug]);
   const supportEmail =
     metadata.data?.project?.supportEmail ||
     metadata.data?.projectPublicDetails?.supportEmail ||
@@ -501,8 +600,31 @@ export default function LayerLinkModal({
     onClose();
   };
 
+  const adminsOnlyGate =
+    mode === "view" && accessGate.data?.layerLinkAccess === "admins_only";
   let access: ReactNode = null;
-  if (
+  if (adminsOnlyGate || (mode === "view" && bookmark?.subjectIsDraft)) {
+    access = (
+      <div className="space-y-3">
+        <AdminOnlyNote />
+        {adminsOnlyGate && !signedIn && (
+          <button
+            type="button"
+            className="rounded-lg bg-primary-500 px-3 py-1.5 text-sm font-medium text-white hover:bg-primary-600"
+            onClick={() =>
+              auth0.loginWithRedirect({
+                appState: { returnTo: window.location.pathname },
+              })
+            }
+          >
+            <Trans ns="mapBookmarks">Sign in</Trans>
+          </button>
+        )}
+      </div>
+    );
+  } else if (mode === "create" && choices.warnAdminsOnly) {
+    access = <AdminOnlyNote />;
+  } else if (
     mode === "create" &&
     notices &&
     sharing &&
@@ -512,6 +634,12 @@ export default function LayerLinkModal({
       <div className="rounded-lg bg-amber-50 px-3 py-2.5 text-sm leading-relaxed text-amber-950">
         <NoticeCopy summary={sharing} blocks={notices.blocks} />
       </div>
+    );
+  } else if (mode === "view" && accessGate.data?.layerLinkAccess === "missing") {
+    access = (
+      <p className="text-sm text-slate-600">
+        {t("This link is no longer available.")}
+      </p>
     );
   } else if (mode === "view" && bookmark && isLayerLink && tocReady && !canSeeLayer) {
     access = (
@@ -629,7 +757,23 @@ export default function LayerLinkModal({
               )}
             </p>
           )}
-          {access && <div className="mt-4">{access}</div>}
+          {mode === "create" && choices.showSwitch && (
+            <div className="mt-4">
+              <VersionSwitch
+                draftTarget={choices.targetDraft}
+                onChange={setDraftTarget}
+              />
+            </div>
+          )}
+          {access && (
+            <div
+              className={
+                mode === "create" && choices.warnAdminsOnly ? "mt-2.5" : "mt-4"
+              }
+            >
+              {access}
+            </div>
+          )}
           {subjectItem?.hasMetadata && (subjectId || subjectItem.id) && (
             <LayerLinkMetadata
               itemId={subjectItem.id}
