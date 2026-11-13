@@ -1,5 +1,15 @@
 # SeaSketch Next – Agents Context Guide
 
+## Database migrations
+
+The schema change on a branch is an edit to `packages/api/migrations/current.sql`. Commit that file with the rest of the work.
+
+`npm run db:commit` and `graphile-migrate commit` are not how you finish the branch. They empty `current.sql` and write the next numbered file under `packages/api/migrations/committed/`. Branches in flight each take that same next number and conflict. Leave the SQL in `current.sql`.
+
+Do not create, edit, or stage files in `packages/api/migrations/committed/`. Do not edit `packages/api/schema.sql`. It is generated.
+
+Run `npm run db:commit` or `graphile-migrate commit` only when the user explicitly tells you to, in this conversation, immediately before merging to master. `npm run db:watch` and `npm run db:migrate` are the normal commands. `db:migrate` applies numbered migrations that already exist. It does not turn `current.sql` into one.
+
 ## 🧱 Project Architecture
 
 - **Monorepo Structure**: Managed with npm workspaces (one root `package-lock.json`; libraries build with TypeScript project references via `tsc -b`), containing multiple packages:
@@ -72,13 +82,13 @@ export const MyComponent: React.FC<MyComponentProps> = ({ title }) => {
 ## GraphQL Queries and Mutations
 
 - The capabilities of the GraphQL API are defined in `packages/api/generated-schema.gql`.
-- When a new query or mutation is necessary, create it in `packages/api/migrations/current.sql`, following the guidance of the PostGraphile documentation at https://www.graphile.org/postgraphile/introduction/. Never create a migration file in `packages/api/migrations/committed` directly. If a mutation or query is particularly complex, it can be implemented as a plugin under `packages/api/src/plugins`.
+- When a new query or mutation is necessary, create it in `packages/api/migrations/current.sql`, following the guidance of the PostGraphile documentation at https://www.graphile.org/postgraphile/introduction/. Do not run `npm run db:commit` or `graphile-migrate commit`, and do not add a file under `packages/api/migrations/committed`. If a mutation or query is particularly complex, it can be implemented as a plugin under `packages/api/src/plugins`.
 - Client GraphQL operation definitions must live in `.graphql` files under `packages/client/src/queries/`. Do not define queries/mutations inline in React component `.tsx` files.
 - Never directly edit client/src/generated/\* files! If you need to modify queries and related auto-generated types, edit .graphql files and run the `graphql:codegen` npm script to regenerate these files.
 
 ## Database Migration Workflow (Mandatory)
 
-- `packages/api/migrations/current.sql` is the only place for in-progress migration work. Do not create/edit files in `packages/api/migrations/committed` directly. Do not edit schema.sql directly.
+- `packages/api/migrations/current.sql` is the only place for in-progress migration work. Commit that file. Do not run `npm run db:commit` or `graphile-migrate commit`, and do not create or edit files in `packages/api/migrations/committed`, unless the user explicitly tells you to commit the numbered migration in this conversation, immediately before merging to master. Do not edit schema.sql directly.
 
 ### Adding columns to tables that are copied on publish/duplicate
 
