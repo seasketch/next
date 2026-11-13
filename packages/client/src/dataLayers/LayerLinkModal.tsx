@@ -1,4 +1,8 @@
-import { ClipboardCopyIcon, XIcon } from "@heroicons/react/outline";
+import {
+  ChevronDownIcon,
+  ClipboardCopyIcon,
+  XIcon,
+} from "@heroicons/react/outline";
 import {
   ApolloClient,
   NormalizedCacheObject,
@@ -21,12 +25,16 @@ import {
   MapBookmarkKind,
   useEnsureLayerLinkMutation,
   useGetBookmarkQuery,
+  useGetMetadataQuery,
   useLayerLinkSharingQuery,
   useMapBookmarkSubscription,
   useProjectMetadataQuery,
   usePublishedTableOfContentsQuery,
   WorkerJobStatus,
 } from "../generated/graphql";
+import MetadataDocumentView from "./MetadataDocumentView";
+import { esriRestUrlFromMetadataItem } from "./esriRestUrl";
+import EsriRestUrlFooter from "./EsriRestUrlFooter";
 import getSlug from "../getSlug";
 import { copyTextToClipboard } from "../projects/Forums/InlineAuthorDetails";
 import {
@@ -215,6 +223,78 @@ function PreviewThumbnail({
   );
 }
 
+function LayerLinkMetadata({
+  itemId,
+  stableId,
+}: {
+  itemId?: number | null;
+  stableId: string | null;
+}) {
+  const [open, setOpen] = useState(false);
+  const metadata = useGetMetadataQuery({
+    variables: {
+      itemId: itemId ?? undefined,
+      stableId: stableId ?? undefined,
+    },
+    skip: !open || (!itemId && !stableId),
+  });
+  const item = metadata.data?.tableOfContentsItemByIdentifier;
+  const esriRestUrl = useMemo(() => {
+    if (!item || item.hideArcGisRestLink) {
+      return null;
+    }
+    return esriRestUrlFromMetadataItem(item);
+  }, [item]);
+  const xml = item?.metadataXml;
+
+  return (
+    <div className="mt-4 border-t border-slate-100 pt-3">
+      <button
+        type="button"
+        className="flex w-full items-center justify-between text-sm font-medium text-slate-700"
+        aria-expanded={open}
+        onClick={() => setOpen((current) => !current)}
+      >
+        <Trans ns="mapBookmarks">Metadata</Trans>
+        <ChevronDownIcon
+          className={`h-4 w-4 text-slate-400 transition ${
+            open ? "rotate-180" : ""
+          }`}
+        />
+      </button>
+      {open && (
+        <div className="metadata mt-3 max-h-48 overflow-y-auto rounded-lg bg-slate-50 px-3 py-2">
+          {metadata.loading && (
+            <div className="flex justify-center py-2">
+              <Spinner mini />
+            </div>
+          )}
+          {item?.computedMetadata && (
+            <MetadataDocumentView
+              document={item.computedMetadata}
+              className="ProseMirror"
+            />
+          )}
+          {xml?.url && (
+            <p className="mt-2 text-sm text-slate-600">
+              <a
+                href={xml.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-primary-600 underline"
+                download={xml.filename}
+              >
+                <Trans ns="homepage">Download</Trans>
+              </a>
+            </p>
+          )}
+          {esriRestUrl && <EsriRestUrlFooter url={esriRestUrl} className="mt-2" />}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function LayerLinkModal({
   mode,
   stableId,
@@ -363,6 +443,7 @@ export default function LayerLinkModal({
       overlay.tableOfContentsItems,
     ]
   );
+  const subjectItem = tocItems.find((item) => item.stableId === subjectId);
   const canSeeLayer = Boolean(
     subjectId && tocItems.some((item) => item.stableId === subjectId)
   );
@@ -549,6 +630,12 @@ export default function LayerLinkModal({
             </p>
           )}
           {access && <div className="mt-4">{access}</div>}
+          {subjectItem?.hasMetadata && (subjectId || subjectItem.id) && (
+            <LayerLinkMetadata
+              itemId={subjectItem.id}
+              stableId={subjectId}
+            />
+          )}
           {mode === "create" && url && (
             <div className="mt-5 flex items-center gap-2">
               <input
