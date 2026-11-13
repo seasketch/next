@@ -1,0 +1,19 @@
+{
+  "version": 1,
+  "hooks": {
+    "beforeShellExecution": [
+      {
+        "command": "bash .cursor/hooks/block-committed-migration.sh",
+        "matcher": "db:commit|graphile-migrate|migrations/committed|\\bgit(\\s+-[^;&|]*)*\\s+(add|commit|mv|rm)\\b",
+        "failClosed": true
+      }
+    ],
+    "preToolUse": [
+      {
+        "command": "bash .cursor/hooks/block-committed-migration.sh",
+        "matcher": "Write|StrReplace|Delete|ApplyPatch|EditNotebook|Edit",
+        "failClosed": true
+      }
+    ]
+  }
+}

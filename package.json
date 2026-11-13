@@ -9,6 +9,7 @@
   ],
   "scripts": {
     "bootstrap": "npm install",
+    "prepare": "node scripts/install-git-hooks.mjs",
     "setup": "bash packages/api/scripts/setup.sh",
     "dev": "node scripts/dev.mjs",
     "clean": "tsc -b --clean",
