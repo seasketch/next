@@ -65,6 +65,20 @@ describe("resolveSapInstruction", () => {
     expect(proseText(resolved)).not.toContain("valued areas");
   });
 
+  it("keeps the stock point list to the instruction sentence", () => {
+    expect(
+      proseText(
+        resolveSapInstruction(
+          "list",
+          polygonInstruction("list"),
+          SketchGeometryType.Point
+        )
+      )
+    ).toBe(
+      "Add as many points as you need for this activity, then set how important each location is."
+    );
+  });
+
   it("keeps an edited prompt when the geometry is a point", () => {
     expect(
       resolveSapInstruction("begin", custom, SketchGeometryType.Point)

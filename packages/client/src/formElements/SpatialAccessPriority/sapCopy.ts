@@ -32,9 +32,7 @@ export const polygonListMarkdown = `Add as many shapes as necessary to represent
 These scores will be summed among all survey responses to create a heatmap of valued areas.`;
 
 // eslint-disable-next-line i18next/no-literal-string
-export const pointListMarkdown = `Add as many points as you need for this activity, then set how important each location is.
-
-Each point keeps the priority you give it. Scores from every response are summed.`;
+export const pointListMarkdown = `Add as many points as you need for this activity, then set how important each location is.`;
 
 // eslint-disable-next-line i18next/no-literal-string
 export const polygonNavMarkdown = `# Your sectors
