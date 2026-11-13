@@ -894,8 +894,8 @@ function Header({
       onError(
         new Error(
           error instanceof Error && error.message
-            ? `${t("Could not download the layer inventory")} (${error.message})`
-            : t("Could not download the layer inventory")
+            ? `${t("Could not export the layer inventory")} (${error.message})`
+            : t("Could not export the layer inventory")
         )
       );
     } finally {
@@ -1075,7 +1075,7 @@ function Header({
                   void onDownloadSpreadsheet();
                 }}
               >
-                <Trans ns="admin:data">Download layer inventory (csv)</Trans>
+                <Trans ns="admin:data">Export layer inventory CSV</Trans>
               </MenuBarItem>
             </MenuBarContent>
           </Menubar.Portal>
