@@ -8,9 +8,9 @@ export function makeFetchRangeFn(
   const pool = new Pool(rootUrl, {
     // Queue extra range reads instead of opening a socket for each one.
     // An unbounded pool gets reset by CloudFront when many tests fetch at once.
-    // Close the socket after the response. Reusing it races a peer RST and
-    // throws read ECONNRESET. Undici does not retry that.
-    pipelining: 0,
+    // One HTTP/2 session. HTTP/1.1 keep-alive writes the next range onto a
+    // socket the peer may already have reset, and that throws read ECONNRESET.
+    allowH2: true,
     connections: 8,
     // 10 second timeout for body
     bodyTimeout: 10 * 1000,

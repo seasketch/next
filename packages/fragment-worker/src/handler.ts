@@ -33,9 +33,9 @@ function poolFor(origin: string): Pool {
   let pool = pools.get(origin);
   if (!pool) {
     pool = new Pool(origin, {
-      // Close the socket after the response. Reusing it races a peer RST
-      // and throws read ECONNRESET. Undici does not retry that.
-      pipelining: 0,
+      // One HTTP/2 session. HTTP/1.1 keep-alive writes the next range onto a
+      // socket the peer may already have reset, and that throws read ECONNRESET.
+      allowH2: true,
       connectTimeout: R2_READ_TIMEOUT_MS,
       headersTimeout: R2_READ_TIMEOUT_MS,
       bodyTimeout: R2_READ_TIMEOUT_MS,
