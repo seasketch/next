@@ -60,6 +60,8 @@ import useCurrentProjectMetadata from "../../useCurrentProjectMetadata";
 import DataDownloadDefaultSettingModal from "./DataDownloadDefaultSettingModal";
 import getSlug from "../../getSlug";
 import { useGlobalErrorHandler } from "../../components/GlobalErrorHandler";
+import { useAuth0 } from "@auth0/auth0-react";
+import { downloadLayerSpreadsheet } from "./downloadLayerSpreadsheet";
 import useDialog from "../../components/useDialog";
 import Warning from "../../components/Warning";
 import AddMVTUrlModal from "../AddMVTUrlModal";
@@ -870,6 +872,33 @@ function Header({
   const [showINaturalistModal, setShowINaturalistModal] = useState(false);
 
   const { confirm } = useDialog();
+  const { getAccessTokenSilently } = useAuth0();
+  const [exportingSpreadsheet, setExportingSpreadsheet] = useState(false);
+  const onDownloadSpreadsheet = async () => {
+    if (exportingSpreadsheet) {
+      return;
+    }
+    setExportingSpreadsheet(true);
+    try {
+      const token = await getAccessTokenSilently({
+        authorizationParams: {
+          audience: process.env.REACT_APP_AUTH0_AUDIENCE,
+          scope: process.env.REACT_APP_AUTH0_SCOPE,
+        },
+      });
+      await downloadLayerSpreadsheet(getSlug(), token);
+    } catch (error) {
+      onError(
+        new Error(
+          error instanceof Error && error.message
+            ? `${t("Could not download the layer spreadsheet")} (${error.message})`
+            : t("Could not download the layer spreadsheet")
+        )
+      );
+    } finally {
+      setExportingSpreadsheet(false);
+    }
+  };
   return (
     <header className="w-128 z-20 flex-none border-b shadow-sm bg-gray-100 mt-2 text-sm border-t px-1">
       <Menubar.Root className="flex p-1 py-0.5 rounded-md z-50 items-center">
@@ -1035,6 +1064,15 @@ function Header({
                 disabled={sharedLayersCount === 0}
               >
                 {t(`Disable for ${sharedLayersCount || ""} shared layers`)}
+              </MenuBarItem>
+              <MenuBarSeparator />
+              <MenuBarItem
+                disabled={exportingSpreadsheet}
+                onClick={() => {
+                  void onDownloadSpreadsheet();
+                }}
+              >
+                <Trans ns="admin:data">Download layer spreadsheet</Trans>
               </MenuBarItem>
             </MenuBarContent>
           </Menubar.Portal>

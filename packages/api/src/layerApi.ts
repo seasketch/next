@@ -1,6 +1,9 @@
 import { Router } from "express";
 import { verify } from "./apiKeys";
 import { DBClient } from "./dbClient";
+import { authenticateRequest } from "./layerCatalog/authenticate";
+import { PgLayerCatalogStore } from "./layerCatalog/pgStore";
+import { registerLayerCatalog } from "./layerCatalog/router";
 
 /**
  * Make available information about a layer to clients with a project
@@ -15,6 +18,13 @@ import { DBClient } from "./dbClient";
 export default function layerApi(loadersPool: DBClient) {
   const router = Router();
 
+  registerLayerCatalog(router, {
+    store: new PgLayerCatalogStore(loadersPool),
+    authenticate: authenticateRequest,
+  });
+
+  // Project API-key bundle used by geoprocessing. Kept separate from the
+  // access-token routes above, which are one resource at a time.
   router.get("/:slug/:stableId", async (req, res) => {
     const bearerToken = req.headers.authorization;
     if (!bearerToken) {
