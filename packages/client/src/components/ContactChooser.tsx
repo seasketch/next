@@ -1,5 +1,5 @@
 import { ReactNode, useState } from "react";
-import { ChatAlt2Icon, UserGroupIcon } from "@heroicons/react/outline";
+import { UserGroupIcon } from "@heroicons/react/outline";
 import { Trans, useTranslation } from "react-i18next";
 import { useParams } from "react-router-dom";
 import { useProjectMetadataQuery } from "../generated/graphql";
@@ -140,14 +140,14 @@ function ContactCard(props: {
     props.tone === "project"
       ? "bg-primary-300 bg-opacity-20 text-primary-700"
       : "bg-gray-100 text-gray-700";
+  const buttonClass =
+    props.tone === "project"
+      ? "border-transparent bg-primary-500 text-white hover:bg-primary-600 focus:ring-primary-500"
+      : "border-gray-300 bg-white text-gray-800 hover:bg-gray-50 focus:ring-primary-500";
   return (
-    <a
-      href={props.href}
-      onClick={props.onClick}
-      className={`group flex flex-col rounded-xl border p-4 text-left shadow-sm transition hover:-translate-y-0.5 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-primary-500 ${
-        props.tone === "project"
-          ? "border-primary-300"
-          : "border-gray-200"
+    <div
+      className={`flex flex-col rounded-xl border p-4 text-left shadow-sm ${
+        props.tone === "project" ? "border-primary-300" : "border-gray-200"
       }`}
     >
       <span
@@ -164,11 +164,14 @@ function ContactCard(props: {
       <span className="mt-2 flex-1 text-sm leading-5 text-gray-600">
         {props.children}
       </span>
-      <span className="mt-4 inline-flex items-center text-sm font-medium text-primary-700 group-hover:underline">
+      <a
+        href={props.href}
+        onClick={props.onClick}
+        className={`mt-4 inline-flex w-full items-center justify-center rounded-md border px-4 py-2 text-sm font-medium shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-2 ${buttonClass}`}
+      >
         {props.action}
-        <ChatAlt2Icon className="ml-1.5 h-4 w-4" aria-hidden="true" />
-      </span>
-    </a>
+      </a>
+    </div>
   );
 }
 

@@ -42,10 +42,10 @@ describe("ContactChooser", () => {
       screen.queryByText(/Questions about this project and questions/)
     ).not.toBeInTheDocument();
     expect(
-      screen.getByRole("link", { name: /planning@example.org/ })
+      screen.getByRole("link", { name: "Email project administrator" })
     ).toHaveAttribute("href", "mailto:planning@example.org");
     expect(
-      screen.getByRole("link", { name: new RegExp(SEASKETCH_SUPPORT_EMAIL) })
+      screen.getByRole("link", { name: "Email SeaSketch support" })
     ).toHaveAttribute("href", `mailto:${SEASKETCH_SUPPORT_EMAIL}`);
   });
 
