@@ -580,6 +580,13 @@ export type Basemap = Node & {
   /** Optional attribution to show at the bottom of the map. Will be overriden by the attribution specified in the gl-style in the case of MAPBOX types. */
   attribution?: Maybe<Scalars['String']>;
   description?: Maybe<Scalars['String']>;
+  /** Reads a single `EncBasemap` that is related to this `Basemap`. */
+  encBasemap?: Maybe<EncBasemap>;
+  /**
+   * Reads and enables pagination through a set of `EncBasemap`.
+   * @deprecated Please use encBasemap instead
+   */
+  encBasemapsConnection: EncBasemapsConnection;
   id: Scalars['Int'];
   /** Reads a single `InteractivitySetting` that is related to this `Basemap`. */
   interactivitySettings?: Maybe<InteractivitySetting>;
@@ -628,6 +635,17 @@ export type Basemap = Node & {
   /** For MAPBOX types, this can be a mapbox://-style url or a link to a custom mapbox gl style. For RASTER_URL_TEMPLATE, it should be a url template conforming to the [raster source documetation](https://docs.mapbox.com/mapbox-gl-js/style-spec/sources/#tiled-sources) */
   url: Scalars['String'];
   useDefaultOfflineTileSettings: Scalars['Boolean'];
+};
+
+
+export type BasemapEncBasemapsConnectionArgs = {
+  after?: Maybe<Scalars['Cursor']>;
+  before?: Maybe<Scalars['Cursor']>;
+  condition?: Maybe<EncBasemapCondition>;
+  first?: Maybe<Scalars['Int']>;
+  last?: Maybe<Scalars['Int']>;
+  offset?: Maybe<Scalars['Int']>;
+  orderBy?: Maybe<Array<EncBasemapsOrderBy>>;
 };
 
 
@@ -759,6 +777,7 @@ export type BasemapPatch = {
 
 /** SeaSketch supports multiple different basemap types. All must eventually be compiled down to a mapbox gl style. */
 export enum BasemapType {
+  Enc = 'ENC',
   Mapbox = 'MAPBOX',
   RasterUrlTemplate = 'RASTER_URL_TEMPLATE'
 }
@@ -5241,6 +5260,85 @@ export type EnableOfflineSupportPayloadProjectEdgeArgs = {
   orderBy?: Maybe<Array<ProjectsOrderBy>>;
 };
 
+/** Chart catalogue and display settings for an ENC basemap. Tiles are public in this spike. */
+export type EncBasemap = Node & {
+  __typename?: 'EncBasemap';
+  /** Reads a single `Basemap` that is related to this `EncBasemap`. */
+  basemap?: Maybe<Basemap>;
+  basemapId: Scalars['Int'];
+  /** West, south, east, north of the chart, in WGS84 degrees. */
+  bounds?: Maybe<Array<Maybe<Scalars['Float']>>>;
+  catalog: Scalars['JSON'];
+  createdAt: Scalars['Datetime'];
+  /** A globally unique identifier. Can be used in various places throughout the system to identify this single value. */
+  nodeId: Scalars['ID'];
+  schemaVersion: Scalars['Int'];
+  settings: Scalars['JSON'];
+};
+
+/**
+ * A condition to be used against `EncBasemap` object types. All fields are tested
+ * for equality and combined with a logical ‘and.’
+ */
+export type EncBasemapCondition = {
+  /** Checks for equality with the object’s `basemapId` field. */
+  basemapId?: Maybe<Scalars['Int']>;
+};
+
+export type EncBasemapJob = {
+  __typename?: 'EncBasemapJob';
+  basemapId?: Maybe<Scalars['Int']>;
+  errorMessage?: Maybe<Scalars['String']>;
+  jobId: Scalars['UUID'];
+  progress?: Maybe<Scalars['Float']>;
+  progressMessage?: Maybe<Scalars['String']>;
+  state: Scalars['String'];
+};
+
+/** A connection to a list of `EncBasemap` values. */
+export type EncBasemapsConnection = {
+  __typename?: 'EncBasemapsConnection';
+  /** A list of edges which contains the `EncBasemap` and cursor to aid in pagination. */
+  edges: Array<EncBasemapsEdge>;
+  /** A list of `EncBasemap` objects. */
+  nodes: Array<EncBasemap>;
+  /** Information to aid in pagination. */
+  pageInfo: PageInfo;
+  /** The count of *all* `EncBasemap` you could get from the connection. */
+  totalCount: Scalars['Int'];
+};
+
+/** A `EncBasemap` edge in the connection. */
+export type EncBasemapsEdge = {
+  __typename?: 'EncBasemapsEdge';
+  /** A cursor for use in pagination. */
+  cursor?: Maybe<Scalars['Cursor']>;
+  /** The `EncBasemap` at the end of the edge. */
+  node: EncBasemap;
+};
+
+/** Methods to use when ordering `EncBasemap`. */
+export enum EncBasemapsOrderBy {
+  BasemapIdAsc = 'BASEMAP_ID_ASC',
+  BasemapIdDesc = 'BASEMAP_ID_DESC',
+  Natural = 'NATURAL',
+  PrimaryKeyAsc = 'PRIMARY_KEY_ASC',
+  PrimaryKeyDesc = 'PRIMARY_KEY_DESC'
+}
+
+export type EncChartFileUpload = {
+  __typename?: 'EncChartFileUpload';
+  contentType: Scalars['String'];
+  filename: Scalars['String'];
+  url: Scalars['String'];
+};
+
+export type EncChartUpload = {
+  __typename?: 'EncChartUpload';
+  jobId: Scalars['UUID'];
+  uploads: Array<EncChartFileUpload>;
+};
+
 export type EsriFeatureLayerConversionTask = Node & {
   __typename?: 'EsriFeatureLayerConversionTask';
   attribution?: Maybe<Scalars['String']>;
@@ -7542,6 +7640,11 @@ export type Mutation = {
   /** Creates a single `DataSource`. */
   createDataSource?: Maybe<CreateDataSourcePayload>;
   createDataUpload?: Maybe<CreateDataUploadPayload>;
+  /**
+   * Presign one PUT per S-57 file. The chart is not built until
+   * submitEncBasemapUpload. Charts built this way are public.
+   */
+  createEncBasemapUpload: EncChartUpload;
   createFileUpload: UploaderResponse;
   /** Creates a single `FormElement`. */
   createFormElement?: Maybe<CreateFormElementPayload>;
@@ -7894,6 +7997,7 @@ export type Mutation = {
   /** Superusers only. "Deletes" a sprite but keeps it in the DB in case layers are already referencing it. */
   softDeleteSprite?: Maybe<SoftDeleteSpritePayload>;
   submitDataUpload?: Maybe<SubmitDataUploadPayload>;
+  submitEncBasemapUpload: EncBasemapJob;
   submitOverlayDataTableUpload?: Maybe<SubmitOverlayDataTableUploadPayload>;
   /** Toggle admin access for the given project and user. User must have already joined the project and shared their user profile. */
   toggleAdminAccess?: Maybe<ToggleAdminAccessPayload>;
@@ -8257,6 +8361,14 @@ export type MutationCreateDataSourceArgs = {
 /** The root mutation type which contains root level fields which mutate data. */
 export type MutationCreateDataUploadArgs = {
   input: CreateDataUploadInput;
+};
+
+
+/** The root mutation type which contains root level fields which mutate data. */
+export type MutationCreateEncBasemapUploadArgs = {
+  filenames: Array<Scalars['String']>;
+  name: Scalars['String'];
+  projectId: Scalars['Int'];
 };
 
 
@@ -9339,6 +9451,12 @@ export type MutationSoftDeleteSpriteArgs = {
 /** The root mutation type which contains root level fields which mutate data. */
 export type MutationSubmitDataUploadArgs = {
   input: SubmitDataUploadInput;
+};
+
+
+/** The root mutation type which contains root level fields which mutate data. */
+export type MutationSubmitEncBasemapUploadArgs = {
+  jobId: Scalars['UUID'];
 };
 
 
@@ -12114,6 +12232,12 @@ export type Query = Node & {
   emailNotificationPreferenceByUserId?: Maybe<EmailNotificationPreference>;
   /** Reads and enables pagination through a set of `EmailNotificationPreference`. */
   emailNotificationPreferencesConnection?: Maybe<EmailNotificationPreferencesConnection>;
+  encBasemap?: Maybe<EncBasemap>;
+  /** Reads a single `EncBasemap` using its globally unique `ID`. */
+  encBasemapByNodeId?: Maybe<EncBasemap>;
+  encBasemapJob?: Maybe<EncBasemapJob>;
+  /** Reads and enables pagination through a set of `EncBasemap`. */
+  encBasemapsConnection?: Maybe<EncBasemapsConnection>;
   extensionToSourceType?: Maybe<Scalars['String']>;
   extractColumnDetailsFromGeostats?: Maybe<Scalars['JSON']>;
   extractRasterBandCountFromGeostats?: Maybe<Scalars['Int']>;
@@ -12659,6 +12783,36 @@ export type QueryEmailNotificationPreferencesConnectionArgs = {
   last?: Maybe<Scalars['Int']>;
   offset?: Maybe<Scalars['Int']>;
   orderBy?: Maybe<Array<EmailNotificationPreferencesOrderBy>>;
+};
+
+
+/** The root query type which gives access points into the data universe. */
+export type QueryEncBasemapArgs = {
+  basemapId: Scalars['Int'];
+};
+
+
+/** The root query type which gives access points into the data universe. */
+export type QueryEncBasemapByNodeIdArgs = {
+  nodeId: Scalars['ID'];
+};
+
+
+/** The root query type which gives access points into the data universe. */
+export type QueryEncBasemapJobArgs = {
+  jobId: Scalars['UUID'];
+};
+
+
+/** The root query type which gives access points into the data universe. */
+export type QueryEncBasemapsConnectionArgs = {
+  after?: Maybe<Scalars['Cursor']>;
+  before?: Maybe<Scalars['Cursor']>;
+  condition?: Maybe<EncBasemapCondition>;
+  first?: Maybe<Scalars['Int']>;
+  last?: Maybe<Scalars['Int']>;
+  offset?: Maybe<Scalars['Int']>;
+  orderBy?: Maybe<Array<EncBasemapsOrderBy>>;
 };
 
 
@@ -19641,6 +19795,9 @@ export type BasemapDetailsFragment = (
   )>, optionalBasemapLayers: Array<(
     { __typename?: 'OptionalBasemapLayer' }
     & Pick<OptionalBasemapLayer, 'basemapId' | 'id' | 'defaultVisibility' | 'description' | 'options' | 'groupType' | 'layers' | 'metadata' | 'name'>
+  )>, encBasemap?: Maybe<(
+    { __typename?: 'EncBasemap' }
+    & Pick<EncBasemap, 'bounds' | 'catalog' | 'schemaVersion' | 'settings'>
   )> }
 );
 
@@ -21931,6 +22088,51 @@ export type ProjectAdminsQuery = (
         & UserProfileDetailsFragment
       )> }
     )>> }
+  )> }
+);
+
+export type CreateEncBasemapUploadMutationVariables = Exact<{
+  projectId: Scalars['Int'];
+  name: Scalars['String'];
+  filenames: Array<Scalars['String']> | Scalars['String'];
+}>;
+
+
+export type CreateEncBasemapUploadMutation = (
+  { __typename?: 'Mutation' }
+  & { createEncBasemapUpload: (
+    { __typename?: 'EncChartUpload' }
+    & Pick<EncChartUpload, 'jobId'>
+    & { uploads: Array<(
+      { __typename?: 'EncChartFileUpload' }
+      & Pick<EncChartFileUpload, 'filename' | 'url' | 'contentType'>
+    )> }
+  ) }
+);
+
+export type SubmitEncBasemapUploadMutationVariables = Exact<{
+  jobId: Scalars['UUID'];
+}>;
+
+
+export type SubmitEncBasemapUploadMutation = (
+  { __typename?: 'Mutation' }
+  & { submitEncBasemapUpload: (
+    { __typename?: 'EncBasemapJob' }
+    & Pick<EncBasemapJob, 'jobId' | 'state' | 'progress' | 'progressMessage' | 'errorMessage' | 'basemapId'>
+  ) }
+);
+
+export type EncBasemapJobQueryVariables = Exact<{
+  jobId: Scalars['UUID'];
+}>;
+
+
+export type EncBasemapJobQuery = (
+  { __typename?: 'Query' }
+  & { encBasemapJob?: Maybe<(
+    { __typename?: 'EncBasemapJob' }
+    & Pick<EncBasemapJob, 'jobId' | 'state' | 'progress' | 'progressMessage' | 'errorMessage' | 'basemapId'>
   )> }
 );
 
@@ -27632,6 +27834,12 @@ export const BasemapDetailsFragmentDoc = /*#__PURE__*/ gql`
   translatedProps
   isArcgisTiledMapservice
   maxzoom
+  encBasemap {
+    bounds
+    catalog
+    schemaVersion
+    settings
+  }
 }
     `;
 export const BasemapAdminDetailsFragmentDoc = /*#__PURE__*/ gql`
@@ -31505,6 +31713,46 @@ export const ProjectAdminsDocument = /*#__PURE__*/ gql`
   }
 }
     ${UserProfileDetailsFragmentDoc}`;
+export const CreateEncBasemapUploadDocument = /*#__PURE__*/ gql`
+    mutation CreateEncBasemapUpload($projectId: Int!, $name: String!, $filenames: [String!]!) {
+  createEncBasemapUpload(
+    projectId: $projectId
+    name: $name
+    filenames: $filenames
+  ) {
+    jobId
+    uploads {
+      filename
+      url
+      contentType
+    }
+  }
+}
+    `;
+export const SubmitEncBasemapUploadDocument = /*#__PURE__*/ gql`
+    mutation SubmitEncBasemapUpload($jobId: UUID!) {
+  submitEncBasemapUpload(jobId: $jobId) {
+    jobId
+    state
+    progress
+    progressMessage
+    errorMessage
+    basemapId
+  }
+}
+    `;
+export const EncBasemapJobDocument = /*#__PURE__*/ gql`
+    query EncBasemapJob($jobId: UUID!) {
+  encBasemapJob(jobId: $jobId) {
+    jobId
+    state
+    progress
+    progressMessage
+    errorMessage
+    basemapId
+  }
+}
+    `;
 export const ForumAdminListDocument = /*#__PURE__*/ gql`
     query ForumAdminList($slug: String!) {
   projectBySlug(slug: $slug) {
@@ -34895,6 +35143,7 @@ export const namedOperations = {
     LayerCartographyChanges: 'LayerCartographyChanges',
     ChangeLogsSinceLastPublish: 'ChangeLogsSinceLastPublish',
     ProjectAdmins: 'ProjectAdmins',
+    EncBasemapJob: 'EncBasemapJob',
     ForumAdminList: 'ForumAdminList',
     Forums: 'Forums',
     TopicList: 'TopicList',
@@ -35072,6 +35321,8 @@ export const namedOperations = {
     CreateResolvableComment: 'CreateResolvableComment',
     ResolveResolvableComment: 'ResolveResolvableComment',
     ReopenResolvableComment: 'ReopenResolvableComment',
+    CreateEncBasemapUpload: 'CreateEncBasemapUpload',
+    SubmitEncBasemapUpload: 'SubmitEncBasemapUpload',
     CreateForum: 'CreateForum',
     UpdateForum: 'UpdateForum',
     DeleteForum: 'DeleteForum',

@@ -24,6 +24,7 @@ import IsSuperuserPlugin from "./plugins/IsSuperuserPlugin";
 import OfflineTilePackagePlugin from "./plugins/offlineTilePackagePlugin";
 import BasemapOfflineDetailsPlugin from "./plugins/BasemapOfflineDetailsPlugin";
 import DataUploadTaskPlugin from "./plugins/dataUploadTaskPlugin";
+import EncBasemapPlugin from "./plugins/encBasemapPlugin";
 import SketchingPlugin from "./plugins/sketchingPlugin";
 import ForumPostsPlugin from "./plugins/forumPostsPlugin";
 import ForumSubscriptionsPlugin from "./plugins/forumSubscriptionsPlugin";
@@ -98,6 +99,7 @@ export default function graphileOptions(): PostGraphileOptions {
       OfflineTilePackagePlugin,
       BasemapOfflineDetailsPlugin,
       DataUploadTaskPlugin,
+      EncBasemapPlugin,
       DataUploadPiiClassifierWarmPlugin,
       SketchingPlugin,
       ForumPostsPlugin,

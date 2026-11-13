@@ -8,6 +8,7 @@ import {
 } from "../../generated/graphql";
 import BasemapEditorPanel from "./BasemapEditorPanel";
 import CreateBasemapModal from "./CreateBasemapModal";
+import CreateEncBasemapModal from "./CreateEncBasemapModal";
 import { useTranslation } from "react-i18next";
 import { useApolloClient } from "@apollo/client";
 import { useParams } from "react-router-dom";
@@ -25,6 +26,7 @@ export default function BaseMapEditor() {
   });
 
   const [addModalOpen, setAddModalOpen] = useState(false);
+  const [encModalOpen, setEncModalOpen] = useState(false);
   const [editModalOpen, setEditModalOpen] = useState(false);
   const [deleteBasemap, deleteMutationState] = useDeleteBasemapMutation();
   const { t } = useTranslation("admin");
@@ -41,6 +43,12 @@ export default function BaseMapEditor() {
             small
             label={t("Add a new map")}
             onClick={() => setAddModalOpen(true)}
+          />
+          <Button
+            className="ml-2"
+            small
+            label={t("Nautical chart")}
+            onClick={() => setEncModalOpen(true)}
           />
           <Button
             className="ml-2"
@@ -104,6 +112,14 @@ export default function BaseMapEditor() {
             }}
           />
         </div>
+        {encModalOpen && (
+          <CreateEncBasemapModal
+            onRequestClose={() => setEncModalOpen(false)}
+            onSave={(id) => {
+              basemapContext.setSelectedBasemap(id);
+            }}
+          />
+        )}
         {addModalOpen && (
           <CreateBasemapModal
             onRequestClose={() => setAddModalOpen(false)}
