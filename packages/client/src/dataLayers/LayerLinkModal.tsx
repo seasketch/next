@@ -1,4 +1,4 @@
-import { XIcon } from "@heroicons/react/outline";
+import { ClipboardCopyIcon, XIcon } from "@heroicons/react/outline";
 import {
   ApolloClient,
   NormalizedCacheObject,
@@ -15,7 +15,6 @@ import {
 import { createPortal } from "react-dom";
 import { Trans, useTranslation } from "react-i18next";
 import { useAuth0 } from "@auth0/auth0-react";
-import Button from "../components/Button";
 import { useToast, ToastViewport } from "../components/Toast";
 import Spinner from "../components/Spinner";
 import {
@@ -175,45 +174,37 @@ function PreviewThumbnail({
       `${process.env.REACT_APP_CLOUDFLARE_IMAGES_ENDPOINT || ""}${imageId}/public`
     : null;
   return (
-    <div className="relative aspect-[3/2] w-full overflow-hidden rounded-lg bg-slate-200 shadow-inner ring-1 ring-black/10">
-      {(pending || (src && !loaded)) && (
-        <div className="absolute inset-0">
-          <div className="absolute inset-0 bg-gradient-to-br from-sky-200 via-slate-100 to-emerald-100" />
-          <div
-            className="absolute inset-0 opacity-40"
-            style={{
-              backgroundImage:
-                "linear-gradient(to right, rgba(15,23,42,0.08) 1px, transparent 1px), linear-gradient(to bottom, rgba(15,23,42,0.08) 1px, transparent 1px)",
-              backgroundSize: "28px 28px",
-            }}
-          />
+    <div className="relative aspect-[3/2] w-full overflow-hidden bg-primary-700">
+      <div className="absolute inset-0 bg-gradient-to-br from-primary-700 via-primary-500 to-sky-300" />
+      {(pending || (src && !loaded)) && !failed && (
+        <>
           <motion.div
-            className="absolute inset-y-0 w-1/2 bg-gradient-to-r from-transparent via-white/80 to-transparent"
-            initial={{ x: "-120%" }}
-            animate={{ x: "220%" }}
-            transition={{ duration: 1.5, repeat: Infinity, ease: "easeInOut" }}
+            className="absolute inset-y-0 w-1/2 bg-gradient-to-r from-transparent via-white/30 to-transparent"
+            initial={{ x: "-130%" }}
+            animate={{ x: "240%" }}
+            transition={{ duration: 1.8, repeat: Infinity, ease: "easeInOut" }}
           />
-          <div className="relative flex h-full flex-col items-center justify-center gap-2 text-slate-600">
-            <Spinner />
-            <span className="text-sm">
+          <div className="relative flex h-full flex-col items-center justify-center gap-3 text-white">
+            <Spinner color="white" large />
+            <span className="text-sm font-medium tracking-wide text-white/90">
               <Trans ns="mapBookmarks">Rendering preview…</Trans>
             </span>
           </div>
-        </div>
+        </>
       )}
       {src && (
         <motion.img
           alt=""
           src={src}
-          className="absolute inset-0 h-full w-full object-cover"
+          className="absolute inset-x-0 top-0 h-[107%] w-full object-cover object-top"
           initial={{ opacity: 0 }}
           animate={{ opacity: loaded ? 1 : 0 }}
-          transition={{ duration: 0.25 }}
+          transition={{ duration: 0.35 }}
           onLoad={() => setLoaded(true)}
         />
       )}
       {failed && !src && (
-        <div className="absolute inset-0 flex items-center justify-center px-4 text-center text-sm text-slate-600">
+        <div className="relative flex h-full items-center justify-center px-8 text-center text-sm leading-relaxed text-white/90">
           <Trans ns="mapBookmarks">
             The preview image could not be created. The link still opens this
             layer.
@@ -430,15 +421,14 @@ export default function LayerLinkModal({
   };
 
   let access: ReactNode = null;
-  if (mode === "create" && notices && sharing) {
+  if (
+    mode === "create" &&
+    notices &&
+    sharing &&
+    notices.tone === "restricted"
+  ) {
     access = (
-      <div
-        className={
-          notices.tone === "open"
-            ? "rounded-md border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-950"
-            : "rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-950"
-        }
-      >
+      <div className="rounded-lg bg-amber-50 px-3 py-2.5 text-sm leading-relaxed text-amber-950">
         <NoticeCopy summary={sharing} blocks={notices.blocks} />
       </div>
     );
@@ -469,169 +459,133 @@ export default function LayerLinkModal({
               )}
         </p>
         {!signedIn && (
-          <Button
-            primary
-            label={<Trans ns="mapBookmarks">Sign in</Trans>}
+          <button
+            type="button"
+            className="rounded-lg bg-primary-500 px-3 py-1.5 text-sm font-medium text-white hover:bg-primary-600"
             onClick={() =>
               auth0.loginWithRedirect({
                 appState: { returnTo: window.location.pathname },
               })
             }
-          />
+          >
+            <Trans ns="mapBookmarks">Sign in</Trans>
+          </button>
         )}
       </div>
     );
   }
 
+  const showView =
+    mode === "view" && bookmark && (isLayerLink ? canSeeLayer : true);
+
   return createPortal(
     <div
-      className="fixed inset-0 z-[70] flex items-center justify-center bg-slate-900/60 p-4 backdrop-blur-sm"
+      className="fixed inset-0 z-[70] flex items-center justify-center bg-slate-950/45 p-4"
       onMouseDown={(event) => {
         if (event.target === event.currentTarget) {
           onClose();
         }
       }}
     >
-      <div
+      <motion.div
         role="dialog"
         aria-modal="true"
         aria-labelledby="layer-link-title"
-        className="relative flex max-h-[90vh] w-full max-w-3xl flex-col overflow-hidden rounded-xl bg-white text-slate-900 shadow-2xl"
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.18, ease: "easeOut" }}
+        className="relative flex max-h-[90vh] w-full max-w-xl flex-col overflow-hidden rounded-2xl bg-white text-slate-900 shadow-2xl ring-1 ring-black/5"
       >
-        <div className="flex items-start gap-3 border-b border-slate-200 px-5 py-4">
-          <div className="min-w-0 flex-1">
-            <p className="text-xs font-medium uppercase tracking-wide text-slate-500">
-              {mode === "create" ? (
-                <Trans ns="mapBookmarks">Link to layer</Trans>
-              ) : (
-                <Trans ns="mapBookmarks">Shared layer</Trans>
-              )}
-            </p>
-            <h2 id="layer-link-title" className="truncate text-xl font-semibold">
-              {title}
-            </h2>
-          </div>
+        <div className="relative flex-none">
+          <PreviewThumbnail
+            imageId={bookmark?.imageId}
+            pending={creating || waitingForImage || (!bookmark && !createError)}
+            failed={failed}
+          />
           <button
             type="button"
-            className="rounded-full p-1 text-slate-500 hover:bg-slate-100 hover:text-slate-800"
+            className="absolute right-3 top-3 flex h-8 w-8 items-center justify-center rounded-full bg-white text-slate-700 shadow-md ring-1 ring-black/10 hover:text-slate-900"
             onClick={onClose}
             aria-label={t("Close")}
           >
-            <XIcon className="h-5 w-5" />
+            <XIcon className="h-4 w-4" />
           </button>
         </div>
-        <div className="overflow-y-auto px-5 py-4">
+        <div className="overflow-y-auto px-6 pb-6 pt-5">
           {createError && (
-            <p className="mb-4 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800">
+            <p className="mb-3 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-800">
               {createError}
             </p>
           )}
-          {mode === "create" && creating && !createError && (
-            <div className="mb-4 flex items-center gap-2 text-sm text-slate-600">
-              <Spinner />
-              <Trans ns="mapBookmarks">Preparing the map preview…</Trans>
-            </div>
-          )}
           {bookmark && !isLayerLink && (
-            <p className="mb-4 text-sm text-slate-600">
+            <p className="mb-3 text-sm text-slate-600">
               <Trans ns="mapBookmarks">
                 This link is a saved map view, not a link to a single layer.
               </Trans>
             </p>
           )}
-          <div className="flex flex-col gap-5 sm:flex-row">
-            <div className="min-w-0 flex-1 space-y-3">
-              {folderTitles.length > 0 && (
-                <p className="text-sm text-slate-500">
-                  {t("In {{path}}", { path: folderTitles.join(" / ") })}
-                </p>
+          <h2
+            id="layer-link-title"
+            className="truncate text-2xl font-semibold tracking-tight text-slate-900"
+          >
+            {title}
+          </h2>
+          {folderTitles.length > 0 && (
+            <p className="mt-1 truncate text-sm text-slate-500">
+              {folderTitles.join(" · ")}
+            </p>
+          )}
+          {sourceAttribution && (
+            <div
+              className="mt-1 text-sm leading-snug text-slate-500 [&_a]:text-primary-600 [&_a]:underline [&_a]:decoration-primary-600/40 [&_a]:underline-offset-2"
+              dangerouslySetInnerHTML={{ __html: sourceAttribution }}
+            />
+          )}
+          {boundsNote && mode === "create" && (
+            <p className="mt-3 text-sm text-slate-500">
+              {t(
+                "This layer has no stored extent, so the preview uses the map view that was on screen when the link was saved."
               )}
-              {sourceAttribution && (
-                <p className="text-sm text-slate-700">
-                  <span className="font-medium">
-                    <Trans ns="mapBookmarks">Attribution</Trans>
-                  </span>
-                  {": "}
-                  <span
-                    className="[&_a]:text-sky-800 [&_a]:underline"
-                    dangerouslySetInnerHTML={{ __html: sourceAttribution }}
-                  />
-                </p>
-              )}
-              {boundsNote && mode === "create" && (
-                <p className="text-sm text-slate-500">
-                  {t(
-                    "This layer has no stored extent, so the preview uses the map view that was on screen when the link was saved."
-                  )}
-                </p>
-              )}
-              {access}
-              {mode === "create" && url && (
-                <div className="space-y-1">
-                  <label
-                    className="text-xs font-medium uppercase tracking-wide text-slate-500"
-                    htmlFor="layer-link-url"
-                  >
-                    <Trans ns="mapBookmarks">Link</Trans>
-                  </label>
-                  <div className="flex gap-2">
-                    <input
-                      id="layer-link-url"
-                      readOnly
-                      value={url}
-                      onFocus={(event) => event.currentTarget.select()}
-                      className="min-w-0 flex-1 rounded-md border border-slate-300 bg-slate-50 px-2 py-1.5 font-mono text-xs text-slate-800"
-                    />
-                    <Button
-                      small
-                      primary
-                      label={<Trans ns="mapBookmarks">Copy</Trans>}
-                      onClick={() => {
-                        void copy();
-                      }}
-                    />
-                  </div>
-                  <p className="text-xs text-slate-500">
-                    {t(
-                      "This address stays the same for this layer. Opening Link to layer again updates the preview when the layer's appearance has changed."
-                    )}
-                  </p>
-                </div>
-              )}
-            </div>
-            <div className="w-full flex-none sm:w-72">
-              <PreviewThumbnail
-                imageId={bookmark?.imageId}
-                pending={creating || waitingForImage || (!bookmark && !createError)}
-                failed={failed}
+            </p>
+          )}
+          {access && <div className="mt-4">{access}</div>}
+          {mode === "create" && url && (
+            <div className="mt-5 flex items-center gap-2">
+              <input
+                id="layer-link-url"
+                readOnly
+                value={url}
+                aria-label={t("Link")}
+                onFocus={(event) => event.currentTarget.select()}
+                className="min-w-0 flex-1 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 font-mono text-xs text-slate-600 shadow-none focus:border-slate-300 focus:ring-0"
               />
+              <button
+                type="button"
+                className="inline-flex shrink-0 items-center gap-1.5 rounded-lg bg-slate-900 px-3 py-2 text-sm font-medium text-white hover:bg-slate-800"
+                onClick={() => {
+                  void copy();
+                }}
+              >
+                <ClipboardCopyIcon className="h-4 w-4" />
+                <Trans ns="mapBookmarks">Copy</Trans>
+              </button>
             </div>
-          </div>
-        </div>
-        <div className="flex items-center justify-end gap-2 border-t border-slate-200 px-5 py-3">
-          <Button
-            label={
-              mode === "view" ? (
-                <Trans ns="mapBookmarks">Dismiss</Trans>
-              ) : (
-                <Trans ns="mapBookmarks">Close</Trans>
-              )
-            }
-            onClick={onClose}
-          />
-          {mode === "view" && bookmark && (isLayerLink ? canSeeLayer : true) && (
-            <Button
-              primary
-              label={<Trans ns="mapBookmarks">View on the map</Trans>}
+          )}
+          {showView && (
+            <button
+              type="button"
+              className="mt-5 rounded-lg bg-primary-500 px-4 py-2 text-sm font-medium text-white hover:bg-primary-600 disabled:opacity-60"
               disabled={!manager || !ready}
               onClick={() => {
                 void viewOnMap();
               }}
-            />
+            >
+              <Trans ns="mapBookmarks">View on the map</Trans>
+            </button>
           )}
         </div>
         <ToastViewport className="pointer-events-none absolute bottom-4 right-4 z-10" />
-      </div>
+      </motion.div>
     </div>,
     document.body
   );
