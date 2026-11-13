@@ -49,6 +49,7 @@ import AboutPage from "./AboutPage";
 import getSlug from "../getSlug";
 import ReportPublishedDataPrefetch from "./ReportPublishedDataPrefetch";
 import { HomepageFlyoutProvider } from "./HomepageFlyoutContext";
+import LayerLinkProvider from "../dataLayers/LayerLinkProvider";
 
 const LazyOverlays = React.lazy(
   () => import(/* webpackChunkName: "Overlays" */ "./OverlayLayers")
@@ -183,6 +184,7 @@ export default function ProjectApp() {
               containerPortal={mapContainerPortal}
               enableTemporal
             >
+              <LayerLinkProvider>
               <MapUIProvider
                 preferencesKey={`${slug}-homepage-ui`}
                 defaultShowScale={data?.project?.showScalebarByDefault || false}
@@ -393,6 +395,7 @@ export default function ProjectApp() {
                   </SketchUIStateContextProvider>
                 </MeasureControlContextProvider>
               </MapUIProvider>
+              </LayerLinkProvider>
             </MapManagerContextProvider>
           </MapOverlayContext.Provider>
         </BasemapContextProvider>

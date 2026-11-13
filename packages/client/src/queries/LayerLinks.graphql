@@ -1,0 +1,33 @@
+query LayerLinkSharing($slug: String!, $stableId: String!) {
+  layerLinkSharing(slug: $slug, stableId: $stableId)
+}
+
+mutation EnsureLayerLink(
+  $slug: String!
+  $stableId: String!
+  $style: JSON!
+  $selectedBasemap: Int!
+  $basemapOptionalLayerStates: JSON
+  $cameraOptions: JSON!
+  $mapDimensions: [Int!]!
+  $basemapName: String!
+  $layerNames: JSON!
+) {
+  ensureLayerLink(
+    input: {
+      slug: $slug
+      stableId: $stableId
+      style: $style
+      selectedBasemap: $selectedBasemap
+      basemapOptionalLayerStates: $basemapOptionalLayerStates
+      cameraOptions: $cameraOptions
+      mapDimensions: $mapDimensions
+      basemapName: $basemapName
+      layerNames: $layerNames
+    }
+  ) {
+    mapBookmark {
+      ...MapBookmarkDetails
+    }
+  }
+}

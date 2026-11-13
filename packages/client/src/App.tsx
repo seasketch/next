@@ -462,7 +462,13 @@ function App() {
                   <Route path="/:slug/admin">
                     <LazyProjectAdmin />
                   </Route>
-                  <Route path={["/:slug/profile", "/:slug/app/:sidebar?"]}>
+                  <Route
+                    path={[
+                      "/:slug/profile",
+                      "/:slug/app/:sidebar?",
+                      "/:slug/layers/:layerLinkId",
+                    ]}
+                  >
                     <ProjectAccessGate>
                       <LazyProjectApp />
                     </ProjectAccessGate>

@@ -5242,6 +5242,47 @@ export type EnableOfflineSupportPayloadProjectEdgeArgs = {
   orderBy?: Maybe<Array<ProjectsOrderBy>>;
 };
 
+/** All input for the `ensureLayerLink` mutation. */
+export type EnsureLayerLinkInput = {
+  basemapName?: Maybe<Scalars['String']>;
+  basemapOptionalLayerStates?: Maybe<Scalars['JSON']>;
+  cameraOptions?: Maybe<Scalars['JSON']>;
+  /**
+   * An arbitrary string value with no semantic meaning. Will be included in the
+   * payload verbatim. May be used to track mutations by the client.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  layerNames?: Maybe<Scalars['JSON']>;
+  mapDimensions?: Maybe<Array<Maybe<Scalars['Int']>>>;
+  selectedBasemap?: Maybe<Scalars['Int']>;
+  slug?: Maybe<Scalars['String']>;
+  stableId?: Maybe<Scalars['String']>;
+  style?: Maybe<Scalars['JSON']>;
+};
+
+/** The output of our `ensureLayerLink` mutation. */
+export type EnsureLayerLinkPayload = {
+  __typename?: 'EnsureLayerLinkPayload';
+  /** Reads a single `Basemap` that is related to this `MapBookmark`. */
+  basemapBySelectedBasemap?: Maybe<Basemap>;
+  /**
+   * The exact same `clientMutationId` that was provided in the mutation input,
+   * unchanged and unused. May be used by a client to track mutations.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  mapBookmark?: Maybe<MapBookmark>;
+  /** An edge for our `MapBookmark`. May be used by Relay 1. */
+  mapBookmarkEdge?: Maybe<MapBookmarksEdge>;
+  /** Our root query field type. Allows us to run any query from our mutation payload. */
+  query?: Maybe<Query>;
+};
+
+
+/** The output of our `ensureLayerLink` mutation. */
+export type EnsureLayerLinkPayloadMapBookmarkEdgeArgs = {
+  orderBy?: Maybe<Array<MapBookmarksOrderBy>>;
+};
+
 export type EsriFeatureLayerConversionTask = Node & {
   __typename?: 'EsriFeatureLayerConversionTask';
   attribution?: Maybe<Scalars['String']>;
@@ -7289,6 +7330,8 @@ export type MapBookmark = {
   imageId?: Maybe<Scalars['String']>;
   isPublic: Scalars['Boolean'];
   job?: Maybe<WorkerJob>;
+  /** forum rows are map views attached to forum posts. layer_link rows are the shareable link for one published overlay. */
+  kind: MapBookmarkKind;
   layerNames?: Maybe<Scalars['JSON']>;
   mapDimensions: Array<Maybe<Scalars['Int']>>;
   postId?: Maybe<Scalars['Int']>;
@@ -7299,6 +7342,8 @@ export type MapBookmark = {
   sketchNames?: Maybe<Scalars['JSON']>;
   sprites?: Maybe<Sprite>;
   style: Scalars['JSON'];
+  /** For layer_link rows, the published table_of_contents stable_id. Null for forum bookmarks. */
+  subjectStableId?: Maybe<Scalars['String']>;
   userId: Scalars['Int'];
   visibleDataLayers: Array<Maybe<Scalars['String']>>;
   visibleSketches?: Maybe<Array<Maybe<Scalars['Int']>>>;
@@ -7316,6 +7361,11 @@ export type MapBookmarkCondition = {
   /** Checks for equality with the object’s `visibleDataLayers` field. */
   visibleDataLayers?: Maybe<Array<Maybe<Scalars['String']>>>;
 };
+
+export enum MapBookmarkKind {
+  Forum = 'FORUM',
+  LayerLink = 'LAYER_LINK'
+}
 
 /** A connection to a list of `MapBookmark` values. */
 export type MapBookmarksConnection = {
@@ -7761,6 +7811,8 @@ export type Mutation = {
   /** Re-enable discussion forum posting for a user that was previously banned. */
   enableForumPosting?: Maybe<EnableForumPostingPayload>;
   enableOfflineSupport?: Maybe<EnableOfflineSupportPayload>;
+  /** Create or refresh the shareable bookmark for one published layer. Admins only. The bookmark id is stable for the layer. */
+  ensureLayerLink?: Maybe<EnsureLayerLinkPayload>;
   failDataUpload?: Maybe<FailDataUploadPayload>;
   /**
    * Enqueue generation of geometry fragments for sketches that are missing them.
@@ -8925,6 +8977,12 @@ export type MutationEnableForumPostingArgs = {
 /** The root mutation type which contains root level fields which mutate data. */
 export type MutationEnableOfflineSupportArgs = {
   input: EnableOfflineSupportInput;
+};
+
+
+/** The root mutation type which contains root level fields which mutate data. */
+export type MutationEnsureLayerLinkArgs = {
+  input: EnsureLayerLinkInput;
 };
 
 
@@ -12188,6 +12246,8 @@ export type Query = Node & {
   /** Reads a single `InviteEmail` using its globally unique `ID`. */
   inviteEmailByNodeId?: Maybe<InviteEmail>;
   isMyEmailVerified: Scalars['Boolean'];
+  /** Admin-only summary of who can open a layer link: project access, attribution, folder path, and non-public ACLs on the layer and its parent folders. */
+  layerLinkSharing?: Maybe<Scalars['JSON']>;
   lcfirst?: Maybe<Scalars['String']>;
   /** Reads and enables pagination through a set of `MapBookmark`. */
   mapBookmarksConnection?: Maybe<MapBookmarksConnection>;
@@ -12997,6 +13057,13 @@ export type QueryInviteEmailArgs = {
 /** The root query type which gives access points into the data universe. */
 export type QueryInviteEmailByNodeIdArgs = {
   nodeId: Scalars['ID'];
+};
+
+
+/** The root query type which gives access points into the data universe. */
+export type QueryLayerLinkSharingArgs = {
+  slug?: Maybe<Scalars['String']>;
+  stableId?: Maybe<Scalars['String']>;
 };
 
 
@@ -22268,7 +22335,7 @@ export type JobFragment = (
 
 export type MapBookmarkDetailsFragment = (
   { __typename?: 'MapBookmark' }
-  & Pick<MapBookmark, 'id' | 'imageId' | 'createdAt' | 'basemapOptionalLayerStates' | 'cameraOptions' | 'projectId' | 'selectedBasemap' | 'visibleDataLayers' | 'mapDimensions' | 'visibleSketches' | 'screenshotJobStatus' | 'basemapName' | 'layerNames' | 'sketchNames' | 'clientGeneratedThumbnail' | 'dataTableStates'>
+  & Pick<MapBookmark, 'id' | 'imageId' | 'createdAt' | 'basemapOptionalLayerStates' | 'cameraOptions' | 'projectId' | 'selectedBasemap' | 'visibleDataLayers' | 'mapDimensions' | 'visibleSketches' | 'screenshotJobStatus' | 'basemapName' | 'layerNames' | 'sketchNames' | 'clientGeneratedThumbnail' | 'dataTableStates' | 'kind' | 'subjectStableId'>
   & { job?: Maybe<(
     { __typename?: 'WorkerJob' }
     & JobFragment
@@ -22739,6 +22806,41 @@ export type JoinProjectMutation = (
         { __typename?: 'Project' }
         & Pick<Project, 'id' | 'sessionParticipationStatus'>
       )> }
+    )> }
+  )> }
+);
+
+export type LayerLinkSharingQueryVariables = Exact<{
+  slug: Scalars['String'];
+  stableId: Scalars['String'];
+}>;
+
+
+export type LayerLinkSharingQuery = (
+  { __typename?: 'Query' }
+  & Pick<Query, 'layerLinkSharing'>
+);
+
+export type EnsureLayerLinkMutationVariables = Exact<{
+  slug: Scalars['String'];
+  stableId: Scalars['String'];
+  style: Scalars['JSON'];
+  selectedBasemap: Scalars['Int'];
+  basemapOptionalLayerStates?: Maybe<Scalars['JSON']>;
+  cameraOptions: Scalars['JSON'];
+  mapDimensions: Array<Scalars['Int']> | Scalars['Int'];
+  basemapName: Scalars['String'];
+  layerNames: Scalars['JSON'];
+}>;
+
+
+export type EnsureLayerLinkMutation = (
+  { __typename?: 'Mutation' }
+  & { ensureLayerLink?: Maybe<(
+    { __typename?: 'EnsureLayerLinkPayload' }
+    & { mapBookmark?: Maybe<(
+      { __typename?: 'MapBookmark' }
+      & MapBookmarkDetailsFragment
     )> }
   )> }
 );
@@ -28252,6 +28354,8 @@ export const MapBookmarkDetailsFragmentDoc = /*#__PURE__*/ gql`
   sketchNames
   clientGeneratedThumbnail
   dataTableStates
+  kind
+  subjectStableId
 }
     ${JobFragmentDoc}`;
 export const FileUploadDetailsFragmentDoc = /*#__PURE__*/ gql`
@@ -31966,6 +32070,22 @@ export const JoinProjectDocument = /*#__PURE__*/ gql`
   }
 }
     `;
+export const LayerLinkSharingDocument = /*#__PURE__*/ gql`
+    query LayerLinkSharing($slug: String!, $stableId: String!) {
+  layerLinkSharing(slug: $slug, stableId: $stableId)
+}
+    `;
+export const EnsureLayerLinkDocument = /*#__PURE__*/ gql`
+    mutation EnsureLayerLink($slug: String!, $stableId: String!, $style: JSON!, $selectedBasemap: Int!, $basemapOptionalLayerStates: JSON, $cameraOptions: JSON!, $mapDimensions: [Int!]!, $basemapName: String!, $layerNames: JSON!) {
+  ensureLayerLink(
+    input: {slug: $slug, stableId: $stableId, style: $style, selectedBasemap: $selectedBasemap, basemapOptionalLayerStates: $basemapOptionalLayerStates, cameraOptions: $cameraOptions, mapDimensions: $mapDimensions, basemapName: $basemapName, layerNames: $layerNames}
+  ) {
+    mapBookmark {
+      ...MapBookmarkDetails
+    }
+  }
+}
+    ${MapBookmarkDetailsFragmentDoc}`;
 export const GetBasemapsAndRegionDocument = /*#__PURE__*/ gql`
     query GetBasemapsAndRegion($slug: String!) {
   projectBySlug(slug: $slug) {
@@ -34911,6 +35031,7 @@ export const namedOperations = {
     GeographyById: 'GeographyById',
     OverlaysForGeography: 'OverlaysForGeography',
     OverlayForGeographyDetails: 'OverlayForGeographyDetails',
+    LayerLinkSharing: 'LayerLinkSharing',
     GetBasemapsAndRegion: 'GetBasemapsAndRegion',
     OfflineSurveys: 'OfflineSurveys',
     SurveysById: 'SurveysById',
@@ -35088,6 +35209,7 @@ export const namedOperations = {
     UpdateGeography: 'UpdateGeography',
     GenerateMissingFragmentsForProject: 'GenerateMissingFragmentsForProject',
     JoinProject: 'JoinProject',
+    EnsureLayerLink: 'EnsureLayerLink',
     UpdateBasemapOfflineTileSettings: 'UpdateBasemapOfflineTileSettings',
     generateOfflineTilePackage: 'generateOfflineTilePackage',
     deleteTilePackage: 'deleteTilePackage',

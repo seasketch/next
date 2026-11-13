@@ -6251,6 +6251,49 @@ type EnableOfflineSupportPayload {
   query: Query
 }
 
+"""All input for the `ensureLayerLink` mutation."""
+input EnsureLayerLinkInput {
+  basemapName: String
+  basemapOptionalLayerStates: JSON
+  cameraOptions: JSON
+
+  """
+  An arbitrary string value with no semantic meaning. Will be included in the
+  payload verbatim. May be used to track mutations by the client.
+  """
+  clientMutationId: String
+  layerNames: JSON
+  mapDimensions: [Int]
+  selectedBasemap: Int
+  slug: String
+  stableId: String
+  style: JSON
+}
+
+"""The output of our `ensureLayerLink` mutation."""
+type EnsureLayerLinkPayload {
+  """Reads a single `Basemap` that is related to this `MapBookmark`."""
+  basemapBySelectedBasemap: Basemap
+
+  """
+  The exact same `clientMutationId` that was provided in the mutation input,
+  unchanged and unused. May be used by a client to track mutations.
+  """
+  clientMutationId: String
+  mapBookmark: MapBookmark
+
+  """An edge for our `MapBookmark`. May be used by Relay 1."""
+  mapBookmarkEdge(
+    """The method to use when ordering `MapBookmark`."""
+    orderBy: [MapBookmarksOrderBy!] = [NATURAL]
+  ): MapBookmarksEdge
+
+  """
+  Our root query field type. Allows us to run any query from our mutation payload.
+  """
+  query: Query
+}
+
 type EsriFeatureLayerConversionTask implements Node {
   attribution: String
   location: String
@@ -8686,6 +8729,11 @@ type MapBookmark {
   imageId: String
   isPublic: Boolean!
   job: WorkerJob
+
+  """
+  forum rows are map views attached to forum posts. layer_link rows are the shareable link for one published overlay.
+  """
+  kind: MapBookmarkKind!
   layerNames: JSON
   mapDimensions: [Int]!
   postId: Int
@@ -8696,6 +8744,11 @@ type MapBookmark {
   sketchNames: JSON
   sprites: Sprite
   style: JSON!
+
+  """
+  For layer_link rows, the published table_of_contents stable_id. Null for forum bookmarks.
+  """
+  subjectStableId: String
   userId: Int!
   visibleDataLayers: [String]!
   visibleSketches: [Int]
@@ -8714,6 +8767,11 @@ input MapBookmarkCondition {
 
   """Checks for equality with the object’s `visibleDataLayers` field."""
   visibleDataLayers: [String]
+}
+
+enum MapBookmarkKind {
+  FORUM
+  LAYER_LINK
 }
 
 """A connection to a list of `MapBookmark` values."""
@@ -9945,6 +10003,16 @@ type Mutation {
     """
     input: EnableOfflineSupportInput!
   ): EnableOfflineSupportPayload
+
+  """
+  Create or refresh the shareable bookmark for one published layer. Admins only. The bookmark id is stable for the layer.
+  """
+  ensureLayerLink(
+    """
+    The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
+    """
+    input: EnsureLayerLinkInput!
+  ): EnsureLayerLinkPayload
   failDataUpload(
     """
     The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
@@ -14363,6 +14431,11 @@ type Query implements Node {
     nodeId: ID!
   ): InviteEmail
   isMyEmailVerified: Boolean!
+
+  """
+  Admin-only summary of who can open a layer link: project access, attribution, folder path, and non-public ACLs on the layer and its parent folders.
+  """
+  layerLinkSharing(slug: String, stableId: String): JSON
   lcfirst(word: String): String
 
   """Reads and enables pagination through a set of `MapBookmark`."""
