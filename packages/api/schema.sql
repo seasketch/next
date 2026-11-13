@@ -319,7 +319,8 @@ CREATE TYPE public.data_upload_output_type AS ENUM (
     'NetCDF',
     'ReportingFlatgeobufV1',
     'ReportingCOG',
-    'CSV'
+    'CSV',
+    'GeoParquet'
 );
 
 

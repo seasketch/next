@@ -3429,6 +3429,7 @@ export enum DataUploadOutputType {
   Csv = 'CSV',
   FlatGeobuf = 'FLAT_GEOBUF',
   GeoJson = 'GEO_JSON',
+  GeoParquet = 'GEO_PARQUET',
   GeoTiff = 'GEO_TIFF',
   NetCdf = 'NET_CDF',
   Pmtiles = 'PMTILES',
