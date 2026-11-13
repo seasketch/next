@@ -5244,6 +5244,49 @@ export type EnableOfflineSupportPayloadProjectEdgeArgs = {
   orderBy?: Maybe<Array<ProjectsOrderBy>>;
 };
 
+/** All input for the `ensureLayerLink` mutation. */
+export type EnsureLayerLinkInput = {
+  basemapName?: Maybe<Scalars['String']>;
+  basemapOptionalLayerStates?: Maybe<Scalars['JSON']>;
+  cameraOptions?: Maybe<Scalars['JSON']>;
+  /**
+   * An arbitrary string value with no semantic meaning. Will be included in the
+   * payload verbatim. May be used to track mutations by the client.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  draft?: Maybe<Scalars['Boolean']>;
+  layerNames?: Maybe<Scalars['JSON']>;
+  mapDimensions?: Maybe<Array<Maybe<Scalars['Int']>>>;
+  refresh?: Maybe<Scalars['Boolean']>;
+  selectedBasemap?: Maybe<Scalars['Int']>;
+  slug?: Maybe<Scalars['String']>;
+  stableId?: Maybe<Scalars['String']>;
+  style?: Maybe<Scalars['JSON']>;
+};
+
+/** The output of our `ensureLayerLink` mutation. */
+export type EnsureLayerLinkPayload = {
+  __typename?: 'EnsureLayerLinkPayload';
+  /** Reads a single `Basemap` that is related to this `MapBookmark`. */
+  basemapBySelectedBasemap?: Maybe<Basemap>;
+  /**
+   * The exact same `clientMutationId` that was provided in the mutation input,
+   * unchanged and unused. May be used by a client to track mutations.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  mapBookmark?: Maybe<MapBookmark>;
+  /** An edge for our `MapBookmark`. May be used by Relay 1. */
+  mapBookmarkEdge?: Maybe<MapBookmarksEdge>;
+  /** Our root query field type. Allows us to run any query from our mutation payload. */
+  query?: Maybe<Query>;
+};
+
+
+/** The output of our `ensureLayerLink` mutation. */
+export type EnsureLayerLinkPayloadMapBookmarkEdgeArgs = {
+  orderBy?: Maybe<Array<MapBookmarksOrderBy>>;
+};
+
 export type EsriFeatureLayerConversionTask = Node & {
   __typename?: 'EsriFeatureLayerConversionTask';
   attribution?: Maybe<Scalars['String']>;
@@ -7291,6 +7334,8 @@ export type MapBookmark = {
   imageId?: Maybe<Scalars['String']>;
   isPublic: Scalars['Boolean'];
   job?: Maybe<WorkerJob>;
+  /** forum rows are map views attached to forum posts. layer_link rows are the shareable link for one overlay. */
+  kind: MapBookmarkKind;
   layerNames?: Maybe<Scalars['JSON']>;
   mapDimensions: Array<Maybe<Scalars['Int']>>;
   postId?: Maybe<Scalars['Int']>;
@@ -7301,6 +7346,10 @@ export type MapBookmark = {
   sketchNames?: Maybe<Scalars['JSON']>;
   sprites?: Maybe<Sprite>;
   style: Scalars['JSON'];
+  /** True when a layer_link opens the admin draft of the layer. Those rows are visible only to project administrators. */
+  subjectIsDraft: Scalars['Boolean'];
+  /** For layer_link rows, the table_of_contents stable_id. Null for forum bookmarks. */
+  subjectStableId?: Maybe<Scalars['String']>;
   userId: Scalars['Int'];
   visibleDataLayers: Array<Maybe<Scalars['String']>>;
   visibleSketches?: Maybe<Array<Maybe<Scalars['Int']>>>;
@@ -7318,6 +7367,11 @@ export type MapBookmarkCondition = {
   /** Checks for equality with the object’s `visibleDataLayers` field. */
   visibleDataLayers?: Maybe<Array<Maybe<Scalars['String']>>>;
 };
+
+export enum MapBookmarkKind {
+  Forum = 'FORUM',
+  LayerLink = 'LAYER_LINK'
+}
 
 /** A connection to a list of `MapBookmark` values. */
 export type MapBookmarksConnection = {
@@ -7763,6 +7817,8 @@ export type Mutation = {
   /** Re-enable discussion forum posting for a user that was previously banned. */
   enableForumPosting?: Maybe<EnableForumPostingPayload>;
   enableOfflineSupport?: Maybe<EnableOfflineSupportPayload>;
+  /** Create or refresh the shareable bookmark for one layer. Admins only. draft stores the admin copy. The bookmark id is stable for that layer and audience. */
+  ensureLayerLink?: Maybe<EnsureLayerLinkPayload>;
   failDataUpload?: Maybe<FailDataUploadPayload>;
   /**
    * Enqueue generation of geometry fragments for sketches that are missing them.
@@ -8927,6 +8983,12 @@ export type MutationEnableForumPostingArgs = {
 /** The root mutation type which contains root level fields which mutate data. */
 export type MutationEnableOfflineSupportArgs = {
   input: EnableOfflineSupportInput;
+};
+
+
+/** The root mutation type which contains root level fields which mutate data. */
+export type MutationEnsureLayerLinkArgs = {
+  input: EnsureLayerLinkInput;
 };
 
 
@@ -12070,6 +12132,7 @@ export type Query = Node & {
   basemapByNodeId?: Maybe<Basemap>;
   /** Reads and enables pagination through a set of `Basemap`. */
   basemapsConnection?: Maybe<BasemapsConnection>;
+  /** Fetch one map bookmark. Draft layer links are returned only to project administrators. */
   bookmarkById?: Maybe<MapBookmark>;
   /**
    * GraphQL server software build identifier. During a deployment, if changes are not detected in software modules some may be skipped. So, client and server version could differ.
@@ -12190,6 +12253,10 @@ export type Query = Node & {
   /** Reads a single `InviteEmail` using its globally unique `ID`. */
   inviteEmailByNodeId?: Maybe<InviteEmail>;
   isMyEmailVerified: Scalars['Boolean'];
+  /** ok, admins_only, or missing. Draft layer links are admins_only until the caller is a project administrator. */
+  layerLinkAccess?: Maybe<Scalars['String']>;
+  /** Admin-only summary of who can open a layer link: project access, attribution, folder path, and non-public ACLs on the layer and its parent folders. */
+  layerLinkSharing?: Maybe<Scalars['JSON']>;
   lcfirst?: Maybe<Scalars['String']>;
   /** Reads and enables pagination through a set of `MapBookmark`. */
   mapBookmarksConnection?: Maybe<MapBookmarksConnection>;
@@ -12999,6 +13066,19 @@ export type QueryInviteEmailArgs = {
 /** The root query type which gives access points into the data universe. */
 export type QueryInviteEmailByNodeIdArgs = {
   nodeId: Scalars['ID'];
+};
+
+
+/** The root query type which gives access points into the data universe. */
+export type QueryLayerLinkAccessArgs = {
+  id?: Maybe<Scalars['UUID']>;
+};
+
+
+/** The root query type which gives access points into the data universe. */
+export type QueryLayerLinkSharingArgs = {
+  slug?: Maybe<Scalars['String']>;
+  stableId?: Maybe<Scalars['String']>;
 };
 
 
@@ -22270,7 +22350,7 @@ export type JobFragment = (
 
 export type MapBookmarkDetailsFragment = (
   { __typename?: 'MapBookmark' }
-  & Pick<MapBookmark, 'id' | 'imageId' | 'createdAt' | 'basemapOptionalLayerStates' | 'cameraOptions' | 'projectId' | 'selectedBasemap' | 'visibleDataLayers' | 'mapDimensions' | 'visibleSketches' | 'screenshotJobStatus' | 'basemapName' | 'layerNames' | 'sketchNames' | 'clientGeneratedThumbnail' | 'dataTableStates'>
+  & Pick<MapBookmark, 'id' | 'imageId' | 'createdAt' | 'basemapOptionalLayerStates' | 'cameraOptions' | 'projectId' | 'selectedBasemap' | 'visibleDataLayers' | 'mapDimensions' | 'visibleSketches' | 'screenshotJobStatus' | 'basemapName' | 'layerNames' | 'sketchNames' | 'clientGeneratedThumbnail' | 'dataTableStates' | 'kind' | 'subjectStableId' | 'subjectIsDraft'>
   & { job?: Maybe<(
     { __typename?: 'WorkerJob' }
     & JobFragment
@@ -22741,6 +22821,53 @@ export type JoinProjectMutation = (
         { __typename?: 'Project' }
         & Pick<Project, 'id' | 'sessionParticipationStatus'>
       )> }
+    )> }
+  )> }
+);
+
+export type LayerLinkSharingQueryVariables = Exact<{
+  slug: Scalars['String'];
+  stableId: Scalars['String'];
+}>;
+
+
+export type LayerLinkSharingQuery = (
+  { __typename?: 'Query' }
+  & Pick<Query, 'layerLinkSharing'>
+);
+
+export type LayerLinkAccessQueryVariables = Exact<{
+  id: Scalars['UUID'];
+}>;
+
+
+export type LayerLinkAccessQuery = (
+  { __typename?: 'Query' }
+  & Pick<Query, 'layerLinkAccess'>
+);
+
+export type EnsureLayerLinkMutationVariables = Exact<{
+  slug: Scalars['String'];
+  stableId: Scalars['String'];
+  style: Scalars['JSON'];
+  selectedBasemap: Scalars['Int'];
+  basemapOptionalLayerStates?: Maybe<Scalars['JSON']>;
+  cameraOptions: Scalars['JSON'];
+  mapDimensions: Array<Scalars['Int']> | Scalars['Int'];
+  basemapName: Scalars['String'];
+  layerNames: Scalars['JSON'];
+  draft: Scalars['Boolean'];
+  refresh: Scalars['Boolean'];
+}>;
+
+
+export type EnsureLayerLinkMutation = (
+  { __typename?: 'Mutation' }
+  & { ensureLayerLink?: Maybe<(
+    { __typename?: 'EnsureLayerLinkPayload' }
+    & { mapBookmark?: Maybe<(
+      { __typename?: 'MapBookmark' }
+      & MapBookmarkDetailsFragment
     )> }
   )> }
 );
@@ -28254,6 +28381,9 @@ export const MapBookmarkDetailsFragmentDoc = gql`
   sketchNames
   clientGeneratedThumbnail
   dataTableStates
+  kind
+  subjectStableId
+  subjectIsDraft
 }
     ${JobFragmentDoc}`;
 export const FileUploadDetailsFragmentDoc = gql`
@@ -36658,6 +36788,120 @@ export function useJoinProjectMutation(baseOptions?: Apollo.MutationHookOptions<
 export type JoinProjectMutationHookResult = ReturnType<typeof useJoinProjectMutation>;
 export type JoinProjectMutationResult = Apollo.MutationResult<JoinProjectMutation>;
 export type JoinProjectMutationOptions = Apollo.BaseMutationOptions<JoinProjectMutation, JoinProjectMutationVariables>;
+export const LayerLinkSharingDocument = gql`
+    query LayerLinkSharing($slug: String!, $stableId: String!) {
+  layerLinkSharing(slug: $slug, stableId: $stableId)
+}
+    `;
+
+/**
+ * __useLayerLinkSharingQuery__
+ *
+ * To run a query within a React component, call `useLayerLinkSharingQuery` and pass it any options that fit your needs.
+ * When your component renders, `useLayerLinkSharingQuery` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = useLayerLinkSharingQuery({
+ *   variables: {
+ *      slug: // value for 'slug'
+ *      stableId: // value for 'stableId'
+ *   },
+ * });
+ */
+export function useLayerLinkSharingQuery(baseOptions: Apollo.QueryHookOptions<LayerLinkSharingQuery, LayerLinkSharingQueryVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useQuery<LayerLinkSharingQuery, LayerLinkSharingQueryVariables>(LayerLinkSharingDocument, options);
+      }
+export function useLayerLinkSharingLazyQuery(baseOptions?: Apollo.LazyQueryHookOptions<LayerLinkSharingQuery, LayerLinkSharingQueryVariables>) {
+          const options = {...defaultOptions, ...baseOptions}
+          return Apollo.useLazyQuery<LayerLinkSharingQuery, LayerLinkSharingQueryVariables>(LayerLinkSharingDocument, options);
+        }
+export type LayerLinkSharingQueryHookResult = ReturnType<typeof useLayerLinkSharingQuery>;
+export type LayerLinkSharingLazyQueryHookResult = ReturnType<typeof useLayerLinkSharingLazyQuery>;
+export type LayerLinkSharingQueryResult = Apollo.QueryResult<LayerLinkSharingQuery, LayerLinkSharingQueryVariables>;
+export const LayerLinkAccessDocument = gql`
+    query LayerLinkAccess($id: UUID!) {
+  layerLinkAccess(id: $id)
+}
+    `;
+
+/**
+ * __useLayerLinkAccessQuery__
+ *
+ * To run a query within a React component, call `useLayerLinkAccessQuery` and pass it any options that fit your needs.
+ * When your component renders, `useLayerLinkAccessQuery` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = useLayerLinkAccessQuery({
+ *   variables: {
+ *      id: // value for 'id'
+ *   },
+ * });
+ */
+export function useLayerLinkAccessQuery(baseOptions: Apollo.QueryHookOptions<LayerLinkAccessQuery, LayerLinkAccessQueryVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useQuery<LayerLinkAccessQuery, LayerLinkAccessQueryVariables>(LayerLinkAccessDocument, options);
+      }
+export function useLayerLinkAccessLazyQuery(baseOptions?: Apollo.LazyQueryHookOptions<LayerLinkAccessQuery, LayerLinkAccessQueryVariables>) {
+          const options = {...defaultOptions, ...baseOptions}
+          return Apollo.useLazyQuery<LayerLinkAccessQuery, LayerLinkAccessQueryVariables>(LayerLinkAccessDocument, options);
+        }
+export type LayerLinkAccessQueryHookResult = ReturnType<typeof useLayerLinkAccessQuery>;
+export type LayerLinkAccessLazyQueryHookResult = ReturnType<typeof useLayerLinkAccessLazyQuery>;
+export type LayerLinkAccessQueryResult = Apollo.QueryResult<LayerLinkAccessQuery, LayerLinkAccessQueryVariables>;
+export const EnsureLayerLinkDocument = gql`
+    mutation EnsureLayerLink($slug: String!, $stableId: String!, $style: JSON!, $selectedBasemap: Int!, $basemapOptionalLayerStates: JSON, $cameraOptions: JSON!, $mapDimensions: [Int!]!, $basemapName: String!, $layerNames: JSON!, $draft: Boolean!, $refresh: Boolean!) {
+  ensureLayerLink(
+    input: {slug: $slug, stableId: $stableId, style: $style, selectedBasemap: $selectedBasemap, basemapOptionalLayerStates: $basemapOptionalLayerStates, cameraOptions: $cameraOptions, mapDimensions: $mapDimensions, basemapName: $basemapName, layerNames: $layerNames, draft: $draft, refresh: $refresh}
+  ) {
+    mapBookmark {
+      ...MapBookmarkDetails
+    }
+  }
+}
+    ${MapBookmarkDetailsFragmentDoc}`;
+export type EnsureLayerLinkMutationFn = Apollo.MutationFunction<EnsureLayerLinkMutation, EnsureLayerLinkMutationVariables>;
+
+/**
+ * __useEnsureLayerLinkMutation__
+ *
+ * To run a mutation, you first call `useEnsureLayerLinkMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useEnsureLayerLinkMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [ensureLayerLinkMutation, { data, loading, error }] = useEnsureLayerLinkMutation({
+ *   variables: {
+ *      slug: // value for 'slug'
+ *      stableId: // value for 'stableId'
+ *      style: // value for 'style'
+ *      selectedBasemap: // value for 'selectedBasemap'
+ *      basemapOptionalLayerStates: // value for 'basemapOptionalLayerStates'
+ *      cameraOptions: // value for 'cameraOptions'
+ *      mapDimensions: // value for 'mapDimensions'
+ *      basemapName: // value for 'basemapName'
+ *      layerNames: // value for 'layerNames'
+ *      draft: // value for 'draft'
+ *      refresh: // value for 'refresh'
+ *   },
+ * });
+ */
+export function useEnsureLayerLinkMutation(baseOptions?: Apollo.MutationHookOptions<EnsureLayerLinkMutation, EnsureLayerLinkMutationVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useMutation<EnsureLayerLinkMutation, EnsureLayerLinkMutationVariables>(EnsureLayerLinkDocument, options);
+      }
+export type EnsureLayerLinkMutationHookResult = ReturnType<typeof useEnsureLayerLinkMutation>;
+export type EnsureLayerLinkMutationResult = Apollo.MutationResult<EnsureLayerLinkMutation>;
+export type EnsureLayerLinkMutationOptions = Apollo.BaseMutationOptions<EnsureLayerLinkMutation, EnsureLayerLinkMutationVariables>;
 export const GetBasemapsAndRegionDocument = gql`
     query GetBasemapsAndRegion($slug: String!) {
   projectBySlug(slug: $slug) {
@@ -44991,6 +45235,8 @@ export const namedOperations = {
     GeographyById: 'GeographyById',
     OverlaysForGeography: 'OverlaysForGeography',
     OverlayForGeographyDetails: 'OverlayForGeographyDetails',
+    LayerLinkSharing: 'LayerLinkSharing',
+    LayerLinkAccess: 'LayerLinkAccess',
     GetBasemapsAndRegion: 'GetBasemapsAndRegion',
     OfflineSurveys: 'OfflineSurveys',
     SurveysById: 'SurveysById',
@@ -45168,6 +45414,7 @@ export const namedOperations = {
     UpdateGeography: 'UpdateGeography',
     GenerateMissingFragmentsForProject: 'GenerateMissingFragmentsForProject',
     JoinProject: 'JoinProject',
+    EnsureLayerLink: 'EnsureLayerLink',
     UpdateBasemapOfflineTileSettings: 'UpdateBasemapOfflineTileSettings',
     generateOfflineTilePackage: 'generateOfflineTilePackage',
     deleteTilePackage: 'deleteTilePackage',

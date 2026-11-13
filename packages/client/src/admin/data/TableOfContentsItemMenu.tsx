@@ -2,7 +2,10 @@ import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
 import * as ContextMenu from "@radix-ui/react-context-menu";
 import * as MenuBar from "@radix-ui/react-menubar";
 import React, { Suspense, useContext, useEffect, useState } from "react";
-import { TableOfContentsItem } from "../../generated/graphql";
+import {
+  TableOfContentsItem,
+  useProjectMetadataQuery,
+} from "../../generated/graphql";
 import { Trans } from "react-i18next";
 import {
   LayerTreeContext,
@@ -14,6 +17,8 @@ import {
   MenuBarSeparatorProps,
 } from "../../components/Menubar";
 import { TableOfContentsMetadataModalContext } from "../../dataLayers/TableOfContentsMetadataModal";
+import { useLayerLink } from "../../dataLayers/LayerLinkProvider";
+import getSlug from "../../getSlug";
 import Skeleton from "../../components/Skeleton";
 import { ArrowDownIcon, ArrowUpIcon } from "@radix-ui/react-icons";
 import { createPortal } from "react-dom";
@@ -79,6 +84,15 @@ export const TableOfContentsItemMenu = React.forwardRef<
     // TODO: adjust this value as context menu grows in size
     const intersectsBottom = (transform?.y || 0) > window.innerHeight - 320;
     const metadataContext = useContext(TableOfContentsMetadataModalContext);
+    const layerLinks = useLayerLink();
+    const slug = getSlug();
+    const projectMetadata = useProjectMetadataQuery({
+      variables: { slug },
+      skip: !slug,
+    });
+    const sessionIsAdmin = Boolean(
+      projectMetadata.data?.project?.sessionIsAdmin
+    );
     return (
       <MenuType.Content
         // avoidCollisions={false}
@@ -164,6 +178,16 @@ export const TableOfContentsItemMenu = React.forwardRef<
                   >
                     <Trans ns="homepage">View metadata</Trans>
                   </MenuType.Item>
+                  {layerLinks.enabled && sessionIsAdmin && (
+                    <MenuType.Item
+                      className={MenuBarItemClasses}
+                      onSelect={() => {
+                        layerLinks.openCreator(firstItem.stableId);
+                      }}
+                    >
+                      <Trans ns="mapBookmarks">Link to layer</Trans>
+                    </MenuType.Item>
+                  )}
                   {firstItem.enableDownload && firstItem.primaryDownloadUrl && (
                     <MenuType.Item
                       className={MenuBarItemClasses}
