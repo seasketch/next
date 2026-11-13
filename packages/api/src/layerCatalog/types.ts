@@ -25,7 +25,7 @@ export type RawTocItem = {
   geostats: unknown;
   attribution: string | null;
   enableDownload: boolean;
-  hasMetadata: boolean;
+  metadata: unknown;
   uploadedSourceFilename: string | null;
   outputs: CatalogOutput[];
 };

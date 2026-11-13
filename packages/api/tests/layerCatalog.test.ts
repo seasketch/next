@@ -14,6 +14,8 @@ import {
   whereHosted,
 } from "../src/layerCatalog/columns";
 import {
+  METADATA_PLAIN_TEXT_LIMIT,
+  metadataPlainText,
   parseMetadataFormat,
   renderMetadata,
 } from "../src/layerCatalog/metadataDocument";
@@ -41,11 +43,10 @@ const HEADERS = [
   "Spatial type",
   "Feature count",
   "Raster type",
-  "Source CRS",
   "Uploaded file type",
   "Uploaded file",
   "Normalized file",
-  "Has metadata",
+  "Metadata",
   "Downloadable",
   "Attribution",
   "Service URL",
@@ -78,7 +79,22 @@ function layer(overrides: Partial<CatalogLayer> = {}): CatalogLayer {
     },
     attribution: "DFO",
     enableDownload: true,
-    hasMetadata: true,
+    metadata: {
+      type: "doc",
+      content: [
+        {
+          type: "heading",
+          attrs: { level: 1 },
+          content: [{ type: "text", text: "Kelp" }],
+        },
+        {
+          type: "paragraph",
+          content: [
+            { type: "text", text: "Nearshore canopy surveyed in 2024." },
+          ],
+        },
+      ],
+    },
     uploadedSourceFilename: "kelp.shp",
     outputs: [
       {
@@ -86,21 +102,18 @@ function layer(overrides: Partial<CatalogLayer> = {}): CatalogLayer {
         url: "https://uploads.example/kelp.zip",
         isOriginal: true,
         originalFilename: "kelp_2024.zip",
-        epsg: 3005,
       },
       {
         type: "FlatGeobuf",
         url: "https://uploads.example/kelp.fgb",
         isOriginal: false,
         originalFilename: "kelp_2024.zip",
-        epsg: 4326,
       },
       {
         type: "XMLMetadata",
         url: "https://uploads.example/kelp.xml",
         isOriginal: false,
         originalFilename: "kelp.xml",
-        epsg: null,
       },
     ],
     styleUrl: "https://api.example/layers/demo/kelpLayer/style",
@@ -133,14 +146,13 @@ describe("layer catalog columns", () => {
     expect(row["Spatial type"]).toBe("Polygon");
     expect(row["Feature count"]).toBe("12480");
     expect(row["Raster type"]).toBe("");
-    expect(row["Source CRS"]).toBe("EPSG:3005");
     expect(row["Uploaded file type"]).toBe("Shapefile");
     expect(row["Uploaded file"]).toBe("kelp_2024.zip");
     expect(row["Uploaded file URL"]).toBe("https://uploads.example/kelp.zip");
     expect(row["Tile service URL"]).toBe("https://tiles.seasketch.org/kelp.json");
     expect(row["Normalized file"]).toBe("FlatGeobuf");
     expect(row["Normalized file URL"]).toBe("https://uploads.example/kelp.fgb");
-    expect(row["Has metadata"]).toBe("true");
+    expect(row["Metadata"]).toBe("Kelp Nearshore canopy surveyed in 2024.");
     expect(row["Metadata file URL"]).toBe("https://uploads.example/kelp.xml");
     expect(row["Downloadable"]).toBe("Yes");
     expect(row["Attribution"]).toBe("DFO");
@@ -209,14 +221,12 @@ describe("layer catalog columns", () => {
           url: "https://uploads.example/bathy.tif",
           isOriginal: true,
           originalFilename: "bathy.tif",
-          epsg: 4326,
         },
         {
           type: "GeoTIFF",
           url: "https://uploads.example/bathy-normalized.tif",
           isOriginal: false,
           originalFilename: null,
-          epsg: 4326,
         },
       ] as CatalogOutput[],
     });
@@ -238,6 +248,63 @@ describe("layer catalog columns", () => {
     expect(legacy["Uploaded file"]).toBe("old.geojson");
     expect(legacy["Spatial type"]).toBe("Point");
     expect(legacy["Added by"]).toBe("Jane Doe <jane@example.gov>");
+  });
+
+  test("writes metadata text, or the service endpoint when metadata is dynamic", () => {
+    const stored = record({
+      sourceType: "arcgis-vector",
+      sourceUrl: "https://services.arcgis.com/abc/FeatureServer/0",
+      metadata: {
+        type: "doc",
+        content: [
+          {
+            type: "paragraph",
+            content: [
+              { type: "text", text: "See " },
+              {
+                type: "text",
+                text: "the survey",
+                marks: [
+                  { type: "strong" },
+                  { type: "link", attrs: { href: "https://example.gov/kelp" } },
+                ],
+              },
+              { type: "text", text: "." },
+            ],
+          },
+        ],
+      },
+    });
+    expect(stored["Metadata"]).toBe("See the survey (https://example.gov/kelp).");
+    expect(stored["Metadata"]).not.toContain("<");
+    expect(stored["Metadata"]).not.toContain("**");
+
+    const dynamic = record({
+      metadata: null,
+      sourceType: "arcgis-dynamic-mapserver",
+      sublayer: "3",
+      sourceUrl: "https://gis.example.gov/arcgis/rest/services/Habitat/MapServer",
+    });
+    expect(dynamic["Metadata"]).toBe(
+      "https://gis.example.gov/arcgis/rest/services/Habitat/MapServer/3"
+    );
+
+    const withToken = record({
+      metadata: null,
+      sourceType: "arcgis-vector",
+      sourceUrl: "https://services.arcgis.com/abc/FeatureServer/0?token=abc",
+    });
+    expect(withToken["Metadata"]).toBe(
+      "https://services.arcgis.com/abc/FeatureServer/0?token=abc"
+    );
+
+    const placeholder = record({
+      metadata: { type: "doc", content: [{ type: "paragraph" }] },
+    });
+    expect(placeholder["Metadata"]).toBe("");
+
+    const hostedWithoutDoc = record({ metadata: null, sourceType: "seasketch-mvt" });
+    expect(hostedWithoutDoc["Metadata"]).toBe("");
   });
 
   test("quotes csv cells and neutralizes formulas", () => {
@@ -365,6 +432,22 @@ describe("metadata documents", () => {
     expect(renderMetadata(doc, "md")).toContain("# Kelp");
     expect(renderMetadata(doc, "md")).toContain("[the survey](https://example.gov/kelp)");
     expect(JSON.parse(renderMetadata(doc, "json"))).toEqual(doc);
+  });
+
+  test("flattens a document to truncated plain text", () => {
+    expect(metadataPlainText(null)).toBe("");
+    expect(metadataPlainText({ type: "doc", content: [] })).toBe("");
+    expect(metadataPlainText({ type: "doc", content: [{ type: "paragraph" }] })).toBe("");
+    expect(metadataPlainText(doc)).toBe("Kelp See the survey (https://example.gov/kelp).");
+
+    const long = "🙂".repeat(METADATA_PLAIN_TEXT_LIMIT + 20);
+    const excerpt = metadataPlainText({
+      type: "doc",
+      content: [{ type: "paragraph", content: [{ type: "text", text: long }] }],
+    });
+    expect(Array.from(excerpt).length).toBe(METADATA_PLAIN_TEXT_LIMIT);
+    expect(excerpt.endsWith("…")).toBe(true);
+    expect(excerpt.startsWith("🙂")).toBe(true);
   });
 });
 
@@ -570,7 +653,10 @@ describe("layer catalog sql", () => {
         await client.query(
           `insert into table_of_contents_items (
              project_id, title, is_folder, stable_id, parent_stable_id, data_layer_id, metadata
-           ) values ($1, 'Kelp', false, 'kelpLayer', $2, $3, '{"type":"doc"}'::jsonb)
+           ) values (
+             $1, 'Kelp', false, 'kelpLayer', $2, $3,
+             '{"type":"doc","content":[{"type":"paragraph","content":[{"type":"text","text":"Kelp beds surveyed in 2024."}]}]}'::jsonb
+           )
            returning id`,
           [projectId, folderId, layerId]
         )
@@ -610,9 +696,8 @@ describe("layer catalog sql", () => {
       expect(row["Uploaded file type"]).toBe("Shapefile");
       expect(row["Uploaded file"]).toBe("kelp_2024.zip");
       expect(row["Normalized file"]).toBe("FlatGeobuf");
-      expect(row["Has metadata"]).toBe("true");
+      expect(row["Metadata"]).toBe("Kelp beds surveyed in 2024.");
       expect(row["Added by"]).toBe(`Jane Doe <${slug}@example.com>`);
-      expect(row["Source CRS"]).toBe("EPSG:3005");
 
       const admin = await store.isProjectAdmin(projectId, userId);
       expect(admin).toBe(true);
@@ -734,7 +819,7 @@ function item(overrides: Partial<RawTocItem>): RawTocItem {
     geostats: null,
     attribution: null,
     enableDownload: false,
-    hasMetadata: false,
+    metadata: null,
     uploadedSourceFilename: null,
     outputs: [],
     ...overrides,
