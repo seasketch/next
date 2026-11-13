@@ -5,6 +5,7 @@ export default defineConfig({
     pool: "forks",
     globals: true,
     environment: "node",
+    setupFiles: ["./__tests__/setupFetch.ts"],
     reporters: ["default"],
     coverage: {
       provider: "v8",
