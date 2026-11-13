@@ -5,6 +5,10 @@
  * A column that only reformats data already on `CatalogLayer` is that one
  * entry. A column that needs data the query does not load also needs a field
  * on `CatalogLayer` and the matching select in `pgStore.ts`.
+ *
+ * URL columns stay at the right, in this order: the source service, original
+ * source files, derivative files and tile services, then the SeaSketch REST
+ * endpoints (style, geostats, metadata).
  */
 
 export type CatalogOutput = {
@@ -91,7 +95,6 @@ export const catalogColumns: CatalogColumn[] = [
   { header: "Where hosted", value: (layer) => whereHosted(layer) },
   { header: "Service host", value: (layer) => serviceHost(layer) },
   { header: "Source type", value: (layer) => sourceTypeLabel(layer) },
-  { header: "Service URL", value: (layer) => serviceUrl(layer) },
   { header: "Sublayer", value: (layer) => sublayerId(layer) },
   { header: "Added at", value: (layer) => addedAt(layer.createdAt) },
   {
@@ -104,26 +107,27 @@ export const catalogColumns: CatalogColumn[] = [
   { header: "Source CRS", value: (layer) => sourceCrs(layer) },
   { header: "Uploaded file type", value: (layer) => uploadedFileType(layer) },
   { header: "Uploaded file", value: (layer) => uploadedFileName(layer) },
-  { header: "Uploaded file URL", value: (layer) => uploadedFileUrl(layer) },
-  { header: "Tile service URL", value: (layer) => tileServiceUrl(layer) },
   { header: "Normalized file", value: (layer) => normalizedFile(layer).label },
-  {
-    header: "Normalized file URL",
-    value: (layer) => normalizedFile(layer).url,
-  },
-  { header: "Style URL", value: (layer) => layer.styleUrl },
-  { header: "Geostats URL", value: (layer) => layer.geostatsUrl },
   {
     header: "Has metadata",
     value: (layer) => (layer.hasMetadata ? "true" : "false"),
   },
-  { header: "Metadata URL", value: (layer) => layer.metadataUrl },
-  { header: "Metadata file URL", value: (layer) => metadataFileUrl(layer) },
   {
     header: "Downloadable",
     value: (layer) => (layer.enableDownload ? "Yes" : "No"),
   },
   { header: "Attribution", value: (layer) => layer.attribution?.trim() || "" },
+  { header: "Service URL", value: (layer) => serviceUrl(layer) },
+  { header: "Uploaded file URL", value: (layer) => uploadedFileUrl(layer) },
+  { header: "Metadata file URL", value: (layer) => metadataFileUrl(layer) },
+  {
+    header: "Normalized file URL",
+    value: (layer) => normalizedFile(layer).url,
+  },
+  { header: "Tile service URL", value: (layer) => tileServiceUrl(layer) },
+  { header: "Style URL", value: (layer) => layer.styleUrl },
+  { header: "Geostats URL", value: (layer) => layer.geostatsUrl },
+  { header: "Metadata URL", value: (layer) => layer.metadataUrl },
 ];
 
 export function catalogRecords(
