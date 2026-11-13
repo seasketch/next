@@ -13,6 +13,7 @@ import { v4 as uuid } from "uuid";
 import * as S3 from "aws-sdk/clients/s3";
 import * as PureImage from "pureimage";
 import { PNG } from "pngjs";
+import { withSpatialUploadsDevHandler } from "../src/spatialUploadsDevHandlerLock";
 
 setCanvasPolyfill((w, h) => {
   const canvas = PureImage.make(w, h);
@@ -415,20 +416,22 @@ const client = new AWS.Lambda({
 
 async function runLambda(event: SpatialUploadsHandlerRequest) {
   if (process.env.SPATIAL_UPLOADS_LAMBDA_DEV_HANDLER) {
-    const response = await fetch(
-      process.env.SPATIAL_UPLOADS_LAMBDA_DEV_HANDLER,
-      {
-        method: "POST",
-        body: JSON.stringify(event),
-      }
-    );
-    const text = await response.text();
-    if (text.length === 0) {
-      throw new Error(
-        "Lambda invocation failed. Could be due to attempting to run multiple simultaneous tasks with dev container."
+    return withSpatialUploadsDevHandler(async () => {
+      const response = await fetch(
+        process.env.SPATIAL_UPLOADS_LAMBDA_DEV_HANDLER as string,
+        {
+          method: "POST",
+          body: JSON.stringify(event),
+        },
       );
-    }
-    return JSON.parse(text);
+      const text = await response.text();
+      if (text.length === 0) {
+        throw new Error(
+          "Lambda invocation failed. Could be due to attempting to run multiple simultaneous tasks with dev container.",
+        );
+      }
+      return JSON.parse(text);
+    });
   } else if (process.env.SPATIAL_UPLOADS_LAMBDA_ARN) {
     await client
       .invoke({

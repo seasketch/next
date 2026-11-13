@@ -101,6 +101,10 @@ services:
         - type=registry,ref=ghcr.io/seasketch/spatial-uploads-runtime:${SPATIAL_UPLOADS_CACHE_TAG:-cache}
     image: seasketch-spatial-uploads:dev
     platform: linux/amd64
+    # The emulator panics and exits if a second invoke arrives while one is
+    # still running. The API queues those calls; this brings the port back
+    # if the process dies anyway.
+    restart: unless-stopped
     ports:
       - "${SPATIAL_UPLOADS_PORT:-9001}:8080"
     extra_hosts:
@@ -145,6 +149,8 @@ services:
       GEOSTATS_PII_CLASSIFIER_ENDPOINT: ${GEOSTATS_PII_CLASSIFIER_ENDPOINT:-}
       AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID:-local}
       AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY:-local}
+      # Empty when the keys are long-lived. The SDK ignores an empty token.
+      AWS_SESSION_TOKEN: ${AWS_SESSION_TOKEN:-}
     healthcheck:
       # Any HTTP answer means the emulator is up. Do not POST to the invoke
       # path here; that would run the handler with an empty event.
@@ -155,9 +161,14 @@ services:
       start_period: 20s
     develop:
       watch:
+        # initial_sync reconciles a container that has been up across branch
+        # switches. Watch otherwise copies only files that change after it
+        # starts, so a dist/ wiped by an earlier sync stays missing handler.js
+        # and the Lambda runtime fails with "Cannot find module 'handler'".
         - action: sync+restart
           path: ./packages/spatial-uploads-handler/dist
           target: /var/task/packages/spatial-uploads-handler/dist
+          initial_sync: true
 
   # Subdivision worker, the production image under the Lambda emulator.
   subdivision:

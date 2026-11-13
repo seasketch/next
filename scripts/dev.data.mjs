@@ -181,8 +181,9 @@ export function aiGatewayEnv() {
   // The handler refuses to run the Cartographer without the PII classifier,
   // so the classifier's ARN (and an endpoint override) travel with the
   // gateway values. Invoking the deployed classifier also needs AWS
-  // credentials in the container; compose.yaml passes AWS_ACCESS_KEY_ID and
-  // AWS_SECRET_ACCESS_KEY through from the environment.
+  // credentials. Host mode loads them from this .env; the container only
+  // sees what compose.yaml interpolates, and that file otherwise substitutes
+  // the placeholder "local", which AWS rejects as an invalid security token.
   const classifierArn = firstSet(
     handler.GEOSTATS_PII_CLASSIFIER_ARN,
     api.GEOSTATS_PII_CLASSIFIER_ARN,
@@ -193,6 +194,21 @@ export function aiGatewayEnv() {
     api.GEOSTATS_PII_CLASSIFIER_ENDPOINT,
     process.env.GEOSTATS_PII_CLASSIFIER_ENDPOINT
   );
+  const accessKeyId = firstSet(
+    handler.AWS_ACCESS_KEY_ID,
+    api.AWS_ACCESS_KEY_ID,
+    process.env.AWS_ACCESS_KEY_ID
+  );
+  const secretAccessKey = firstSet(
+    handler.AWS_SECRET_ACCESS_KEY,
+    api.AWS_SECRET_ACCESS_KEY,
+    process.env.AWS_SECRET_ACCESS_KEY
+  );
+  const sessionToken = firstSet(
+    handler.AWS_SESSION_TOKEN,
+    api.AWS_SESSION_TOKEN,
+    process.env.AWS_SESSION_TOKEN
+  );
   return {
     ...(token ? { CF_AIG_TOKEN: token } : {}),
     ...(url ? { CF_AIG_URL: url } : {}),
@@ -200,6 +216,9 @@ export function aiGatewayEnv() {
     ...(classifierEndpoint
       ? { GEOSTATS_PII_CLASSIFIER_ENDPOINT: classifierEndpoint }
       : {}),
+    ...(accessKeyId ? { AWS_ACCESS_KEY_ID: accessKeyId } : {}),
+    ...(secretAccessKey ? { AWS_SECRET_ACCESS_KEY: secretAccessKey } : {}),
+    ...(sessionToken ? { AWS_SESSION_TOKEN: sessionToken } : {}),
   };
 }
 
