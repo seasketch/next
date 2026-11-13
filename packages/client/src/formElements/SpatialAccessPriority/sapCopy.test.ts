@@ -231,7 +231,7 @@ describe("adaptSketchFormElement", () => {
       },
     };
     const adapted = adaptSketchFormElement(range, SketchGeometryType.Point);
-    expect(proseText(adapted.body)).toBe("How important is this point?");
+    expect(proseText(adapted.body)).toBe("How important is this location?");
     expect(adapted.alternateLanguageSettings.es.body).toBeUndefined();
   });
 
