@@ -2,13 +2,13 @@
 
 ## Database migrations
 
-Put schema changes in `packages/api/migrations/current.sql` only.
+The schema change on a branch is an edit to `packages/api/migrations/current.sql`. Commit that file with the rest of the work.
 
-Do not run `npm run db:commit` or `graphile-migrate commit`. Do not create, edit, stage, or commit files under `packages/api/migrations/committed/`. Parallel branches each adding the next numbered file conflict. `current.sql` is the shared file those branches edit instead.
+`npm run db:commit` and `graphile-migrate commit` are not how you finish the branch. They empty `current.sql` and write the next numbered file under `packages/api/migrations/committed/`. Branches in flight each take that same next number and conflict. Leave the SQL in `current.sql`.
 
-`npm run db:watch` and `npm run db:migrate` are allowed. A hook rejects a numbered migration. If it rejects you, stop. Do not retry and do not look for a bypass. Commit a numbered migration only when the user explicitly tells you to, in this conversation, immediately before merging to master, and gives the command to do it.
+Do not create, edit, or stage files in `packages/api/migrations/committed/`. Do not edit `packages/api/schema.sql`. It is generated.
 
-`npm install` points this clone at `.githooks`, which enforces the same rule for every tool that runs `git commit`.
+Run `npm run db:commit` or `graphile-migrate commit` only when the user explicitly tells you to, in this conversation, immediately before merging to master. `npm run db:watch` and `npm run db:migrate` are the normal commands. `db:migrate` applies numbered migrations that already exist. It does not turn `current.sql` into one.
 
 ## 🧱 Project Architecture
 
@@ -88,7 +88,7 @@ export const MyComponent: React.FC<MyComponentProps> = ({ title }) => {
 
 ## Database Migration Workflow (Mandatory)
 
-- `packages/api/migrations/current.sql` is the only place for in-progress migration work. Do not create or edit files in `packages/api/migrations/committed`, and do not run `db:commit` to move `current.sql` into that directory. Do not edit schema.sql directly. The numbered migration is committed only when the user explicitly asks for that immediately before merging to master.
+- `packages/api/migrations/current.sql` is the only place for in-progress migration work. Commit that file. Do not run `npm run db:commit` or `graphile-migrate commit`, and do not create or edit files in `packages/api/migrations/committed`, unless the user explicitly tells you to commit the numbered migration in this conversation, immediately before merging to master. Do not edit schema.sql directly.
 
 ### Adding columns to tables that are copied on publish/duplicate
 

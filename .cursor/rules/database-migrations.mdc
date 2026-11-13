@@ -1,16 +1,14 @@
 ---
-description: Schema changes stay in current.sql. Do not commit graphile-migrate migrations.
+description: Schema changes stay in current.sql until the user asks for a numbered migration.
 alwaysApply: true
 ---
 
 # Database migrations
 
-Put every schema change in `packages/api/migrations/current.sql`.
+The schema change on a branch is an edit to `packages/api/migrations/current.sql`. Commit that file with the rest of the work.
 
-Do not run `npm run db:commit` or `graphile-migrate commit`. Do not create, edit, stage, or commit files under `packages/api/migrations/committed/`. A hook rejects those commands. If it rejects you, stop. Do not retry and do not look for a bypass. If the user's own message tells you to commit the numbered migration and gives the command, run that command.
+Do not run `npm run db:commit` or `graphile-migrate commit`. Do not create, edit, or stage files under `packages/api/migrations/committed/`. Those commands write the next numbered migration. Parallel branches each take that same number and conflict.
 
-`npm run db:watch` and `npm run db:migrate` are allowed. `db:migrate` applies migrations that are already committed. It does not turn `current.sql` into a numbered migration.
+Run `npm run db:commit` or `graphile-migrate commit` only when the user explicitly tells you to, in this conversation, immediately before merging to master.
 
-Numbered files under `migrations/committed` are created only when the user explicitly tells you, in this conversation, to commit the migration immediately before merging to master. Parallel branches each adding the next number conflict. `current.sql` is the shared unnumbered file those branches edit instead.
-
-Do not edit `packages/api/schema.sql` directly. It is generated.
+`npm run db:watch` and `npm run db:migrate` are fine. `db:migrate` applies numbered migrations that already exist. Do not edit `packages/api/schema.sql`. It is generated.

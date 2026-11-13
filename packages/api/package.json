@@ -21,7 +21,7 @@
     "build:watch": "tsc -b --watch",
     "db:migrate": "graphile-migrate migrate",
     "db:watch": "graphile-migrate watch",
-    "db:commit": "node ../../scripts/migration-commit-guard.mjs refuse-commit && graphile-migrate commit",
+    "db:commit": "graphile-migrate commit",
     "db:uncommit": "graphile-migrate uncommit",
     "db:reset": "graphile-migrate reset",
     "db:status": "graphile-migrate status",

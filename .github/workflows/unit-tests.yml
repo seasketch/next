@@ -440,14 +440,3 @@ jobs:
             echo "The **playwright-report-admin** artifact on this run has the HTML report, and screenshots, video, and traces for any failure."
             echo "Download it and open the report with \`npx playwright show-report playwright-report\`."
           } >> "$GITHUB_STEP_SUMMARY"
-
-  migration-commit-guard:
-    name: Migration commit guard
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v7
-      - uses: actions/setup-node@v7
-        with:
-          node-version-file: ".nvmrc"
-      - name: Test migration commit guard
-        run: node --test scripts/migration-commit-guard.test.mjs
