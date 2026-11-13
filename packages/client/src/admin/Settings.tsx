@@ -247,13 +247,18 @@ function BasicSettingsForm(props: {
                   propName="supportEmail"
                   type="email"
                   label={t("Contact email")}
+                  description={
+                    <Trans ns="admin">
+                      Provide the address of an administrator who can be the
+                      first point of contact for your project.
+                    </Trans>
+                  }
                   value={props.supportEmail}
                   slug={props.slug}
                   normalize={normalizeContactEmail}
                   validate={validateContactEmail}
                 />
               </div>
-              <ContactEmailUsage />
             </div>
             <div className="md:max-w-xs mt-5">
               <TextInput
@@ -333,54 +338,6 @@ function BasicSettingsForm(props: {
           </div>
         </div>
       </form>
-    </div>
-  );
-}
-
-function ContactEmailUsage() {
-  return (
-    <div className="mt-3 max-w-2xl rounded-md border border-gray-200 bg-gray-50 p-3 text-sm text-gray-600">
-      <p>
-        <Trans ns="admin">
-          People use this address when they need the team running this project.
-          Questions about bugs or how SeaSketch works still go to{" "}
-          <a className="underline" href={mailtoHref(SEASKETCH_SUPPORT_EMAIL)}>
-            {SEASKETCH_SUPPORT_EMAIL}
-          </a>
-          .
-        </Trans>
-      </p>
-      <ul className="mt-2 list-disc space-y-1 pl-5">
-        <li>
-          <Trans ns="admin">
-            Visitors who cannot open the project, or whose request to join is
-            waiting for approval, are shown this address.
-          </Trans>
-        </li>
-        <li>
-          <Trans ns="admin">
-            Invitation emails ask recipients to use it if they have questions.
-          </Trans>
-        </li>
-        <li>
-          <Trans ns="admin">
-            The join page points here for questions about how this project uses
-            personal data.
-          </Trans>
-        </li>
-        <li>
-          <Trans ns="admin">
-            Inside the project, Contact us offers this address as the project
-            administrator, next to SeaSketch support.
-          </Trans>
-        </li>
-      </ul>
-      <p className="mt-2">
-        <Trans ns="admin">
-          It starts as the project creator's account email. Use an inbox the
-          project team actually reads.
-        </Trans>
-      </p>
     </div>
   );
 }

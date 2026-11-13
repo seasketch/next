@@ -84,19 +84,12 @@ export function ContactChooserModal(props: {
       scrollable
       footer={[{ label: t("Cancel"), onClick: props.onClose }]}
     >
-      <p className="text-sm text-gray-600">
-        <Trans ns="common">
-          Questions about this project and questions about the SeaSketch
-          software go to different people.
-        </Trans>
-      </p>
-      <div className="mt-4 grid gap-3 sm:grid-cols-2">
+      <div className="grid gap-3 sm:grid-cols-2">
         <ContactCard
           href={mailtoHref(props.project.email, props.subject)}
-          kicker={t("This project")}
           title={t("Project administrator")}
           email={props.project.email}
-          action={t("Email the project team")}
+          action={t("Email project administrator")}
           icon={
             <UserGroupIcon className="h-6 w-6" aria-hidden="true" />
           }
@@ -108,13 +101,12 @@ export function ContactChooserModal(props: {
             <strong className="font-semibold text-gray-900">
               {{ projectName }}
             </strong>
-            , including access, participation, surveys, and the data published
-            here. The project team reads this inbox.
+            , including access requests, questions or comments about data, and
+            information about the objectives of the project.
           </Trans>
         </ContactCard>
         <ContactCard
           href={mailtoHref(SEASKETCH_SUPPORT_EMAIL, props.subject)}
-          kicker={t("The software")}
           title={t("SeaSketch support")}
           email={SEASKETCH_SUPPORT_EMAIL}
           action={t("Email SeaSketch support")}
@@ -125,9 +117,8 @@ export function ContactChooserModal(props: {
           onClick={props.onClose}
         >
           <Trans ns="common">
-            Contact the SeaSketch development team about bugs, outages, or how
-            the software works. They cannot approve access to this project or
-            answer questions about its data.
+            Contact the SeaSketch development team about bugs, outages,
+            technical questions, and for help with using the software.
           </Trans>
         </ContactCard>
       </div>
@@ -137,7 +128,6 @@ export function ContactChooserModal(props: {
 
 function ContactCard(props: {
   href: string;
-  kicker: string;
   title: string;
   email: string;
   action: string;
@@ -165,10 +155,7 @@ function ContactCard(props: {
       >
         {props.icon}
       </span>
-      <span className="mt-3 text-xs font-medium uppercase tracking-wide text-gray-500">
-        {props.kicker}
-      </span>
-      <span className="mt-1 text-base font-semibold text-gray-900">
+      <span className="mt-3 text-base font-semibold text-gray-900">
         {props.title}
       </span>
       <span className="mt-1 break-all text-sm font-medium text-primary-700">

@@ -35,6 +35,12 @@ describe("ContactChooser", () => {
       screen.getByRole("dialog", { name: "Who would you like to contact?" })
     ).toBeInTheDocument();
     expect(screen.getByText("Demo Samoa")).toBeInTheDocument();
+    expect(screen.getByText("Email project administrator")).toBeInTheDocument();
+    expect(screen.queryByText("This project")).not.toBeInTheDocument();
+    expect(screen.queryByText("The software")).not.toBeInTheDocument();
+    expect(
+      screen.queryByText(/Questions about this project and questions/)
+    ).not.toBeInTheDocument();
     expect(
       screen.getByRole("link", { name: /planning@example.org/ })
     ).toHaveAttribute("href", "mailto:planning@example.org");
