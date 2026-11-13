@@ -47,7 +47,9 @@ export type AccessListRecord = {
 };
 
 export interface LayerCatalogStore {
-  projectBySlug(slug: string): Promise<{ id: number } | null>;
+  projectBySlug(
+    slug: string
+  ): Promise<{ id: number; accessControl: string } | null>;
   draftItems(projectId: number): Promise<RawTocItem[]>;
   layerResource(
     projectId: number,

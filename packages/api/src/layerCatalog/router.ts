@@ -1,5 +1,5 @@
 import { Request, Response, Router } from "express";
-import { passesLayerAccess } from "./access";
+import { layerIsOpenToAnyone, passesLayerAccess } from "./access";
 import {
   CatalogLayer,
   catalogCsv,
@@ -9,12 +9,6 @@ import {
 import { parseMetadataFormat, renderMetadata } from "./metadataDocument";
 import { layersInOverlayOrder } from "./order";
 import { CatalogUser, LayerCatalogStore, RawTocItem } from "./types";
-
-type LoadComputedMetadata = (
-  sourceType: string | null,
-  url: string | null,
-  sublayer: string | null
-) => Promise<unknown>;
 
 export type Authenticate = (
   req: Request,
@@ -26,12 +20,8 @@ export function registerLayerCatalog(
   options: {
     store: LayerCatalogStore;
     authenticate: Authenticate;
-    loadComputedMetadata?: LoadComputedMetadata;
   }
 ) {
-  const loadComputedMetadata =
-    options.loadComputedMetadata || defaultLoadComputedMetadata;
-
   router.get("/:slug.csv", (req, res, next) => {
     sendCatalog(req, res, options.store, options.authenticate, "csv").catch(next);
   });
@@ -39,29 +29,13 @@ export function registerLayerCatalog(
     sendCatalog(req, res, options.store, options.authenticate, "json").catch(next);
   });
   router.get("/:slug/:stableId/style", (req, res, next) => {
-    sendResource(req, res, options.store, options.authenticate, "style", loadComputedMetadata).catch(
-      next
-    );
+    sendResource(req, res, options.store, options.authenticate, "style").catch(next);
   });
   router.get("/:slug/:stableId/geostats", (req, res, next) => {
-    sendResource(
-      req,
-      res,
-      options.store,
-      options.authenticate,
-      "geostats",
-      loadComputedMetadata
-    ).catch(next);
+    sendResource(req, res, options.store, options.authenticate, "geostats").catch(next);
   });
   router.get("/:slug/:stableId/metadata", (req, res, next) => {
-    sendResource(
-      req,
-      res,
-      options.store,
-      options.authenticate,
-      "metadata",
-      loadComputedMetadata
-    ).catch(next);
+    sendResource(req, res, options.store, options.authenticate, "metadata").catch(next);
   });
 }
 
@@ -112,8 +86,7 @@ async function sendResource(
   res: Response,
   store: LayerCatalogStore,
   authenticate: Authenticate,
-  resource: "style" | "geostats" | "metadata",
-  loadComputedMetadata: LoadComputedMetadata
+  resource: "style" | "geostats" | "metadata"
 ) {
   const slug = req.params.slug;
   const stableId = req.params.stableId;
@@ -133,6 +106,10 @@ async function sendResource(
     return;
   }
   const lists = await store.accessLists(project.id, isAdmin, record.path);
+  if (!user && !layerIsOpenToAnyone({ projectAccess: project.accessControl, lists })) {
+    res.status(401).send("Unauthorized");
+    return;
+  }
   const memberIds = new Set(
     user ? await store.memberAclIds(lists.map((list) => list.id), user.id) : []
   );
@@ -157,29 +134,16 @@ async function sendResource(
     res.json(record.geostats ?? null);
     return;
   }
+  if (record.metadata == null) {
+    res.status(204).end();
+    return;
+  }
   const format = parseMetadataFormat(req.query.format);
   if (!format) {
     res.status(400).send("format must be json, html, txt, or md");
     return;
   }
-  let document = record.metadata;
-  if (document == null) {
-    try {
-      document = await loadComputedMetadata(
-        record.sourceType,
-        record.sourceUrl,
-        record.sublayer
-      );
-    } catch (error) {
-      console.error(error);
-      res.status(502).send("Could not read service metadata");
-      return;
-    }
-  }
-  if (document == null) {
-    res.status(404).send("Not found");
-    return;
-  }
+  const document = record.metadata;
   if (format === "json") {
     res.json(document);
     return;
@@ -239,15 +203,6 @@ async function callerIsAdmin(
     return true;
   }
   return store.isProjectAdmin(projectId, user.id);
-}
-
-async function defaultLoadComputedMetadata(
-  sourceType: string | null,
-  url: string | null,
-  sublayer: string | null
-): Promise<unknown> {
-  const { computedMetadataForArcgis } = await import("./computedMetadata.js");
-  return computedMetadataForArcgis(sourceType, url, sublayer);
 }
 
 function catalogSlug(req: Request): string | null {

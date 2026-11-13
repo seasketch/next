@@ -26,3 +26,14 @@ export function passesLayerAccess(args: {
     return false;
   });
 }
+
+/** Anonymous callers can read a layer only when the project is public and every list on the path is public. */
+export function layerIsOpenToAnyone(args: {
+  projectAccess: string;
+  lists: { type: string }[];
+}): boolean {
+  return (
+    args.projectAccess === "public" &&
+    args.lists.every((list) => list.type === "public")
+  );
+}

@@ -4,7 +4,7 @@ import { AddressInfo } from "net";
 import { randomUUID } from "crypto";
 import { PgLayerCatalogStore } from "../src/layerCatalog/pgStore";
 import { createPgPool } from "./pool";
-import { passesLayerAccess } from "../src/layerCatalog/access";
+import { layerIsOpenToAnyone, passesLayerAccess } from "../src/layerCatalog/access";
 import {
   CatalogLayer,
   CatalogOutput,
@@ -303,6 +303,25 @@ describe("layer access", () => {
       })
     ).toBe(true);
   });
+
+  test("opens a layer only when the project and the path are public", () => {
+    expect(
+      layerIsOpenToAnyone({ projectAccess: "public", lists: [{ type: "public" }] })
+    ).toBe(true);
+    expect(layerIsOpenToAnyone({ projectAccess: "public", lists: [] })).toBe(true);
+    expect(
+      layerIsOpenToAnyone({
+        projectAccess: "public",
+        lists: [{ type: "public" }, { type: "group" }],
+      })
+    ).toBe(false);
+    expect(
+      layerIsOpenToAnyone({ projectAccess: "invite_only", lists: [{ type: "public" }] })
+    ).toBe(false);
+    expect(
+      layerIsOpenToAnyone({ projectAccess: "admins_only", lists: [{ type: "public" }] })
+    ).toBe(false);
+  });
 });
 
 describe("metadata documents", () => {
@@ -372,15 +391,6 @@ describe("layer catalog routes", () => {
         }
         return null;
       },
-      loadComputedMetadata: async () => ({
-        type: "doc",
-        content: [
-          {
-            type: "paragraph",
-            content: [{ type: "text", text: "From the service" }],
-          },
-        ],
-      }),
     });
     app.use("/layers", router);
     server = app.listen(0, () => {
@@ -453,16 +463,34 @@ describe("layer catalog routes", () => {
     });
     expect(JSON.parse(admin.body)).toEqual({ draft: true });
 
-    const metadata = await request(
-      `${base}/layers/demo/portsLayer/metadata?format=txt`
-    );
-    expect(metadata.status).toBe(200);
-    expect(metadata.body).toContain("From the service");
+    const metadata = await request(`${base}/layers/demo/portsLayer/metadata?format=txt`);
+    expect(metadata.status).toBe(204);
+    expect(metadata.body).toBe("");
+
+    const stored = await request(`${base}/layers/demo/kelpLayer/metadata?format=json`, {
+      authorization: "Bearer admin",
+    });
+    expect(stored.status).toBe(200);
+    expect(JSON.parse(stored.body)).toEqual({ type: "doc", content: [] });
 
     expect(
-      (await request(`${base}/layers/demo/portsLayer/metadata?format=pdf`)).status
+      (await request(`${base}/layers/demo/kelpLayer/metadata?format=pdf`, {
+        authorization: "Bearer admin",
+      })).status
     ).toBe(400);
     expect((await request(`${base}/layers/demo/nope/style`)).status).toBe(404);
+
+    const closedAnon = await request(`${base}/layers/closed/openLayer/style`);
+    expect(closedAnon.status).toBe(401);
+    const closedUser = await request(`${base}/layers/closed/openLayer/style`, {
+      authorization: "Bearer other",
+    });
+    expect(closedUser.status).toBe(200);
+    expect(JSON.parse(closedUser.body)).toEqual({ published: "open" });
+    const closedApiKey = await request(`${base}/layers/closed/openLayer/geostats`, {
+      authorization: "Bearer geoprocessing-key",
+    });
+    expect(closedApiKey.status).toBe(401);
   });
 });
 
@@ -578,6 +606,8 @@ describe("layer catalog sql", () => {
 
       const admin = await store.isProjectAdmin(projectId, userId);
       expect(admin).toBe(true);
+      const project = await store.projectBySlug(slug);
+      expect(project).toEqual({ id: projectId, accessControl: "admins_only" });
       const resource = await store.layerResource(projectId, "kelpLayer", true);
       expect(resource?.path).toContain("kelpLayer");
       const lists = await store.accessLists(projectId, true, resource!.path);
@@ -616,7 +646,13 @@ function request(
 
 class MemoryStore implements LayerCatalogStore {
   async projectBySlug(slug: string) {
-    return slug === "demo" ? { id: 7 } : null;
+    if (slug === "demo") {
+      return { id: 7, accessControl: "public" };
+    }
+    if (slug === "closed") {
+      return { id: 8, accessControl: "admins_only" };
+    }
+    return null;
   }
 
   async draftItems(): Promise<RawTocItem[]> {
@@ -748,6 +784,19 @@ const resources = new Map<string, LayerResourceRecord>([
       sourceUrl: "https://tiles.seasketch.org/secret",
     },
   ],
+  [
+    "published:openLayer",
+    {
+      stableId: "openLayer",
+      path: "openLayer",
+      metadata: null,
+      sublayer: null,
+      style: { published: "open" },
+      geostats: null,
+      sourceType: "arcgis-vector",
+      sourceUrl: "https://services.arcgis.com/abc/FeatureServer/2",
+    },
+  ],
 ]);
 
 const access = new Map<string, AccessListRecord[]>([
@@ -755,4 +804,5 @@ const access = new Map<string, AccessListRecord[]>([
   ["published:habitat.kelpLayer", [{ id: 11, type: "group" }]],
   ["published:portsLayer", [{ id: 2, type: "public" }]],
   ["published:secretLayer", [{ id: 3, type: "admins_only" }]],
+  ["published:openLayer", [{ id: 4, type: "public" }]],
 ]);

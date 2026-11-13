@@ -12,13 +12,20 @@ type QueryRow = Record<string, unknown>;
 export class PgLayerCatalogStore implements LayerCatalogStore {
   constructor(private readonly db: DBClient) {}
 
-  async projectBySlug(slug: string): Promise<{ id: number } | null> {
+  async projectBySlug(
+    slug: string
+  ): Promise<{ id: number; accessControl: string } | null> {
     const result = await this.db.query(
-      `select id from projects where slug = $1`,
+      `select id, access_control::text as "accessControl"
+       from projects
+       where slug = $1 and is_deleted = false`,
       [slug]
     );
-    const id = result.rows[0]?.id;
-    return typeof id === "number" ? { id } : null;
+    const row = result.rows[0];
+    if (!row || typeof row.id !== "number" || row.accessControl == null) {
+      return null;
+    }
+    return { id: row.id, accessControl: String(row.accessControl) };
   }
 
   async draftItems(projectId: number): Promise<RawTocItem[]> {
