@@ -22,6 +22,7 @@ import { useSketchUIState } from "./Sketches/SketchUIStateContextProvider";
 import LanguageSelector from "../surveys/LanguageSelector";
 import Button from "../components/Button";
 import { useTranslatedProps } from "../components/TranslatedPropControl";
+import ContactChooser from "../components/ContactChooser";
 
 export default function FullSidebar({
   open,
@@ -77,6 +78,12 @@ export default function FullSidebar({
   const getTranslatedProp = useTranslatedProps(data?.project);
 
   const project = data?.project;
+  const contact = project?.supportEmail
+    ? {
+        name: getTranslatedProp("name") || project.name,
+        email: project.supportEmail,
+      }
+    : undefined;
   return (
     <motion.div
       variants={{
@@ -235,13 +242,9 @@ export default function FullSidebar({
             tabIndex={open ? 6 : -1}
           />
         )}
-        <a
-          target="_blank"
-          rel="noreferrer"
-          href={`mailto:${
-            data?.project?.supportEmail || "support@seasketch.org"
-          }`}
-          className="flex p-1 rounded my-2 hover:bg-gray-900 hover:bg-opacity-20 w-full"
+        <ContactChooser
+          project={contact}
+          className="flex p-1 rounded my-2 hover:bg-gray-900 hover:bg-opacity-20 w-full text-left"
           role="menuitem"
           tabIndex={open ? 7 : -1}
         >
@@ -261,7 +264,7 @@ export default function FullSidebar({
             </svg>
           </div>
           {t("Contact support")}
-        </a>
+        </ContactChooser>
         {!user && !data?.me && (
           <>
             <LanguageSelector
@@ -439,9 +442,12 @@ export default function FullSidebar({
               >
                 {t("Terms of Use")}
               </a>
-              <a tabIndex={open ? 17 : -1} href="mailto:support@seasketch.org">
+              <ContactChooser
+                project={contact}
+                tabIndex={open ? 17 : -1}
+              >
                 {t("Contact Us")}
-              </a>
+              </ContactChooser>
               <a
                 tabIndex={open ? 18 : -1}
                 target="_blank"

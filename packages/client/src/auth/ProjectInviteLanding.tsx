@@ -4,6 +4,7 @@ import { useProjectInviteIngressFlow, IngressState } from ".";
 import Button from "../components/Button";
 import Spinner from "../components/Spinner";
 import { useProjectMetadataQuery } from "../generated/graphql";
+import ContactChooser from "../components/ContactChooser";
 
 /**
  * Implements user ingress from a project invitation email as described here:
@@ -105,12 +106,24 @@ export default function ProjectInviteLanding() {
                           Proceed to the project{" "}
                         </a>{" "}
                         or{" "}
-                        <a
+                        <ContactChooser
                           className="text-primary-500 font-bold"
-                          href="mailto:support@seasketch.org"
+                          project={
+                            supportEmail &&
+                            (claims?.projectName ||
+                              data?.projectPublicDetails?.name)
+                              ? {
+                                  name:
+                                    claims?.projectName ||
+                                    data?.projectPublicDetails?.name ||
+                                    "",
+                                  email: supportEmail,
+                                }
+                              : undefined
+                          }
                         >
                           contact support
-                        </a>
+                        </ContactChooser>
                         if you believe this to be an error.
                       </Trans>
                     </p>

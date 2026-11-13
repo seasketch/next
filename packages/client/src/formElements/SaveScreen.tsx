@@ -12,6 +12,7 @@ import { OfflineStateContext } from "../offline/OfflineStateContext";
 import SurveyButton from "../surveys/SurveyButton";
 import { FormElementComponent, SurveyContext } from "./FormElement";
 import fromMarkdown from "./fromMarkdown";
+import ContactChooser from "../components/ContactChooser";
 
 const SaveScreen: FormElementComponent<{}> = (props) => {
   const { t } = useTranslation("surveys");
@@ -110,17 +111,9 @@ const SaveScreen: FormElementComponent<{}> = (props) => {
               </Trans>
             </p>
             <p>
-              <Trans ns="surveys" i18nKey="ContactForAssistance">
-                Contact
-                <a
-                  className="underline"
-                  target="_blank"
-                  rel="noreferrer"
-                  href="mailto:support@seasketch.org"
-                >
-                  support@seasketch.org
-                </a>
-                for assistance.
+              <Trans ns="surveys" i18nKey="ContactSupportForAssistance">
+                Contact <ContactChooser className="underline">support</ContactChooser> for
+                assistance.
               </Trans>
             </p>
 

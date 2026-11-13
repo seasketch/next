@@ -10858,6 +10858,7 @@ export type Project = Node & {
   sourceProcessingJobsConnection: SourceProcessingJobsConnection;
   /** Reads and enables pagination through a set of `Sprite`. */
   sprites?: Maybe<Array<Sprite>>;
+  /** Inbox for questions about this project. Shown when access is denied or pending, included in invitation emails, and offered as the project administrator contact. This is not the SeaSketch software support address. */
   supportEmail: Scalars['String'];
   supportedLanguages: Array<Maybe<Scalars['String']>>;
   /** Reads and enables pagination through a set of `Basemap`. */
@@ -11822,6 +11823,8 @@ export type ProjectPatch = {
   region?: Maybe<Scalars['GeoJSON']>;
   showLegendByDefault?: Maybe<Scalars['Boolean']>;
   showScalebarByDefault?: Maybe<Scalars['Boolean']>;
+  /** Inbox for questions about this project. Shown when access is denied or pending, included in invitation emails, and offered as the project administrator contact. This is not the SeaSketch software support address. */
+  supportEmail?: Maybe<Scalars['String']>;
   translatedProps?: Maybe<Scalars['JSON']>;
 };
 
@@ -26557,6 +26560,7 @@ export type UpdateProjectSettingsMutationVariables = Exact<{
   isFeatured?: Maybe<Scalars['Boolean']>;
   mapboxPublicKey?: Maybe<Scalars['String']>;
   customDocLink?: Maybe<Scalars['String']>;
+  supportEmail?: Maybe<Scalars['String']>;
 }>;
 
 
@@ -26567,7 +26571,7 @@ export type UpdateProjectSettingsMutation = (
     & Pick<UpdateProjectPayload, 'clientMutationId'>
     & { project?: Maybe<(
       { __typename?: 'Project' }
-      & Pick<Project, 'id' | 'name' | 'description' | 'logoUrl' | 'logoLink' | 'mapboxPublicKey' | 'mapboxSecretKey' | 'isFeatured' | 'customDocLink'>
+      & Pick<Project, 'id' | 'name' | 'description' | 'logoUrl' | 'logoLink' | 'mapboxPublicKey' | 'mapboxSecretKey' | 'isFeatured' | 'customDocLink' | 'supportEmail'>
     )> }
   )> }
 );
@@ -43468,9 +43472,9 @@ export type UpdateProjectNameMutationHookResult = ReturnType<typeof useUpdatePro
 export type UpdateProjectNameMutationResult = Apollo.MutationResult<UpdateProjectNameMutation>;
 export type UpdateProjectNameMutationOptions = Apollo.BaseMutationOptions<UpdateProjectNameMutation, UpdateProjectNameMutationVariables>;
 export const UpdateProjectSettingsDocument = gql`
-    mutation UpdateProjectSettings($slug: String!, $clientMutationId: String, $name: String, $description: String, $logoUrl: Upload, $logoLink: String, $isFeatured: Boolean, $mapboxPublicKey: String, $customDocLink: String) {
+    mutation UpdateProjectSettings($slug: String!, $clientMutationId: String, $name: String, $description: String, $logoUrl: Upload, $logoLink: String, $isFeatured: Boolean, $mapboxPublicKey: String, $customDocLink: String, $supportEmail: String) {
   updateProjectBySlug(
-    input: {slug: $slug, clientMutationId: $clientMutationId, patch: {name: $name, description: $description, logoUrl: $logoUrl, logoLink: $logoLink, isFeatured: $isFeatured, mapboxPublicKey: $mapboxPublicKey, customDocLink: $customDocLink}}
+    input: {slug: $slug, clientMutationId: $clientMutationId, patch: {name: $name, description: $description, logoUrl: $logoUrl, logoLink: $logoLink, isFeatured: $isFeatured, mapboxPublicKey: $mapboxPublicKey, customDocLink: $customDocLink, supportEmail: $supportEmail}}
   ) {
     clientMutationId
     project {
@@ -43483,6 +43487,7 @@ export const UpdateProjectSettingsDocument = gql`
       mapboxSecretKey
       isFeatured
       customDocLink
+      supportEmail
     }
   }
 }
@@ -43511,6 +43516,7 @@ export type UpdateProjectSettingsMutationFn = Apollo.MutationFunction<UpdateProj
  *      isFeatured: // value for 'isFeatured'
  *      mapboxPublicKey: // value for 'mapboxPublicKey'
  *      customDocLink: // value for 'customDocLink'
+ *      supportEmail: // value for 'supportEmail'
  *   },
  * });
  */

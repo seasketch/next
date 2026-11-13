@@ -58,6 +58,12 @@ import TranslatedPropControl from "../components/TranslatedPropControl";
 import bytes from "bytes";
 import ProjectAPIKeys from "./ProjectAPIKeys";
 import AboutPageSettings from "./AboutPageSettings";
+import {
+  SEASKETCH_SUPPORT_EMAIL,
+  contactEmailProblem,
+  mailtoHref,
+  normalizeContactEmail,
+} from "../components/contactEmail";
 
 export default function Settings() {
   const { data } = useCurrentProjectMetadata();
@@ -144,8 +150,22 @@ function BasicSettingsForm(props: {
   description?: string | null;
   url: string;
   slug: string;
+  supportEmail: string;
 }) {
   const { t } = useTranslation("admin");
+  const validateContactEmail = useCallback(
+    (next: string) => {
+      const problem = contactEmailProblem(next);
+      if (problem === "required") {
+        return t("A contact email is required.");
+      }
+      if (problem === "invalid") {
+        return t("Enter an email address like name@example.org.");
+      }
+      return undefined;
+    },
+    [t]
+  );
   const [copiedToClipboard, setCopiedToClipboard] = useState(false);
   useEffect(() => {
     if (copiedToClipboard === true) {
@@ -221,6 +241,25 @@ function BasicSettingsForm(props: {
                 slug={props.slug}
               />
             </div>
+            <div className="mt-5">
+              <div className="md:max-w-sm">
+                <ProjectAutosaveInput
+                  propName="supportEmail"
+                  type="email"
+                  label={t("Contact email")}
+                  description={
+                    <Trans ns="admin">
+                      Provide the address of an administrator who can be the
+                      first point of contact for your project.
+                    </Trans>
+                  }
+                  value={props.supportEmail}
+                  slug={props.slug}
+                  normalize={normalizeContactEmail}
+                  validate={validateContactEmail}
+                />
+              </div>
+            </div>
             <div className="md:max-w-xs mt-5">
               <TextInput
                 name="url"
@@ -232,12 +271,12 @@ function BasicSettingsForm(props: {
                     Contact{" "}
                     <a
                       className="underline"
-                      target="_blank"
-                      href="mailto:support@seasketch.org"
+                      href={mailtoHref(SEASKETCH_SUPPORT_EMAIL)}
                     >
-                      support
+                      SeaSketch support
                     </a>{" "}
-                    to discuss changing.
+                    to discuss changing this address. Project administrators
+                    cannot edit the URL.
                   </Trans>
                 }
                 inputChildNode={
