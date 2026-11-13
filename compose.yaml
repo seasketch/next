@@ -161,14 +161,18 @@ services:
       start_period: 20s
     develop:
       watch:
-        # initial_sync reconciles a container that has been up across branch
-        # switches. Watch otherwise copies only files that change after it
-        # starts, so a dist/ wiped by an earlier sync stays missing handler.js
-        # and the Lambda runtime fails with "Cannot find module 'handler'".
+        # x-initialSync is the name from before Compose 2.39.4. That release
+        # renamed it to initial_sync and still honors the extension. The
+        # Compose on GitHub Actions is older and rejects initial_sync, which
+        # fails `docker compose build` before the e2e jobs start. This
+        # reconciles a container that has been up across branch switches.
+        # Watch otherwise copies only files that change after it starts, so
+        # a dist/ wiped by an earlier sync stays missing handler.js and the
+        # Lambda runtime fails with "Cannot find module 'handler'".
         - action: sync+restart
           path: ./packages/spatial-uploads-handler/dist
           target: /var/task/packages/spatial-uploads-handler/dist
-          initial_sync: true
+          x-initialSync: true
 
   # Subdivision worker, the production image under the Lambda emulator.
   subdivision:
