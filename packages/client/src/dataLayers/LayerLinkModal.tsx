@@ -481,14 +481,6 @@ export default function LayerLinkModal({
         )}
       </div>
     );
-  } else if (mode === "view" && bookmark && isLayerLink && canSeeLayer) {
-    access = (
-      <p className="text-sm text-slate-600">
-        {t(
-          "View on the map replaces the current extent and the visible overlays with this layer. Closing this window leaves the map unchanged."
-        )}
-      </p>
-    );
   }
 
   return createPortal(
@@ -566,15 +558,6 @@ export default function LayerLinkModal({
                   />
                 </p>
               )}
-              {(bookmark?.basemapName || sharing) && bookmark?.basemapName && (
-                <p className="text-sm text-slate-700">
-                  <span className="font-medium">
-                    <Trans ns="mapBookmarks">Basemap</Trans>
-                  </span>
-                  {": "}
-                  {bookmark.basemapName}
-                </p>
-              )}
               {boundsNote && mode === "create" && (
                 <p className="text-sm text-slate-500">
                   {t(
@@ -610,7 +593,7 @@ export default function LayerLinkModal({
                   </div>
                   <p className="text-xs text-slate-500">
                     {t(
-                      "This address stays the same for this layer. Opening Link to layer again updates the preview when the basemap or the layer's appearance has changed."
+                      "This address stays the same for this layer. Opening Link to layer again updates the preview when the layer's appearance has changed."
                     )}
                   </p>
                 </div>
