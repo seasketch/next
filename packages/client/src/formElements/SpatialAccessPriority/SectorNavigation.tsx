@@ -10,6 +10,8 @@ import {
   useLocalizedComponentSetting,
 } from "../FormElement";
 import { FormElementOption } from "../FormElementOptionsInput";
+import { SketchGeometryType } from "../../generated/graphql";
+import { isPointGeometry } from "./sapCopy";
 import SpatialAccessPriority, {
   SAPValueType,
   SpatialAccessPriorityProps,
@@ -21,6 +23,7 @@ type SectorNavigationProps = FormElementProps<
   SAPValueType
 > & {
   setSector: (sector: FormElementOption) => void;
+  geometryType?: SketchGeometryType | null;
 };
 
 export default function SectorNavigation(props: SectorNavigationProps) {
@@ -109,11 +112,24 @@ export default function SectorNavigation(props: SectorNavigationProps) {
                 </div>
                 <div className="flex-1 items-center px-5">{sector.label}</div>
                 <div className="flex items-center">
-                  {hasValue && (
-                    <Trans i18nKey="AreaCount" ns="surveys" count={numShapes}>
-                      {{ count: numShapes }} areas
-                    </Trans>
-                  )}
+                  {hasValue &&
+                    (isPointGeometry(props.geometryType) ? (
+                      <Trans
+                        i18nKey="PointCount"
+                        ns="surveys"
+                        count={numShapes}
+                      >
+                        {{ count: numShapes }} points
+                      </Trans>
+                    ) : (
+                      <Trans
+                        i18nKey="AreaCount"
+                        ns="surveys"
+                        count={numShapes}
+                      >
+                        {{ count: numShapes }} areas
+                      </Trans>
+                    ))}
                 </div>
               </button>
             );

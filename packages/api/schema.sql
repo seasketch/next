@@ -6412,8 +6412,14 @@ CREATE FUNCTION public.before_update_sketch_class_trigger() RETURNS trigger
     LANGUAGE plpgsql
     AS $$
     begin
-      if NEW.geometry_type != OLD.geometry_type and NEW.form_element_id is null then
-        raise exception 'Cannot change geometry type of a sketch class';
+      if NEW.geometry_type != OLD.geometry_type then
+        if NEW.form_element_id is null then
+          raise exception 'Cannot change geometry type of a sketch class';
+        elsif exists (
+          select 1 from sketches where sketch_class_id = NEW.id
+        ) then
+          raise exception 'Cannot change geometry type after sketches have been collected';
+        end if;
       end if;
       return NEW;
     end;
@@ -44780,6 +44786,7 @@ GRANT ALL ON FUNCTION public.sketch_classes_report(sc public.sketch_classes) TO 
 
 REVOKE ALL ON FUNCTION public.sketch_classes_sketch_count(sketch_class public.sketch_classes) FROM PUBLIC;
 GRANT ALL ON FUNCTION public.sketch_classes_sketch_count(sketch_class public.sketch_classes) TO anon;
+GRANT ALL ON FUNCTION public.sketch_classes_sketch_count(sketch_class public.sketch_classes) TO seasketch_user;
 
 
 --

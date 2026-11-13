@@ -13,6 +13,7 @@ import {
   Feature,
   FeatureCollection,
   GeoJsonProperties,
+  Point,
   Polygon,
 } from "geojson";
 import { LngLatBoundsLike, Map, MapboxOptions, Style } from "mapbox-gl";
@@ -71,10 +72,8 @@ import {
 import FormElementOptionsInput, {
   FormElementOption,
 } from "../FormElementOptionsInput";
-import fromMarkdown, { questionBodyFromMarkdown } from "../fromMarkdown";
 import SectorNavigation from "./SectorNavigation";
 import ChooseSectors from "./ChooseSectors";
-import bbox from "@turf/bbox";
 import DigitizingMiniMap from "../DigitizingMiniMap";
 import { FormEditorHeader } from "../../admin/surveys/SurveyFormEditor";
 import InputBlock from "../../components/InputBlock";
@@ -101,6 +100,20 @@ import {
   shouldAdvanceFromDrawingIntro,
 } from "../maxPolygonSize";
 import { usePolygonTooLargePaint } from "../usePolygonTooLargePaint";
+import SketchGeometryTypeSelector from "../../components/SketchGeometryTypeSelector";
+import { useGlobalErrorHandler } from "../../components/GlobalErrorHandler";
+import { useUpdateFormElementMutation } from "../../generated/graphql";
+import {
+  adaptSketchFormElement,
+  alternateLanguageSettingsForGeometry,
+  componentSettingsForGeometry,
+  geometryTypeLocked,
+  instructionPresentation,
+  isPointGeometry,
+  polygonInstruction,
+  questionBodyForGeometry,
+} from "./sapCopy";
+import { drawnFeatureCamera } from "./sapFeatureCamera";
 
 export enum STAGES {
   CHOOSE_SECTORS,
@@ -156,7 +169,42 @@ export type SpatialAccessPriorityProps = {
   maxPolygonSizeUnit?: "kilometer" | "hectare" | "acre" | "mile" | null;
 };
 type SectorFeatureProps = { sector: string; [key: string]: any };
-type FC = FeatureCollection<Polygon, SectorFeatureProps>;
+type SectorGeometry = Polygon | Point;
+type FC = FeatureCollection<SectorGeometry, SectorFeatureProps>;
+
+function focusDrawnFeature(
+  map: Map,
+  feature: Feature<any> | FeatureCollection<any>,
+  options: { padding?: number; animate?: boolean }
+) {
+  const camera = drawnFeatureCamera(feature, options);
+  if (camera.type === "ease") {
+    map.easeTo({
+      center: camera.center,
+      zoom: camera.zoom,
+      padding: camera.padding,
+      duration: camera.duration,
+    });
+    return;
+  }
+  map.fitBounds(camera.bounds as LngLatBoundsLike, {
+    padding: camera.padding,
+    animate: camera.animate,
+  });
+}
+
+function geometryWasCleared(feature: Feature<any> | null | undefined) {
+  const geometry = feature?.geometry;
+  if (!geometry || !("coordinates" in geometry)) {
+    return false;
+  }
+  if (geometry.type !== "Polygon" && geometry.type !== "LineString") {
+    return false;
+  }
+  return (
+    Array.isArray(geometry.coordinates) && geometry.coordinates.length === 0
+  );
+}
 export type SAPValueType = {
   collection: FC;
   sectors: string[];
@@ -214,6 +262,10 @@ function SpatialAccessPriorityInner(
       : null
   );
   const { alert } = useDialog();
+  const collectingPoints = isPointGeometry(props.sketchClass?.geometryType);
+  const deleteFeaturePrompt = collectingPoints
+    ? t("Are you sure you want to delete this point?", { ns: "surveys" })
+    : t("Are you sure you want to delete this shape?", { ns: "surveys" });
 
   const localizedSectors: FormElementOption[] = useLocalizedComponentSetting(
     "sectorOptions",
@@ -300,13 +352,17 @@ function SpatialAccessPriorityInner(
         polygonSizeViolation(updatedFeature, maxPolygonSizeSqKm)
       );
       // Handle deletion of all vertexes
-      if (updatedFeature?.geometry.coordinates.length === 0) {
+      if (updatedFeature && geometryWasCleared(updatedFeature)) {
         setDraftFeature(null);
         if (
           await confirm(
-            t("This will delete your entire shape. Are you sure?", {
-              ns: "surveys",
-            })
+            collectingPoints
+              ? t("This will delete this point. Are you sure?", {
+                  ns: "surveys",
+                })
+              : t("This will delete your entire shape. Are you sure?", {
+                  ns: "surveys",
+                })
           )
         ) {
           // delete the entire shape
@@ -377,7 +433,7 @@ function SpatialAccessPriorityInner(
   );
 
   function setFilteredCollection(
-    collection: FeatureCollection<Polygon, { sector: string }>
+    collection: FeatureCollection<SectorGeometry, { sector: string }>
   ) {
     if (!sector) {
       throw new Error("Sector not set");
@@ -577,7 +633,9 @@ function SpatialAccessPriorityInner(
   function onClickSave() {
     if (selfIntersects) {
       return alert(
-        t("Please fix problems with your shape first.", { ns: "surveys" })
+        collectingPoints
+          ? t("Please fix this point before continuing.", { ns: "surveys" })
+          : t("Please fix problems with your shape first.", { ns: "surveys" })
       );
     }
     if (blockIfPolygonTooLarge()) {
@@ -598,7 +656,11 @@ function SpatialAccessPriorityInner(
       selfIntersects
     ) {
       return alert(
-        t("Please complete your shape on the map", { ns: "surveys" })
+        collectingPoints
+          ? t("Place a point on the map before continuing.", {
+              ns: "surveys",
+            })
+          : t("Please complete your shape on the map", { ns: "surveys" })
       );
     } else {
       if (!sector) {
@@ -644,7 +706,7 @@ function SpatialAccessPriorityInner(
             ...collection,
             features: [
               ...collection.features,
-              feature as Feature<Polygon, SectorFeatureProps>,
+              feature as Feature<SectorGeometry, SectorFeatureProps>,
             ],
           },
         });
@@ -663,7 +725,9 @@ function SpatialAccessPriorityInner(
   function onClickDoneMobile() {
     if (selfIntersects) {
       return alert(
-        t("Please fix problems with your shape first.", { ns: "surveys" })
+        collectingPoints
+          ? t("Please fix this point before continuing.", { ns: "surveys" })
+          : t("Please fix problems with your shape first.", { ns: "surveys" })
       );
     }
     if (blockIfPolygonTooLarge()) {
@@ -672,11 +736,8 @@ function SpatialAccessPriorityInner(
     props.onRequestStageChange(STAGES.MOBILE_EDIT_PROPERTIES);
     setTimeout(() => {
       if (manager?.map && selection) {
-        // manager.map.panTo()
         manager.map.resize();
-        manager.map.fitBounds(bbox(selection) as LngLatBoundsLike, {
-          padding: 20,
-        });
+        focusDrawnFeature(manager.map, selection, { padding: 20 });
       }
     }, 10);
   }
@@ -716,9 +777,7 @@ function SpatialAccessPriorityInner(
     setTimeout(() => {
       if (manager?.map && selection) {
         manager.map.resize();
-        manager.map.fitBounds(bbox(selection) as LngLatBoundsLike, {
-          padding: 50,
-        });
+        focusDrawnFeature(manager.map, selection, { padding: 50 });
       }
     }, 10);
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -748,7 +807,11 @@ function SpatialAccessPriorityInner(
           isSmall={style.isSmall}
           geometryType={props.sketchClass!.geometryType}
           title={
-            !selection ? t("Focus on shapes", { ns: "surveys" }) : undefined
+            !selection
+              ? collectingPoints
+                ? t("Focus on points", { ns: "surveys" })
+                : t("Focus on shapes", { ns: "surveys" })
+              : undefined
           }
         />
       ) : null}
@@ -756,6 +819,28 @@ function SpatialAccessPriorityInner(
       <ShowScaleBar />
       <ShowCoordinates />
     </>
+  );
+
+  const beginCopy = instructionPresentation(
+    "begin",
+    props.componentSettings.beginBody,
+    props.sketchClass?.geometryType,
+    props.alternateLanguageSettings,
+    props.editable
+  );
+  const listCopy = instructionPresentation(
+    "list",
+    props.componentSettings.listShapesBody,
+    props.sketchClass?.geometryType,
+    props.alternateLanguageSettings,
+    props.editable
+  );
+  const navCopy = instructionPresentation(
+    "nav",
+    props.componentSettings.navBody,
+    props.sketchClass?.geometryType,
+    props.alternateLanguageSettings,
+    props.editable
   );
 
   return (
@@ -853,22 +938,29 @@ function SpatialAccessPriorityInner(
               />
             )}
             {props.stage === STAGES.SECTOR_NAVIGATION && (
-              <SectorNavigation {...props} setSector={setSector} />
+              <SectorNavigation
+                {...props}
+                setSector={setSector}
+                geometryType={props.sketchClass?.geometryType}
+                componentSettings={{
+                  ...props.componentSettings,
+                  navBody: navCopy.body,
+                }}
+                alternateLanguageSettings={navCopy.alternateLanguageSettings}
+              />
             )}
             {(props.stage === STAGES.DRAWING_INTRO ||
               props.stage === STAGES.MOBILE_DRAW_FIRST_SHAPE) && (
               <>
                 <FormElementBody
-                  alternateLanguageSettings={props.alternateLanguageSettings}
+                  key={`begin-${props.sketchClass?.geometryType || "polygon"}`}
+                  alternateLanguageSettings={beginCopy.alternateLanguageSettings}
                   componentSettingName={"beginBody"}
                   componentSettings={props.componentSettings}
                   required={false}
                   formElementId={props.id}
                   isInput={false}
-                  body={
-                    props.componentSettings.beginBody ||
-                    SpatialAccessPriority.defaultComponentSettings?.beginBody
-                  }
+                  body={beginCopy.body}
                   editable={props.editable}
                 />
                 {style.isSmall && (
@@ -885,17 +977,14 @@ function SpatialAccessPriorityInner(
             {props.stage === STAGES.LIST_SHAPES && (
               <>
                 <FormElementBody
-                  alternateLanguageSettings={props.alternateLanguageSettings}
+                  key={`list-${props.sketchClass?.geometryType || "polygon"}`}
+                  alternateLanguageSettings={listCopy.alternateLanguageSettings}
                   required={false}
                   componentSettings={props.componentSettings}
                   componentSettingName={"listShapesBody"}
                   formElementId={props.id}
                   isInput={false}
-                  body={
-                    props.componentSettings.listShapesBody ||
-                    SpatialAccessPriority.defaultComponentSettings
-                      ?.listShapesBody
-                  }
+                  body={listCopy.body}
                   editable={props.editable}
                 />
                 <div
@@ -943,10 +1032,10 @@ function SpatialAccessPriorityInner(
                               manager.map.resize();
                               setTimeout(() => {
                                 if (style.isSmall && manager?.map) {
-                                  manager.map.fitBounds(
-                                    bbox(feature) as LngLatBoundsLike,
-                                    { padding: 20, animate: false }
-                                  );
+                                  focusDrawnFeature(manager.map, feature, {
+                                    padding: 20,
+                                    animate: false,
+                                  });
                                 }
                               }, 100);
                             }
@@ -1006,7 +1095,11 @@ function SpatialAccessPriorityInner(
                       <span className="space-x-1 rtl:space-x-reverse flex">
                         <PlusCircleIcon className="w-5 h-5" />
                         <span>
-                          <Trans ns="surveys">New Shape</Trans>
+                          {collectingPoints ? (
+                            <Trans ns="surveys">New Point</Trans>
+                          ) : (
+                            <Trans ns="surveys">New Shape</Trans>
+                          )}
                         </span>
                       </span>
                     }
@@ -1070,9 +1163,16 @@ function SpatialAccessPriorityInner(
                 <SketchForm
                   key={state.featureId}
                   formElements={
-                    (props.sketchClass?.form?.formElements || []).filter((el) =>
-                      visibleInSector(el, props.componentSettings, sector)
-                    ) as FormElementFullDetailsFragment[]
+                    (props.sketchClass?.form?.formElements || [])
+                      .filter((el) =>
+                        visibleInSector(el, props.componentSettings, sector)
+                      )
+                      .map((el) =>
+                        adaptSketchFormElement(
+                          el,
+                          props.sketchClass?.geometryType
+                        )
+                      ) as FormElementFullDetailsFragment[]
                   }
                   logicRules={props.sketchClass?.form?.logicRules || []}
                   startingProperties={state}
@@ -1142,9 +1242,7 @@ function SpatialAccessPriorityInner(
                         if (
                           !geometryEditingState.feature ||
                           (await confirm(
-                            t("Are you sure you want to delete this shape?", {
-                              ns: "surveys",
-                            })
+                            deleteFeaturePrompt
                           ))
                         ) {
                           if (geometryEditingState.feature) {
@@ -1205,11 +1303,7 @@ function SpatialAccessPriorityInner(
                             );
                           }
                           if (
-                            await confirm(
-                              t("Are you sure you want to delete this shape?", {
-                                ns: "surveys",
-                              })
-                            )
+                            await confirm(deleteFeaturePrompt)
                           ) {
                             const collection = removeFeatureFromValue(
                               selection.id
@@ -1326,7 +1420,13 @@ function SpatialAccessPriorityInner(
                         />
                         <Button
                           className="pointer-events-auto"
-                          label={<Trans ns="surveys">New Shape</Trans>}
+                          label={
+                            collectingPoints ? (
+                              <Trans ns="surveys">New Point</Trans>
+                            ) : (
+                              <Trans ns="surveys">New Shape</Trans>
+                            )
+                          }
                           onClick={() => {
                             create(true);
                           }}
@@ -1367,13 +1467,7 @@ function SpatialAccessPriorityInner(
                     if (!props.value) {
                       throw new Error("No collection to delete feature from");
                     }
-                    if (
-                      await confirm(
-                        t("Are you sure you want to delete this shape?", {
-                          ns: "surveys",
-                        })
-                      )
-                    ) {
+                    if (await confirm(deleteFeaturePrompt)) {
                       const collection = removeFeatureFromValue(selection.id);
                       setFilteredCollection(collection);
                       if (props.stage === STAGES.MOBILE_DRAW_FIRST_SHAPE) {
@@ -1435,7 +1529,15 @@ function SpatialAccessPriorityInner(
           enableDraw={enable}
           componentSettings={props.componentSettings}
           id={props.id}
+          body={props.body}
           geometryType={props.sketchClass?.geometryType}
+          sketchCount={
+            // Selected on the survey editor query, not the respondent query.
+            (
+              props.sketchClass as { sketchCount?: unknown } | null | undefined
+            )?.sketchCount
+          }
+          sketchFormElements={props.sketchClass?.form?.formElements || []}
           alternateLanguageSettings={props.alternateLanguageSettings}
         />
       </>
@@ -1449,12 +1551,7 @@ SpatialAccessPriority.label = (
 SpatialAccessPriority.description = (
   <Trans ns="admin:surveys">Prioritize use by location</Trans>
 );
-// eslint-disable-next-line i18next/no-literal-string
-SpatialAccessPriority.defaultBody = questionBodyFromMarkdown(`
-# What sectors do you represent?
-
-For each selection, you will be asked to draw and prioritize valued areas.
-`);
+SpatialAccessPriority.defaultBody = polygonInstruction("question");
 
 SpatialAccessPriority.icon = ({ componentSettings, sketchClass }) => {
   return (
@@ -1480,21 +1577,9 @@ SpatialAccessPriority.defaultComponentSettings = {
       value: "diving",
     },
   ],
-  // eslint-disable-next-line i18next/no-literal-string
-  beginBody: fromMarkdown(`
-Use the map to indicate the most valued places for this activity. You can draw multiple areas and prioritize them individually.
-`),
-  // eslint-disable-next-line i18next/no-literal-string
-  listShapesBody: fromMarkdown(`
-Add as many shapes as necessary to represent valued areas for this activity, then adjust their relative priority below. 
-
-These scores will be summed among all survey responses to create a heatmap of valued areas.
-`),
-  // eslint-disable-next-line i18next/no-literal-string
-  navBody: fromMarkdown(`
-# Your sectors
-Please prioritize areas for each sector you represent.
-`),
+  beginBody: polygonInstruction("begin"),
+  listShapesBody: polygonInstruction("list"),
+  navBody: polygonInstruction("nav"),
 };
 
 SpatialAccessPriority.stages = STAGES;
@@ -1534,16 +1619,29 @@ SpatialAccessPriority.getLayout = (
 
 function Admin(props: {
   id: number;
+  body: any;
   componentSettings: SpatialAccessPriorityProps;
   alternateLanguageSettings: { [lang: string]: { [key: string]: any } };
   map?: Map;
   bounds: BBox;
   geometryType?: SketchGeometryType;
+  sketchCount?: unknown;
+  sketchFormElements?: Array<{
+    id: number;
+    typeId: string;
+    body: any;
+    componentSettings: { generatedNamePrefix?: string | null } | null;
+    alternateLanguageSettings?: { [key: string]: any } | null;
+  }>;
   enableDraw: () => void;
   disableDraw: () => void;
 }) {
   const { t } = useTranslation("admin:surveys");
   const context = useContext(FormLanguageContext);
+  const onError = useGlobalErrorHandler();
+  const [updateFormElement] = useUpdateFormElementMutation({ onError });
+  const geometryLocked = geometryTypeLocked(props.sketchCount);
+  const collectingPoints = isPointGeometry(props.geometryType);
   return (
     <FormElementEditorPortal
       render={(
@@ -1552,8 +1650,98 @@ function Admin(props: {
         updateSurveySettings,
         updateSketchClass
       ) => {
+        const onGeometryTypeChange = async (next: SketchGeometryType) => {
+          if (geometryLocked || next === props.geometryType) {
+            return;
+          }
+          try {
+            await updateSketchClass({ geometryType: next });
+          } catch {
+            return;
+          }
+          const settingsPatch = componentSettingsForGeometry(
+            props.componentSettings,
+            next
+          );
+          const nextBody = questionBodyForGeometry(props.body, next);
+          const translations = alternateLanguageSettingsForGeometry(
+            props.alternateLanguageSettings,
+            props.componentSettings,
+            props.body,
+            next
+          );
+          if (settingsPatch.changed || nextBody || translations.changed) {
+            updateFormElement({
+              variables: {
+                id: props.id,
+                componentSettings: settingsPatch.changed
+                  ? settingsPatch.settings
+                  : undefined,
+                body: nextBody || undefined,
+                alternateLanguageSettings: translations.changed
+                  ? translations.value
+                  : undefined,
+              },
+            });
+          }
+          for (const element of props.sketchFormElements || []) {
+            const adapted = adaptSketchFormElement(element, next);
+            if (adapted === element) {
+              continue;
+            }
+            updateFormElement({
+              variables: {
+                id: element.id,
+                body: adapted.body,
+                componentSettings:
+                  adapted.componentSettings !== element.componentSettings
+                    ? adapted.componentSettings
+                    : undefined,
+                alternateLanguageSettings:
+                  adapted.alternateLanguageSettings !==
+                  element.alternateLanguageSettings
+                    ? adapted.alternateLanguageSettings
+                    : undefined,
+              },
+            });
+          }
+        };
         return (
           <>
+            <div>
+              <h4 className="block text-sm font-medium leading-5 text-gray-800">
+                {t("Geometry type")}
+              </h4>
+              <p className="text-sm text-gray-500 mb-2 mt-1">
+                {geometryLocked ? (
+                  collectingPoints ? (
+                    <Trans ns="admin:surveys">
+                      Respondents have already placed points for this question,
+                      so the geometry type can no longer be changed.
+                    </Trans>
+                  ) : (
+                    <Trans ns="admin:surveys">
+                      Respondents have already drawn areas for this question,
+                      so the geometry type can no longer be changed.
+                    </Trans>
+                  )
+                ) : (
+                  <Trans ns="admin:surveys">
+                    Choose whether respondents draw areas or place points. This
+                    can be changed until the first response is saved.
+                  </Trans>
+                )}
+              </p>
+              <SketchGeometryTypeSelector
+                value={props.geometryType || SketchGeometryType.Polygon}
+                allowed={[
+                  SketchGeometryType.Polygon,
+                  SketchGeometryType.Point,
+                ]}
+                disabled={geometryLocked}
+                onChange={onGeometryTypeChange}
+              />
+            </div>
             <FormElementOptionsInput
               key={props.id}
               prop="sectorOptions"
@@ -1567,12 +1755,21 @@ function Admin(props: {
               )}
               heading={t("Sector Options")}
               description={
-                <Trans ns="admin:surveys">
-                  List sector options below to collect data related to different
-                  ocean uses. If no sectors are provided then the sectors
-                  question will be skipped and only a single set of shapes will
-                  be collected.
-                </Trans>
+                collectingPoints ? (
+                  <Trans ns="admin:surveys">
+                    List sector options below to collect data related to
+                    different ocean uses. If no sectors are provided then the
+                    sectors question will be skipped and only one set of points
+                    will be collected.
+                  </Trans>
+                ) : (
+                  <Trans ns="admin:surveys">
+                    List sector options below to collect data related to
+                    different ocean uses. If no sectors are provided then the
+                    sectors question will be skipped and only a single set of
+                    shapes will be collected.
+                  </Trans>
+                )
               }
             />
             <MaxPolygonSizeSetting
@@ -1663,8 +1860,10 @@ function ChildVisibilitySettings({
   updateComponentSetting,
   componentSettings,
   childId,
+  geometryType,
 }: {
   childId: number;
+  geometryType?: SketchGeometryType | null;
   childVisibilitySettings: ChildVisibilitySetting;
   componentSettings: SpatialAccessPriorityProps;
   updateComponentSetting: (
@@ -1695,10 +1894,17 @@ function ChildVisibilitySettings({
           }
         />
         <p className="text-gray-500 text-sm">
-          <Trans ns="admin:surveys">
-            If enabled, this field will only be presented as an option for
-            shapes representing the following sectors.
-          </Trans>
+          {isPointGeometry(geometryType) ? (
+            <Trans ns="admin:surveys">
+              If enabled, this field will only be presented as an option for
+              points representing the following sectors.
+            </Trans>
+          ) : (
+            <Trans ns="admin:surveys">
+              If enabled, this field will only be presented as an option for
+              shapes representing the following sectors.
+            </Trans>
+          )}
         </p>
         <div className="mt-4">
           {(componentSettings.sectorOptions || []).map((s) => (
@@ -1893,6 +2099,7 @@ SpatialAccessPriority.ChildOptions = (props) => {
       <ChildVisibilitySettings
         key={props.child.id}
         childId={props.child.id}
+        geometryType={props.geometryType}
         componentSettings={props.componentSettings}
         childVisibilitySettings={childVisibilitySettings}
         updateComponentSetting={props.updateComponentSetting}

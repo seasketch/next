@@ -235,7 +235,7 @@ type FormElementRenderer = (
   }) => void,
   updateSketchClass: (
     settings: Pick<SketchClassDetailsFragment, "geometryType">
-  ) => void
+  ) => Promise<unknown>
 ) => ReactNode;
 export class FormElementEditorPortal extends Component<{
   render: FormElementRenderer;
@@ -325,7 +325,7 @@ function FormElementEditorContainer({
             },
           }),
         (settings: Pick<SketchClassDetailsFragment, "geometryType">) => {
-          updateSketchClass({
+          return updateSketchClass({
             variables: {
               id: context!.formElementSettings.sketchClass.id,
               ...settings,
@@ -350,6 +350,7 @@ function FormElementEditorContainer({
 
 interface ChildOptionsFactoryProps extends FormElementDetailsFragment {
   child: FormElementDetailsFragment;
+  sketchClass?: { geometryType?: SketchGeometryType | null } | null;
 }
 export function ChildOptionsFactory(props: ChildOptionsFactoryProps) {
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -368,6 +369,7 @@ export function ChildOptionsFactory(props: ChildOptionsFactoryProps) {
     return (
       <C.ChildOptions
         child={props.child}
+        geometryType={props.sketchClass?.geometryType}
         componentSettings={data.formElement.componentSettings}
         updateComponentSetting={(...args) => {
           return updateComponentSetting(...args);
@@ -561,6 +563,7 @@ export interface FormElementComponent<T, V = {}>
   ) => number;
   ChildOptions?: FunctionComponent<{
     componentSettings: T;
+    geometryType?: SketchGeometryType | null;
     child: {
       typeId: string;
       componentSettings: any;

@@ -109,6 +109,7 @@ fragment FormElementFullDetails on FormElement {
   ...FormElementDetails
   sketchClass {
     ...SketchClassDetails
+    sketchCount
   }
 }
 
