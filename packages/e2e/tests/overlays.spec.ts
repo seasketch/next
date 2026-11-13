@@ -1,7 +1,7 @@
 import { expect, test } from "@playwright/test";
 import { openMap, visibleButton } from "../src/project";
 
-test.describe("demo-samoa overlay layers", () => {
+test.describe("demo-samoa overlay layers @enduser @overlays", () => {
   test("an anonymous visitor can browse, toggle, and read geography layers", async ({
     page,
   }) => {

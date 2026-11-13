@@ -143,7 +143,7 @@ const secondSquare: Array<[number, number]> = [
   [0.42, 0.48],
 ];
 
-test.describe("Maldives ocean use survey", () => {
+test.describe("Maldives ocean use survey @enduser @surveys", () => {
   test.use({ viewport: { width: 1440, height: 900 } });
 
   test("an anonymous visitor can complete the ocean-use survey", async ({ page }) => {
@@ -421,7 +421,7 @@ test.describe("Maldives ocean use survey", () => {
   });
 });
 
-test.describe("Palawan coral survey", () => {
+test.describe("Palawan coral survey @enduser @surveys", () => {
   test.use({ viewport: { width: 1440, height: 900 } });
 
   test("a single sector starts on the map and comes back to the sector list", async ({

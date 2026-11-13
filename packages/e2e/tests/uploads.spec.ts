@@ -325,7 +325,7 @@ async function expectMapDrawsLayer(
     .toContain(200);
 }
 
-test.describe("hosted data upload on the local data services", () => {
+test.describe("hosted data upload on the local data services @admin @uploads", () => {
   let dir: string;
   test.beforeEach(async () => {
     dir = fs.mkdtempSync(path.join(os.tmpdir(), "seasketch-e2e-upload-"));

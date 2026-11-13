@@ -25,6 +25,9 @@
     "snapshot:publish": "node packages/api/scripts/snapshot-r2.js push",
     "probe:production": "node packages/production-probe/src/cli.js",
     "e2e": "node scripts/e2e.mjs",
+    "e2e:smoke": "node scripts/e2e.mjs --grep @smoke",
+    "e2e:enduser": "node scripts/e2e.mjs --grep @enduser",
+    "e2e:admin": "node scripts/e2e.mjs --grep @admin",
     "e2e:headed": "node scripts/e2e.mjs --headed",
     "e2e:ui": "node scripts/e2e.mjs --ui"
   },

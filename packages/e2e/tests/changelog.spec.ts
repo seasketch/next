@@ -3,7 +3,7 @@ import { personas } from "../src/config";
 import { clearProjectChangeLogs, seedProjectChangeLogs } from "../src/db";
 import { signIn } from "../src/project";
 
-test.describe("demo-samoa layer list changelog", () => {
+test.describe("demo-samoa layer list changelog @admin @layers", () => {
   test.afterAll(async () => {
     await clearProjectChangeLogs("demo-samoa");
   });

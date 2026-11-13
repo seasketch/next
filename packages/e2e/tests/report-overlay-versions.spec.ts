@@ -422,7 +422,7 @@ const publishReportMutation = `
   }
 `;
 
-test.describe("report overlay versions", () => {
+test.describe("report overlay versions @admin @layers", () => {
   test.beforeEach(async () => {
     await resetAiCartographerChoice(personas.admin.sub);
   });

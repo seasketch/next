@@ -7,6 +7,7 @@ import React, {
   useMemo,
   useCallback,
   useContext,
+  useEffect,
 } from "react";
 import { Route, useHistory, useParams, useRouteMatch } from "react-router-dom";
 import MapboxMap from "../components/MapboxMap";
@@ -18,6 +19,7 @@ import BasemapContextProvider from "../dataLayers/BasemapContext";
 import MapManagerContextProvider from "../dataLayers/MapManagerContextProvider";
 import MapUIProvider from "../dataLayers/MapUIContext";
 import {
+  ParticipationStatus,
   TableOfContentsItem,
   useProjectMetadataQuery,
 } from "../generated/graphql";
@@ -98,6 +100,33 @@ export default function ProjectApp() {
     variables: { slug },
     skip: !slug,
   });
+
+  // Sign-in from a project returns to this url with ?pj. Send a signed-in
+  // person who has not shared a profile to the join page.
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    if (!params.has("pj") || !data?.me) {
+      return;
+    }
+    const participation = data.project?.sessionParticipationStatus;
+    if (!participation) {
+      return;
+    }
+    if (participation === ParticipationStatus.ParticipantSharedProfile) {
+      history.replace(location.pathname);
+      return;
+    }
+    history.replace(
+      `/${routeSlug}/join?redirectUrl=${encodeURIComponent(location.pathname)}`
+    );
+  }, [
+    data?.me,
+    data?.project?.sessionParticipationStatus,
+    history,
+    location.pathname,
+    location.search,
+    routeSlug,
+  ]);
 
   const { basemaps, dataLayers, dataSources, tableOfContentsItems } =
     useMapData();

@@ -4,9 +4,10 @@ import { installSession, issueToken } from "./auth";
 export async function signIn(
   page: Page,
   request: APIRequestContext,
-  persona: { sub: string; superuser: boolean }
+  persona: { sub: string; superuser: boolean },
+  options?: { emailVerified?: boolean }
 ) {
-  const issued = await issueToken(request, persona);
+  const issued = await issueToken(request, persona, options);
   await installSession(page.context(), issued);
   return issued;
 }

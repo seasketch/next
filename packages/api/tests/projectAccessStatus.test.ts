@@ -51,6 +51,36 @@ describe("currentProjectAccessStatus", () => {
       }
     );
   });
+  test("Admin-only projects deny an approved participant who is not an admin", async () => {
+    await projectTransaction(
+      pool,
+      "admins_only",
+      async (conn, projectId, adminId, [userA]) => {
+        await addParticipant(conn, userA, projectId, false, true, true);
+        await createSession(conn, userA, true, false, projectId);
+        const status = await conn.oneFirst(
+          sql`select project_access_status(${projectId})`
+        );
+        expect(status).toBe("DENIED_ADMINS_ONLY");
+      }
+    );
+  });
+  test("A deleted project does not exist for access checks", async () => {
+    await projectTransaction(
+      pool,
+      "public",
+      async (conn, projectId, adminId) => {
+        await createSession(conn, adminId, true, false, projectId);
+        await conn.one(sql`select delete_project(${projectId})`);
+        await clearSession(conn);
+        await createSession(conn, undefined, false, false, projectId);
+        const status = await conn.oneFirst(
+          sql`select project_access_status(${projectId})`
+        );
+        expect(status).toBe("PROJECT_DOES_NOT_EXIST");
+      }
+    );
+  });
   test("Admin-only projects return GRANTED if the user is an admin", async () => {
     await projectTransaction(
       pool,

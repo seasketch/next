@@ -42,7 +42,7 @@ Queue URLs are per-environment names for a specific reason. The API's overlay-en
 
 **One committed manifest.** A single file lists every variable: its name, class, which packages read it, which profiles require it, and a short description. `process-env.d.ts`, the client's env typings, `.env.template` files, the deploy workflow, and `GraphQLStack` are consumers of that list. A check in CI fails when a consumer names a variable the manifest does not, or the reverse. [ENV.md](../../ENV.md)'s checklist becomes "add it to the manifest."
 
-**Named profiles.** Variables are the schema. Values live in named profiles: non-production (laptops, CI, agents, staging) and `seasketch.org` production. Adding another production profile is a data change, not a schema change ([second production install](second-install.md)).
+**Named profiles.** Variables are the schema. Values live in named profiles: non-production (laptops, CI, agents) and `seasketch.org` production. Adding another production profile is a data change, not a schema change ([second production install](second-install.md)).
 
 **Generated dotenv files are a cache.** `.env` stays gitignored. A person copies `.env.template` and fills in the few shared development secrets by hand. Public defaults are written in the template, so the copied file is short. CI and cloud agents do not need the files when the environment is already populated. `.env` stays the delivery format in development because that is what every package already loads.
 

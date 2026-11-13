@@ -10,7 +10,7 @@ test.afterEach(async () => {
   }
 });
 
-test.describe("demo-samoa forums", () => {
+test.describe("demo-samoa forums @enduser @forums", () => {
   test("an anonymous visitor can read the public topic and is asked to sign in", async ({
     page,
   }) => {

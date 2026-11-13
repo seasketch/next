@@ -3,7 +3,7 @@ import { visibleButton } from "../src/project";
 
 const samoanForums = "Fa'atalanoaga Lautele";
 
-test.describe("demo-samoa language", () => {
+test.describe("demo-samoa language @enduser @language", () => {
   test("an anonymous visitor can switch the project between English and Samoan", async ({
     page,
   }) => {

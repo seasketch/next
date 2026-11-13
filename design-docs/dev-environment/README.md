@@ -2,7 +2,7 @@
 
 > **2026 campaign record.** Status: design, started September 2026.
 
-This folder records the decisions behind a 2026 campaign to change how SeaSketch is configured, started, tested, and built — on developer laptops, in CI, on cloud agents, and eventually in a staging environment.
+This folder records the decisions behind a 2026 campaign to change how SeaSketch is configured, started, tested, and built — on developer laptops, in CI, and on cloud agents.
 
 ## Why
 
@@ -19,14 +19,15 @@ Start with the [strategy](strategy.md). It is the sequence. Each other file is o
 
 | Document                                            | What it decides                                                                                                                  |
 | --------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------- |
-| [Strategy](strategy.md)                             | The five phases, their gates, and how the packaging / testing deadlock is broken                                                 |
-| [Environment setup](env-setup.md)                   | One setup and startup command for laptops, CI, cloud agents, and staging                                                         |
+| [Strategy](strategy.md)                             | The four phases, their gates, and how the packaging / testing deadlock is broken                                                 |
+| [Environment setup](env-setup.md)                   | One setup and startup command for laptops, CI, and cloud agents                                                                  |
 | [Secrets and configuration](secrets-management.md)  | One manifest of variables, a class for each, and named profiles. Laptops keep a short hand-managed `.env`. CI uses GitHub, production uses GitHub and CDK |
 | [Auth0](auth0.md)                                   | A non-production Auth0 tenant, and an API that does not need Auth0 to boot                                                       |
 | [Local services](local-services.md)                 | Which SeaSketch backends run locally, in which profile, and the rule that an unset integration never falls through to production |
 | [Service inventory](service-inventory.md)           | What development and e2e call today, and which of those already have a local stand-in. An inventory of the present, not a decision |
 | [Local data services](local-data-services.md)       | Self-contained storage references and environment-authorized writers, so rows from any installation, bucket, or backend coexist; raw uploads on R2; then uploads, tile serving, overlay analysis, data prep, and sketch clipping running locally with no cloud accounts. Accepted October 2026 |
-| [Integration testing](integration-testing.md)       | Playwright journeys, test-mode auth, the golden database snapshot, and production probes                                         |
+| [Integration testing](integration-testing.md)       | Playwright journeys, smoke versus end-user versus admin CI jobs, test-mode auth, the golden database snapshot, and production probes |
+| [Journey catalog](journeys.md)                      | Index, smoke, and how the two suites differ. Iterate [end-user](journeys-end-user.md) and [admin](journeys-admin.md) before farming tests |
 | [Monorepo and build](monorepo-and-build-upgrade.md) | npm workspaces, one Node and TypeScript, production build paths, and replacing Create React App                                  |
 | [Second production install](second-install.md)      | Out of scope to build. Choices should leave one possible later, as the same revision with a different profile                    |
 
@@ -34,7 +35,7 @@ Start with the [strategy](strategy.md). It is the sequence. Each other file is o
 
 Accepted decisions. They describe what this campaign will build, not what is running today. A decision that has shipped is marked with the month. Anything without a month is accepted and still open.
 
-- **Order:** smoke tests on today's toolchain → npm workspaces → access and onboarding journeys → replace Create React App → breadth and staging. One axis changes at a time. ([strategy](strategy.md)) *(October 2026)* Dependency consolidation within majors and TypeScript project references are part of the workspaces step and its pull request. Phase 3 also writes the bundler-risk journeys phase 4 is judged by. A combined workspaces-and-bundler pull request was considered and rejected ([monorepo and build](monorepo-and-build-upgrade.md)).
+- **Order:** smoke tests on today's toolchain → npm workspaces → end-user and admin journeys as separate CI jobs → replace Create React App. One axis changes at a time. ([strategy](strategy.md)) *(October 2026)* Dependency consolidation within majors and TypeScript project references are part of the workspaces step and its pull request. *(November 2026)* Phase 3 is the two catalogs, smoke kept as one undifferentiated job, and bundler-risk inside the suite that owns the screen. There is no staging server and no fifth phase. A combined workspaces-and-bundler pull request was considered and rejected ([monorepo and build](monorepo-and-build-upgrade.md)).
 - **Test runner:** Playwright in `packages/e2e` (October 2026). Cypress scenarios are mined for behavior, then removed. ([integration testing](integration-testing.md))
 - **Test auth:** `E2E_TEST_MODE` mints tokens with the API's own signing keys under a test-only issuer (October 2026). CI holds no Auth0 secrets. ([integration testing](integration-testing.md))
 - **Human auth:** a separate non-production Auth0 tenant with its own issuer and audience (October 2026). The API's Management client is already lazy and optional ([Auth0](auth0.md), September 2026).
@@ -43,7 +44,8 @@ Accepted decisions. They describe what this campaign will build, not what is run
 - **Production reach:** an unset integration makes the feature unavailable (September 2026). Pointing at production is an explicit override, never in CI. ([local services](local-services.md))
 - **Secrets:** one committed manifest and named profiles. Laptops keep a short hand-managed `.env` (October 2026). CI uses GitHub environments. Production uses GitHub and CDK. No new secrets product. ([secrets](secrets-management.md))
 - **Packaging:** npm workspaces with one lockfile (October 2026). No Nx, Turborepo, or new Lerna. One version of each shared library and one range per tool, moving within majors; pins that exist only for Create React App are a named temporary list. ([monorepo and build](monorepo-and-build-upgrade.md))
-- **Client build:** Vite is the candidate replacement for Create React App, accepted only when the existing journeys, including the bundler-risk set, pass on it. That pull request deletes the temporary pins. ([monorepo and build](monorepo-and-build-upgrade.md))
+- **Client build:** Vite is the candidate replacement for Create React App, accepted when smoke and the end-user suite pass on it, including end-user bundler-risk, and admin bundler-risk passes on the admin job. That pull request deletes the temporary pins. ([monorepo and build](monorepo-and-build-upgrade.md))
+- **Journeys:** two catalogs. End-user is critical. Admin is separate and more forgiving. Smoke is a third run and is not split by audience. Iterate the catalogs, then farm tests. Offline support waits on a downstream plan, end-user first. ([journeys](journeys.md), [integration testing](integration-testing.md)) *(November 2026)*
 - **Data path:** rows carry complete URLs and bucket-qualified remotes, a process writes only buckets its own environment names, and raw uploads move to R2, all deployed to production first. Then the data path runs locally by default: Miniflare's R2 behind `wrangler dev`'s S3 API, the production upload container under the Lambda emulator, `pmtiles-server` under `wrangler dev`, ElasticMQ for results. Heavy compute stays on Lambda. ([local data services](local-data-services.md))
 
 ## Keeping this record
@@ -54,4 +56,4 @@ This is a design record, not an operating manual. Instructions for running the r
 - **When the campaign is finished**, change every status line in this folder to _archived_, with the date, and stop editing. The rule for what happens after that stays here.
 - **If a later refactor replaces these decisions**, it gets its own folder. Add a _Superseded by_ link under the status line above. Do not rewrite these files.
 
-Working notes live outside this folder and are not part of the record. The [Playwright sketch](../../.cursor/plans/e2e_integration_testing_bbbc671b.plan.md) and the [local data services sketch](../../.cursor/plans/local_data_services.plan.md) are two; they may go stale.
+Working notes live outside this folder and are not part of the record. The [Playwright sketch](../../.cursor/plans/e2e_integration_testing_bbbc671b.plan.md) and the [local data services sketch](../../.cursor/plans/local_data_services.plan.md) are two; they may go stale. `packages/e2e/JOURNEYS.md` is an implementation note for tests that already landed. The catalogs are [journeys.md](journeys.md), [journeys-end-user.md](journeys-end-user.md), and [journeys-admin.md](journeys-admin.md).

@@ -5,7 +5,9 @@ import {
   currentUserId,
   inviteMember,
 } from "../src/accessProject";
+import { issueToken } from "../src/auth";
 import { personas } from "../src/config";
+import { graphql } from "../src/graphql";
 import {
   createE2EUser,
   deleteE2EUser,
@@ -34,7 +36,7 @@ function slug(label: string) {
   return `e2e-${label}-${Date.now().toString(36)}`.slice(0, 24);
 }
 
-test.describe("access @access", () => {
+test.describe("access @enduser @access", () => {
   test("an anonymous visitor opens a public project from the list", async ({ page }) => {
     test.setTimeout(90_000);
     await page.goto("/projects");
@@ -148,6 +150,55 @@ test.describe("access @access", () => {
     }
   });
 
+  test("an invite-only gate shows the project's support email", async ({
+    page,
+    request,
+    browser,
+  }) => {
+    test.setTimeout(90_000);
+    const name = "Access Invite Contact";
+    const project = await createAccessProject(request, {
+      name,
+      slug: slug("invite-mail"),
+      accessControl: "INVITE_ONLY",
+      isListed: false,
+    });
+    created.push(project.slug);
+
+    const admin = await issueToken(request, personas.admin);
+    const details = await graphql<{
+      projectBySlug: { supportEmail: string } | null;
+    }>(
+      request,
+      admin.accessToken,
+      `query ($slug: String!) {
+        projectBySlug(slug: $slug) { supportEmail }
+      }`,
+      { slug: project.slug }
+    );
+    const supportEmail = details.projectBySlug?.supportEmail ?? "";
+    expect(supportEmail).toContain("@");
+
+    await page.goto(`/${project.slug}`);
+    const anonGate = page.getByRole("dialog");
+    await expect(anonGate.getByRole("heading", { name: "Private Project" })).toBeVisible();
+    await expect(anonGate.getByText(supportEmail)).toBeVisible();
+
+    const memberContext = await browser.newContext();
+    try {
+      const memberPage = await memberContext.newPage();
+      await signIn(memberPage, request, personas.member);
+      await memberPage.goto(`/${project.slug}`);
+      const memberGate = memberPage.getByRole("dialog");
+      await expect(
+        memberGate.getByRole("button", { name: "Share Profile and Request Access" })
+      ).toBeVisible();
+      await expect(memberGate.getByText(supportEmail)).toBeVisible();
+    } finally {
+      await memberContext.close();
+    }
+  });
+
   test("a member requests access and sees the project after an admin approves", async ({
     page,
     request,
@@ -170,7 +221,16 @@ test.describe("access @access", () => {
     await page.locator('input[name="fullname"]').fill("E2E Requester");
     await page.getByRole("button", { name: "Send Request" }).click();
     await expect(page.getByRole("heading", { name: "Your Request Has Been Sent" })).toBeVisible();
+    await expect(
+      page.getByRole("button", { name: `Contact ${personas.admin.email}` })
+    ).toBeVisible();
     await expect(page.locator(".mapboxgl-map")).toHaveCount(0);
+
+    await page.reload();
+    await expect(page.getByRole("heading", { name: "Request Awaiting Approval" })).toBeVisible();
+    await expect(
+      page.getByRole("button", { name: `Contact ${personas.admin.email}` })
+    ).toBeVisible();
 
     await approveMember(request, project.id, await currentUserId(request, member.accessToken));
 
@@ -414,7 +474,19 @@ test.describe("access @access", () => {
     ).toBeVisible();
     await expect(page.getByRole("button", { name: "Sign In", exact: true })).toHaveCount(0);
     await expect(page.getByRole("button", { name: "Join Project", exact: true })).toHaveCount(0);
+    await expect(page.getByText(/Contact .+ to request a new invitation/)).toBeVisible();
 
+    expect(await projectInviteStatus(project.slug)).not.toBe("CONFIRMED");
+
+    // The expired invite is not the only way in. A signed-in person can still
+    // file an access request on this invite-only project.
+    await signIn(page, request, personas.member);
+    await page.goto(`/${project.slug}`);
+    await page.getByRole("button", { name: "Share Profile and Request Access" }).click();
+    await page.locator('input[name="fullname"]').fill("E2E Expired Requester");
+    await page.getByRole("button", { name: "Send Request" }).click();
+    await expect(page.getByRole("heading", { name: "Your Request Has Been Sent" })).toBeVisible();
+    await expect(page.locator(".mapboxgl-map")).toHaveCount(0);
     expect(await projectInviteStatus(project.slug)).not.toBe("CONFIRMED");
   });
 });

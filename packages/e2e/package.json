@@ -1,7 +1,7 @@
 {
   "name": "@seasketch/e2e",
   "private": true,
-  "description": "Playwright smoke journeys against a local SeaSketch API and client.",
+  "description": "Playwright journeys against a local SeaSketch API and client. `@smoke` is the fast undifferentiated subset. `@enduser` and `@admin` are separate integration suites.",
   "scripts": {
     "test": "playwright test",
     "test:headed": "playwright test --headed",

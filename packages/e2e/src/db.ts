@@ -249,6 +249,223 @@ export async function seedProjectChangeLogs(
   }
 }
 
+export type ProjectAccess = "public" | "invite_only" | "admins_only";
+
+/** Patch the door directly. The visitor tests then reload. */
+export async function setProject(
+  slug: string,
+  patch: { accessControl?: ProjectAccess; isListed?: boolean; isDeleted?: boolean }
+) {
+  const sets: string[] = [];
+  const values: unknown[] = [slug];
+  if (patch.accessControl) {
+    values.push(patch.accessControl);
+    sets.push(`access_control = $${values.length}::project_access_control_setting`);
+  }
+  if (patch.isListed !== undefined) {
+    values.push(patch.isListed);
+    sets.push(`is_listed = $${values.length}`);
+  }
+  if (patch.isDeleted !== undefined) {
+    values.push(patch.isDeleted);
+    sets.push(`is_deleted = $${values.length}`);
+  }
+  if (sets.length === 0) {
+    return;
+  }
+  const client = new Client({ connectionString: databaseURL });
+  await client.connect();
+  try {
+    const result = await client.query(
+      `update projects set ${sets.join(", ")} where slug = $1`,
+      values
+    );
+    if (result.rowCount === 0) {
+      throw new Error(`No project ${slug}`);
+    }
+  } finally {
+    await client.end();
+  }
+}
+
+/**
+ * A participant row, and a profile when a name is given so Access Requests
+ * can list them. Arranged here so the journey does not click through admin.
+ */
+export async function upsertParticipant(input: {
+  slug: string;
+  sub: string;
+  isAdmin?: boolean;
+  approved?: boolean;
+  shareProfile?: boolean;
+  fullname?: string;
+  email?: string;
+}) {
+  const client = new Client({ connectionString: databaseURL });
+  await client.connect();
+  try {
+    await client.query("BEGIN");
+    const user = await client.query(
+      `select id, canonical_email from users where sub = $1`,
+      [input.sub]
+    );
+    const project = await client.query(`select id from projects where slug = $1`, [
+      input.slug,
+    ]);
+    if (user.rowCount === 0) {
+      throw new Error(`No user ${input.sub}`);
+    }
+    if (project.rowCount === 0) {
+      throw new Error(`No project ${input.slug}`);
+    }
+    await client.query(
+      `insert into project_participants (user_id, project_id, is_admin, approved, share_profile)
+       values ($1, $2, $3, $4, $5)
+       on conflict (user_id, project_id) do update
+         set is_admin = excluded.is_admin,
+             approved = excluded.approved,
+             share_profile = excluded.share_profile`,
+      [
+        user.rows[0].id,
+        project.rows[0].id,
+        input.isAdmin === true,
+        input.approved === true,
+        input.shareProfile === true,
+      ]
+    );
+    if (input.fullname) {
+      await client.query(
+        `insert into user_profiles (user_id, fullname, email)
+         values ($1, $2, $3)
+         on conflict (user_id) do update
+           set fullname = excluded.fullname,
+               email = excluded.email`,
+        [
+          user.rows[0].id,
+          input.fullname,
+          input.email ?? user.rows[0].canonical_email,
+        ]
+      );
+    }
+    await client.query("COMMIT");
+  } catch (error) {
+    await client.query("ROLLBACK");
+    throw error;
+  } finally {
+    await client.end();
+  }
+}
+
+export async function participantCount(slug: string, sub: string): Promise<number> {
+  const client = new Client({ connectionString: databaseURL });
+  await client.connect();
+  try {
+    const result = await client.query(
+      `select count(*)::int as n
+       from project_participants pp
+       join projects p on p.id = pp.project_id
+       join users u on u.id = pp.user_id
+       where p.slug = $1 and u.sub = $2`,
+      [slug, sub]
+    );
+    return result.rows[0].n as number;
+  } finally {
+    await client.end();
+  }
+}
+
+export async function setShareProfile(slug: string, sub: string, shareProfile: boolean) {
+  const client = new Client({ connectionString: databaseURL });
+  await client.connect();
+  try {
+    const result = await client.query(
+      `update project_participants
+       set share_profile = $3
+       where project_id = (select id from projects where slug = $1)
+         and user_id = (select id from users where sub = $2)`,
+      [slug, sub, shareProfile]
+    );
+    if (result.rowCount === 0) {
+      throw new Error(`No participant ${sub} on ${slug}`);
+    }
+  } finally {
+    await client.end();
+  }
+}
+
+/**
+ * Two forums, each limited to its own group. The invite names `groupName`.
+ * The other forum stays hidden from that person. Admins still see both.
+ */
+export async function seedGroupForums(slug: string): Promise<{
+  groupName: string;
+  forumName: string;
+  otherForumName: string;
+}> {
+  const groupName = "Crew";
+  const forumName = "Crew Forum";
+  const otherForumName = "Other Forum";
+  const client = new Client({ connectionString: databaseURL });
+  await client.connect();
+  try {
+    await client.query("BEGIN");
+    const project = await client.query(`select id from projects where slug = $1`, [slug]);
+    if (project.rowCount === 0) {
+      throw new Error(`No project ${slug}`);
+    }
+    const projectId = project.rows[0].id as number;
+    const crew = await client.query(
+      `insert into project_groups (project_id, name) values ($1, $2) returning id`,
+      [projectId, groupName]
+    );
+    const other = await client.query(
+      `insert into project_groups (project_id, name) values ($1, 'Others') returning id`,
+      [projectId]
+    );
+    const crewForum = await client.query(
+      `insert into forums (project_id, name, position) values ($1, $2, 0) returning id`,
+      [projectId, forumName]
+    );
+    const otherForum = await client.query(
+      `insert into forums (project_id, name, position) values ($1, $2, 1) returning id`,
+      [projectId, otherForumName]
+    );
+    await grantForumToGroup(client, projectId, crewForum.rows[0].id, crew.rows[0].id);
+    await grantForumToGroup(client, projectId, otherForum.rows[0].id, other.rows[0].id);
+    await client.query("COMMIT");
+  } catch (error) {
+    await client.query("ROLLBACK");
+    throw error;
+  } finally {
+    await client.end();
+  }
+  return { groupName, forumName, otherForumName };
+}
+
+async function grantForumToGroup(
+  client: Client,
+  _projectId: number,
+  forumId: number,
+  groupId: number
+) {
+  // Creating a forum already inserts a public read ACL. Point that row at the group.
+  const acl = await client.query(
+    `update access_control_lists
+     set type = 'group'
+     where forum_id_read = $1
+     returning id`,
+    [forumId]
+  );
+  if (acl.rowCount === 0) {
+    throw new Error(`No read ACL for forum ${forumId}`);
+  }
+  await client.query(
+    `insert into access_control_list_groups (access_control_list_id, group_id)
+     values ($1, $2)`,
+    [acl.rows[0].id, groupId]
+  );
+}
+
 export async function clearProjectChangeLogs(slug: string) {
   const client = new Client({ connectionString: databaseURL });
   await client.connect();

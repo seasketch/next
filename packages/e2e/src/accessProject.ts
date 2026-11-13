@@ -81,7 +81,8 @@ export async function inviteMember(
   projectId: number,
   email: string,
   fullname: string,
-  makeAdmin = false
+  makeAdmin = false,
+  groupNames: string[] = []
 ) {
   const admin = await issueToken(request, personas.admin);
   await graphql(
@@ -92,12 +93,13 @@ export async function inviteMember(
       $email: Email
       $fullname: String
       $makeAdmin: Boolean
+      $groupNames: [String]
     ) {
       createProjectInvites(
         input: {
           projectId: $projectId
           makeAdmin: $makeAdmin
-          groupNames: []
+          groupNames: $groupNames
           sendEmailNow: true
           projectInviteOptions: [{ email: $email, fullname: $fullname }]
         }
@@ -105,7 +107,7 @@ export async function inviteMember(
         projectInvites { id email }
       }
     }`,
-    { projectId, email, fullname, makeAdmin }
+    { projectId, email, fullname, makeAdmin, groupNames }
   );
 }
 
@@ -125,4 +127,43 @@ export async function approveMember(
     }`,
     { projectId, userId }
   );
+}
+
+export async function denyMember(
+  request: APIRequestContext,
+  projectId: number,
+  userId: number
+) {
+  const admin = await issueToken(request, personas.admin);
+  await graphql(
+    request,
+    admin.accessToken,
+    `mutation Deny($projectId: Int!, $userId: Int!) {
+      denyParticipant(input: { projectId: $projectId, userId: $userId }) {
+        user { id }
+      }
+    }`,
+    { projectId, userId }
+  );
+}
+
+/** Users still waiting on Access Requests. Approval false keeps a denied row here. */
+export async function accessRequestIds(
+  request: APIRequestContext,
+  slug: string
+): Promise<number[]> {
+  const admin = await issueToken(request, personas.admin);
+  const data = await graphql<{
+    projectBySlug: { accessRequestsConnection: { nodes: { id: number }[] } } | null;
+  }>(
+    request,
+    admin.accessToken,
+    `query ($slug: String!) {
+      projectBySlug(slug: $slug) {
+        accessRequestsConnection { nodes { id } }
+      }
+    }`,
+    { slug }
+  );
+  return data.projectBySlug?.accessRequestsConnection.nodes.map((node) => node.id) ?? [];
 }
