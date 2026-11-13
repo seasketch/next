@@ -886,6 +886,9 @@ function Header({
           scope: process.env.REACT_APP_AUTH0_SCOPE,
         },
       });
+      if (!token) {
+        throw new Error("missing-token");
+      }
       await downloadLayerSpreadsheet(getSlug(), token);
     } catch (error) {
       onError(
