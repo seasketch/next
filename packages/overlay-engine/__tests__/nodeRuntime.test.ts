@@ -32,7 +32,6 @@ describe("Node 24 runtime", () => {
     // Same Pool options as makeFetchRangeFn. Undici 7, which Node 24 ships,
     // is what that helper imports.
     const pool = new Pool(`http://127.0.0.1:${address.port}`, {
-      allowH2: true,
       connections: 8,
       bodyTimeout: 10 * 1000,
     });

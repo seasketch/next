@@ -8,9 +8,6 @@ function poolFor(origin: string): Pool {
   if (!pool) {
     pool = new Pool(origin, {
       // Queue extra range reads instead of opening a socket for each one.
-      // One HTTP/2 session. HTTP/1.1 keep-alive writes the next range onto a
-      // socket the peer may already have reset, and that throws read ECONNRESET.
-      allowH2: true,
       connections: 8,
       bodyTimeout: 10 * 1000,
     });

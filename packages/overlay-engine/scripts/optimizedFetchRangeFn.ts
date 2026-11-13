@@ -1,20 +1,11 @@
-import { Pool } from "undici";
 import { LRUCache } from "lru-cache";
+import { testRangeDispatcher } from "./testSocketRetry";
 
 export function makeFetchRangeFn(
   rootUrl: string,
   maxCacheSizeBytes: number = 1000 * 1024 * 128
 ) {
-  const pool = new Pool(rootUrl, {
-    // Queue extra range reads instead of opening a socket for each one.
-    // An unbounded pool gets reset by CloudFront when many tests fetch at once.
-    // One HTTP/2 session. HTTP/1.1 keep-alive writes the next range onto a
-    // socket the peer may already have reset, and that throws read ECONNRESET.
-    allowH2: true,
-    connections: 8,
-    // 10 second timeout for body
-    bodyTimeout: 10 * 1000,
-  });
+  const pool = testRangeDispatcher(rootUrl);
 
   const cache = new LRUCache<string, ArrayBuffer>({
     maxSize: maxCacheSizeBytes,

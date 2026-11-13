@@ -69,12 +69,7 @@ const pools = new Map<string, Pool>();
 function poolFor(origin: string): Pool {
   let pool = pools.get(origin);
   if (!pool) {
-    pool = new Pool(origin, {
-      // One HTTP/2 session. HTTP/1.1 keep-alive writes the next range onto a
-      // socket the peer may already have reset, and that throws read ECONNRESET.
-      allowH2: true,
-      bodyTimeout: 10 * 1000,
-    });
+    pool = new Pool(origin, { bodyTimeout: 10 * 1000 });
     pools.set(origin, pool);
   }
   return pool;
