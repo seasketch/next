@@ -19,13 +19,13 @@ type RangeFetchResult =
 
 const inFlight = new Map<string, Promise<RangeFetchResult>>();
 
-/**
- * Buffer and cache ranges at or under this size. Anything larger is streamed.
- * Overlay pages are 1–5MB. The Cache API will not store the 5MB ones, and
- * buffering them kept a full copy per in-flight request, which is enough to
- * kill an isolate and reset every client still reading it.
- */
+/** Skip Cache API for huge windows — buffering multi‑MB bodies OOMs isolates. */
 const MAX_RANGE_CACHE_BYTES = 2 * 1024 * 1024;
+/**
+ * Only buffer ranges at or under this size. Larger / open-ended ranges are
+ * streamed from R2 so overlay-worker `bytes=N-` feature scans do not OOM.
+ */
+const MAX_RANGE_BUFFER_BYTES = 16 * 1024 * 1024;
 
 function parseRange(value: string | null): ByteRange | null {
   if (!value) return null;
@@ -187,10 +187,9 @@ export async function getR2Range(
   }
 
   const headerLength = knownHeaderLength(range);
-  // Open-ended ranges have no known length (`bytes={featureOffset}-`).
-  // Bounded ranges above the cache cap are streamed too: there is no cache
-  // entry to fill, so the buffer only costs memory.
-  if (headerLength === null || headerLength > MAX_RANGE_CACHE_BYTES) {
+  // Open-ended or clearly huge ranges must stream — buffering OOMs the isolate
+  // (overlay-worker commonly requests `bytes={featureOffset}-`).
+  if (headerLength === null || headerLength > MAX_RANGE_BUFFER_BYTES) {
     return streamR2Range(bucket, key, range, timing);
   }
 

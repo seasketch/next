@@ -19,7 +19,7 @@ import {
   bustOverlayEngineAccessTokenCache,
   getOverlayEngineAccessToken,
 } from "./overlayEngineAccessToken";
-import { resolveStorageUrl, retryTransient } from "overlay-engine";
+import { resolveStorageUrl } from "overlay-engine";
 
 const pools = new Map<string, Pool>();
 
@@ -33,9 +33,9 @@ function poolFor(origin: string): Pool {
   let pool = pools.get(origin);
   if (!pool) {
     pool = new Pool(origin, {
-      // Same cap as the API and the overlay-engine tests. Extra range reads
-      // queue on these sockets instead of opening one per page.
-      connections: 8,
+      // Close the socket after the response. Reusing it races a peer RST
+      // and throws read ECONNRESET. Undici does not retry that.
+      pipelining: 0,
       connectTimeout: R2_READ_TIMEOUT_MS,
       headersTimeout: R2_READ_TIMEOUT_MS,
       bodyTimeout: R2_READ_TIMEOUT_MS,
@@ -67,14 +67,7 @@ async function discardResponseBody(body: {
 async function fetchUploadsRange(
   url: string,
   range: [number, number | null],
-): Promise<ArrayBuffer> {
-  return retryTransient(() => readUploadsRange(url, range, false));
-}
-
-async function readUploadsRange(
-  url: string,
-  range: [number, number | null],
-  retriedAuth: boolean,
+  retriedAuth = false,
 ): Promise<ArrayBuffer> {
   const token = await getOverlayEngineAccessToken();
   const target = resolveStorageUrl(url);
@@ -96,7 +89,7 @@ async function readUploadsRange(
   ) {
     await discardResponseBody(response.body);
     bustOverlayEngineAccessTokenCache();
-    return readUploadsRange(url, range, true);
+    return fetchUploadsRange(url, range, true);
   }
   if (response.statusCode >= 400) {
     await discardResponseBody(response.body);

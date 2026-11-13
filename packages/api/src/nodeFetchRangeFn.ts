@@ -1,6 +1,5 @@
 import { LRUCache } from "lru-cache";
 import { Pool } from "undici";
-import { retryTransient } from "overlay-engine/dist/retryTransient";
 
 const originPools = new Map<string, Pool>();
 
@@ -9,6 +8,9 @@ function poolFor(origin: string): Pool {
   if (!pool) {
     pool = new Pool(origin, {
       // Queue extra range reads instead of opening a socket for each one.
+      // Close the socket after the response. Reusing it races a peer RST
+      // and throws read ECONNRESET. Undici does not retry that.
+      pipelining: 0,
       connections: 8,
       bodyTimeout: 10 * 1000,
     });
@@ -25,25 +27,23 @@ function requestUrlRange(
   url: URL,
   range: [number, number | null]
 ): Promise<ArrayBuffer> {
-  return retryTransient(() =>
-    poolFor(url.origin)
-      .request({
-        path: `${url.pathname}${url.search}`,
-        method: "GET",
-        headers: {
-          Range: `bytes=${range[0]}-${rangeEnd(range)}`,
-        },
-      })
-      .then(async (response) => {
-        const buffer = await response.body.arrayBuffer();
-        if (response.statusCode >= 400) {
-          throw new Error(
-            `HTTP ${response.statusCode} fetching ${url.href} range=${range[0]}-${rangeEnd(range)}`
-          );
-        }
-        return buffer;
-      }),
-  );
+  return poolFor(url.origin)
+    .request({
+      path: `${url.pathname}${url.search}`,
+      method: "GET",
+      headers: {
+        Range: `bytes=${range[0]}-${rangeEnd(range)}`,
+      },
+    })
+    .then(async (response) => {
+      const buffer = await response.body.arrayBuffer();
+      if (response.statusCode >= 400) {
+        throw new Error(
+          `HTTP ${response.statusCode} fetching ${url.href} range=${range[0]}-${rangeEnd(range)}`
+        );
+      }
+      return buffer;
+    });
 }
 
 /**
