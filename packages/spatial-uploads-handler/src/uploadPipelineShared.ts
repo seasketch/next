@@ -14,7 +14,8 @@ export type SupportedTypes =
   | "ZippedShapefile"
   | "GeoTIFF"
   | "NetCDF"
-  | "CSV";
+  | "CSV"
+  | "GeoParquet";
 
 export interface ResponseOutput {
   /** Remote location string as used in rclone */

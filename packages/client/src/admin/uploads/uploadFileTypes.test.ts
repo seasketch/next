@@ -23,12 +23,16 @@ describe("spatial and data-table file helpers", () => {
     expect(detectSupportedFormat("dem.tif")).toBe("geotiff");
     expect(detectSupportedFormat("sst.nc4")).toBe("netcdf");
     expect(detectSupportedFormat("points.fgb")).toBe("flatgeobuf");
+    expect(detectSupportedFormat("sites.parquet")).toBe("geoparquet");
+    expect(detectSupportedFormat("sites.GEOPARQUET")).toBe("geoparquet");
     expect(detectSupportedFormat("table.csv")).toBe("delimited");
     expect(detectSupportedFormat("notes.docx")).toBeNull();
     expect(detectSupportedFormat(null)).toBeNull();
   });
 
   it("includes netcdf extensions in the spatial browse accept list", () => {
+    expect(SPATIAL_FILE_ACCEPT).toContain(".parquet");
+    expect(SPATIAL_FILE_ACCEPT).toContain(".geoparquet");
     expect(SPATIAL_FILE_ACCEPT).toContain(".nc");
     expect(SPATIAL_FILE_ACCEPT).toContain(".nc4");
     expect(DATA_TABLE_FILE_ACCEPT).toBe(".csv,.tsv,.txt");

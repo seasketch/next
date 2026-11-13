@@ -402,6 +402,8 @@ export function humanizeOutputType(
       return "NetCDF";
     case DataUploadOutputType.Csv:
       return "CSV";
+    case DataUploadOutputType.GeoParquet:
+      return "GeoParquet";
     case "Archives":
       return "Archived Versions";
     case DataUploadOutputType.Xmlmetadata:

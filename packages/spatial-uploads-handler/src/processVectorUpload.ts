@@ -29,6 +29,11 @@ import {
 import { convertDelimitedToGeoJSON } from "./formats/delimited";
 import type { DelimitedUploadProcessingOptions } from "./spatialUploadsHandlerTypes";
 import { ogrInfoHasMeasuredGeometry } from "./vectorGeometryType";
+import {
+  geoparquetSrsDecision,
+  ogrInfoHasNoGeometry,
+  vectorTypeFromOgrInfo,
+} from "./formats/geoparquet";
 
 const DELIMITED_EXTENSIONS = new Set([".csv", ".tsv", ".txt"]);
 
@@ -349,14 +354,15 @@ export async function processVectorUpload(options: {
       : "Could not run ogrinfo on file",
     1 / 30,
   );
-  if (/GeoJSON/.test(ogrInfo)) {
-    type = "GeoJSON";
-  } else if (/FlatGeobuf/.test(ogrInfo)) {
-    type = "FlatGeobuf";
-  } else if (/ESRI Shapefile/.test(ogrInfo)) {
-    type = "ZippedShapefile";
-  } else {
+  const detectedType = vectorTypeFromOgrInfo(ogrInfo);
+  if (!detectedType) {
     throw new Error("Not a recognized file type");
+  }
+  type = detectedType;
+  if (type === "GeoParquet" && ogrInfoHasNoGeometry(ogrInfo)) {
+    throw new Error(
+      "This Parquet file has no geometry column, so it cannot be added as a map layer.",
+    );
   }
 
   if (isDelimited) {
@@ -397,6 +403,13 @@ export async function processVectorUpload(options: {
   if (/World Geodetic System 1984/.test(ogrInfo)) {
     isCorrectProjection = true;
   }
+  const srsDecision =
+    type === "GeoParquet"
+      ? geoparquetSrsDecision(ogrInfo, isCorrectProjection)
+      : { assumeWgs84: false as const };
+  if ("error" in srsDecision) {
+    throw new Error(srsDecision.error);
+  }
 
   // Z-only layers use GDAL's 2.5D geometry codes and are classified as
   // Point, Polygon, and so on. M and ZM layers use the ISO *M / *ZM codes.
@@ -433,6 +446,7 @@ export async function processVectorUpload(options: {
         "ogr2ogr",
         [
           "-skipfailures",
+          ...(srsDecision.assumeWgs84 ? ["-s_srs", "EPSG:4326"] : []),
           "-t_srs",
           "EPSG:4326",
           "-nlt",

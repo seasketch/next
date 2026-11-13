@@ -211,8 +211,26 @@ RUN mkdir /tmp/netcdf \
 RUN dnf install -y openssl python-pip python3 swig python-devel
 RUN LD_LIBRARY_PATH="" pip install cython numpy==1.25 wheel --no-binary numpy
 
-# GDAL
-ENV GDAL_VERSION=3.9.2
+# Apache Arrow C++ and Parquet. The GeoParquet driver, including the Parquet
+# GEOMETRY logical type (libarrow >= 21, GDAL >= 3.12), is not part of the
+# gdal-async prebuild. ogr2ogr in this image is what opens uploaded parquet.
+# The Lambda base is microdnf, which cannot run the Arrow release RPM's
+# config-manager scriptlet or parse its signing key, so the repo is written
+# directly and packages are pinned.
+RUN printf '%s\n' \
+      '[apache-arrow]' \
+      'name=Apache Arrow' \
+      'baseurl=https://packages.apache.org/artifactory/arrow/amazon-linux/2023/$basearch/' \
+      'gpgcheck=0' \
+      'enabled=1' \
+      > /etc/yum.repos.d/apache-arrow.repo \
+  && dnf install -y arrow-devel-26.0.1 parquet-devel-26.0.1 \
+  && python3 -c 'import subprocess; v=subprocess.check_output(["rpm","-q","--qf","%{VERSION}","arrow-devel"], text=True).strip(); print("arrow", v); major=int(v.split(".")[0]); assert major>=21, "libarrow %s cannot read the Parquet GEOMETRY logical type" % v'
+
+# GDAL. Keep this on the same 3.12 line as the gdal-async package: the Node
+# bindings open the FlatGeobuf this stage's ogr2ogr writes. Arrow 26 headers
+# require C++20, so the build sets CMAKE_CXX_STANDARD=20.
+ENV GDAL_VERSION=3.12.3
 RUN mkdir /tmp/gdal \
   && curl -sfL https://github.com/OSGeo/gdal/archive/refs/tags/v${GDAL_VERSION}.tar.gz | tar zxf - -C /tmp/gdal --strip-components=1 \
   && cd /tmp/gdal \
@@ -229,12 +247,18 @@ RUN mkdir /tmp/gdal \
     -DGDAL_USE_GEOTIFF_INTERNAL=OFF \
     -DGDAL_USE_LERC_INTERNAL=OFF \
     -DGDAL_USE_NETCDF=ON \
+    -DGDAL_USE_PARQUET=ON \
+    -DGDAL_USE_ARROW=ON \
+    -DCMAKE_CXX_STANDARD=20 \
+    -DCMAKE_CXX_STANDARD_REQUIRED=ON \
     -DLERC_INCLUDE_DIR=$PREFIX/include \
     -DLERC_LIBRARY=$PREFIX/lib/libLercLib.so \
     -DPNG_PNG_INCLUDE_DIR=$PREFIX/include \
     -DPNG_LIBRARY_RELEASE=$PREFIX/lib64/libpng.so \
     -DBUILD_PYTHON_BINDINGS=ON \
   && make -j $(nproc) --silent && make install \
+  && ogrinfo --version \
+  && ogrinfo --formats | grep -i parquet \
   && rm -rf /tmp/gdal
 
 # unar
