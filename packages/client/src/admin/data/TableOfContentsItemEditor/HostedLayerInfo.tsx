@@ -287,6 +287,8 @@ export function humanizeSourceType(type: DataUploadOutputType) {
       return "Shapefile";
     case DataUploadOutputType.Csv:
       return "CSV";
+    case DataUploadOutputType.GeoParquet:
+      return "GeoParquet";
     default:
       return type;
   }

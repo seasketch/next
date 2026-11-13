@@ -4,6 +4,7 @@ import {
   SpatialUploadsHandlerRequest,
 } from "spatial-uploads-handler";
 import AWS from "aws-sdk";
+import { withSpatialUploadsDevHandler } from "../src/spatialUploadsDevHandlerLock";
 
 /**
  * graphile-worker task which fires off requests for spatial data upload
@@ -134,39 +135,9 @@ function formatDevHandlerFetchError(err: unknown, url: string): Error {
 
 export async function runLambda(event: SpatialUploadsHandlerRequest) {
   if (process.env.SPATIAL_UPLOADS_LAMBDA_DEV_HANDLER) {
-    const url = process.env.SPATIAL_UPLOADS_LAMBDA_DEV_HANDLER;
-    let response: Response;
-    try {
-      response = await fetch(url, {
-        method: "POST",
-        body: JSON.stringify(event),
-        headers: { "Content-Type": "application/json" },
-      });
-    } catch (e) {
-      throw formatDevHandlerFetchError(e, url);
-    }
-    const text = await response.text();
-    if (text.length === 0) {
-      throw new Error(
-        "Lambda invocation failed. Could be due to attempting to run multiple simultaneous tasks with dev container.",
-      );
-    }
-    let data: ProcessedUploadResponse & { error?: string };
-    try {
-      data = JSON.parse(text) as ProcessedUploadResponse & { error?: string };
-    } catch {
-      throw new Error(
-        `Spatial uploads dev handler returned non-JSON (HTTP ${response.status}): ${text.slice(0, 500)}`,
-      );
-    }
-    if (!response.ok) {
-      throw new Error(
-        data.error ||
-          `Spatial uploads dev handler HTTP ${response.status}: ${text.slice(0, 500)}`,
-      );
-    }
-    assertNoHandlerError(data);
-    return data;
+    return withSpatialUploadsDevHandler(() =>
+      invokeSpatialUploadsDevHandler(event),
+    );
   } else if (process.env.SPATIAL_UPLOADS_LAMBDA_ARN) {
     await client
       .invoke({
@@ -186,4 +157,42 @@ export async function runLambda(event: SpatialUploadsHandlerRequest) {
       `Neither SPATIAL_UPLOADS_LAMBDA_ARN or SPATIAL_UPLOADS_LAMBDA_DEV_HANDLER are defined`,
     );
   }
+}
+
+async function invokeSpatialUploadsDevHandler(
+  event: SpatialUploadsHandlerRequest,
+) {
+  const url = process.env.SPATIAL_UPLOADS_LAMBDA_DEV_HANDLER as string;
+  let response: Response;
+  try {
+    response = await fetch(url, {
+      method: "POST",
+      body: JSON.stringify(event),
+      headers: { "Content-Type": "application/json" },
+    });
+  } catch (e) {
+    throw formatDevHandlerFetchError(e, url);
+  }
+  const text = await response.text();
+  if (text.length === 0) {
+    throw new Error(
+      "Lambda invocation failed. Could be due to attempting to run multiple simultaneous tasks with dev container.",
+    );
+  }
+  let data: ProcessedUploadResponse & { error?: string };
+  try {
+    data = JSON.parse(text) as ProcessedUploadResponse & { error?: string };
+  } catch {
+    throw new Error(
+      `Spatial uploads dev handler returned non-JSON (HTTP ${response.status}): ${text.slice(0, 500)}`,
+    );
+  }
+  if (!response.ok) {
+    throw new Error(
+      data.error ||
+        `Spatial uploads dev handler HTTP ${response.status}: ${text.slice(0, 500)}`,
+    );
+  }
+  assertNoHandlerError(data);
+  return data;
 }

@@ -4,6 +4,7 @@ export type SupportedSpatialFormat =
   | "geotiff"
   | "netcdf"
   | "flatgeobuf"
+  | "geoparquet"
   | "delimited";
 
 export const SUPPORTED_SPATIAL_FORMATS: {
@@ -43,6 +44,12 @@ export const SUPPORTED_SPATIAL_FORMATS: {
     tag: "FGB",
   },
   {
+    id: "geoparquet",
+    label: "GeoParquet",
+    extensions: ".parquet, .geoparquet",
+    tag: "PQ",
+  },
+  {
     id: "delimited",
     label: "CSV / Delimited Text",
     extensions: ".csv, .tsv, .txt",
@@ -51,7 +58,7 @@ export const SUPPORTED_SPATIAL_FORMATS: {
 ];
 
 export const SPATIAL_FILE_ACCEPT =
-  ".zip,.json,.geojson,.fgb,.tif,.tiff,.nc,.nc4,.csv,.tsv,.txt";
+  ".zip,.json,.geojson,.fgb,.parquet,.geoparquet,.tif,.tiff,.nc,.nc4,.csv,.tsv,.txt";
 
 export const DATA_TABLE_FILE_ACCEPT = ".csv,.tsv,.txt";
 
@@ -80,6 +87,9 @@ export function detectSupportedFormat(
       return "netcdf";
     case ".fgb":
       return "flatgeobuf";
+    case ".parquet":
+    case ".geoparquet":
+      return "geoparquet";
     case ".csv":
     case ".tsv":
     case ".txt":
