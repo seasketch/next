@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 // Points this clone at .githooks so git itself refuses numbered migration commits.
-// npm install runs this. A missing git checkout (CI image, packed tarball) is fine.
+// npm install runs this from a full checkout. Docker images that copy package.json
+// without this script skip prepare. A missing git checkout is fine.
 
 import { execFileSync } from "node:child_process";
 import { chmodSync, existsSync } from "node:fs";

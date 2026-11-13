@@ -9,7 +9,7 @@
   ],
   "scripts": {
     "bootstrap": "npm install",
-    "prepare": "node scripts/install-git-hooks.mjs",
+    "prepare": "node -e \"const fs=require('node:fs'); if (!fs.existsSync('scripts/install-git-hooks.mjs')) process.exit(0); require('node:child_process').execFileSync(process.execPath, ['scripts/install-git-hooks.mjs'], {stdio:'inherit'});\"",
     "setup": "bash packages/api/scripts/setup.sh",
     "dev": "node scripts/dev.mjs",
     "clean": "tsc -b --clean",

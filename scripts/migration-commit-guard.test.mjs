@@ -267,6 +267,7 @@ test("package scripts and hook config keep the guard in front of commit", () => 
 
   const root = JSON.parse(readFileSync(path.join(repoRoot, "package.json"), "utf8"));
   assert.match(root.scripts.prepare, /install-git-hooks\.mjs/);
+  assert.match(root.scripts.prepare, /existsSync\('scripts\/install-git-hooks\.mjs'\)/);
 
   const hooks = JSON.parse(readFileSync(path.join(repoRoot, ".cursor/hooks.json"), "utf8"));
   const shellHook = hooks.hooks.beforeShellExecution[0];
@@ -277,6 +278,20 @@ test("package scripts and hook config keep the guard in front of commit", () => 
   assert.equal(matcher.test("git -C /tmp/repo commit -m hi"), true);
   assert.equal(matcher.test("git status"), false);
   assert.equal(matcher.test("npm run db:migrate"), false);
+});
+
+test("prepare succeeds in a tree that only has package.json", () => {
+  const root = JSON.parse(readFileSync(path.join(repoRoot, "package.json"), "utf8"));
+  const dir = mkdtempSync(path.join(tmpdir(), "mig-prepare-"));
+  try {
+    const result = spawnSync("sh", ["-c", root.scripts.prepare], {
+      cwd: dir,
+      encoding: "utf8",
+    });
+    assert.equal(result.status, 0, result.stderr);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
 });
 
 test("install-git-hooks points the clone at .githooks", () => {
