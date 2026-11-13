@@ -17928,12 +17928,13 @@ CREATE FUNCTION public.project_access_status(pid integer) RETURNS public.project
     AS $$
     declare
       access_control_setting project_access_control_setting;
+      deleted boolean;
       approved_request boolean;
       uid int;
       admin_bit boolean;
       email_verified boolean;
     begin
-      select nullif (current_setting('session.user_id', TRUE), '')::integer into 
+      select nullif (current_setting('session.user_id', TRUE), '')::integer into
       uid;
       select is_admin(pid, uid) into admin_bit;
       if current_setting('session.email_verified', TRUE) = 'true' then
@@ -17942,14 +17943,16 @@ CREATE FUNCTION public.project_access_status(pid integer) RETURNS public.project
         email_verified = false;
       end if;
       SELECT
-        access_control
+        access_control,
+        is_deleted
       into
-        access_control_setting
+        access_control_setting,
+        deleted
       FROM
         projects
       WHERE
         id = pid;
-      if access_control_setting is null then
+      if access_control_setting is null or deleted is true then
         return 'PROJECT_DOES_NOT_EXIST'::project_access_status;
       end if;
       if session_has_project_access(pid) then
@@ -17966,11 +17969,11 @@ CREATE FUNCTION public.project_access_status(pid integer) RETURNS public.project
         end if;
       end if;
       -- access control setting must be invite_only
-      select 
-        approved into approved_request 
-      from 
-        project_participants 
-      where 
+      select
+        approved into approved_request
+      from
+        project_participants
+      where
         user_id = uid and project_id = pid;
       if approved_request is null then
         return 'DENIED_NOT_REQUESTED'::project_access_status;
@@ -23380,10 +23383,16 @@ CREATE FUNCTION public.session_has_project_access(pid integer) RETURNS boolean
         projects
       where
         projects.id = pid and
-        access_control = 'public'
-    ) or
-    session_is_admin(pid) or
-    session_is_approved_participant(pid)
+        projects.is_deleted = false and
+        (
+          projects.access_control = 'public'
+          or session_is_admin(pid)
+          or (
+            projects.access_control = 'invite_only'
+            and session_is_approved_participant(pid)
+          )
+        )
+    )
   $$;
 
 
@@ -43630,7 +43639,6 @@ GRANT ALL ON FUNCTION public.projects_downloadable_layers_count(p public.project
 --
 
 REVOKE ALL ON FUNCTION public.projects_draft_reports(p public.projects) FROM PUBLIC;
-GRANT ALL ON FUNCTION public.projects_draft_reports(p public.projects) TO anon;
 GRANT ALL ON FUNCTION public.projects_draft_reports(p public.projects) TO seasketch_user;
 GRANT ALL ON FUNCTION public.projects_draft_reports(p public.projects) TO seasketch_superuser;
 
