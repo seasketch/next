@@ -1,5 +1,6 @@
 import { LRUCache } from "lru-cache";
 import { Pool } from "undici";
+import { retryTransient } from "overlay-engine/dist/retryTransient";
 
 const originPools = new Map<string, Pool>();
 
@@ -24,23 +25,25 @@ function requestUrlRange(
   url: URL,
   range: [number, number | null]
 ): Promise<ArrayBuffer> {
-  return poolFor(url.origin)
-    .request({
-      path: `${url.pathname}${url.search}`,
-      method: "GET",
-      headers: {
-        Range: `bytes=${range[0]}-${rangeEnd(range)}`,
-      },
-    })
-    .then(async (response) => {
-      const buffer = await response.body.arrayBuffer();
-      if (response.statusCode >= 400) {
-        throw new Error(
-          `HTTP ${response.statusCode} fetching ${url.href} range=${range[0]}-${rangeEnd(range)}`
-        );
-      }
-      return buffer;
-    });
+  return retryTransient(() =>
+    poolFor(url.origin)
+      .request({
+        path: `${url.pathname}${url.search}`,
+        method: "GET",
+        headers: {
+          Range: `bytes=${range[0]}-${rangeEnd(range)}`,
+        },
+      })
+      .then(async (response) => {
+        const buffer = await response.body.arrayBuffer();
+        if (response.statusCode >= 400) {
+          throw new Error(
+            `HTTP ${response.statusCode} fetching ${url.href} range=${range[0]}-${rangeEnd(range)}`
+          );
+        }
+        return buffer;
+      }),
+  );
 }
 
 /**

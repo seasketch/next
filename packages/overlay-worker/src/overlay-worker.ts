@@ -60,7 +60,7 @@ import {
   getOverlayEngineAccessToken,
   withAccessTokenQueryParam,
 } from "./overlayEngineAccessToken";
-import { resolveStorageUrl } from "overlay-engine";
+import { resolveStorageUrl, retryTransient } from "overlay-engine";
 
 const SIMPLIFICATION_TOLERANCE = 0.000018;
 
@@ -69,7 +69,9 @@ const pools = new Map<string, Pool>();
 function poolFor(origin: string): Pool {
   let pool = pools.get(origin);
   if (!pool) {
-    pool = new Pool(origin, { bodyTimeout: 10 * 1000 });
+    // Same cap as the API and the overlay-engine tests. Extra range reads
+    // queue on these sockets instead of opening one per page.
+    pool = new Pool(origin, { connections: 8, bodyTimeout: 10 * 1000 });
     pools.set(origin, pool);
   }
   return pool;
@@ -99,7 +101,14 @@ async function discardResponseBody(body: {
 async function fetchUploadsRange(
   url: string,
   range: [number, number | null],
-  retriedAuth = false,
+): Promise<ArrayBuffer> {
+  return retryTransient(() => readUploadsRange(url, range, false));
+}
+
+async function readUploadsRange(
+  url: string,
+  range: [number, number | null],
+  retriedAuth: boolean,
 ): Promise<ArrayBuffer> {
   const token = await getOverlayEngineAccessToken();
   const target = resolveStorageUrl(url);
@@ -121,7 +130,7 @@ async function fetchUploadsRange(
   ) {
     await discardResponseBody(response.body);
     bustOverlayEngineAccessTokenCache();
-    return fetchUploadsRange(url, range, true);
+    return readUploadsRange(url, range, true);
   }
   if (response.statusCode >= 400) {
     await discardResponseBody(response.body);

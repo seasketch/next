@@ -131,3 +131,8 @@ export {
   OusDemographicsAggregator,
 } from "./metrics/ousDemographics";
 export { computeBufferedSubjectAndCollar } from "./metrics/computeSubjectCollar";
+export {
+  retryTransient,
+  isTransientSocketError,
+  TRANSIENT_SOCKET_ATTEMPTS,
+} from "./retryTransient";

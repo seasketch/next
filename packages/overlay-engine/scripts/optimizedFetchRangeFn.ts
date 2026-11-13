@@ -1,5 +1,6 @@
 import { Pool } from "undici";
 import { LRUCache } from "lru-cache";
+import { retryTransient } from "../src/retryTransient";
 
 export function makeFetchRangeFn(
   rootUrl: string,
@@ -8,6 +9,7 @@ export function makeFetchRangeFn(
   const pool = new Pool(rootUrl, {
     // Queue extra range reads instead of opening a socket for each one.
     // An unbounded pool gets reset by CloudFront when many tests fetch at once.
+    // A reset on a socket that is reused is retried in retryTransient.
     connections: 8,
     // 10 second timeout for body
     bodyTimeout: 10 * 1000,
@@ -37,19 +39,21 @@ export function makeFetchRangeFn(
     } else {
       cacheMisses++;
       // console.log("cache miss", cacheKey);
-      const request = pool
-        .request({
-          path: url.replace("https://uploads.seasketch.org", ""),
-          method: "GET",
-          headers: {
-            Range: `bytes=${range[0]}-${range[1] ? range[1] : ""}`,
-          },
-        })
-        .then(async (response) => {
-          const buffer = await response.body.arrayBuffer();
-          // console.log("fetched", cacheKey, buffer.byteLength);
-          return buffer;
-        })
+      const request = retryTransient(() =>
+        pool
+          .request({
+            path: url.replace("https://uploads.seasketch.org", ""),
+            method: "GET",
+            headers: {
+              Range: `bytes=${range[0]}-${range[1] ? range[1] : ""}`,
+            },
+          })
+          .then(async (response) => {
+            const buffer = await response.body.arrayBuffer();
+            // console.log("fetched", cacheKey, buffer.byteLength);
+            return buffer;
+          }),
+      )
         .then((buffer) => {
           // console.timeEnd(cacheKey);
           cache.set(cacheKey, buffer);

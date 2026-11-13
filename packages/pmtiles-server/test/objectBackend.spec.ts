@@ -144,6 +144,34 @@ describe("raw object backend", () => {
     expect(body[body.length - 1]).toBe((big.length - 1) % 256);
   });
 
+  it("streams a bounded range larger than the cache cap", async () => {
+    // MAX_RANGE_CACHE_BYTES in rangeCache.ts. A 5MB FlatGeobuf page is in
+    // this bucket: too big to cache, so it must not be buffered either.
+    const bigKey = `fixtures/${crypto.randomUUID()}.bin`;
+    const length = 2 * 1024 * 1024 + 1;
+    const big = new Uint8Array(length);
+    big[0] = 7;
+    big[length - 1] = 9;
+    await env.TILES_BUCKET.put(bigKey, big);
+
+    const response = await handleObjectRequest(
+      new Request(`https://uploads.seasketch.org/${bigKey}`, {
+        headers: { Range: `bytes=0-${length - 1}` },
+      }),
+      { TILES_BUCKET: env.TILES_BUCKET } as Env,
+    );
+    expect(response.status).toBe(206);
+    expect(response.headers.get("X-SS-Range-Cache")).toBe("bypass");
+    expect(response.headers.get("Content-Range")).toBe(
+      `bytes 0-${length - 1}/${length}`,
+    );
+    expect(response.headers.get("Content-Length")).toBe(String(length));
+    const body = new Uint8Array(await response.arrayBuffer());
+    expect(body.length).toBe(length);
+    expect(body[0]).toBe(7);
+    expect(body[length - 1]).toBe(9);
+  });
+
   it("returns 416 for malformed and unsatisfiable ranges", async () => {
     for (const range of ["bytes=0-1,4-5", "items=0-1", "bytes=99-"]) {
       const response = await handleObjectRequest(
