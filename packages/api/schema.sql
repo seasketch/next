@@ -3872,6 +3872,9 @@ begin
   if coalesce(current_setting('seasketch.publishing', true), '') = 'true' then
     return new;
   end if;
+  if coalesce(current_setting('seasketch.defer_toc_has_changes', true), '') = 'true' then
+    return new;
+  end if;
   update projects p
   set draft_table_of_contents_has_changes =
     public.overlay_list_has_unpublished_changes(p.id)
@@ -4487,6 +4490,9 @@ begin
   if coalesce(current_setting('seasketch.skip_library_source_side_effects', true), '') = 'true' then
     return new;
   end if;
+  if coalesce(current_setting('seasketch.defer_toc_has_changes', true), '') = 'true' then
+    return coalesce(new, old);
+  end if;
   update projects p
   set draft_table_of_contents_has_changes =
     public.overlay_list_has_unpublished_changes(p.id)
@@ -4517,6 +4523,9 @@ begin
   end if;
   if coalesce(current_setting('seasketch.skip_library_source_side_effects', true), '') = 'true' then
     return new;
+  end if;
+  if coalesce(current_setting('seasketch.defer_toc_has_changes', true), '') = 'true' then
+    return coalesce(new, old);
   end if;
 
   if tg_op = 'DELETE' then
@@ -5945,30 +5954,46 @@ begin
   if coalesce(current_setting('seasketch.publishing', true), '') = 'true' and new.is_draft = false then
     return new;
   end if;
-  if new.is_folder or new.data_layer_id is null then
-    new.data_source_type = null;
-  else
-    new.data_source_type = data_source_type(new.data_layer_id);
+  if tg_op = 'UPDATE'
+     and old.is_draft = false
+     and coalesce(current_setting('seasketch.skip_library_source_side_effects', true), '') != 'true'
+  then
+    raise 'Cannot alter table of contents items after they are published';
   end if;
-  if (new.data_source_type = 'seasketch-vector' or new.data_source_type = 'seasketch-mvt' or new.data_source_type = 'seasketch-raster') and new.original_source_upload_available = false then
-    new.original_source_upload_available = (
-      select exists (
-        select
-          original_filename
-        from
-          data_upload_outputs
-        where
-          data_upload_outputs.data_source_id = (
-            select
-              data_layers.data_source_id
-            from
-              data_layers
-            where
-              data_layers.id = new.data_layer_id
-          ) and
-          data_upload_outputs.is_original = true
-      )
-    );
+  -- Moving a folder rewrites path on every descendant and nothing else.
+  -- Skip the per-layer source lookup and the rest of the validation.
+  if tg_op = 'UPDATE'
+     and old.path is distinct from new.path
+     and (to_jsonb(old) - 'path') is not distinct from (to_jsonb(new) - 'path')
+  then
+    return new;
+  end if;
+  if tg_op = 'INSERT' or old.data_layer_id is distinct from new.data_layer_id then
+    if new.is_folder or new.data_layer_id is null then
+      new.data_source_type = null;
+    else
+      new.data_source_type = data_source_type(new.data_layer_id);
+    end if;
+    if (new.data_source_type = 'seasketch-vector' or new.data_source_type = 'seasketch-mvt' or new.data_source_type = 'seasketch-raster') and new.original_source_upload_available = false then
+      new.original_source_upload_available = (
+        select exists (
+          select
+            original_filename
+          from
+            data_upload_outputs
+          where
+            data_upload_outputs.data_source_id = (
+              select
+                data_layers.data_source_id
+              from
+                data_layers
+              where
+                data_layers.id = new.data_layer_id
+            ) and
+            data_upload_outputs.is_original = true
+        )
+      );
+    end if;
   end if;
   if old.is_folder != new.is_folder then
     raise 'Cannot change is_folder. Create a new table of contents item';
@@ -9520,7 +9545,10 @@ declare
   child record;
   new_stable_id text;
   old_stable_id text;
+  v_outer boolean;
 begin
+  v_outer := public.toc_has_changes_defer_begin();
+
   select stable_id into old_stable_id
   from table_of_contents_items
   where id = item_id;
@@ -9640,6 +9668,11 @@ begin
       new_stable_id
     );
   end loop;
+
+  perform public.toc_has_changes_defer_end(
+    v_outer,
+    copy_table_of_contents_item_recursive.project_id
+  );
   return copy_id;
 end;
 $$;
@@ -13077,25 +13110,32 @@ CREATE FUNCTION public.delete_report_tab(tab_id integer, move_cards_to_tab_id in
 CREATE FUNCTION public.delete_table_of_contents_branch("tableOfContentsItemId" integer) RETURNS void
     LANGUAGE plpgsql SECURITY DEFINER
     AS $$
-    declare
-      toc_id int;
-      root_path ltree;
-    begin
-      if session_is_admin((select project_id from table_of_contents_items where table_of_contents_items.id = "tableOfContentsItemId")) = false then
-        raise 'Permission denied. Must be a project admin';
-      end if;
-      if (select is_draft from table_of_contents_items where table_of_contents_items.id = "tableOfContentsItemId") = false then
-        raise 'Cannot delete published table of contents items';
-      end if;
-      select path into root_path from table_of_contents_items where table_of_contents_items.id = "tableOfContentsItemId";
-      for toc_id in
-        select table_of_contents_items.id from table_of_contents_items where root_path @> path and is_draft = true
-      loop
-        execute _delete_table_of_contents_item(toc_id);
-      end loop;
-      return;
-    end;
-  $$;
+declare
+  toc_id int;
+  root_path ltree;
+  v_project_id int;
+  v_outer boolean;
+begin
+  select project_id into v_project_id
+  from table_of_contents_items
+  where table_of_contents_items.id = "tableOfContentsItemId";
+  if session_is_admin(v_project_id) = false then
+    raise 'Permission denied. Must be a project admin';
+  end if;
+  if (select is_draft from table_of_contents_items where table_of_contents_items.id = "tableOfContentsItemId") = false then
+    raise 'Cannot delete published table of contents items';
+  end if;
+  select path into root_path from table_of_contents_items where table_of_contents_items.id = "tableOfContentsItemId";
+  v_outer := public.toc_has_changes_defer_begin();
+  for toc_id in
+    select table_of_contents_items.id from table_of_contents_items where root_path @> path and is_draft = true
+  loop
+    execute _delete_table_of_contents_item(toc_id);
+  end loop;
+  perform public.toc_has_changes_defer_end(v_outer, v_project_id);
+  return;
+end;
+$$;
 
 
 --
@@ -17054,6 +17094,7 @@ declare
   folder_stable text;
   layer_rec record;
   i integer := 0;
+  v_outer boolean;
 begin
   if session_is_admin(p_project_id) is not true then
     raise exception 'Permission denied';
@@ -17072,6 +17113,7 @@ begin
   end if;
 
   folder_stable := create_stable_id();
+  v_outer := public.toc_has_changes_defer_begin();
 
   update table_of_contents_items
   set sort_index = sort_index + 1
@@ -17117,6 +17159,8 @@ begin
     perform update_table_of_contents_item_position(layer_rec.id, folder_stable, i);
     i := i + 1;
   end loop;
+
+  perform public.toc_has_changes_defer_end(v_outer, p_project_id);
 end;
 $$;
 
@@ -21169,6 +21213,33 @@ begin
   return old;
 end;
 $$;
+
+
+--
+-- Name: refresh_draft_table_of_contents_has_changes(integer); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.refresh_draft_table_of_contents_has_changes(p_project_id integer) RETURNS void
+    LANGUAGE plpgsql SECURITY DEFINER
+    SET search_path TO 'public', 'pg_temp'
+    AS $$
+begin
+  if p_project_id is null then
+    return;
+  end if;
+  update projects
+  set draft_table_of_contents_has_changes =
+    public.overlay_list_has_unpublished_changes(id)
+  where id = p_project_id;
+end;
+$$;
+
+
+--
+-- Name: FUNCTION refresh_draft_table_of_contents_has_changes(p_project_id integer); Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON FUNCTION public.refresh_draft_table_of_contents_has_changes(p_project_id integer) IS '@omit';
 
 
 --
@@ -25936,28 +26007,38 @@ COMMENT ON FUNCTION public.table_of_contents_items_project_background_jobs(item 
 
 CREATE FUNCTION public.table_of_contents_items_project_update() RETURNS trigger
     LANGUAGE plpgsql SECURITY DEFINER
+    SET search_path TO 'public', 'pg_temp'
     AS $$
+declare
+  v_project_id int;
 begin
-  -- publishing-bailout
   if coalesce(current_setting('seasketch.publishing', true), '') = 'true' then
-    return new;
+    return null;
   end if;
   if coalesce(current_setting('seasketch.skip_library_source_side_effects', true), '') = 'true' then
-    return new;
+    return null;
   end if;
-  -- The flag is what the Publish button reads. Set it from the draft-vs-published
-  -- diff so an edit that is immediately undone (changelog coalesces to nothing,
-  -- and a full publish would copy nothing) turns the button off again.
-  update projects
-  set draft_table_of_contents_has_changes =
-    public.overlay_list_has_unpublished_changes(id)
-  where id = coalesce(new.project_id, old.project_id);
-  if tg_op = 'DELETE' then
-    return old;
+  if coalesce(current_setting('seasketch.defer_toc_has_changes', true), '') = 'true' then
+    return null;
   end if;
-  return new;
+
+  for v_project_id in
+    select distinct project_id
+    from changed_rows
+    where project_id is not null
+  loop
+    perform public.refresh_draft_table_of_contents_has_changes(v_project_id);
+  end loop;
+  return null;
 end;
 $$;
+
+
+--
+-- Name: FUNCTION table_of_contents_items_project_update(); Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON FUNCTION public.table_of_contents_items_project_update() IS 'Sets projects.draft_table_of_contents_has_changes from the draft-vs-published diff once per TOC statement. seasketch.defer_toc_has_changes skips it so a loop can refresh once at the end.';
 
 
 --
@@ -26316,6 +26397,58 @@ CREATE FUNCTION public.to_graphql_id(type text, id integer) RETURNS text
     return camel_case(type || ':' || id::text);
     end;
   $$;
+
+
+--
+-- Name: toc_has_changes_defer_begin(); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.toc_has_changes_defer_begin() RETURNS boolean
+    LANGUAGE plpgsql
+    SET search_path TO 'public', 'pg_temp'
+    AS $$
+declare
+  v_outer boolean;
+begin
+  v_outer := coalesce(current_setting('seasketch.defer_toc_has_changes', true), '')
+    is distinct from 'true';
+  if v_outer then
+    perform set_config('seasketch.defer_toc_has_changes', 'true', true);
+  end if;
+  return v_outer;
+end;
+$$;
+
+
+--
+-- Name: FUNCTION toc_has_changes_defer_begin(); Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON FUNCTION public.toc_has_changes_defer_begin() IS '@omit';
+
+
+--
+-- Name: toc_has_changes_defer_end(boolean, integer); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.toc_has_changes_defer_end(p_outer boolean, p_project_id integer) RETURNS void
+    LANGUAGE plpgsql SECURITY DEFINER
+    SET search_path TO 'public', 'pg_temp'
+    AS $$
+begin
+  if p_outer then
+    perform set_config('seasketch.defer_toc_has_changes', 'false', true);
+    perform public.refresh_draft_table_of_contents_has_changes(p_project_id);
+  end if;
+end;
+$$;
+
+
+--
+-- Name: FUNCTION toc_has_changes_defer_end(p_outer boolean, p_project_id integer); Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON FUNCTION public.toc_has_changes_defer_end(p_outer boolean, p_project_id integer) IS '@omit';
 
 
 --
@@ -28899,6 +29032,7 @@ declare
   "maxRootSortIndex" int;
   "projectId" int;
   item table_of_contents_items;
+  v_outer boolean;
 begin
   select project_id into "projectId"
   from table_of_contents_items
@@ -28922,6 +29056,9 @@ begin
   from table_of_contents_items
   where is_draft = true and project_id = "projectId" and parent_stable_id is null;
 
+  -- One position() call per sibling. Defer the diff until the list is final.
+  v_outer := public.toc_has_changes_defer_begin();
+
   for item in
     select *
     from table_of_contents_items
@@ -28936,6 +29073,8 @@ begin
   for i in array_lower("childIds", 1)..array_upper("childIds", 1) loop
     perform update_table_of_contents_item_position("childIds"[i], "parentStableId", i - 1);
   end loop;
+
+  perform public.toc_has_changes_defer_end(v_outer, "projectId");
 
   return query
   select *
@@ -29037,14 +29176,18 @@ begin
     end if;
   end if;
 
-  if "parentStableId" is not null then
-    update table_of_contents_items
-    set path = parent_path || subpath(path, nlevel(current_path) - 1)
-    where is_draft = true and path <@ current_path;
-  else
-    update table_of_contents_items
-    set path = subpath(path, nlevel(current_path) - 1)
-    where is_draft = true and path <@ current_path;
+  -- A reorder keeps the same parent, so every descendant path is already
+  -- correct. Rewriting them fired the has-changes trigger once per layer.
+  if old_parent is distinct from "parentStableId" then
+    if "parentStableId" is not null then
+      update table_of_contents_items
+      set path = parent_path || subpath(path, nlevel(current_path) - 1)
+      where is_draft = true and path <@ current_path;
+    else
+      update table_of_contents_items
+      set path = subpath(path, nlevel(current_path) - 1)
+      where is_draft = true and path <@ current_path;
+    end if;
   end if;
 
   select * into item from table_of_contents_items where id = "itemId";
@@ -33362,10 +33505,24 @@ CREATE TRIGGER sketch_classes_prohibit_delete_t BEFORE DELETE ON public.sketch_c
 
 
 --
--- Name: table_of_contents_items table_of_contents_items_project_update; Type: TRIGGER; Schema: public; Owner: -
+-- Name: table_of_contents_items table_of_contents_items_project_update_delete; Type: TRIGGER; Schema: public; Owner: -
 --
 
-CREATE TRIGGER table_of_contents_items_project_update AFTER INSERT OR DELETE OR UPDATE ON public.table_of_contents_items FOR EACH ROW EXECUTE FUNCTION public.table_of_contents_items_project_update();
+CREATE TRIGGER table_of_contents_items_project_update_delete AFTER DELETE ON public.table_of_contents_items REFERENCING OLD TABLE AS changed_rows FOR EACH STATEMENT EXECUTE FUNCTION public.table_of_contents_items_project_update();
+
+
+--
+-- Name: table_of_contents_items table_of_contents_items_project_update_insert; Type: TRIGGER; Schema: public; Owner: -
+--
+
+CREATE TRIGGER table_of_contents_items_project_update_insert AFTER INSERT ON public.table_of_contents_items REFERENCING NEW TABLE AS changed_rows FOR EACH STATEMENT EXECUTE FUNCTION public.table_of_contents_items_project_update();
+
+
+--
+-- Name: table_of_contents_items table_of_contents_items_project_update_update; Type: TRIGGER; Schema: public; Owner: -
+--
+
+CREATE TRIGGER table_of_contents_items_project_update_update AFTER UPDATE ON public.table_of_contents_items REFERENCING NEW TABLE AS changed_rows FOR EACH STATEMENT EXECUTE FUNCTION public.table_of_contents_items_project_update();
 
 
 --
@@ -44046,6 +44203,13 @@ REVOKE ALL ON FUNCTION public.record_project_activity_on_delete() FROM PUBLIC;
 
 
 --
+-- Name: FUNCTION refresh_draft_table_of_contents_has_changes(p_project_id integer); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.refresh_draft_table_of_contents_has_changes(p_project_id integer) FROM PUBLIC;
+
+
+--
 -- Name: FUNCTION regexp_match(public.citext, public.citext); Type: ACL; Schema: public; Owner: -
 --
 
@@ -48231,6 +48395,20 @@ GRANT ALL ON FUNCTION public.tilebbox(z integer, x integer, y integer, srid inte
 
 REVOKE ALL ON FUNCTION public.to_graphql_id(type text, id integer) FROM PUBLIC;
 GRANT ALL ON FUNCTION public.to_graphql_id(type text, id integer) TO anon;
+
+
+--
+-- Name: FUNCTION toc_has_changes_defer_begin(); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.toc_has_changes_defer_begin() FROM PUBLIC;
+
+
+--
+-- Name: FUNCTION toc_has_changes_defer_end(p_outer boolean, p_project_id integer); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.toc_has_changes_defer_end(p_outer boolean, p_project_id integer) FROM PUBLIC;
 
 
 --
