@@ -8,6 +8,8 @@ export default function SketchGeometryTypeSelector({
   onChange,
   simpleFeatures,
   optionDetails,
+  allowed,
+  disabled,
 }: {
   value: SketchGeometryType;
   onChange?: (value: SketchGeometryType) => void;
@@ -17,8 +19,11 @@ export default function SketchGeometryTypeSelector({
    * is selected, so polygon-only settings stay with Polygon.
    */
   optionDetails?: Partial<Record<SketchGeometryType, ReactNode>>;
+  /** Limits the choices. Order is preserved. */
+  allowed?: SketchGeometryType[];
+  disabled?: boolean;
 }) {
-  let options = [
+  let options = allowed || [
     SketchGeometryType.Point,
     SketchGeometryType.Linestring,
     SketchGeometryType.Polygon,
@@ -32,11 +37,11 @@ export default function SketchGeometryTypeSelector({
     [SketchGeometryType.ChooseFeature]: "Choose feature",
     [SketchGeometryType.FilteredPlanningUnits]: "Filtered planning units",
   };
-  if (simpleFeatures) {
+  if (!allowed && simpleFeatures) {
     options = options.slice(0, -1);
   }
   return (
-    <div>
+    <div className={disabled ? "opacity-60" : undefined}>
       {options.map((option, i) => {
         const checked = value === option;
         const IconComponent = Icons[option] || (() => null);
@@ -54,25 +59,30 @@ export default function SketchGeometryTypeSelector({
             key={option}
           >
             <div
-              className="px-4 py-4 flex cursor-pointer items-center"
+              className={`px-4 py-4 flex items-center ${
+                disabled ? "cursor-not-allowed" : "cursor-pointer"
+              }`}
               onClick={() => {
-                if (onChange) {
-                  onChange(option);
+                if (disabled || !onChange) {
+                  return;
                 }
+                onChange(option);
               }}
             >
               <input
                 className="block text-primary-500"
                 onChange={() => {
-                  if (onChange) {
-                    onChange(option);
+                  if (disabled || !onChange) {
+                    return;
                   }
+                  onChange(option);
                 }}
                 type="radio"
                 id={option}
                 name="geometryType"
                 value={option}
                 checked={checked}
+                disabled={disabled}
               />
               <label
                 className={`block w-full flex-1 cursor-pointer px-4 ${
