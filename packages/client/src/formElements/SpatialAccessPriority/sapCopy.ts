@@ -2,12 +2,14 @@ import { SketchGeometryType } from "../../generated/graphql";
 import fromMarkdown, { questionBodyFromMarkdown } from "../fromMarkdown";
 
 /**
- * Stock respondent copy for Spatial Access Priority.
+ * Stock documents written onto a Spatial Access Priority element when an
+ * admin changes its geometry. Respondents read the stored document and
+ * alternateLanguageSettings. Nothing here is substituted at render time.
  *
- * Polygon strings are the historical defaults. A survey that still has those
- * words keeps them while the question draws polygons. Switching the sketch
- * class to points substitutes the point copy, and a customized document is
- * left alone.
+ * Polygon strings are the historical defaults. A customized document is left
+ * alone. Switching geometry replaces a document only when its text is still
+ * the other geometry's stock wording, and drops translations of that field
+ * so the language tabs are not left describing the old geometry.
  */
 
 // eslint-disable-next-line i18next/no-literal-string
@@ -117,7 +119,7 @@ export function polygonInstruction(kind: SapInstructionKind): unknown {
   return polygonDocs[kind];
 }
 
-export function resolveSapInstruction(
+function stockDocument(
   kind: SapInstructionKind,
   stored: unknown,
   geometryType: SketchGeometryType | null | undefined
@@ -140,63 +142,8 @@ export function resolveSapInstruction(
   return stored;
 }
 
-const instructionSettingKey: Record<SapInstructionKind, string> = {
-  question: "body",
-  begin: "beginBody",
-  list: "listShapesBody",
-  nav: "navBody",
-};
-
-function withoutInstructionTranslation(
-  alternateLanguageSettings: { [key: string]: any } | null | undefined,
-  kind: SapInstructionKind
-): { [key: string]: any } {
-  if (
-    alternateLanguageSettings === null ||
-    alternateLanguageSettings === undefined
-  ) {
-    return {};
-  }
-  const key = instructionSettingKey[kind];
-  const next: { [lang: string]: any } = {};
-  for (const [lang, value] of Object.entries(alternateLanguageSettings)) {
-    if (value !== null && typeof value === "object" && key in value) {
-      const copy = { ...value };
-      delete copy[key];
-      next[lang] = copy;
-    } else {
-      next[lang] = value;
-    }
-  }
-  return next;
-}
-
-export function instructionPresentation(
-  kind: SapInstructionKind,
-  stored: unknown,
-  geometryType: SketchGeometryType | null | undefined,
-  alternateLanguageSettings: { [key: string]: any } | null | undefined,
-  editable: boolean | undefined
-): { body: any; alternateLanguageSettings: { [key: string]: any } } {
-  const body = resolveSapInstruction(kind, stored, geometryType);
-  if (!editable && instructionReplacedStock(kind, stored, geometryType)) {
-    return {
-      body,
-      alternateLanguageSettings: withoutInstructionTranslation(
-        alternateLanguageSettings,
-        kind
-      ),
-    };
-  }
-  return { body, alternateLanguageSettings: alternateLanguageSettings || {} };
-}
-
-/**
- * True when the document shown to a respondent is stock copy for the other
- * geometry, so a translation written for the stored text would describe the
- * wrong kind of feature.
- */
-export function instructionReplacedStock(
+/** True when saving this geometry would replace the stored stock document. */
+function stockWillBeReplaced(
   kind: SapInstructionKind,
   stored: unknown,
   geometryType: SketchGeometryType | null | undefined
@@ -226,7 +173,7 @@ export function componentSettingsForGeometry<T extends InstructionSettings>(
     ["navBody", "nav"],
   ];
   for (const [key, kind] of pairs) {
-    const resolved = resolveSapInstruction(kind, settings?.[key], geometryType);
+    const resolved = stockDocument(kind, settings?.[key], geometryType);
     if (resolved !== settings?.[key]) {
       next[key] = resolved;
       changed = true;
@@ -248,16 +195,16 @@ export function alternateLanguageSettingsForGeometry(
     return { value: {}, changed: false };
   }
   const drop: string[] = [];
-  if (instructionReplacedStock("begin", settings.beginBody, geometryType)) {
+  if (stockWillBeReplaced("begin", settings.beginBody, geometryType)) {
     drop.push("beginBody");
   }
-  if (instructionReplacedStock("list", settings.listShapesBody, geometryType)) {
+  if (stockWillBeReplaced("list", settings.listShapesBody, geometryType)) {
     drop.push("listShapesBody");
   }
-  if (instructionReplacedStock("nav", settings.navBody, geometryType)) {
+  if (stockWillBeReplaced("nav", settings.navBody, geometryType)) {
     drop.push("navBody");
   }
-  if (instructionReplacedStock("question", question, geometryType)) {
+  if (stockWillBeReplaced("question", question, geometryType)) {
     drop.push("body");
   }
   if (drop.length === 0) {
@@ -289,7 +236,7 @@ export function questionBodyForGeometry(
   body: unknown,
   geometryType: SketchGeometryType | null | undefined
 ): unknown | null {
-  const resolved = resolveSapInstruction("question", body, geometryType);
+  const resolved = stockDocument("question", body, geometryType);
   if (resolved === body) {
     return null;
   }
@@ -389,9 +336,9 @@ function withoutBodyTranslation(
 }
 
 /**
- * Rewrites stock Feature Name and priority prompts when the geometry changes.
- * Custom wording is left in place. A replaced prompt drops translated copies
- * of the old wording.
+ * Stock Feature Name and priority prompts to store when the geometry changes.
+ * Custom wording is left in place. A replaced prompt drops translations of
+ * the old wording so the language tabs can be filled in again.
  */
 export function adaptSketchFormElement<T extends SketchFormElement>(
   element: T,

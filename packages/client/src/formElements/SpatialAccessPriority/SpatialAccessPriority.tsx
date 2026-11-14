@@ -108,9 +108,9 @@ import {
   alternateLanguageSettingsForGeometry,
   componentSettingsForGeometry,
   geometryTypeLocked,
-  instructionPresentation,
   isPointGeometry,
   polygonInstruction,
+  proseText,
   questionBodyForGeometry,
 } from "./sapCopy";
 import { drawnFeatureCamera } from "./sapFeatureCamera";
@@ -821,28 +821,6 @@ function SpatialAccessPriorityInner(
     </>
   );
 
-  const beginCopy = instructionPresentation(
-    "begin",
-    props.componentSettings.beginBody,
-    props.sketchClass?.geometryType,
-    props.alternateLanguageSettings,
-    props.editable
-  );
-  const listCopy = instructionPresentation(
-    "list",
-    props.componentSettings.listShapesBody,
-    props.sketchClass?.geometryType,
-    props.alternateLanguageSettings,
-    props.editable
-  );
-  const navCopy = instructionPresentation(
-    "nav",
-    props.componentSettings.navBody,
-    props.sketchClass?.geometryType,
-    props.alternateLanguageSettings,
-    props.editable
-  );
-
   return (
     <MapUIProvider preferencesKey={`${props.slug}-spatial-access-priority`}>
       <>
@@ -942,25 +920,20 @@ function SpatialAccessPriorityInner(
                 {...props}
                 setSector={setSector}
                 geometryType={props.sketchClass?.geometryType}
-                componentSettings={{
-                  ...props.componentSettings,
-                  navBody: navCopy.body,
-                }}
-                alternateLanguageSettings={navCopy.alternateLanguageSettings}
               />
             )}
             {(props.stage === STAGES.DRAWING_INTRO ||
               props.stage === STAGES.MOBILE_DRAW_FIRST_SHAPE) && (
               <>
                 <FormElementBody
-                  key={`begin-${props.sketchClass?.geometryType || "polygon"}`}
-                  alternateLanguageSettings={beginCopy.alternateLanguageSettings}
+                  key={proseText(props.componentSettings.beginBody)}
+                  alternateLanguageSettings={props.alternateLanguageSettings}
                   componentSettingName={"beginBody"}
                   componentSettings={props.componentSettings}
                   required={false}
                   formElementId={props.id}
                   isInput={false}
-                  body={beginCopy.body}
+                  body={props.componentSettings.beginBody}
                   editable={props.editable}
                 />
                 {style.isSmall && (
@@ -977,14 +950,14 @@ function SpatialAccessPriorityInner(
             {props.stage === STAGES.LIST_SHAPES && (
               <>
                 <FormElementBody
-                  key={`list-${props.sketchClass?.geometryType || "polygon"}`}
-                  alternateLanguageSettings={listCopy.alternateLanguageSettings}
+                  key={proseText(props.componentSettings.listShapesBody)}
+                  alternateLanguageSettings={props.alternateLanguageSettings}
                   required={false}
                   componentSettings={props.componentSettings}
                   componentSettingName={"listShapesBody"}
                   formElementId={props.id}
                   isInput={false}
-                  body={listCopy.body}
+                  body={props.componentSettings.listShapesBody}
                   editable={props.editable}
                 />
                 <div
@@ -1163,16 +1136,9 @@ function SpatialAccessPriorityInner(
                 <SketchForm
                   key={state.featureId}
                   formElements={
-                    (props.sketchClass?.form?.formElements || [])
-                      .filter((el) =>
-                        visibleInSector(el, props.componentSettings, sector)
-                      )
-                      .map((el) =>
-                        adaptSketchFormElement(
-                          el,
-                          props.sketchClass?.geometryType
-                        )
-                      ) as FormElementFullDetailsFragment[]
+                    (props.sketchClass?.form?.formElements || []).filter((el) =>
+                      visibleInSector(el, props.componentSettings, sector)
+                    ) as FormElementFullDetailsFragment[]
                   }
                   logicRules={props.sketchClass?.form?.logicRules || []}
                   startingProperties={state}

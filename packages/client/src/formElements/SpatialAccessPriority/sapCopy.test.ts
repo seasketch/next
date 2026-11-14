@@ -2,16 +2,15 @@ import { SketchGeometryType } from "../../generated/graphql";
 import {
   adaptFeatureNameElement,
   adaptSketchFormElement,
+  alternateLanguageSettingsForGeometry,
   AREA_NAME_PREFIX,
   componentSettingsForGeometry,
   geometryTypeLocked,
-  instructionReplacedStock,
   POINT_NAME_PREFIX,
   polygonInstruction,
   polygonQuestionMarkdown,
   proseText,
   questionBodyForGeometry,
-  resolveSapInstruction,
 } from "./sapCopy";
 import { questionBodyFromMarkdown } from "../fromMarkdown";
 
@@ -33,101 +32,6 @@ describe("proseText", () => {
   });
 });
 
-describe("resolveSapInstruction", () => {
-  const polygonQuestion = polygonInstruction("question");
-  const custom = questionBodyFromMarkdown("# Where do you fish?");
-
-  it("keeps stored polygon copy for polygon questions", () => {
-    expect(
-      resolveSapInstruction(
-        "question",
-        polygonQuestion,
-        SketchGeometryType.Polygon
-      )
-    ).toBe(polygonQuestion);
-  });
-
-  it("uses the polygon default when a polygon question has no body", () => {
-    expect(
-      proseText(
-        resolveSapInstruction("question", null, SketchGeometryType.Polygon)
-      )
-    ).toContain("valued areas");
-  });
-
-  it("substitutes point copy when the stored text is still the polygon default", () => {
-    const resolved = resolveSapInstruction(
-      "question",
-      polygonQuestion,
-      SketchGeometryType.Point
-    );
-    expect(proseText(resolved)).toContain("place a point");
-    expect(proseText(resolved)).not.toContain("valued areas");
-  });
-
-  it("keeps the stock point list to the instruction sentence", () => {
-    expect(
-      proseText(
-        resolveSapInstruction(
-          "list",
-          polygonInstruction("list"),
-          SketchGeometryType.Point
-        )
-      )
-    ).toBe(
-      "Add as many points as you need for this activity, then set how important each location is."
-    );
-  });
-
-  it("keeps an edited prompt when the geometry is a point", () => {
-    expect(
-      resolveSapInstruction("begin", custom, SketchGeometryType.Point)
-    ).toBe(custom);
-  });
-
-  it("restores polygon copy if the stored text is the point default", () => {
-    const pointQuestion = resolveSapInstruction(
-      "question",
-      polygonQuestion,
-      SketchGeometryType.Point
-    );
-    const restored = resolveSapInstruction(
-      "question",
-      pointQuestion,
-      SketchGeometryType.Polygon
-    );
-    expect(proseText(restored)).toContain("valued areas");
-  });
-
-  it("treats a missing geometry type as polygon", () => {
-    expect(resolveSapInstruction("nav", polygonInstruction("nav"), null)).toBe(
-      polygonInstruction("nav")
-    );
-  });
-});
-
-describe("instructionReplacedStock", () => {
-  it("flags a polygon default shown on a point question", () => {
-    expect(
-      instructionReplacedStock(
-        "list",
-        polygonInstruction("list"),
-        SketchGeometryType.Point
-      )
-    ).toBe(true);
-  });
-
-  it("keeps translations when the polygon question still shows its stored text", () => {
-    expect(
-      instructionReplacedStock(
-        "list",
-        polygonInstruction("list"),
-        SketchGeometryType.Polygon
-      )
-    ).toBe(false);
-  });
-});
-
 describe("componentSettingsForGeometry", () => {
   it("rewrites stock bodies when switching to points and leaves custom text", () => {
     const customList = questionBodyFromMarkdown("Keep my list text");
@@ -144,6 +48,7 @@ describe("componentSettingsForGeometry", () => {
     expect(proseText(settings.beginBody)).toContain("place a point");
     expect(settings.listShapesBody).toBe(customList);
     expect(proseText(settings.navBody)).toContain("prioritize points");
+    expect(proseText(settings.listShapesBody)).toBe("Keep my list text");
     expect(settings.sectorOptions).toEqual([
       { label: "Diving", value: "diving" },
     ]);
@@ -179,6 +84,58 @@ describe("questionBodyForGeometry", () => {
       SketchGeometryType.Point
     );
     expect(proseText(next)).toContain("place a point");
+  });
+
+  it("leaves a customized question alone", () => {
+    const custom = questionBodyFromMarkdown("# Where do you fish?");
+    expect(
+      questionBodyForGeometry(custom, SketchGeometryType.Point)
+    ).toBeNull();
+  });
+
+  it("writes the one-sentence point list when the list is still polygon stock", () => {
+    const { settings } = componentSettingsForGeometry(
+      { listShapesBody: polygonInstruction("list") },
+      SketchGeometryType.Point
+    );
+    expect(proseText(settings.listShapesBody)).toBe(
+      "Add as many points as you need for this activity, then set how important each location is."
+    );
+  });
+});
+
+describe("alternateLanguageSettingsForGeometry", () => {
+  it("drops translations of stock fields the geometry change rewrites", () => {
+    const result = alternateLanguageSettingsForGeometry(
+      {
+        sm: {
+          body: questionBodyFromMarkdown("# Tusi"),
+          beginBody: questionBodyFromMarkdown("Amata"),
+          sectorOptions: [{ label: "Faigafaiva" }],
+        },
+      },
+      { beginBody: polygonInstruction("begin") },
+      polygonInstruction("question"),
+      SketchGeometryType.Point
+    );
+    expect(result.changed).toBe(true);
+    expect(result.value.sm.body).toBeUndefined();
+    expect(result.value.sm.beginBody).toBeUndefined();
+    expect(result.value.sm.sectorOptions).toEqual([{ label: "Faigafaiva" }]);
+  });
+
+  it("keeps translations when the stored wording is custom", () => {
+    const stored = {
+      sm: { body: questionBodyFromMarkdown("# Tusi") },
+    };
+    const result = alternateLanguageSettingsForGeometry(
+      stored,
+      {},
+      questionBodyFromMarkdown("# Where do you fish?"),
+      SketchGeometryType.Point
+    );
+    expect(result.changed).toBe(false);
+    expect(result.value).toBe(stored);
   });
 });
 

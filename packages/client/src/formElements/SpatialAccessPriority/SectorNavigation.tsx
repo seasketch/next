@@ -11,7 +11,7 @@ import {
 } from "../FormElement";
 import { FormElementOption } from "../FormElementOptionsInput";
 import { SketchGeometryType } from "../../generated/graphql";
-import { isPointGeometry } from "./sapCopy";
+import { isPointGeometry, proseText } from "./sapCopy";
 import SpatialAccessPriority, {
   SAPValueType,
   SpatialAccessPriorityProps,
@@ -49,6 +49,7 @@ export default function SectorNavigation(props: SectorNavigationProps) {
   return (
     <div className="mb-5">
       <FormElementBody
+        key={proseText(props.componentSettings.navBody)}
         componentSettingName={"navBody"}
         componentSettings={props.componentSettings}
         required={false}

@@ -9,7 +9,7 @@ import {
 } from "../FormElement";
 import { FormElementOption } from "../FormElementOptionsInput";
 import OptionPicker from "../OptionPicker";
-import { instructionPresentation } from "./sapCopy";
+import { proseText } from "./sapCopy";
 import {
   SpatialAccessPriorityProps,
   STAGES,
@@ -31,23 +31,16 @@ export default function ChooseSectors(props: ChooseSectorsProps) {
     "sectorOptions",
     props
   );
-  const question = instructionPresentation(
-    "question",
-    props.body,
-    props.sketchClass?.geometryType,
-    props.alternateLanguageSettings,
-    props.editable
-  );
   return (
     <div className="mb-5">
       <FormElementBody
-        key={props.sketchClass?.geometryType || "polygon"}
+        key={proseText(props.body)}
         required={props.isRequired}
         formElementId={props.id}
         isInput={true}
-        body={question.body}
+        body={props.body}
         editable={props.editable}
-        alternateLanguageSettings={question.alternateLanguageSettings}
+        alternateLanguageSettings={props.alternateLanguageSettings}
       />
       {!options?.length && (
         <div className="rounded p-4 mt-4 bg-yellow-400 bg-opacity-60 text-black text-sm">
