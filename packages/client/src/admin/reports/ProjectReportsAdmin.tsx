@@ -15,6 +15,7 @@ import {
 } from "../../generated/graphql";
 import GeographyRequiredForReportsPrompt from "../../components/GeographyRequiredForReportsPrompt";
 import SketchClassReportsAdmin from "../sketchClasses/SketchClassReportsAdmin";
+import { isSurveyFormElementSketchClass } from "./assignableSketchClass";
 
 /** Same gradient + dot grid as {@link ../sketchClasses/SketchClassForm} tab content. */
 const sketchClassAdminReportWorkspaceBackground: { background: string } = {
@@ -50,7 +51,8 @@ export default function ProjectReportsAdmin() {
   const sketchClasses = useMemo(
     () =>
       (contextQuery.data?.projectBySlug?.sketchClasses || []).filter(
-        (sc: any): sc is NonNullable<typeof sc> => Boolean(sc)
+        (sc: any): sc is NonNullable<typeof sc> =>
+          Boolean(sc) && !isSurveyFormElementSketchClass(sc)
       ),
     [contextQuery.data?.projectBySlug?.sketchClasses]
   );

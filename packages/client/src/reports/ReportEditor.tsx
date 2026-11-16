@@ -25,6 +25,7 @@ import {
   useSetPrimaryReportForSketchClassMutation,
   useUpdateReportTitleMutation,
 } from "../generated/graphql";
+import { isSurveyFormElementSketchClass } from "../admin/reports/assignableSketchClass";
 import { useGlobalErrorHandler } from "../components/GlobalErrorHandler";
 import useDialog from "../components/useDialog";
 import Modal from "../components/Modal";
@@ -582,7 +583,9 @@ export default function ReportEditor({
     reportAssignmentsQuery.data?.projectBySlug?.sketchClasses || []
   )
     .filter((sc: any): sc is NonNullable<typeof sc> => Boolean(sc))
-    .filter((sc) => !sc.isArchived && sc.formElementId == null)
+    .filter(
+      (sc) => !sc.isArchived && !isSurveyFormElementSketchClass(sc)
+    )
     .sort((a: any, b: any) => a.name.localeCompare(b.name));
 
   const editMenuDisabled = editing != null;
