@@ -381,6 +381,7 @@ export default function LayerVersioning({
       {versions.find((v) => v.source.id === selectedItemId) && (
         <VersionDetails
           layerName={item.title}
+          stableId={item.stableId}
           itemId={item.id}
           version={
             versions.find((v) => v.source.id === selectedItemId)!.version
@@ -532,6 +533,7 @@ function VersionDetails({
   archivedDataSource,
   hasActiveJobs,
   layerName,
+  stableId,
 }: {
   itemId: number;
   source: FullAdminSourceFragment & { isArchived: boolean };
@@ -545,6 +547,7 @@ function VersionDetails({
   archivedDataSource?: Pick<ArchivedDataSource, "sublayer" | "sourceLayer">;
   hasActiveJobs?: boolean;
   layerName: string;
+  stableId?: string | null;
 }) {
   const onError = useGlobalErrorHandler();
   const changeLogRefetchQueries = useMemo(
@@ -666,6 +669,7 @@ function VersionDetails({
         <LayerInfoList
           layerName={layerName}
           isLatestVersion={version === layer.version}
+          stableId={stableId}
           source={source}
           layer={{
             ...layer,

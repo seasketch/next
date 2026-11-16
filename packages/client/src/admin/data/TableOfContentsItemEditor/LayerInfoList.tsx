@@ -14,6 +14,8 @@ import HostedLayerInfo from "./HostedLayerInfo";
 import ArcGISDynamicMapServiceLayerInfo from "./ArcGISDynamicMapServiceLayerInfo";
 import { ReactNode, useEffect, useMemo, useState } from "react";
 import { InfoCircledIcon, PersonIcon, TableIcon } from "@radix-ui/react-icons";
+import { ClipboardCopyIcon } from "@heroicons/react/outline";
+import { copyTextToClipboard } from "../../../projects/Forums/InlineAuthorDetails";
 import GeostatsModal from "../GLStyleEditor/GeostatsModal";
 import ArcGISTiledRasterSettings from "../ArcGISTiledRasterSettings";
 import ArcGISVectorLayerInfo from "./ArcGISVectorLayerInfo";
@@ -41,6 +43,7 @@ export default function LayerInfoList({
   children,
   isLatestVersion,
   layerName,
+  stableId,
 }: {
   source: Pick<
     FullAdminSourceFragment,
@@ -69,6 +72,7 @@ export default function LayerInfoList({
   children?: ReactNode;
   isLatestVersion: boolean;
   layerName: string;
+  stableId?: string | null;
 }) {
   const { t } = useTranslation("admin:data");
   let profile = source.authorProfile;
@@ -127,6 +131,7 @@ export default function LayerInfoList({
   return (
     <>
       <SettingsDefinitionList>
+        {stableId ? <StableIdDetails stableId={stableId} /> : null}
         <SettingsDLListItem
           term={t("Created By")}
           description={
@@ -414,6 +419,40 @@ export default function LayerInfoList({
         />
       )}
     </>
+  );
+}
+
+function StableIdDetails({ stableId }: { stableId: string }) {
+  const { t } = useTranslation("admin:data");
+  const [copied, setCopied] = useState(false);
+  return (
+    <SettingsDLListItem
+      term={t("Stable ID")}
+      description={
+        <div className="flex min-w-0 items-start gap-2">
+          <span className="min-w-0 break-all font-mono text-xs select-text">
+            {stableId}
+          </span>
+          <button
+            type="button"
+            className="mt-0.5 inline-flex shrink-0 items-center rounded border border-blue-300 bg-blue-50 px-1 text-blue-800"
+            aria-label={t("Copy stable id")}
+            onClick={() => {
+              copyTextToClipboard(stableId);
+              setCopied(true);
+              setTimeout(() => setCopied(false), 2000);
+            }}
+          >
+            <ClipboardCopyIcon className="h-4 w-4" />
+            {copied ? (
+              <span className="ml-1 text-xs">
+                <Trans ns="homepage">Copied!</Trans>
+              </span>
+            ) : null}
+          </button>
+        </div>
+      }
+    />
   );
 }
 
