@@ -428,14 +428,15 @@ function StableIdDetails({ stableId }: { stableId: string }) {
   return (
     <SettingsDLListItem
       term={t("Stable ID")}
+      alignCenter
       description={
-        <div className="flex min-w-0 items-start gap-2">
-          <span className="min-w-0 break-all font-mono text-xs select-text">
+        <div className="flex w-full min-w-0 items-center gap-1.5">
+          <span className="min-w-0 break-all font-mono leading-5 select-text">
             {stableId}
           </span>
           <button
             type="button"
-            className="mt-0.5 inline-flex shrink-0 items-center rounded border border-blue-300 bg-blue-50 px-1 text-blue-800"
+            className="inline-flex h-5 w-5 shrink-0 items-center justify-center rounded border border-blue-300 bg-blue-50 text-blue-800"
             aria-label={t("Copy stable id")}
             onClick={() => {
               copyTextToClipboard(stableId);
@@ -443,13 +444,13 @@ function StableIdDetails({ stableId }: { stableId: string }) {
               setTimeout(() => setCopied(false), 2000);
             }}
           >
-            <ClipboardCopyIcon className="h-4 w-4" />
-            {copied ? (
-              <span className="ml-1 text-xs">
-                <Trans ns="homepage">Copied!</Trans>
-              </span>
-            ) : null}
+            <ClipboardCopyIcon className="h-3.5 w-3.5" />
           </button>
+          {copied ? (
+            <span className="text-xs leading-5 text-gray-500">
+              <Trans ns="homepage">Copied!</Trans>
+            </span>
+          ) : null}
         </div>
       }
     />
