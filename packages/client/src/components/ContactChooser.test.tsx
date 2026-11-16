@@ -47,6 +47,11 @@ describe("ContactChooser", () => {
     expect(
       screen.getByRole("link", { name: "Email SeaSketch support" })
     ).toHaveAttribute("href", `mailto:${SEASKETCH_SUPPORT_EMAIL}`);
+    const mark = document.querySelector("img");
+    expect(mark).toHaveAttribute("width", "149");
+    expect(mark).toHaveAttribute("height", "128");
+    expect(mark).toHaveClass("w-auto");
+    expect(mark).not.toHaveClass("w-7");
   });
 
   test("emails SeaSketch directly when there is no project", () => {
