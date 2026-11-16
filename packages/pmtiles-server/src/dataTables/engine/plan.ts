@@ -34,7 +34,8 @@ export interface ReadSpan {
   rowEnd: number;
   /**
    * Column stats prove every row overlaps the query's `when` window, so the
-   * per-row clock test can be skipped.
+   * per-row clock test can be skipped. `when.step` still needs each row's
+   * interval to choose bins, so that path must read `_when_*` itself.
    */
   whenSaturated?: boolean;
 }
