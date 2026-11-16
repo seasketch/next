@@ -1,5 +1,5 @@
 import { ReactNode, useState } from "react";
-import { UserGroupIcon } from "@heroicons/react/outline";
+import { UserIcon } from "@heroicons/react/outline";
 import { Trans, useTranslation } from "react-i18next";
 import { useParams } from "react-router-dom";
 import { useProjectMetadataQuery } from "../generated/graphql";
@@ -90,9 +90,7 @@ export function ContactChooserModal(props: {
           title={t("Project administrator")}
           email={props.project.email}
           action={t("Email project administrator")}
-          icon={
-            <UserGroupIcon className="h-6 w-6" aria-hidden="true" />
-          }
+          icon={<UserIcon className="h-6 w-6" aria-hidden="true" />}
           tone="project"
           onClick={props.onClose}
         >
@@ -111,7 +109,13 @@ export function ContactChooserModal(props: {
           email={SEASKETCH_SUPPORT_EMAIL}
           action={t("Email SeaSketch support")}
           icon={
-            <img src={logo} alt="" className="h-7 w-7" />
+            <img
+              src={logo}
+              alt=""
+              width={149}
+              height={128}
+              className="h-7 w-auto max-w-none shrink-0"
+            />
           }
           tone="software"
           onClick={props.onClose}
