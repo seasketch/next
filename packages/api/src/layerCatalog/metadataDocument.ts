@@ -23,6 +23,16 @@ export function parseMetadataFormat(value: unknown): MetadataFormat | null {
 /** Spreadsheet excerpt length. Long enough for a full abstract, short of an unbounded cell. */
 export const METADATA_PLAIN_TEXT_LIMIT = 8000;
 
+/**
+ * Formatted metadata kept in one spreadsheet cell.
+ *
+ * Excel refuses a cell longer than 32,767 characters and can drop the columns
+ * that follow it. 32,000 stays under that ceiling so a long description still
+ * leaves the URL columns readable. Truncation keeps this many characters,
+ * including the trailing ellipsis.
+ */
+export const METADATA_HTML_LIMIT = 32000;
+
 const INLINE_PARENTS = new Set([
   "paragraph",
   "heading",
@@ -48,6 +58,23 @@ export function metadataPlainText(
   collectPlain(doc, parts);
   const text = parts.join("").replace(/\s+/g, " ").trim();
   return truncateText(text, limit);
+}
+
+/**
+ * Body markup of a metadata document: headings, emphasis, and links stay in
+ * the HTML. The result is the cell value, so callers quote it for CSV. Text
+ * longer than `limit` is cut on a code-point boundary and ends with an ellipsis.
+ */
+export function metadataHtml(
+  document: unknown,
+  limit = METADATA_HTML_LIMIT
+): string {
+  const doc = asNode(document);
+  if (!doc || limit < 1 || !metadataPlainText(doc)) {
+    return "";
+  }
+  const html = renderHtml(doc).replace(/\s+$/u, "");
+  return truncateText(html, limit);
 }
 
 export function renderMetadata(document: unknown, format: MetadataFormat): string {

@@ -1,4 +1,4 @@
-import { metadataPlainText } from "./metadataDocument";
+import { metadataHtml, metadataPlainText } from "./metadataDocument";
 
 /**
  * Draft layer spreadsheet columns.
@@ -117,6 +117,7 @@ export const catalogColumns: CatalogColumn[] = [
   { header: "Uploaded file", value: (layer) => uploadedFileName(layer) },
   { header: "Normalized file", value: (layer) => normalizedFile(layer).label },
   { header: "Metadata", value: (layer) => metadataValue(layer) },
+  { header: "Metadata HTML", value: (layer) => metadataHtmlValue(layer) },
   {
     header: "Downloadable",
     value: (layer) => (layer.enableDownload ? "Yes" : "No"),
@@ -350,6 +351,13 @@ function metadataValue(layer: CatalogLayer): string {
   return metadataPlainText(layer.metadata);
 }
 
+function metadataHtmlValue(layer: CatalogLayer): string {
+  if (layer.metadata == null) {
+    return "";
+  }
+  return metadataHtml(layer.metadata);
+}
+
 function dynamicMetadataEndpoint(layer: CatalogLayer): string {
   if (!layer.sourceType || !DYNAMIC_METADATA_SOURCE_TYPES.has(layer.sourceType)) {
     return "";
@@ -534,6 +542,12 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
+/**
+ * RFC 4180 cell. Markup is left intact: quotes, commas, and line breaks are
+ * quoted rather than stripped. A leading spreadsheet formula character is
+ * prefixed so Excel does not evaluate the cell. HTML from the metadata
+ * column starts with a tag, so that prefix does not apply to it.
+ */
 function csvCell(value: string): string {
   const safe = /^[=+\-@]/.test(value) ? `'${value}` : value;
   if (/[",\r\n]/.test(safe)) {

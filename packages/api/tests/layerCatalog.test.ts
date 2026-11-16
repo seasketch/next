@@ -14,7 +14,9 @@ import {
   whereHosted,
 } from "../src/layerCatalog/columns";
 import {
+  METADATA_HTML_LIMIT,
   METADATA_PLAIN_TEXT_LIMIT,
+  metadataHtml,
   metadataPlainText,
   parseMetadataFormat,
   renderMetadata,
@@ -47,6 +49,7 @@ const HEADERS = [
   "Uploaded file",
   "Normalized file",
   "Metadata",
+  "Metadata HTML",
   "Downloadable",
   "Attribution",
   "Service URL",
@@ -153,6 +156,9 @@ describe("layer catalog columns", () => {
     expect(row["Normalized file"]).toBe("FlatGeobuf");
     expect(row["Normalized file URL"]).toBe("https://uploads.example/kelp.fgb");
     expect(row["Metadata"]).toBe("Kelp Nearshore canopy surveyed in 2024.");
+    expect(row["Metadata HTML"]).toBe(
+      "<h1>Kelp</h1>\n<p>Nearshore canopy surveyed in 2024.</p>"
+    );
     expect(row["Metadata file URL"]).toBe("https://uploads.example/kelp.xml");
     expect(row["Downloadable"]).toBe("Yes");
     expect(row["Attribution"]).toBe("DFO");
@@ -278,6 +284,9 @@ describe("layer catalog columns", () => {
     expect(stored["Metadata"]).toBe("See the survey (https://example.gov/kelp).");
     expect(stored["Metadata"]).not.toContain("<");
     expect(stored["Metadata"]).not.toContain("**");
+    expect(stored["Metadata HTML"]).toBe(
+      '<p>See <a href="https://example.gov/kelp"><strong>the survey</strong></a>.</p>'
+    );
 
     const dynamic = record({
       metadata: null,
@@ -288,6 +297,7 @@ describe("layer catalog columns", () => {
     expect(dynamic["Metadata"]).toBe(
       "https://gis.example.gov/arcgis/rest/services/Habitat/MapServer/3"
     );
+    expect(dynamic["Metadata HTML"]).toBe("");
 
     const withToken = record({
       metadata: null,
@@ -302,9 +312,11 @@ describe("layer catalog columns", () => {
       metadata: { type: "doc", content: [{ type: "paragraph" }] },
     });
     expect(placeholder["Metadata"]).toBe("");
+    expect(placeholder["Metadata HTML"]).toBe("");
 
     const hostedWithoutDoc = record({ metadata: null, sourceType: "seasketch-mvt" });
     expect(hostedWithoutDoc["Metadata"]).toBe("");
+    expect(hostedWithoutDoc["Metadata HTML"]).toBe("");
   });
 
   test("quotes csv cells and neutralizes formulas", () => {
@@ -315,6 +327,60 @@ describe("layer catalog columns", () => {
     expect(csv).toContain('"Kelp, ""north"""');
     expect(csv).toContain("'=1+1");
     expect(csv.startsWith("\uFEFFLayer name,Folder,")).toBe(true);
+  });
+
+  test("quotes metadata html without changing the markup", () => {
+    const metadata = {
+      type: "doc",
+      content: [
+        {
+          type: "heading",
+          attrs: { level: 2 },
+          content: [{ type: "text", text: 'Kelp, "north" & south' }],
+        },
+        {
+          type: "paragraph",
+          content: [
+            { type: "text", text: "See " },
+            {
+              type: "text",
+              text: "the survey",
+              marks: [
+                { type: "strong" },
+                {
+                  type: "link",
+                  attrs: { href: "https://example.gov/kelp?q=a,b&view=map" },
+                },
+              ],
+            },
+            { type: "text", text: ".\nLine two" },
+          ],
+        },
+      ],
+    };
+    const rowLayer = layer({
+      title: 'Kelp, "north"',
+      attribution: "=1+1",
+      metadata,
+    });
+    const csv = catalogCsv([rowLayer]);
+    const rows = parseCsv(csv);
+    expect(rows).toHaveLength(2);
+    expect(rows[0]).toEqual(HEADERS);
+    expect(rows[1]).toHaveLength(HEADERS.length);
+
+    const htmlIndex = HEADERS.indexOf("Metadata HTML");
+    const html = metadataHtml(metadata);
+    expect(rows[1][htmlIndex]).toBe(html);
+    expect(html.startsWith("<h2>")).toBe(true);
+    expect(html).toContain("Kelp, &quot;north&quot; &amp; south");
+    expect(html).toContain('href="https://example.gov/kelp?q=a,b&amp;view=map"');
+    expect(html).toContain("<strong>the survey</strong>");
+    expect(html).not.toMatch(/^[=+\-@']/);
+    expect(rows[1][HEADERS.indexOf("Style URL")]).toBe(rowLayer.styleUrl);
+    expect(rows[1][HEADERS.indexOf("Geostats URL")]).toBe(rowLayer.geostatsUrl);
+    expect(rows[1][HEADERS.indexOf("Metadata URL")]).toBe(rowLayer.metadataUrl);
+    expect(rows[1][HEADERS.indexOf("Attribution")]).toBe("'=1+1");
   });
 
   test("walks the overlay list depth-first", () => {
@@ -448,6 +514,25 @@ describe("metadata documents", () => {
     expect(Array.from(excerpt).length).toBe(METADATA_PLAIN_TEXT_LIMIT);
     expect(excerpt.endsWith("…")).toBe(true);
     expect(excerpt.startsWith("🙂")).toBe(true);
+  });
+
+  test("keeps formatted metadata up to the spreadsheet cell budget", () => {
+    expect(METADATA_HTML_LIMIT).toBe(32000);
+    const doc = {
+      type: "doc",
+      content: [
+        {
+          type: "paragraph",
+          content: [{ type: "text", text: "a".repeat(METADATA_HTML_LIMIT) }],
+        },
+      ],
+    };
+    const html = metadataHtml(doc);
+    expect(html.startsWith("<p>")).toBe(true);
+    expect(html.endsWith("…")).toBe(true);
+    expect(Array.from(html).length).toBe(METADATA_HTML_LIMIT);
+    expect(metadataHtml(doc, 1)).toBe("…");
+    expect(metadataHtml(null)).toBe("");
   });
 });
 
@@ -697,6 +782,7 @@ describe("layer catalog sql", () => {
       expect(row["Uploaded file"]).toBe("kelp_2024.zip");
       expect(row["Normalized file"]).toBe("FlatGeobuf");
       expect(row["Metadata"]).toBe("Kelp beds surveyed in 2024.");
+      expect(row["Metadata HTML"]).toBe("<p>Kelp beds surveyed in 2024.</p>");
       expect(row["Added by"]).toBe(`Jane Doe <${slug}@example.com>`);
 
       const admin = await store.isProjectAdmin(projectId, userId);
@@ -718,6 +804,49 @@ describe("layer catalog sql", () => {
     }
   });
 });
+
+/** Minimal RFC 4180 reader for the catalog writer. Fields may contain quotes, commas, and line breaks. */
+function parseCsv(csv: string): string[][] {
+  const text = csv.replace(/^\uFEFF/, "").replace(/\r\n/g, "\n");
+  const rows: string[][] = [];
+  let row: string[] = [];
+  let cell = "";
+  let quoted = false;
+  for (let i = 0; i < text.length; i++) {
+    const char = text[i];
+    if (quoted) {
+      if (char === '"') {
+        if (text[i + 1] === '"') {
+          cell += '"';
+          i++;
+        } else {
+          quoted = false;
+        }
+      } else {
+        cell += char;
+      }
+      continue;
+    }
+    if (char === '"') {
+      quoted = true;
+      continue;
+    }
+    if (char === ",") {
+      row.push(cell);
+      cell = "";
+      continue;
+    }
+    if (char === "\n") {
+      row.push(cell);
+      rows.push(row);
+      row = [];
+      cell = "";
+      continue;
+    }
+    cell += char;
+  }
+  return rows.filter((parsed) => parsed.length > 1 || parsed[0] !== "");
+}
 
 function request(
   url: string,
