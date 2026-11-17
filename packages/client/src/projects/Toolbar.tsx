@@ -465,6 +465,7 @@ export default function Toolbar({
                 </nav>
                 <a
                   aria-label="View source code on GitHub (opens in new tab)"
+                  data-testid="client-build-id"
                   className="text-xs text-gray-500 focus:outline-0 focus-visible:ring-2 ring-blue-500 hidden tall:inline"
                   target="_blank"
                   rel="noreferrer"

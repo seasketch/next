@@ -67,6 +67,6 @@ These must pass on Create React App before phase 4, and on the new build after. 
 | 6 | GL style editor with autocomplete, save, and map update. *Missing.* | Admin |
 | 7 | Map bookmark screenshot. *Covered: `tests/map-bookmarks.spec.ts`.* | End-user |
 | 8 | Service worker / offline survey, or a recorded decision to drop it. *Missing; needs the offline plan.* | End-user |
-| 9 | A `REACT_APP_*` value reaches the client (so the phase 4 rename is tested, not grepped). *Missing.* | End-user |
+| 9 | A `REACT_APP_*` value reaches the client (so the phase 4 rename is tested, not grepped). *Covered: the build id in `tests/map-shell.spec.ts`.* | End-user |
 | 10 | Report authoring insertion of a ProseMirror card (not SQL). *Missing.* | Admin |
 | 11 | Zoom to layer bounds. *Missing.* | End-user |

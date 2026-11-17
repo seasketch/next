@@ -7,6 +7,7 @@ class CoordinatesControl implements IControl {
   onAdd(map: Map) {
     const div = document.createElement("div");
     div.className = "mapboxgl-ctrl mapboxgl-ctrl-group px-1 py-0.5";
+    div.dataset.testid = "map-coordinates";
     div.style.backgroundColor = "rgba(255, 255, 255, 0.8)";
     const mapCenter = map.getCenter();
     this.container = div;

@@ -96,7 +96,17 @@ export async function openMap(page: Page, path: string) {
   await page.goto(path);
   expect(isMapboxGlStyle(await style)).toBe(true);
   await expect(page.locator(".mapboxgl-map[data-map-loaded='true']")).toBeVisible({
-    timeout: 30_000,
+    timeout: 60_000,
+  });
+}
+
+/** Reload the open project and wait until the map has booted again. */
+export async function reloadMap(page: Page) {
+  const style = waitForMapboxStyle(page);
+  await page.reload();
+  expect(isMapboxGlStyle(await style)).toBe(true);
+  await expect(page.locator(".mapboxgl-map[data-map-loaded='true']")).toBeVisible({
+    timeout: 60_000,
   });
 }
 

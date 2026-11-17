@@ -29,6 +29,7 @@ See the catalog's *Covered* notes. Specs:
 - `tests/forums.spec.ts` — anonymous read, join, reply
 - `tests/topic-title.spec.ts` — post a topic, length limits
 - `tests/map-bookmarks.spec.ts` — forum map bookmark screenshot
+- `tests/map-shell.spec.ts` — toolbar, map controls, legend, bookmark restore
 - `tests/overlays.spec.ts` — overlay browse, legend, metadata, search
 - `tests/basemaps.spec.ts` — Light / Satellite
 - `tests/language.spec.ts` — Samoan / English
