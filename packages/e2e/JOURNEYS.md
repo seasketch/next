@@ -30,6 +30,7 @@ See the catalog's *Covered* notes. Specs:
 - `tests/topic-title.spec.ts` — post a topic, length limits
 - `tests/map-bookmarks.spec.ts` — forum map bookmark screenshot
 - `tests/map-shell.spec.ts` — toolbar, map controls, legend, bookmark restore
+- `tests/session.spec.ts` — Sign In, the signed-in name, and sign-out
 - `tests/overlays.spec.ts` — overlay browse, legend, metadata, search
 - `tests/basemaps.spec.ts` — Light / Satellite
 - `tests/language.spec.ts` — Samoan / English

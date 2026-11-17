@@ -111,6 +111,14 @@ The Settings and Users screens are the [admin catalog](journeys-admin.md#project
 
 ---
 
+## Sign in and sign out
+
+Intent: the project toolbar shows who is here, and signing out returns to that project unless the project is private and unlisted. These journeys wait for the map to load. Tag: `@session`.
+
+1. An anonymous visitor sees Sign In on the toolbar. A signed-in person sees their name when the toolbar is expanded, and signing out returns them to the same project, unless it is a private, unlisted project. Returning to the same project is known-broken. *Covered: `tests/session.spec.ts`.*
+
+---
+
 ## Project map shell
 
 Intent: the toolbar, legend, and map chrome a participant uses. These journeys wait for the map to load. Tag: `@map`.
@@ -121,11 +129,10 @@ Intent: the toolbar, legend, and map chrome a participant uses. These journeys w
 2. Collapsing the sidebar leaves the icon buttons. The map stays loaded. *Covered.*
 3. About is absent when the about page is turned off. Maps is still there. *Covered.*
 4. When sketches, forums, or overlays are hidden for the project, those buttons are gone. The test sets the flags itself. *Covered.*
-5. An anonymous visitor sees Sign In on the toolbar. A signed-in person sees their name when the toolbar is expanded, and signing out returns them to the same project, unless it is a private, unlisted project. Returning to the same project is known-broken. *Covered.*
-6. User Guide opens the SeaSketch user guide in a new tab. When the project has a custom documentation link, that address opens instead. *Covered.*
-7. The expanded footer links to Terms of Use, offers Contact Us with the project's contact email, and links to Accessibility. The SeaSketch logo returns to the homepage. *Covered.*
-8. Accessibility opens the statement in the sidebar, including accessibility@seasketch.org. *Covered.*
-9. The expanded footer shows the client build id. *Covered. This is the `REACT_APP_*` check in the [bundler-risk index](journeys.md#bundler-risk-index).*
+5. User Guide opens the SeaSketch user guide in a new tab. When the project has a custom documentation link, that address opens instead. *Covered.*
+6. The expanded footer links to Terms of Use, offers Contact Us with the project's contact email, and links to Accessibility. The SeaSketch logo returns to the homepage. *Covered.*
+7. Accessibility opens the statement in the sidebar, including accessibility@seasketch.org. *Covered.*
+8. The expanded footer shows the client build id. *Covered. This is the `REACT_APP_*` check in the [bundler-risk index](journeys.md#bundler-risk-index).*
 
 ### Map controls
 
