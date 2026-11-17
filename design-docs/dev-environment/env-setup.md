@@ -42,7 +42,7 @@ From a clean checkout, with Docker running and secrets injected ([secrets](secre
 
 `setup` never drops a database that already exists. A clean slate is a separate, explicit command (`npm run setup -- --reset`), because people and agents both need one and both need to avoid wiping a database they meant to keep.
 
-CI and cloud agents run `bootstrap`, install Playwright's Chromium, then the Playwright command for that job: `npm run e2e:smoke` on every push, `npm run e2e:enduser` and `npm run e2e:admin` for the two integration jobs. An agent runs `dev` in a background shell and reads `.logs/`. They do not use VS Code tasks.
+CI and cloud agents run `bootstrap`, install Playwright's Chromium, then the Playwright command for that job: `npm run e2e:smoke` on every push, `npm run e2e:enduser -- --grep @access` for one end-user theme, and `npm run e2e:admin` for admin. An agent runs `dev` in a background shell and reads `.logs/`. They do not use VS Code tasks.
 
 ## Process supervision
 

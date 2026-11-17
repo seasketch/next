@@ -10,7 +10,7 @@ Four outcomes that only work together:
 
 - A clean machine — a developer laptop, a GitHub Actions runner, or a cloud agent VM — can install, load a useful database, and start SeaSketch from documented commands.
 - That default stack does not read credentials for, or write to, production systems.
-- Browser tests cover the product's surface. Every push runs a tiny `@smoke` set that is not split by audience. End-user journeys and admin journeys are separate catalogs and separate CI jobs. The end-user job is the critical one. The admin job matters and is a more forgiving bar. Either integration job may take 20–30 minutes or longer. Both run on every branch push, in the same Unit Tests workflow as smoke, as their own jobs. They do not run inside the deploy workflow. The production probe is a smaller read-only check of the live site. ([journeys](journeys.md))
+- Browser tests cover the product's surface. Every push runs a tiny `@smoke` set that is not split by audience. End-user journeys and admin journeys are separate catalogs. Admin is one CI job. End-user is one CI job per theme, named End User - Access and so on. Those are the critical jobs. The admin job matters and is a more forgiving bar. A theme job may take 20–30 minutes or longer. They run on every branch push, in the same Unit Tests workflow as smoke, as their own jobs. They do not run inside the deploy workflow. The production probe is a smaller read-only check of the live site. ([journeys](journeys.md))
 - Large refactors of the client build can be implemented, and those tests show whether they work before they merge.
 
 ## Starting point (2026)
@@ -106,7 +106,7 @@ A single pull request for workspaces and the bundler was considered and rejected
 
 **Exit.** Smoke is green on the workspace layout, and its install time is recorded against the Lerna baseline. The consolidation checkpoints in [monorepo and build](monorepo-and-build-upgrade.md) hold. A deploy with no product change succeeds through the normal workflow and passes the probe. Day-to-day `npm install` at the root replaces per-package bootstraps.
 
-If this phase slips, new journeys do not pile onto the pull-request smoke job. End-user journeys go to the end-user job. Admin journeys go to the admin job.
+If this phase slips, new journeys do not pile onto the pull-request smoke job. End-user journeys go to the job for their theme. Admin journeys go to the admin job.
 
 ### Phase 3 — Comprehensive journeys
 
@@ -147,7 +147,7 @@ A hosted staging stack is out of scope. Cloud agents running `setup` and `dev` f
 ## Rules
 
 - A pull request changes one axis. Node, workspaces, and the client bundler never share a pull request. A journey and a large refactor share one only when the journey is the characterization test for that refactor. *(October 2026)* Dependency versions within a major, regenerated artifacts, and TypeScript project references are part of the workspaces axis, not a fourth one; they ride with it.
-- *(November 2026)* `@smoke` runs on every push, with a report and a trace when it fails. It is three journeys, not split into end-user and admin. The end-user job (`@enduser`) and the admin job (`@admin`) are separate jobs in `.github/workflows/unit-tests.yml`, written out beside Smoke tests so the check list shows each name. One push is one workflow run. A matrix was removed the same day because GitHub collapses those cells. They run on every branch push. A same-day limit to `master`, and a same-day separate workflow, were both replaced. Create Deployment does not wait on this workflow. A red end-user job is the one reviewers treat as the product being broken. A red admin job is a separate regression and a more forgiving bar. None of the three gates a deploy. Failing smoke is not skipped to make a migration look green.
+- *(November 2026)* `@smoke` runs on every push, with a report and a trace when it fails. It is three journeys, not split into end-user and admin. Admin (`@admin`) is one job. End-user (`@enduser`) is one job per theme tag, named End User - Access and so on, written out in `.github/workflows/unit-tests.yml` so the check list shows each name. One push is one workflow run. A matrix was removed the same day because GitHub collapses those cells, and the theme split stays written out for the same reason. They run on every branch push. A same-day limit to `master`, and a same-day separate workflow, were both replaced. Create Deployment does not wait on this workflow. A red end-user theme job is the one reviewers treat as the product being broken. A red admin job is a separate regression and a more forgiving bar. None of these gates a deploy. Failing smoke is not skipped to make a migration look green.
 - A journey depends only on services the root start command runs for its profile. A journey that needs a production Lambda is not a local test.
 - The default configuration never points at production. A production override is explicit, per integration ([local services](local-services.md)), and absent from CI.
 - Agents are normal consumers of the contract. Commands are non-interactive, logs are attributable to a service, and failure paths are written down. Agents may restore the golden snapshot; they may not publish one unless the task is a snapshot refresh.
