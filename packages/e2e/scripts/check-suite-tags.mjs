@@ -3,15 +3,16 @@
 // @admin. Smoke is not also an end-user or admin test. A test with no suite
 // tag would run in none of the CI jobs.
 //
-// Every @enduser test also carries exactly one theme tag, and unit-tests.yml
-// has one job for that tag ("End User - Access"). @bundler is additive and
-// is not a theme. `--github-output` prints the group list as JSON.
+// Every @enduser test also carries exactly one theme tag, and
+// integration-tests.yml has one job for that tag ("End User - Access").
+// @bundler is additive and is not a theme. `--github-output` prints the
+// group list as JSON.
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 const testsDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../tests");
-const workflowPath = path.resolve(testsDir, "../../../.github/workflows/unit-tests.yml");
+const workflowPath = path.resolve(testsDir, "../../../.github/workflows/integration-tests.yml");
 const suiteTags = ["smoke", "enduser", "admin"];
 const suiteTagSet = new Set(suiteTags);
 const additiveTags = new Set(["bundler"]);
