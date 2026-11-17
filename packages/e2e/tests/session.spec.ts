@@ -32,8 +32,10 @@ async function expandToolbar(page: Page) {
  * sign-out lands and not whether the tenant answers.
  */
 async function followLogoutReturn(page: Page) {
+  await page.evaluate(() => sessionStorage.setItem("e2e-signed-out", "1"));
   await page.route(/\/v2\/logout/, async (route) => {
     const returnTo = new URL(route.request().url()).searchParams.get("returnTo") ?? "/";
+    await page.context().clearCookies();
     await route.fulfill({
       status: 200,
       contentType: "text/html",
@@ -56,7 +58,6 @@ test.describe("sign in and sign out @enduser @session", () => {
     await expandToolbar(page);
     await expect(page.getByText(personas.member.email)).toBeVisible();
 
-    // Known product bug: sign-out sends every visitor to the homepage.
     await followLogoutReturn(page);
     await page.getByRole("button", { name: "Sign Out" }).click();
     await expect(page).toHaveURL(/\/demo-samoa/);

@@ -113,9 +113,9 @@ The Settings and Users screens are the [admin catalog](journeys-admin.md#project
 
 ## Sign in and sign out
 
-Intent: the project toolbar shows who is here, and signing out returns to that project unless the project is private and unlisted. These journeys wait for the map to load. Tag: `@session`.
+Intent: the project toolbar shows who is here. Signing out returns to a listed public project. A project an anonymous visitor cannot open returns them to the site root. These journeys wait for the map to load. Tag: `@session`.
 
-1. An anonymous visitor sees Sign In on the toolbar. A signed-in person sees their name when the toolbar is expanded, and signing out returns them to the same project, unless it is a private, unlisted project. Returning to the same project is known-broken. *Covered: `tests/session.spec.ts`.*
+1. An anonymous visitor sees Sign In on the toolbar. A signed-in person sees their name when the toolbar is expanded. Signing out of a listed public project returns them to that project. Signing out of a project they could not open anonymously returns them to the site root. *Covered: `tests/session.spec.ts`.*
 
 ---
 

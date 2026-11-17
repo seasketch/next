@@ -1,14 +1,25 @@
 import React, { useContext } from "react";
 import { useAuth0 } from "@auth0/auth0-react";
 import { useTranslation } from "react-i18next";
-import { Link } from "react-router-dom";
+import { Link, useParams } from "react-router-dom";
 import { GraphqlQueryCacheContext } from "../offline/GraphqlQueryCache/useGraphqlQueryCache";
 import ContactChooser from "../components/ContactChooser";
+import { useProjectMetadataQuery } from "../generated/graphql";
+import {
+  logoutReturnTo,
+  projectPathAfterSignOut,
+  rememberSignOutReturn,
+} from "../auth/signOutReturn";
 
 export default function ProfileContextMenu(props?: { itemClassName?: string }) {
   const { user, logout } = useAuth0();
   const { t, i18n } = useTranslation("nav");
   const cache = useContext(GraphqlQueryCacheContext);
+  const { slug } = useParams<{ slug?: string }>();
+  const { data } = useProjectMetadataQuery({
+    variables: { slug: slug || "" },
+    skip: !slug,
+  });
   if (!user) {
     return null;
   }
@@ -58,10 +69,18 @@ export default function ProfileContextMenu(props?: { itemClassName?: string }) {
           role="menuitem"
           onClick={() => {
             cache?.logout();
+            rememberSignOutReturn(
+              projectPathAfterSignOut({
+                pathname: window.location.pathname,
+                search: window.location.search,
+                slug,
+                accessControl: data?.project?.accessControl,
+                isListed: data?.project?.isListed,
+              })
+            );
             logout({
               logoutParams: {
-                returnTo:
-                  window.location.protocol + "//" + window.location.host + "/",
+                returnTo: logoutReturnTo(),
               },
             });
           }}

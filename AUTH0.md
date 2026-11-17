@@ -61,7 +61,7 @@ Applications → Create Application → Single Page Application.
 | Allowed Web Origins    | `http://localhost:3000`              |
 | Allowed Origins (CORS) | `http://localhost:3000`              |
 
-The client sends people to `{origin}/authenticate` and logs them out to `{origin}/`. A deployment on another host uses that host instead of `localhost:3000`. Keep the path `/authenticate` and the trailing slash on the logout URL.
+The client sends people to `{origin}/authenticate` and logs them out to `{origin}/`. A deployment on another host uses that host instead of `localhost:3000`. Keep the path `/authenticate` and the trailing slash on the logout URL. After that root load, a listed public project continues at the project. A project an anonymous visitor cannot open stays at `{origin}/`.
 
 This application is public. It has no secret. Its client id is `REACT_APP_AUTH0_CLIENT_ID`.
 
