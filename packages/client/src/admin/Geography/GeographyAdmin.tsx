@@ -635,7 +635,7 @@ export default function GeographyAdmin() {
           </p>
           <p className="text-sm p-4">
             <a
-              href="https://docs.seasketch.org/seasketch-documentation/users-guide/geographies"
+              href="https://docs.seasketch.org/seasketch-documentation/administrators-guide/geographies"
               className="flex items-center space-x-1 text-primary-500"
             >
               <FileTextIcon />
