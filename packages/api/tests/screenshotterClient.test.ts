@@ -2,6 +2,7 @@ import { MisconfiguredError } from "../src/env";
 import {
   captureBookmarkScreenshot,
   e2eBookmarkImage,
+  screenshotPageOrigin,
   screenshotterConfig,
 } from "../src/screenshotterClient";
 
@@ -54,6 +55,27 @@ describe("map screenshotter client", () => {
       else process.env[key] = value;
     }
     global.fetch = fetchImpl;
+  });
+
+  test("opens the local client when the screenshotter is local", () => {
+    expect(
+      screenshotPageOrigin({
+        CLIENT_DOMAIN: "cburt-dev.seasketch.org",
+        SCREENSHOTTER_URL: "http://127.0.0.1:8791",
+      })
+    ).toBe("http://127.0.0.1:3000");
+    expect(
+      screenshotPageOrigin({
+        CLIENT_DOMAIN: "localhost:13000",
+        SCREENSHOTTER_URL: "http://127.0.0.1:8792",
+      })
+    ).toBe("http://localhost:13000");
+    expect(
+      screenshotPageOrigin({
+        CLIENT_DOMAIN: "www.seasketch.org",
+        SCREENSHOTTER_URL: "https://map-screenshotter.example.workers.dev",
+      })
+    ).toBe("https://www.seasketch.org");
   });
 
   test("stays quiet outside production until a capture is requested", () => {

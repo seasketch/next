@@ -41,6 +41,30 @@ type ScreenshotterConfig = {
   token: string;
 };
 
+/**
+ * Origin of screenshot.html.
+ *
+ * Production and a public CLIENT_DOMAIN use that host. The dev screenshotter
+ * runs Chrome on this machine, so a tunnel hostname is not required: open the
+ * local client instead. The dev client listens on port 3000.
+ */
+export function screenshotPageOrigin(
+  env: {
+    CLIENT_DOMAIN?: string;
+    SCREENSHOTTER_URL?: string;
+  } = process.env
+): string {
+  const domain = env.CLIENT_DOMAIN || "";
+  if (/localhost|127\.0\.0\.1/.test(domain)) {
+    return `http://${domain}`;
+  }
+  const screenshotter = env.SCREENSHOTTER_URL || "";
+  if (/^https?:\/\/(127\.0\.0\.1|localhost)(:\d+)?(\/|$)/.test(screenshotter)) {
+    return "http://127.0.0.1:3000";
+  }
+  return `https://${domain}`;
+}
+
 export function screenshotterConfig(): ScreenshotterConfig {
   const url = process.env.SCREENSHOTTER_URL;
   const token = process.env.SCREENSHOTTER_TOKEN;
