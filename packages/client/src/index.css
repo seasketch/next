@@ -7402,6 +7402,10 @@ select{
   height:107%
 }
 
+.h-\[116\%\]{
+  height:116%
+}
+
 .h-\[14px\]{
   height:14px
 }
@@ -8638,6 +8642,10 @@ select{
 
 .origin-bottom-right{
   transform-origin:bottom right
+}
+
+.origin-center{
+  transform-origin:center
 }
 
 .origin-right{
@@ -13910,6 +13918,12 @@ select{
   transition-duration:150ms
 }
 
+.transition-\[filter\2c transform\]{
+  transition-property:filter,transform;
+  transition-timing-function:cubic-bezier(0.4, 0, 0.2, 1);
+  transition-duration:150ms
+}
+
 .transition-\[grid-template-columns\2c opacity\]{
   transition-property:grid-template-columns,opacity;
   transition-timing-function:cubic-bezier(0.4, 0, 0.2, 1);
@@ -13984,6 +13998,10 @@ select{
 
 .duration-500{
   transition-duration:500ms
+}
+
+.duration-700{
+  transition-duration:700ms
 }
 
 .duration-75{

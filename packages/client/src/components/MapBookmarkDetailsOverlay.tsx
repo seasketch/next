@@ -105,6 +105,16 @@ export default function MapBookmarkDetailsOverlay({
       pending={waiting}
       failed={failed}
       onClose={onRequestClose}
+      onDownload={
+        bookmark?.imageId
+          ? () =>
+              downloadImage(
+                // eslint-disable-next-line i18next/no-literal-string
+                `${process.env.REACT_APP_CLOUDFLARE_IMAGES_ENDPOINT || ""}${bookmark.imageId}/public`,
+                "map-image.png"
+              )
+          : undefined
+      }
       label={t("Map bookmark")}
       summary={
         <div className="min-w-0">
@@ -175,12 +185,8 @@ export default function MapBookmarkDetailsOverlay({
           }))}
         />
       )}
-      {(camera || dimensions || bookmark?.imageId) && (
-        <MapFacts
-          camera={camera}
-          dimensions={dimensions}
-          imageId={bookmark?.imageId}
-        />
+      {(camera || dimensions) && (
+        <MapFacts camera={camera} dimensions={dimensions} />
       )}
     </BookmarkCard>
   );
@@ -240,11 +246,9 @@ function CountedList({
 function MapFacts({
   camera,
   dimensions,
-  imageId,
 }: {
   camera: { zoom: number; center: [number, number] } | null;
   dimensions: [number, number] | null;
-  imageId?: string | null;
 }) {
   const { t } = useTranslation("mapBookmarks");
   const [open, setOpen] = useState(false);
@@ -295,36 +299,6 @@ function MapFacts({
             </div>
           )}
         </dl>
-      )}
-      {open && imageId && (
-        <div className="mt-4 flex flex-wrap gap-2">
-          <button
-            type="button"
-            className="rounded-lg border border-slate-200 px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50"
-            onClick={() =>
-              downloadImage(
-                // eslint-disable-next-line i18next/no-literal-string
-                `${process.env.REACT_APP_CLOUDFLARE_IMAGES_ENDPOINT || ""}${imageId}/public`,
-                "fullsize.png"
-              )
-            }
-          >
-            <Trans ns="mapBookmarks">Download full size</Trans>
-          </button>
-          <button
-            type="button"
-            className="rounded-lg border border-slate-200 px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50"
-            onClick={() =>
-              downloadImage(
-                // eslint-disable-next-line i18next/no-literal-string
-                `${process.env.REACT_APP_CLOUDFLARE_IMAGES_ENDPOINT || ""}${imageId}/thumbnail`,
-                "thumbnail.png"
-              )
-            }
-          >
-            <Trans ns="mapBookmarks">Download thumbnail</Trans>
-          </button>
-        </div>
       )}
     </div>
   );

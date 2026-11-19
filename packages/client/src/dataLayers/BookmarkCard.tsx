@@ -1,4 +1,9 @@
-import { ArrowsExpandIcon, ChevronUpIcon, XIcon } from "@heroicons/react/outline";
+import {
+  ArrowsExpandIcon,
+  ChevronUpIcon,
+  DownloadIcon,
+  XIcon,
+} from "@heroicons/react/outline";
 import { motion } from "framer-motion";
 import { ReactNode, useEffect, useState } from "react";
 import { createPortal } from "react-dom";
@@ -38,8 +43,10 @@ function PreviewThumbnail({
     setBroken(false);
   }, [imageId]);
   const src = imageSrc(imageId);
+  // A client thumbnail is a stand-in, not the finished screenshot. Keep the
+  // same rendering sheen layer links use until the full image is on screen.
   const showSheen =
-    !standIn && !broken && (pending || (Boolean(src) && !loaded)) && !failed;
+    !failed && !broken && (pending || (Boolean(src) && !loaded));
   const showUnavailable = (failed && !src) || (broken && !standIn);
   return (
     <div className="relative aspect-[3/2] w-full overflow-hidden bg-primary-700">
@@ -48,11 +55,16 @@ function PreviewThumbnail({
         <img
           alt=""
           src={standIn}
-          className="absolute inset-x-0 top-0 h-[107%] w-full object-cover object-top"
+          className={
+            showSheen
+              ? "absolute inset-x-0 top-0 h-[116%] w-full origin-center scale-105 object-cover object-top blur-xl transition-[filter,transform] duration-700"
+              : "absolute inset-x-0 top-0 h-[107%] w-full object-cover object-top"
+          }
         />
       )}
       {showSheen && (
         <>
+          {standIn && <div className="absolute inset-0 bg-slate-950/45" />}
           <motion.div
             className="absolute inset-y-0 w-1/2 bg-gradient-to-r from-transparent via-white/30 to-transparent"
             initial={{ x: "-130%" }}
@@ -62,7 +74,7 @@ function PreviewThumbnail({
           <div className="relative flex h-full flex-col items-center justify-center gap-3 text-white">
             <Spinner color="white" large />
             <span className="text-sm font-medium tracking-wide text-white/90">
-              <Trans ns="mapBookmarks">Rendering preview…</Trans>
+              <Trans ns="mapBookmarks">Rendering map image…</Trans>
             </span>
           </div>
         </>
@@ -103,6 +115,7 @@ export default function BookmarkCard({
   footer,
   summary,
   label,
+  onDownload,
 }: {
   labelledBy: string;
   imageId?: string | null;
@@ -116,6 +129,7 @@ export default function BookmarkCard({
   footer?: ReactNode;
   summary?: ReactNode;
   label?: string;
+  onDownload?: () => void;
 }) {
   const { t } = useTranslation("mapBookmarks");
   const [expanded, setExpanded] = useState(false);
@@ -257,15 +271,29 @@ export default function BookmarkCard({
             failed={failed}
             unavailable={unavailable}
           />
-          {canExpand && (
-            <button
-              type="button"
-              className="absolute bottom-2.5 left-2.5 flex h-7 w-7 items-center justify-center rounded-md bg-slate-950/30 text-white/85 backdrop-blur-[2px] hover:bg-slate-950/50 hover:text-white"
-              onClick={() => setExpanded(true)}
-              aria-label={t("View full size")}
-            >
-              <ArrowsExpandIcon className="h-4 w-4" />
-            </button>
+          {(canExpand || onDownload) && (
+            <div className="absolute bottom-2.5 left-2.5 flex items-center gap-1.5">
+              {canExpand && (
+                <button
+                  type="button"
+                  className="flex h-7 w-7 items-center justify-center rounded-md bg-slate-950/30 text-white/85 backdrop-blur-[2px] hover:bg-slate-950/50 hover:text-white"
+                  onClick={() => setExpanded(true)}
+                  aria-label={t("View full size")}
+                >
+                  <ArrowsExpandIcon className="h-4 w-4" />
+                </button>
+              )}
+              {onDownload && (
+                <button
+                  type="button"
+                  className="flex h-7 w-7 items-center justify-center rounded-md bg-slate-950/30 text-white/85 backdrop-blur-[2px] hover:bg-slate-950/50 hover:text-white"
+                  onClick={onDownload}
+                  aria-label={t("Download image")}
+                >
+                  <DownloadIcon className="h-4 w-4" />
+                </button>
+              )}
+            </div>
           )}
           <button
             type="button"
