@@ -21,6 +21,52 @@ import { useGlobalErrorHandler } from "../components/GlobalErrorHandler";
 import useCurrentProjectMetadata from "../useCurrentProjectMetadata";
 import useDialog from "../components/useDialog";
 import UserProfileForm, { useUserProfileState } from "./UserProfileForm";
+import {
+  accessSupportReason,
+  projectSupportMailto,
+  SEASKETCH_SUPPORT_EMAIL,
+} from "../components/contactEmail";
+
+// Desktop keeps every action on one line. Buttons size to their label.
+// On a phone the same buttons stack and fill the card.
+const gateActionClass = "w-full shrink-0 sm:w-auto";
+const gateActionButtonClass = "w-full justify-center whitespace-nowrap sm:w-auto";
+
+function SupportEmailLink({
+  email,
+  projectName,
+  projectSlug,
+  reason,
+  detail,
+}: {
+  email?: string | null;
+  projectName?: string | null;
+  projectSlug?: string | null;
+  reason: string;
+  detail?: string | null;
+}) {
+  const auth0 = useAuth0();
+  const address = email?.trim() || SEASKETCH_SUPPORT_EMAIL;
+  const href = projectSupportMailto({
+    supportEmail: email,
+    projectName,
+    projectSlug,
+    reason,
+    detail,
+    visitorEmail: auth0.user?.email,
+    pageUrl: typeof window === "undefined" ? undefined : window.location.href,
+  });
+  return (
+    <span className="inline-flex items-center justify-center whitespace-nowrap text-sm text-gray-600">
+      <span>
+        <Trans ns="projectLanding">Contact </Trans>
+      </span>
+      <a href={href} className="ml-1 text-primary-500 underline">
+        {address}
+      </a>
+    </span>
+  );
+}
 
 interface ProfileFormValues {
   fullname: string;
@@ -67,13 +113,6 @@ export const ProjectAccessGate: React.FunctionComponent<{ admin?: boolean }> = (
       <CheckIcon className="h-6 w-6 text-gray-100" />
     </div>
   );
-  const contactSupport = (
-    <Button
-      // innerRef={initialFocusRef}
-      mailTo={`support@seasketch.org`}
-      label={<Trans ns="projectLanding">Contact support</Trans>}
-    />
-  );
   let status: ProjectAccessStatus | null =
     data?.projectPublicDetails?.accessStatus || null;
   let notFound = false;
@@ -81,7 +120,12 @@ export const ProjectAccessGate: React.FunctionComponent<{ admin?: boolean }> = (
   const markMissingProject = () => {
     notFound = true;
     icon = errorIcon;
-    buttons = <></>;
+    buttons = (
+      <SupportEmailLink
+        projectSlug={projectSlug}
+        reason={accessSupportReason.notFound}
+      />
+    );
     title = (
       <Trans ns="projectLanding" values={{ slug: projectSlug }}>
         Project "{{slug}}" not found.
@@ -122,22 +166,9 @@ export const ProjectAccessGate: React.FunctionComponent<{ admin?: boolean }> = (
           limited to project administrators.
         </Trans>
       );
-      if (data?.me) {
-        buttons = (
-          <Button
-            mailTo={data!.projectPublicDetails!.supportEmail!}
-            label={
-              <Trans ns="projectLanding">
-                Contact{" "}
-                {data!.projectPublicDetails!.supportEmail ||
-                  "support@seasketch.org"}
-              </Trans>
-            }
-          />
-        );
-      } else {
-        buttons = (
-          <>
+      buttons = (
+        <>
+          {!data?.me && (
             <Button
               onClick={() =>
                 auth0.loginWithRedirect({
@@ -151,15 +182,22 @@ export const ProjectAccessGate: React.FunctionComponent<{ admin?: boolean }> = (
               }
               primary
               label={<Trans ns="projectLanding">Sign in</Trans>}
-              buttonClassName="md:w-full"
+              className={gateActionClass}
+              buttonClassName={gateActionButtonClass}
               disabled={
                 resendVerificationState.loading ||
                 resendVerificationState.data?.resendVerificationEmail.success
               }
             />
-          </>
-        );
-      }
+          )}
+          <SupportEmailLink
+            email={data!.projectPublicDetails!.supportEmail}
+            projectName={data!.projectPublicDetails!.name}
+            projectSlug={projectSlug}
+            reason={accessSupportReason.adminArea}
+          />
+        </>
+      );
     }
   } else if (!error && projectSlug && !data?.projectPublicDetails) {
     markMissingProject();
@@ -172,7 +210,13 @@ export const ProjectAccessGate: React.FunctionComponent<{ admin?: boolean }> = (
         The API server returned null data for this project
       </Trans>
     );
-    buttons = contactSupport;
+    buttons = (
+      <SupportEmailLink
+        projectSlug={projectSlug}
+        reason={accessSupportReason.loadError}
+        detail={error?.message}
+      />
+    );
     icon = errorIcon;
   } else if (!data.projectPublicDetails) {
     title = <Trans ns="projectLanding">Error Loading Project</Trans>;
@@ -182,7 +226,12 @@ export const ProjectAccessGate: React.FunctionComponent<{ admin?: boolean }> = (
       </Trans>
     );
 
-    buttons = contactSupport;
+    buttons = (
+      <SupportEmailLink
+        projectSlug={projectSlug}
+        reason={accessSupportReason.loadError}
+      />
+    );
     icon = errorIcon;
   } else {
     switch (status as ProjectAccessStatus) {
@@ -201,15 +250,11 @@ export const ProjectAccessGate: React.FunctionComponent<{ admin?: boolean }> = (
           </Trans>
         );
         buttons = (
-          <Button
-            mailTo={data.projectPublicDetails.supportEmail!}
-            label={
-              <Trans ns="projectLanding">
-                Contact{" "}
-                {data.projectPublicDetails.supportEmail ||
-                  "support@seasketch.org"}
-              </Trans>
-            }
+          <SupportEmailLink
+            email={data.projectPublicDetails.supportEmail}
+            projectName={data.projectPublicDetails.name}
+            projectSlug={projectSlug}
+            reason={accessSupportReason.adminsOnly}
           />
         );
 
@@ -231,13 +276,11 @@ export const ProjectAccessGate: React.FunctionComponent<{ admin?: boolean }> = (
         );
 
         buttons = (
-          <Button
-            mailTo={data.projectPublicDetails.supportEmail!}
-            label={
-              <Trans ns="projectLanding">
-                Contact {data.projectPublicDetails.supportEmail!}
-              </Trans>
-            }
+          <SupportEmailLink
+            email={data.projectPublicDetails.supportEmail}
+            projectName={data.projectPublicDetails.name}
+            projectSlug={projectSlug}
+            reason={accessSupportReason.pending}
           />
         );
         break;
@@ -255,30 +298,40 @@ export const ProjectAccessGate: React.FunctionComponent<{ admin?: boolean }> = (
         );
 
         buttons = (
-          <Button
-            onClick={() =>
-              resendVerification().then((response) => {
-                if (response.data?.resendVerificationEmail.success === true) {
-                  alert(t("Verification email sent. Check your inbox."));
-                } else {
-                  if (response.errors) {
-                    alert(
-                      `Problem sending verification email. ${response.errors.toString()}`
-                    );
-                  } else if (response.data?.resendVerificationEmail.error) {
-                    alert(
-                      `Problem sending verification email. ${response.data?.resendVerificationEmail.error}`
-                    );
+          <>
+            <Button
+              onClick={() =>
+                resendVerification().then((response) => {
+                  if (response.data?.resendVerificationEmail.success === true) {
+                    alert(t("Verification email sent. Check your inbox."));
+                  } else {
+                    if (response.errors) {
+                      alert(
+                        `Problem sending verification email. ${response.errors.toString()}`
+                      );
+                    } else if (response.data?.resendVerificationEmail.error) {
+                      alert(
+                        `Problem sending verification email. ${response.data?.resendVerificationEmail.error}`
+                      );
+                    }
                   }
-                }
-              })
-            }
-            label={<Trans ns="projectLanding">Resend verification email</Trans>}
-            disabled={
-              resendVerificationState.loading ||
-              resendVerificationState.data?.resendVerificationEmail.success
-            }
-          />
+                })
+              }
+              label={<Trans ns="projectLanding">Resend verification email</Trans>}
+              className={gateActionClass}
+              buttonClassName={gateActionButtonClass}
+              disabled={
+                resendVerificationState.loading ||
+                resendVerificationState.data?.resendVerificationEmail.success
+              }
+            />
+            <SupportEmailLink
+              email={data.projectPublicDetails.supportEmail}
+              projectName={data.projectPublicDetails.name}
+              projectSlug={projectSlug}
+              reason={accessSupportReason.verifyEmail}
+            />
+          </>
         );
         break;
       case ProjectAccessStatus.DeniedNotRequested:
@@ -304,23 +357,18 @@ export const ProjectAccessGate: React.FunctionComponent<{ admin?: boolean }> = (
                   Share Profile and Request Access
                 </Trans>
               }
-              buttonClassName="md:w-full"
+              className={gateActionClass}
+              buttonClassName={gateActionButtonClass}
               disabled={
                 resendVerificationState.loading ||
                 resendVerificationState.data?.resendVerificationEmail.success
               }
             />
-            <Button
-              mailTo={
-                data.projectPublicDetails.supportEmail || "support@seasketch.org"
-              }
-              label={
-                <Trans ns="projectLanding">
-                  Contact{" "}
-                  {data.projectPublicDetails.supportEmail ||
-                    "support@seasketch.org"}
-                </Trans>
-              }
+            <SupportEmailLink
+              email={data.projectPublicDetails.supportEmail}
+              projectName={data.projectPublicDetails.name}
+              projectSlug={projectSlug}
+              reason={accessSupportReason.request}
             />
           </>
         );
@@ -362,7 +410,8 @@ export const ProjectAccessGate: React.FunctionComponent<{ admin?: boolean }> = (
               }
               primary
               label={<Trans ns="projectLanding">Sign in</Trans>}
-              buttonClassName="md:w-full"
+              className={gateActionClass}
+              buttonClassName={gateActionButtonClass}
               disabled={
                 resendVerificationState.loading ||
                 resendVerificationState.data?.resendVerificationEmail.success
@@ -382,29 +431,25 @@ export const ProjectAccessGate: React.FunctionComponent<{ admin?: boolean }> = (
                   })
                 }
                 label={<Trans ns="projectLanding">Create an account</Trans>}
-                buttonClassName="md:w-full"
+                className={gateActionClass}
+                buttonClassName={gateActionButtonClass}
                 disabled={
                   resendVerificationState.loading ||
                   resendVerificationState.data?.resendVerificationEmail.success
                 }
               />
             )}
-            {data.projectPublicDetails.accessControl ===
-              ProjectAccessControlSetting.InviteOnly && (
-              <Button
-                mailTo={
-                  data.projectPublicDetails.supportEmail ||
-                  "support@seasketch.org"
-                }
-                label={
-                  <Trans ns="projectLanding">
-                    Contact{" "}
-                    {data.projectPublicDetails.supportEmail ||
-                      "support@seasketch.org"}
-                  </Trans>
-                }
-              />
-            )}
+            <SupportEmailLink
+              email={data.projectPublicDetails.supportEmail}
+              projectName={data.projectPublicDetails.name}
+              projectSlug={projectSlug}
+              reason={
+                data.projectPublicDetails.accessControl ===
+                ProjectAccessControlSetting.AdminsOnly
+                  ? accessSupportReason.adminsOnly
+                  : accessSupportReason.invitation
+              }
+            />
           </>
         );
         break;
@@ -493,7 +538,7 @@ export const ProjectAccessGate: React.FunctionComponent<{ admin?: boolean }> = (
                     </div>
                   </div>
                 </div>
-                <div className="mt-5 sm:mt-4 flex w-full justify-center sm:justify-end sm:space-x-1">
+                <div className="mt-5 sm:mt-4 flex w-full flex-col flex-nowrap gap-3 sm:flex-row sm:items-center sm:justify-end">
                   {buttons}
                 </div>
               </DialogContainer>
@@ -524,7 +569,7 @@ const DialogContainer: React.FunctionComponent<{
       }
       animate={{ x: "-50%", y: "-33.333%", opacity: 1 }}
       exit={{ x: props.exitToLeft ? -500 : 500, opacity: 0, y: "-33.333%" }}
-      className=" bg-white block sm:align-middle absolute sm:max-w-lg sm:rounded-lg px-4 text-left overflow-y-auto pb-6 sm:overflow-hidden shadow-xl sm:p-6 flex-nowrap left-1/2 top-1/3 w-screen h-screen sm:w-max sm:h-auto max-h-full"
+      className=" bg-white block sm:align-middle absolute sm:max-w-xl sm:rounded-lg px-4 text-left overflow-y-auto pb-6 sm:overflow-hidden shadow-xl sm:p-6 flex-nowrap left-1/2 top-1/3 w-screen h-screen sm:w-full sm:h-auto max-h-full"
     >
       {props.children}
     </motion.div>
@@ -640,14 +685,21 @@ export const ProfileForm = ({
           </div>
         </div>
       </div>
-      <div className="mt-5 sm:mt-2 flex w-full justify-center sm:justify-end space-x-4 sm:space-x-1">
-        <Button label={t("Cancel")} onClick={onRequestClose} />
+      <div className="mt-5 sm:mt-4 flex w-full flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+        <Button
+          label={t("Cancel")}
+          onClick={onRequestClose}
+          className={gateActionClass}
+          buttonClassName={gateActionButtonClass}
+        />
         <Button
           loading={profile.mutationState.loading}
           disabled={profile.mutationState.loading}
           type="submit"
           label={t("Send Request")}
           primary
+          className={gateActionClass}
+          buttonClassName={gateActionButtonClass}
           onClick={async () => {
             try {
               await profile.submit();

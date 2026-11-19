@@ -19,6 +19,7 @@ import {
   defaultPort as localR2Port,
   endpoint as localR2Endpoint,
   repoRoot,
+  fileUploadsBucket,
   spatialUploadsBucket,
   tilesBucket,
 } from "../packages/local-r2/config.mjs";
@@ -282,6 +283,7 @@ function storageEnv(stack) {
     R2_SECRET_ACCESS_KEY: localR2Credentials.secretAccessKey,
     R2_TILES_BUCKET: tilesBucket,
     SPATIAL_UPLOADS_BUCKET: spatialUploadsBucket,
+    R2_FILE_UPLOADS_BUCKET: fileUploadsBucket,
     TILES_REMOTE: `r2://${tilesBucket}`,
     UPLOADS_BASE_URL: `http://localhost:${ports.uploads}`,
     TILES_BASE_URL: `http://localhost:${ports.tiles}`,

@@ -9,7 +9,7 @@
 Three consumers need a running SeaSketch, and they get it from the same commands:
 
 1. **Local development** — the common case, and the one that has to work every morning.
-2. **CI** — `@smoke`, `@enduser`, and `@admin` on every branch push, as separate jobs in the Unit Tests workflow. Those jobs are not part of Create Deployment.
+2. **CI** — `@smoke` on every branch push, in the Unit Tests workflow. `@enduser` and `@admin` on every branch push, as separate jobs in the Integration Tests workflow. Those jobs are not part of Create Deployment.
 3. **Cloud agents** — Cursor cloud agents or any equivalent: a clean Linux VM with the repo, Docker, and a secret environment. No editor, no personal shell profile.
 
 There is one contract. CI and agents are not a separate design. This campaign does not add a hosted staging server; cloud agents running these commands are the isolated place to try a change.
@@ -42,7 +42,7 @@ From a clean checkout, with Docker running and secrets injected ([secrets](secre
 
 `setup` never drops a database that already exists. A clean slate is a separate, explicit command (`npm run setup -- --reset`), because people and agents both need one and both need to avoid wiping a database they meant to keep.
 
-CI and cloud agents run `bootstrap`, install Playwright's Chromium, then the Playwright command for that job: `npm run e2e:smoke` on every push, `npm run e2e:enduser` and `npm run e2e:admin` for the two integration jobs. An agent runs `dev` in a background shell and reads `.logs/`. They do not use VS Code tasks.
+CI and cloud agents run `bootstrap`, install Playwright's Chromium, then the Playwright command for that job: `npm run e2e:smoke` on every push, `npm run e2e:enduser -- --grep @access` for one end-user theme, and `npm run e2e:admin` for admin. An agent runs `dev` in a background shell and reads `.logs/`. They do not use VS Code tasks.
 
 ## Process supervision
 

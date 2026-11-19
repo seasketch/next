@@ -6,6 +6,7 @@ import {
   Error404,
   Loading,
   DeniedAdminsOnly,
+  DeniedAdminsOnlyAndAnon,
   DeniedEmailNotVerified,
   DeniedInviteOnly,
   DeniedNotApproved,
@@ -48,6 +49,10 @@ test("Error is shown if project doesn't exist", async () => {
       "href",
       "/projects"
     );
+    expect(screen.getByRole("link", { name: "support@seasketch.org" })).toHaveAttribute(
+      "href",
+      expect.stringContaining("mailto:support@seasketch.org?")
+    );
   });
 });
 
@@ -55,14 +60,33 @@ test("Unauthorized users are blocked by admin-only projects and given the suppor
   render(<DeniedAdminsOnly />);
   await waitFor(() => {
     expect(screen.getByText(/administrators/)).toBeInTheDocument();
-    expect(screen.getByText(/chad@underbluewaters.net/)).toBeInTheDocument();
+    const support = screen.getByRole("link", { name: "chad@underbluewaters.net" });
+    expect(decodeURIComponent(support.getAttribute("href") || "")).toContain(
+      "mailto:chad@underbluewaters.net?"
+    );
   });
+});
+
+test("Anonymous visitors to an admins-only project can write the project", async () => {
+  render(<DeniedAdminsOnlyAndAnon />);
+  await waitFor(() => {
+    expect(screen.getByText(/only be accessed by project administrators/)).toBeInTheDocument();
+  });
+  const support = screen.getByRole("link", { name: "chad@underbluewaters.net" });
+  const href = decodeURIComponent(support.getAttribute("href") || "");
+  expect(href.startsWith("mailto:chad@underbluewaters.net?")).toBe(true);
+  expect(href).toContain("Chad's Project");
+  expect(href).toContain("project administrators");
 });
 
 test("Privileged access projects require a verified email", async () => {
   render(<DeniedEmailNotVerified />);
   await waitFor(() => {
     expect(screen.getByText(/verify/)).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "chad@underbluewaters.net" })).toHaveAttribute(
+      "href",
+      expect.stringContaining("mailto:chad@underbluewaters.net?")
+    );
   });
 });
 

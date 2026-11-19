@@ -29,7 +29,7 @@ Intent: a person can find a project, create one, and manage the account that own
 2. A new visitor who signs up and comes back can open `/projects`. The return onto a gated project is [Signup, then the project](#signup-then-the-project). The suite inserts the user and plants the test-mode session. It does not call Auth0.
 3. `/account-settings` asks an anonymous visitor to sign in, and shows cache settings to a signed-in user.
 4. A signed-in user can set email notification preferences (forum replies, project invites) and see them persist after reload.
-5. **bundler-risk.** A value that reaches the client through `REACT_APP_*` today is visible in the running app, so the phase 4 rename is checked by a test and not by reading the bundle.
+5. **bundler-risk.** A value that reaches the client through `REACT_APP_*` today is visible in the running app, so the phase 4 rename is checked by a test and not by reading the bundle. *Covered: the build id in `tests/map-shell.spec.ts`.*
 
 ---
 
@@ -111,17 +111,48 @@ The Settings and Users screens are the [admin catalog](journeys-admin.md#project
 
 ---
 
+## Sign in and sign out
+
+Intent: the project toolbar shows who is here. Signing out returns to a listed public project. A project an anonymous visitor cannot open returns them to the site root. These journeys wait for the map to load. Tag: `@session`.
+
+1. An anonymous visitor sees Sign In on the toolbar. A signed-in person sees their name when the toolbar is expanded. Signing out of a listed public project returns them to that project. Signing out of a project they could not open anonymously returns them to the site root. *Covered: `tests/session.spec.ts`.*
+
+---
+
 ## Project map shell
 
-Intent: the toolbar, legend, and map chrome a participant uses. Tag: `@map`.
+Intent: the toolbar, legend, and map chrome a participant uses. These journeys wait for the map to load. Tag: `@map`.
 
-1. With access, the toolbar offers About (when enabled), Maps, Overlay Layers, Sketching, and Forums (when those are not hidden).
-2. A project admin sees Project Admin Dashboard in the chrome. A participant does not. This checks the map shell, not the admin pages.
-3. Map settings can show the scale bar and switch coordinate display. The map stays loaded.
-4. The measure tool draws a path and reports a distance.
-5. `/:slug/app/accessibility` opens the accessibility statement.
-6. When sketches, forums, or overlays have been hidden for the project, those toolbar entries are gone for a participant. The test arranges the flags; it does not open project settings.
-7. A map bookmark created from the map chrome (not a forum post) can be restored: the map returns to that center, zoom, and basemap.
+### Toolbar
+
+1. With the mini sidebar open, it offers About, Maps, Overlay Layers, Sketches, and Discussion Forums. Expanding it shows the project name beside those labels. *Covered: `tests/map-shell.spec.ts`.*
+2. Collapsing the sidebar leaves the icon buttons. The map stays loaded. *Covered.*
+3. About is absent when the about page is turned off. Maps is still there. *Covered.*
+4. When sketches, forums, or overlays are hidden for the project, those buttons are gone. The test sets the flags itself. *Covered.*
+5. User Guide opens the SeaSketch user guide in a new tab. When the project has a custom documentation link, that address opens instead. *Covered.*
+6. The expanded footer links to Terms of Use, offers Contact Us with the project's contact email, and links to Accessibility. The SeaSketch logo returns to the homepage. *Covered.*
+7. Accessibility opens the statement in the sidebar, including accessibility@seasketch.org. *Covered.*
+8. The expanded footer shows the client build id. *Covered. This is the `REACT_APP_*` check in the [bundler-risk index](journeys.md#bundler-risk-index).*
+
+### Map controls
+
+1. Zoom in and zoom out change the map's zoom. The map stays loaded. *Covered.*
+2. After the map is rotated, the compass resets it to north. *Covered.*
+3. Reset view in Map settings returns the map to the project's extent. *Covered.*
+4. Show scale bar adds the scale control at the bottom of the map. Turning it off removes the control. The map stays loaded. *Covered.*
+5. Show coordinates displays longitude and latitude, and the numbers follow the pointer. Turning it off removes the readout. *Covered.*
+6. The scale and coordinate choices are still in effect after a reload. *Covered.*
+7. A project set to show the scale bar by default shows it for a visitor who has no saved choice. A project whose default is off does not. *Covered.*
+8. Measure lets the visitor click a line on the map and shows the length in kilometers. Choosing miles updates the number. Closing Measure removes the line and the readout. *Covered.*
+
+### Legend
+
+1. Turning a layer on lists it in the legend. Hiding the legend removes the panel, and showing it again lists the same layer. *Covered.*
+2. A project set to show the legend by default opens with the legend visible when a layer is on and the visitor has no saved legend state. Otherwise the legend starts collapsed. *Covered.*
+
+### Bookmark on the map
+
+1. Clicking a map bookmark that was posted in a forum moves the map to that center, zoom, and basemap, and a banner says the bookmark is shown. *Covered.* The screenshot itself stays in `tests/map-bookmarks.spec.ts`.
 
 ---
 
@@ -202,7 +233,7 @@ Intent: reading and posting in a project forum, including map bookmarks. Creatin
 4. **bundler-risk.** Share → Map Bookmark captures a client thumbnail. Posting shows it. The info button shows the large screenshot from the local screenshotter. *Covered: `tests/map-bookmarks.spec.ts`.*
 5. Post a topic: a normal title posts. Eighty emoji is allowed. Eighty-one characters show the limit and disable Post New Topic. Empty title and empty message each ask for content. *Covered: `tests/topic-title.spec.ts`.*
 6. A participant who is in the group a forum is limited to can see that forum. A participant who is not in the group cannot. *Group visibility on `e2e-private` is also part of smoke. This journey is the end-user check beyond smoke, arranged without the admin form.*
-7. Attach a file to a post. The attachment is downloadable.
+7. Attach a file to a post. The attachment is downloadable from the local file-uploads bucket. *Covered: `tests/forum-attachments.spec.ts`.*
 8. Share sketches into a forum post. A reader can copy them into their own sketch list.
 
 ---

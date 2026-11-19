@@ -159,7 +159,7 @@ export default function Legend({
     [clockHiddenItems]
   );
   maxHeight = maxHeight || undefined;
-  const [hidden, setHidden] = useLocalForage<boolean>(
+  const [hidden, setHidden, legendRestored] = useLocalForage<boolean>(
     persistedStateKey || "legend",
     defaultToHidden,
     true
@@ -192,6 +192,9 @@ export default function Legend({
             }
           : {}
       }
+      data-testid="map-legend"
+      data-legend-restored={legendRestored ? "true" : "false"}
+      data-legend-collapsed={hidden ? "true" : "false"}
       className={`${className || ""} rounded ${
         hidden ? "bg-white" : "bg-white/90"
       } ${

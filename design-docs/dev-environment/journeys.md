@@ -8,7 +8,7 @@ Phase 3 implements two product lists. Iterate the list that matches the interfac
 
 | Catalog | Who it is for | CI job | Tag |
 | --- | --- | --- | --- |
-| [End-user journeys](journeys-end-user.md) | Visitors, participants, and account holders on the public site and the project map. This is the critical set. | End-user integration | `@enduser` |
+| [End-user journeys](journeys-end-user.md) | Visitors, participants, and account holders on the public site and the project map. This is the critical set. | One job per theme, named End User - Access and so on | `@enduser` plus one theme tag |
 | [Admin journeys](journeys-admin.md) | Project admins and superusers inside the admin interface. Important, and a more forgiving bar than the end-user set. | Admin integration | `@admin` |
 
 Smoke is neither of those. It stays one short job and is not split by audience.
@@ -21,11 +21,11 @@ Existing Playwright coverage is noted in italics. An unmarked item is not yet a 
 
 **Smoke.** The three journeys below. Tag `@smoke` only. They do not also carry `@enduser` or `@admin`, so they are not copied into either integration job. Every push. Must stay fast. Do not grow this set.
 
-**End-user integration.** Every item in [journeys-end-user.md](journeys-end-user.md), tagged `@enduser` plus a theme tag. Every branch push. This is the suite that must be green before phase 4 and before a participant-facing change is trusted. A failure here means the product people use is broken.
+**End-user integration.** Every item in [journeys-end-user.md](journeys-end-user.md), tagged `@enduser` plus one theme tag. Every branch push runs one job per theme, named End User - Access, End User - Map, and so on, in the Integration Tests workflow. A new theme tag needs a job in `integration-tests.yml`. The tag check fails until that job exists. This is the suite that must be green before phase 4 and before a participant-facing change is trusted. A failure in one of these jobs means the product people use is broken.
 
 **Admin integration.** Every item in [journeys-admin.md](journeys-admin.md), tagged `@admin` plus a theme tag. Every branch push, as its own job, so an admin failure cannot hide an end-user failure and the two can be retried on their own. Admin coverage still gets written. A red admin job is a real regression in the admin UI, and it does not carry the same weight as a red end-user job: phase 4 does not wait on an unfinished admin form the way it waits on sketching, surveys, or the map. Bundler-risk that lives in the admin UI (uploads, the style editor, metadata, inserting a report card) is the exception: those rows are part of the phase 4 acceptance test and are called out in each file.
 
-A journey has one suite tag. `@enduser` and `@admin` are never combined. Theme tags (`@sketching`, `@surveys`, `@uploads`, …) are for running one heading locally, not for another CI job. `@bundler` is additive. Sign-in and signup use the test-mode session. No journey calls Auth0 or carries `@auth0`. `@production` is the read-only probe and never runs against the local stack.
+A journey has one suite tag. `@enduser` and `@admin` are never combined. An `@enduser` journey has one theme tag (`@access`, `@map`, `@surveys`, …). That tag is its CI job. Admin theme tags stay inside the single admin job. `@bundler` is additive and is not a job. Locally, `npm run e2e:enduser -- --grep @access` runs one theme. Sign-in and signup use the test-mode session. No journey calls Auth0 or carries `@auth0`. `@production` is the read-only probe and never runs against the local stack.
 
 Locally: `npm run e2e:smoke`, `npm run e2e:enduser`, and `npm run e2e:admin`. `npm run e2e` runs the folder. CI triggers are in [integration testing](integration-testing.md). None of these jobs are part of Create Deployment.
 
@@ -67,6 +67,6 @@ These must pass on Create React App before phase 4, and on the new build after. 
 | 6 | GL style editor with autocomplete, save, and map update. *Missing.* | Admin |
 | 7 | Map bookmark screenshot. *Covered: `tests/map-bookmarks.spec.ts`.* | End-user |
 | 8 | Service worker / offline survey, or a recorded decision to drop it. *Missing; needs the offline plan.* | End-user |
-| 9 | A `REACT_APP_*` value reaches the client (so the phase 4 rename is tested, not grepped). *Missing.* | End-user |
+| 9 | A `REACT_APP_*` value reaches the client (so the phase 4 rename is tested, not grepped). *Covered: the build id in `tests/map-shell.spec.ts`.* | End-user |
 | 10 | Report authoring insertion of a ProseMirror card (not SQL). *Missing.* | Admin |
 | 11 | Zoom to layer bounds. *Missing.* | End-user |

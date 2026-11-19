@@ -18,7 +18,7 @@ name: Spatial uploads runtime cache
 # a branch writes that branch's ref; a manual run from master writes the
 # master ref. With a warm cache the job is a few minutes; a cold one is 30
 # minutes or more. The branch name becomes the tag the same way the smoke
-# job computes it (unit-tests.yml), so a branch's smoke run finds its cache.
+# job and the integration jobs compute it, so those runs find this cache.
 
 on:
   push:

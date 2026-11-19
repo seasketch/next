@@ -44,6 +44,7 @@ function bucketByName(env, bucketName) {
   const byName = {
     "ssn-tiles-local": env.TILES_BUCKET,
     "ssn-spatial-uploads-tmp-local": env.SPATIAL_UPLOADS_BUCKET,
+    "ssn-file-uploads-local": env.FILE_UPLOADS_BUCKET,
   };
   return byName[bucketName];
 }

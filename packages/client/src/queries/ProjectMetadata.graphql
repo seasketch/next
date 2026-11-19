@@ -7,6 +7,7 @@ fragment ProjectMetadata on Project {
   logoLink
   logoUrl
   accessControl
+  isListed
   sessionIsAdmin
   isFeatured
   supportEmail
