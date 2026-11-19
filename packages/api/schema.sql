@@ -11784,10 +11784,15 @@ begin
       raise exception 'Sketch Class with id=% is not a template', template_sketch_class_id;
     end if;
 
-    -- Never enable clipping by default for non-polygon classes.
-    enable_geography_clipping = base.geometry_type = 'POLYGON'
-      and default_report_id is not null
-      and default_clipping_geography_id is not null;
+    enable_geography_clipping = case
+      when base.geometry_type = 'POLYGON' then
+        default_report_id is not null
+        and default_clipping_geography_id is not null
+      when base.geometry_type = 'COLLECTION' then
+        default_report_id is not null
+      else
+        false
+    end;
 
     -- TODO: add suffix to name if there are duplicates
     select count(*) into num_similarly_named
@@ -11811,7 +11816,8 @@ begin
       mapbox_gl_style,
       preprocessing_endpoint,
       preprocessing_project_url,
-      is_geography_clipping_enabled
+      is_geography_clipping_enabled,
+      preview_new_reports
     ) values (
       "projectId",
       new_name,
@@ -11823,7 +11829,8 @@ begin
       base.mapbox_gl_style,
       base.preprocessing_endpoint,
       base.preprocessing_project_url,
-      enable_geography_clipping
+      enable_geography_clipping,
+      false
     ) returning * into created;
 
     perform initialize_sketch_class_form_from_template(
@@ -11833,7 +11840,10 @@ begin
     if default_report_id is not null then
       perform set_primary_report_for_sketch_class(created.id, default_report_id);
     end if;
-    if default_clipping_geography_id is not null then
+    -- A geography row plus is_geography_clipping_enabled makes
+    -- sketch_classes_use_geography_clipping true. Collections do not clip.
+    if default_clipping_geography_id is not null
+      and base.geometry_type is distinct from 'COLLECTION' then
       insert into sketch_class_geographies (sketch_class_id, geography_id)
       values (created.id, default_clipping_geography_id);
     end if;

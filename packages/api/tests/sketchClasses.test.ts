@@ -439,6 +439,97 @@ describe("Sketch Classes tied to FormElements", () => {
   });
 });
 
+test("new Collection sketch classes use authored reports instead of geoprocessing", async () => {
+  await pool.transaction(async (conn) => {
+    const adminId = await createUser(conn);
+    const projectId = await createProject(conn, adminId);
+    await conn.any(
+      sql`insert into project_geography (project_id, name) values (${projectId}, 'EEZ')`
+    );
+
+    // The superuser Collection is the template, but its reporting flag is not copied.
+    await conn.any(sql`set role postgres`);
+    await conn.any(
+      sql`update sketch_classes
+          set is_geography_clipping_enabled = false,
+              preview_new_reports = true
+          where is_template = true
+            and name = 'Collection'
+            and geometry_type = 'COLLECTION'`
+    );
+    const collectionTemplateId = await conn.oneFirst<number>(
+      sql`select id from sketch_classes
+          where is_template = true
+            and name = 'Collection'
+            and geometry_type = 'COLLECTION'`
+    );
+    const polygonTemplateId = await conn.oneFirst<number>(
+      sql`select id from sketch_classes
+          where is_template = true and name = 'Simple Polygon'`
+    );
+    const pointTemplateId = await conn.oneFirst<number>(
+      sql`select id from sketch_classes
+          where is_template = true and name = 'Simple Point'`
+    );
+
+    await createSession(conn, adminId, true, false, projectId);
+    const collection = await conn.one<{
+      id: number;
+      geometry_type: string;
+      is_geography_clipping_enabled: boolean;
+      preview_new_reports: boolean;
+    }>(
+      sql`select * from create_sketch_class_from_template(${projectId}, ${collectionTemplateId})`
+    );
+    expect(collection.geometry_type).toBe("COLLECTION");
+    expect(collection.is_geography_clipping_enabled).toBe(true);
+    expect(collection.preview_new_reports).toBe(false);
+
+    await conn.any(sql`set role postgres`);
+    expect(
+      await conn.oneFirst<boolean>(
+        sql`select sketch_classes_use_geography_clipping(sketch_classes.*)
+            from sketch_classes where id = ${collection.id}`
+      )
+    ).toBe(false);
+    expect(
+      await conn.oneFirst(
+        sql`select count(*)::int from sketch_class_geographies where sketch_class_id = ${collection.id}`
+      )
+    ).toBe(0);
+    expect(
+      await conn.oneFirst(
+        sql`select count(*)::int from sketch_class_reports
+            where sketch_class_id = ${collection.id} and is_primary = true`
+      )
+    ).toBe(1);
+
+    await createSession(conn, adminId, true, false, projectId);
+    const polygon = await conn.one<{
+      id: number;
+      is_geography_clipping_enabled: boolean;
+    }>(
+      sql`select * from create_sketch_class_from_template(${projectId}, ${polygonTemplateId})`
+    );
+    const point = await conn.one<{
+      is_geography_clipping_enabled: boolean;
+    }>(
+      sql`select * from create_sketch_class_from_template(${projectId}, ${pointTemplateId})`
+    );
+    expect(polygon.is_geography_clipping_enabled).toBe(true);
+    expect(point.is_geography_clipping_enabled).toBe(false);
+
+    await conn.any(sql`set role postgres`);
+    expect(
+      await conn.oneFirst(
+        sql`select count(*)::int from sketch_class_geographies where sketch_class_id = ${polygon.id}`
+      )
+    ).toBe(1);
+
+    await conn.any(sql`ROLLBACK`);
+  });
+});
+
 test("Don't allow geometry type to be changed for sketch classes that aren't a part of surveys", async () => {
   await pool.transaction(async (conn) => {
     const adminId = await createUser(conn);
