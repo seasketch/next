@@ -2,15 +2,12 @@
  * Link previews for layer links and map bookmarks.
  *
  * Slack, Facebook, X, iMessage, and the rest read Open Graph tags from the
- * first HTML response. They do not run the React app, so the worker inserts
- * the tags when one of those crawlers requests a share URL.
+ * first HTML response. They do not run the React app. The tags are part of
+ * the share URL itself, so a new app does not need to be added to a list.
  */
 
 const SHARE_PATH =
   /^\/([^/]+)\/(layers|bookmarks)\/([0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12})\/?$/i;
-
-const PREVIEW_BOT =
-  /Slackbot|Twitterbot|facebookexternalhit|Facebot|LinkedInBot|Discordbot|WhatsApp|TelegramBot|Applebot|redditbot|Embedly|Iframely|Pinterest|vkShare|SkypeUriPreview|Googlebot|bingbot|DuckDuckBot/i;
 
 const PREVIEW_QUERY = `query BookmarkLinkPreview($slug: String!, $id: UUID!) {
   bookmarkLinkPreview(slug: $slug, id: $id)
@@ -22,10 +19,6 @@ export function shareTarget(pathname) {
     return null;
   }
   return { slug: match[1], id: match[3] };
-}
-
-export function isPreviewBot(userAgent) {
-  return typeof userAgent === "string" && PREVIEW_BOT.test(userAgent);
 }
 
 export function previewImageUrl(endpoint, imageId) {

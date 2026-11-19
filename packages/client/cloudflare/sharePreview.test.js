@@ -3,7 +3,6 @@ import test from "node:test";
 import {
   escapeHtml,
   injectPreview,
-  isPreviewBot,
   loadSharePreview,
   previewImageUrl,
   readPreview,
@@ -24,27 +23,6 @@ test("shareTarget reads layer and bookmark urls", () => {
   assert.equal(shareTarget(`/demo/layers/${id}/extra`), null);
   assert.equal(shareTarget("/demo/app"), null);
   assert.equal(shareTarget("/demo/admin/data"), null);
-});
-
-test("isPreviewBot matches link-preview crawlers and not browsers", () => {
-  assert.equal(
-    isPreviewBot("Slackbot-LinkExpanding 1.0 (+https://api.slack.com/robots)"),
-    true
-  );
-  assert.equal(isPreviewBot("Twitterbot/1.0"), true);
-  assert.equal(
-    isPreviewBot(
-      "Mozilla/5.0 (compatible; facebookexternalhit/1.1; +http://www.facebook.com/externalhit_uatext.php)"
-    ),
-    true
-  );
-  assert.equal(
-    isPreviewBot(
-      "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/120.0.0.0 Safari/537.36"
-    ),
-    false
-  );
-  assert.equal(isPreviewBot(null), false);
 });
 
 test("injectPreview replaces the title and description and escapes text", () => {

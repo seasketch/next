@@ -13,7 +13,6 @@
 
 import {
   injectPreview,
-  isPreviewBot,
   loadSharePreview,
   previewImageUrl,
   shareTarget,
@@ -84,11 +83,7 @@ export default {
     if (shouldSpaFallback(url.pathname)) {
       const indexUrl = new URL("/index.html", url.origin);
       const target = shareTarget(url.pathname);
-      if (
-        request.method === "GET" &&
-        target &&
-        isPreviewBot(request.headers.get("user-agent"))
-      ) {
+      if (request.method === "GET" && target) {
         try {
           const preview = await loadSharePreview(env.GRAPHQL_ENDPOINT, target);
           if (preview) {
@@ -106,7 +101,6 @@ export default {
                 headers: {
                   "Content-Type": "text/html; charset=utf-8",
                   "Cache-Control": "no-cache, no-store, max-age=0, must-revalidate",
-                  Vary: "User-Agent",
                 },
               });
             }
