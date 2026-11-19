@@ -50,6 +50,7 @@ import getSlug from "../getSlug";
 import ReportPublishedDataPrefetch from "./ReportPublishedDataPrefetch";
 import { HomepageFlyoutProvider } from "./HomepageFlyoutContext";
 import LayerLinkProvider from "../dataLayers/LayerLinkProvider";
+import BookmarkLinkRoute from "./BookmarkLinkRoute";
 
 const LazyOverlays = React.lazy(
   () => import(/* webpackChunkName: "Overlays" */ "./OverlayLayers")
@@ -185,6 +186,7 @@ export default function ProjectApp() {
               enableTemporal
             >
               <LayerLinkProvider>
+              <BookmarkLinkRoute />
               <MapUIProvider
                 preferencesKey={`${slug}-homepage-ui`}
                 defaultShowScale={data?.project?.showScalebarByDefault || false}

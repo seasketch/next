@@ -400,4 +400,99 @@ describe("layer links", () => {
       },
     );
   });
+
+  test("link previews describe a published layer and hide the admin copy", async () => {
+    await projectTransaction(pool, "public", async (conn, projectId, adminId) => {
+      await createSession(conn, adminId, true, false, projectId);
+      const slug = (await conn.oneFirst(
+        sql`select slug from projects where id = ${projectId}`,
+      )) as string;
+      await conn.any(
+        sql`update projects set name = ${"American Samoa"} where id = ${projectId}`,
+      );
+      const basemapId = Number(
+        await conn.oneFirst(sql`
+          insert into basemaps (project_id, name, type, url, thumbnail)
+          values (
+            ${projectId}, 'Ocean', 'MAPBOX',
+            'mapbox://my-map/id', 'https://thumbnail.org/1.png'
+          ) returning id`),
+      );
+      const stableId = await createDraftLayer(conn, projectId, "Rockfish", null, null);
+      const draftLink = await callEnsure(conn, slug, stableId, camera, basemapId, true);
+      await publish(conn, projectId, [stableId]);
+      const published = await callEnsure(conn, slug, stableId, camera, basemapId, false);
+      await conn.any(sql`set role postgres`);
+      await conn.any(sql`
+        update map_bookmarks
+        set image_id = 'img_published'
+        where id = ${published.id}`);
+      await conn.any(sql`set role anon`);
+
+      const preview = await conn.oneFirst(sql`
+        select bookmark_link_preview(${slug}, ${published.id})`);
+      expect(preview).toMatchObject({
+        title: "Rockfish",
+        description: "Rockfish on the American Samoa map.",
+        imageId: "img_published",
+        width: 1200,
+        height: 800,
+      });
+      expect(
+        await conn.oneFirst(sql`
+          select bookmark_link_preview(${slug}, ${draftLink.id})`),
+      ).toBeNull();
+      expect(
+        await conn.oneFirst(sql`
+          select bookmark_link_preview(${"other-project"}, ${published.id})`),
+      ).toBeNull();
+    });
+  });
+
+  test("link previews describe a saved map view", async () => {
+    await projectTransaction(pool, "public", async (conn, projectId, adminId) => {
+      await createSession(conn, adminId, true, false, projectId);
+      const slug = (await conn.oneFirst(
+        sql`select slug from projects where id = ${projectId}`,
+      )) as string;
+      await conn.any(
+        sql`update projects set name = ${"American Samoa"} where id = ${projectId}`,
+      );
+      const basemapId = Number(
+        await conn.oneFirst(sql`
+          insert into basemaps (project_id, name, type, url, thumbnail)
+          values (
+            ${projectId}, 'Ocean', 'MAPBOX',
+            'mapbox://my-map/id', 'https://thumbnail.org/1.png'
+          ) returning id`),
+      );
+      await conn.any(sql`set role postgres`);
+      const bookmarkId = await conn.oneFirst(sql`
+        insert into map_bookmarks (
+          project_id, user_id, style, selected_basemap, camera_options,
+          map_dimensions, basemap_name, layer_names, image_id, kind
+        ) values (
+          ${projectId},
+          ${adminId},
+          ${sql.json(style)},
+          ${basemapId},
+          ${sql.json(camera)},
+          ${sql.array([800, 500], "int4")},
+          'Light',
+          ${sql.json({ a: "Territorial Seas", b: "Land" })},
+          'img_view',
+          'forum'
+        ) returning id`);
+      await conn.any(sql`set role anon`);
+      const preview = await conn.oneFirst(sql`
+        select bookmark_link_preview(${slug}, ${bookmarkId})`);
+      expect(preview).toMatchObject({
+        title: "Map bookmark",
+        description: "Land, Territorial Seas on the American Samoa map.",
+        imageId: "img_view",
+        width: 800,
+        height: 500,
+      });
+    });
+  });
 });

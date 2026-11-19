@@ -27,6 +27,8 @@
     "run_worker_first": true
   },
   "vars": {
-    "SPRITES_BASE_URL": "https://seasketchpublicuploads-publicuploads056688dd-1evw01vk0kf8z.s3.us-west-2.amazonaws.com/sprites/"
+    "SPRITES_BASE_URL": "https://seasketchpublicuploads-publicuploads056688dd-1evw01vk0kf8z.s3.us-west-2.amazonaws.com/sprites/",
+    "GRAPHQL_ENDPOINT": "https://api.seasket.ch/graphql",
+    "CLOUDFLARE_IMAGES_ENDPOINT": "https://imagedelivery.net/UvAJR8nUVV-h3iWaqOVMkw/"
   }
 }

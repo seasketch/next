@@ -467,6 +467,7 @@ function App() {
                       "/:slug/profile",
                       "/:slug/app/:sidebar?",
                       "/:slug/layers/:layerLinkId",
+                      "/:slug/bookmarks/:bookmarkId",
                     ]}
                   >
                     <ProjectAccessGate>
