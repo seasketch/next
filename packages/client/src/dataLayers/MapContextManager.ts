@@ -14,6 +14,13 @@ import mapboxgl, {
   LineLayer,
 } from "mapbox-gl";
 import { createContext, Dispatch, SetStateAction } from "react";
+import {
+  boundsAreUsable,
+  cameraForLayerBounds,
+  LAYER_LINK_MAP_HEIGHT,
+  LAYER_LINK_MAP_WIDTH,
+} from "./layerLinkBounds";
+import { stripEphemeralLayers } from "./stripBookmarkStyle";
 import { Feature, Polygon } from "geojson";
 import {
   ArcgisFeatureLayerFetchStrategy,
@@ -2020,7 +2027,14 @@ class MapContextManager extends EventEmitter {
     return ctas;
   }
 
+  private layerLinkCapture = false;
+  private skippedStyleUpdate = false;
+
   async updateStyle() {
+    if (this.layerLinkCapture) {
+      this.skippedStyleUpdate = true;
+      return;
+    }
     if (!this.basemapState?.getSelectedBasemap()?.url) {
       this.debouncedUpdateStyle();
       return;
@@ -3905,6 +3919,147 @@ class MapContextManager extends EventEmitter {
       clientGeneratedThumbnail,
       dataTableStates,
     };
+  }
+
+  /**
+   * Bookmark payload for a shareable link to one layer: that layer only, the
+   * current basemap, and a camera fitted to the layer's full extent. The
+   * caller's map is left as it was.
+   */
+  async getLayerLinkBookmarkData(stableId: string) {
+    if (!this.map) {
+      throw new Error("Map is not ready");
+    }
+    const selectedId = this.basemapState?.selectedBasemap;
+    if (!selectedId || !this.basemaps[selectedId]) {
+      throw new Error("Choose a basemap before linking to this layer");
+    }
+    if (!this.layers[stableId]) {
+      throw new Error("This layer is not on the map");
+    }
+    const rawBounds = await this.boundsForTocItem(stableId);
+    const boundsAvailable = boundsAreUsable(rawBounds);
+    const cameraOptions = boundsAvailable
+      ? cameraForLayerBounds(rawBounds)
+      : {
+          center: this.map.getCenter().toArray() as [number, number],
+          zoom: this.map.getZoom(),
+          bearing: 0,
+          pitch: 0,
+        };
+    const title = this.tocItems[stableId]?.label || stableId;
+    const { style, sketchLayerIds } = await this.withLayerLinkCapture(
+      stableId,
+      () => this.getComputedStyle()
+    );
+    const stripped = stripEphemeralLayers(
+      JSON.parse(JSON.stringify(style)),
+      sketchLayerIds
+    );
+    return {
+      style: stripped,
+      selectedBasemap: selectedId,
+      basemapOptionalLayerStates:
+        this.basemapState?.basemapOptionalLayerStates || {},
+      cameraOptions,
+      mapDimensions: [LAYER_LINK_MAP_WIDTH, LAYER_LINK_MAP_HEIGHT] as [
+        number,
+        number
+      ],
+      basemapName: this.basemaps[selectedId]?.name || "",
+      layerNames: { [stableId]: title },
+      boundsAvailable,
+    };
+  }
+
+  /**
+   * Run `fn` while overlay state pretends only `stableId` is visible.
+   * Notifications are suppressed and the previous state is restored, including
+   * custom-source visibility flags that style generation flips on.
+   */
+  private async withLayerLinkCapture<T>(
+    stableId: string,
+    fn: () => Promise<T>
+  ): Promise<T> {
+    const overlayEmit = this.overlayStates.emit.bind(this.overlayStates);
+    const sketchEmit = this.sketchStates.emit.bind(this.sketchStates);
+    const swallow = (() => true) as typeof this.overlayStates.emit;
+    this.overlayStates.emit = swallow;
+    this.sketchStates.emit = swallow;
+    this.layerLinkCapture = true;
+
+    const overlaySnapshot = this.overlayStates.keys().map((key) => ({
+      key,
+      state: { ...this.overlayStates.getRaw(key)! },
+    }));
+    const hadTarget = this.overlayStates.has(stableId);
+    const sketchSnapshot = this.sketchStates.keys().map((key) => ({
+      key,
+      visible: this.sketchStates.getRaw(key)?.visible,
+    }));
+    const customVisible = Object.keys(this.customSources).map((id) => ({
+      id,
+      visible: this.customSources[Number(id)].visible,
+    }));
+
+    try {
+      for (const key of this.overlayStates.keys()) {
+        if (key !== stableId) {
+          this.overlayStates.setVisible(key, false);
+        }
+      }
+      if (!hadTarget) {
+        this.overlayStates.addLayer(stableId, {
+          visible: true,
+          hidden: false,
+          loading: false,
+          opacity: 1,
+        });
+      } else {
+        this.overlayStates.setVisible(stableId, true);
+        this.overlayStates.setHidden(stableId, false);
+        this.overlayStates.setOpacity(stableId, 1);
+      }
+      for (const key of this.sketchStates.keys()) {
+        this.sketchStates.setVisible(key, false);
+      }
+      return await fn();
+    } finally {
+      if (!hadTarget && this.overlayStates.has(stableId)) {
+        this.overlayStates.removeLayer(stableId);
+      }
+      for (const snap of overlaySnapshot) {
+        const current = this.overlayStates.getRaw(snap.key);
+        if (!current) {
+          this.overlayStates.addLayer(snap.key, snap.state);
+        } else {
+          this.overlayStates.setVisible(snap.key, Boolean(snap.state.visible));
+          this.overlayStates.setHidden(snap.key, Boolean(snap.state.hidden));
+          if (typeof snap.state.opacity === "number") {
+            this.overlayStates.setOpacity(snap.key, snap.state.opacity);
+          }
+        }
+      }
+      for (const snap of sketchSnapshot) {
+        if (typeof snap.visible === "boolean") {
+          this.sketchStates.setVisible(snap.key, snap.visible);
+        }
+      }
+      for (const id of Object.keys(this.customSources)) {
+        const snap = customVisible.find((entry) => entry.id === id);
+        const current = this.customSources[Number(id)];
+        if (current) {
+          current.visible = snap ? snap.visible : false;
+        }
+      }
+      this.layerLinkCapture = false;
+      this.overlayStates.emit = overlayEmit;
+      this.sketchStates.emit = sketchEmit;
+      if (this.skippedStyleUpdate) {
+        this.skippedStyleUpdate = false;
+        this.debouncedUpdateStyle();
+      }
+    }
   }
 
   /**

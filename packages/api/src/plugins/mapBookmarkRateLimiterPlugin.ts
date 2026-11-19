@@ -25,26 +25,35 @@ if (process.env.NODE_ENV !== "test") {
  * The screenshot creation process is computationally intensive and should be
  * protected from abuse.
  */
+function limitBookmarkMutation(
+  resolve: any,
+  source: any,
+  args: any,
+  context: any,
+  resolveInfo: any
+) {
+  if (limiter) {
+    if (context?.user?.sub) {
+      return limiter
+        .consume(context.user.sub, 1)
+        .then(() => {
+          return resolve(source, args, context, resolveInfo);
+        })
+        .catch(() => {
+          throw new Error("Rate limited");
+        });
+    } else {
+      throw new Error("You must be logged in to create a bookmark");
+    }
+  } else {
+    return resolve(source, args, context, resolveInfo);
+  }
+}
+
 const MapBookmarkRateLimiterPlugin = makeWrapResolversPlugin({
   Mutation: {
-    createMapBookmark: (resolve, source, args, context, resolveInfo) => {
-      if (limiter) {
-        if (context?.user?.sub) {
-          return limiter
-            .consume(context.user.sub, 1)
-            .then((value) => {
-              return resolve(source, args, context, resolveInfo);
-            })
-            .catch((e) => {
-              throw new Error("Rate limited");
-            });
-        } else {
-          throw new Error("You must be logged in to create a bookmark");
-        }
-      } else {
-        return resolve(source, args, context, resolveInfo);
-      }
-    },
+    createMapBookmark: limitBookmarkMutation,
+    ensureLayerLink: limitBookmarkMutation,
   },
 });
 

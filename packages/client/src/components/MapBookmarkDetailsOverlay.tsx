@@ -1,17 +1,23 @@
-import { XIcon } from "@heroicons/react/outline";
-import { useEffect, useState, useMemo, useContext } from "react";
-import { createPortal } from "react-dom";
-import { useGetBookmarkQuery, WorkerJobStatus } from "../generated/graphql";
-import Spinner from "./Spinner";
-import { motion } from "framer-motion";
-import { useGlobalErrorHandler } from "./GlobalErrorHandler";
-import { useTranslation, Trans } from "react-i18next";
+import { ChevronDownIcon } from "@heroicons/react/outline";
+import { ApolloClient, NormalizedCacheObject, useApolloClient } from "@apollo/client";
+import { useContext, useEffect, useMemo, useState } from "react";
+import { Trans, useTranslation } from "react-i18next";
+import BookmarkCard from "../dataLayers/BookmarkCard";
 import { MapManagerContext } from "../dataLayers/MapContextManager";
-import { XCircleIcon } from "@heroicons/react/solid";
-import Warning from "./Warning";
+import {
+  useGetBookmarkQuery,
+  useMapBookmarkSubscription,
+  WorkerJobStatus,
+} from "../generated/graphql";
+import { useGlobalErrorHandler } from "./GlobalErrorHandler";
+import {
+  bookmarkCamera,
+  bookmarkDimensions,
+  bookmarkName,
+} from "./bookmarkCardFacts";
 
 const coordinateFormatter = Intl.NumberFormat(undefined, {
-  maximumFractionDigits: 6,
+  maximumFractionDigits: 4,
 });
 
 export default function MapBookmarkDetailsOverlay({
@@ -22,400 +28,284 @@ export default function MapBookmarkDetailsOverlay({
   onRequestClose: () => void;
 }) {
   const onError = useGlobalErrorHandler();
+  const { t } = useTranslation("mapBookmarks");
+  const client = useApolloClient() as ApolloClient<NormalizedCacheObject>;
+  const { manager, ready } = useContext(MapManagerContext);
   const { data, loading } = useGetBookmarkQuery({
-    variables: {
-      id: bookmarkId,
-    },
+    variables: { id: bookmarkId },
     onError,
+    fetchPolicy: "cache-and-network",
+  });
+  const bookmark = data?.bookmarkById;
+  const status = bookmark?.screenshotJobStatus;
+  const failed =
+    status === WorkerJobStatus.Failed || status === WorkerJobStatus.Error;
+  const waiting =
+    !failed &&
+    !bookmark?.imageId &&
+    (loading ||
+      status === WorkerJobStatus.Queued ||
+      status === WorkerJobStatus.Started ||
+      !bookmark);
+  useMapBookmarkSubscription({
+    variables: { id: bookmarkId },
+    skip: Boolean(bookmark?.imageId) || failed,
   });
 
-  // Image loading state
-  const [imageLoaded, setImageLoaded] = useState(false);
-  const [imageShown, setImageShown] = useState(false);
-
-  const { t } = useTranslation("mapBookmarks");
-
-  // Close on escape
   useEffect(() => {
-    const handler = (e: KeyboardEvent) => {
-      if (e.key === "Escape") {
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
         onRequestClose();
       }
     };
-    document.body.addEventListener("keydown", handler);
-    return () => {
-      document.body.removeEventListener("keydown", handler);
-    };
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
   }, [onRequestClose]);
 
-  const { manager } = useContext(MapManagerContext);
-  const bookmark = data?.bookmarkById;
-
-  const imageRatio = useMemo(() => {
-    if (data?.bookmarkById?.mapDimensions) {
-      const [width, height] = data?.bookmarkById?.mapDimensions;
-      if (width && height) {
-        const wider = width > height;
-        if (wider) {
-          return {
-            width: "100%",
-            height: (height / width) * 100 + "%",
-          };
-        } else {
-          return {
-            height: "100%",
-            width: (width / height) * 100 + "%",
-          };
-        }
-      } else {
-        return undefined;
-      }
-    } else {
-      return null;
-    }
-  }, [data?.bookmarkById?.mapDimensions]);
-
   const errors = useMemo(() => {
-    if (data?.bookmarkById && manager) {
-      return manager.getErrorsForBookmark(data.bookmarkById);
-    } else {
+    if (!bookmark || !manager) {
       return null;
     }
-  }, [data?.bookmarkById, manager]);
+    return manager.getErrorsForBookmark(bookmark, client);
+  }, [bookmark, manager, client]);
+  const missingLayers = errors?.missingLayers || [];
+  const missingSketches = errors?.missingSketches || [];
+  const hasErrors = Boolean(
+    errors?.missingBasemap || missingLayers.length || missingSketches.length
+  );
 
-  const hasErrors = useMemo(() => {
-    return (
-      errors?.missingBasemap ||
-      Boolean(errors?.missingLayers?.length) ||
-      Boolean(errors?.missingSketches?.length)
-    );
-  }, [errors]);
+  const camera = bookmarkCamera(bookmark?.cameraOptions);
+  const dimensions = bookmarkDimensions(bookmark?.mapDimensions);
+  const layers = (bookmark?.visibleDataLayers || []).filter(
+    (id): id is string => typeof id === "string" && id.length > 0
+  );
+  const sketches = (bookmark?.visibleSketches || []).filter(
+    (id): id is number => typeof id === "number"
+  );
+  const savedAt = bookmark
+    ? new Date(bookmark.createdAt).toLocaleString(undefined, {
+        dateStyle: "medium",
+        timeStyle: "short",
+      })
+    : "";
 
-  return createPortal(
-    <div
-      id="overlay-body"
-      className="w-full h-full bg-black bg-opacity-80 absolute left-0 top-0 z-50 flex"
-      onClick={(e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        if (e.target instanceof HTMLElement) {
-          if (
-            e.target.tagName === "DIV" &&
-            !e.target.classList.contains("screenshot")
-          ) {
-            onRequestClose();
-          }
-        }
-      }}
+  const viewOnMap = async () => {
+    if (!manager || !bookmark) {
+      return;
+    }
+    await manager.showMapBookmark(bookmark, true, client);
+    onRequestClose();
+  };
+
+  return (
+    <BookmarkCard
+      labelledBy="map-bookmark-title"
+      imageId={bookmark?.imageId}
+      standIn={bookmark?.clientGeneratedThumbnail}
+      pending={waiting}
+      failed={failed}
+      onClose={onRequestClose}
+      onDownload={
+        bookmark?.imageId
+          ? () =>
+              downloadImage(
+                // eslint-disable-next-line i18next/no-literal-string
+                `${process.env.REACT_APP_CLOUDFLARE_IMAGES_ENDPOINT || ""}${bookmark.imageId}/public`,
+                "map-image.png"
+              )
+          : undefined
+      }
+      label={t("Map bookmark")}
+      summary={
+        <div className="min-w-0">
+          <div className="truncate text-sm font-medium text-slate-900">
+            <Trans ns="mapBookmarks">Map bookmark</Trans>
+          </div>
+          {savedAt && (
+            <div className="truncate text-xs text-slate-500">{savedAt}</div>
+          )}
+        </div>
+      }
+      footer={
+        <button
+          type="button"
+          className="rounded-lg bg-primary-500 px-4 py-2 text-sm font-medium text-white hover:bg-primary-600 disabled:opacity-60"
+          disabled={!manager || !ready || !bookmark}
+          onClick={() => {
+            void viewOnMap();
+          }}
+        >
+          <Trans ns="mapBookmarks">View on the map</Trans>
+        </button>
+      }
     >
-      {loading && (
-        <div className="absolute top-1/2 left-1/2 -ml-5 -mt-5">
-          <Spinner large />
+      <h2
+        id="map-bookmark-title"
+        className="text-2xl font-semibold tracking-tight text-slate-900"
+      >
+        <Trans ns="mapBookmarks">Map bookmark</Trans>
+      </h2>
+      {savedAt && <p className="mt-1 text-sm text-slate-500">{savedAt}</p>}
+      {hasErrors && (
+        <p className="mt-4 rounded-lg bg-amber-50 px-3 py-2 text-sm leading-snug text-amber-950">
+          <Trans ns="mapBookmarks">
+            Some layers or sketches in this view are no longer in the project.
+            The preview is the map as it was saved.
+          </Trans>
+        </p>
+      )}
+      {bookmark?.basemapName && (
+        <div className="mt-4 flex items-baseline justify-between gap-4 text-sm">
+          <span className="text-slate-500">{t("Basemap")}</span>
+          <span className="min-w-0 truncate text-right text-slate-900">
+            {bookmark.basemapName}
+            {errors?.missingBasemap && (
+              <span className="ml-2 text-xs text-amber-700">{t("missing")}</span>
+            )}
+          </span>
         </div>
       )}
-      {data?.bookmarkById && (
-        <>
-          <div className="flex-2 flex items-center p-4 relative">
-            {!imageShown && (bookmark?.imageId || data.bookmarkById.imageId) && (
-              <div className="absolute top-0 left-0 w-full h-full flex items-center justify-center">
-                <div className="mx-auto z-10 absolute top-1/2 -mt-5 flex flex-col text-center items-center justify-center">
-                  <Spinner large />
-                  <span className="text-gray-500 mt-1">
-                    <Trans ns="mapBookmarks">Loading screenshot...</Trans>
-                  </span>
-                </div>
-              </div>
-            )}
-            {bookmark && bookmark.imageId && (
-              <motion.img
-                variants={{
-                  hidden: { opacity: 0.01 },
-                  visible: { opacity: 1 },
-                }}
-                animate={imageLoaded ? "visible" : "hidden"}
-                transition={{ duration: 0.15 }}
-                onLoad={() => setImageLoaded(true)}
-                alt="Bookmark preview thumbnail"
-                className="absolute top-0 left-0 w-full h-full"
-                style={{ objectFit: "contain" }}
-                onAnimationComplete={() => {
-                  if (imageLoaded) {
-                    setImageShown(true);
-                  }
-                }}
-                src={`${process.env.REACT_APP_CLOUDFLARE_IMAGES_ENDPOINT}${
-                  bookmark.imageId || data?.bookmarkById?.imageId
-                }/public`}
-              />
-            )}
-            {bookmark &&
-              (bookmark.screenshotJobStatus === WorkerJobStatus.Failed ||
-                bookmark.screenshotJobStatus === WorkerJobStatus.Error) && (
-                <>
-                  <div className="w-full text-center">
-                    <span className="text-white text-center w-full font-bold text-lg">
-                      <Trans ns="mapBookmarks">Screenshot not available</Trans>
-                    </span>
-                    <div className="text-white text-center w-full">
-                      <Trans ns="mapBookmarks">
-                        An unknown error prevented this map from being captured
-                        when the bookmark was created.
-                      </Trans>
-                    </div>
-                  </div>
-                </>
-              )}
-            {bookmark &&
-              (bookmark.screenshotJobStatus === WorkerJobStatus.Queued ||
-                bookmark.screenshotJobStatus === WorkerJobStatus.Started) && (
-                <>
-                  <div className="w-full text-center">
-                    <span className="text-white text-center w-full font-bold text-lg">
-                      <Trans ns="mapBookmarks">Screenshot not available</Trans>
-                    </span>
-                    <div className="text-white text-center w-full">
-                      <Trans ns="mapBookmarks">
-                        The screenshot is currently being generated.
-                      </Trans>
-                    </div>
-                  </div>
-                </>
-              )}
-          </div>
-          <div className="flex-1 p-0 lg:p-4 text-white font-bold h-full bg-gray-700 bg-opacity-50 max-w-lg lg:max-w-xl">
-            <div className="mx-auto  p-0 lg:p-4 overflow-y-auto max-h-full">
-              <div className="flex items-center mb-2">
-                <h1 className="flex-1">
-                  <Trans ns="mapBookmarks">Map Bookmark Details</Trans>
-                </h1>
-                <button
-                  className="rounded-full bg-white bg-opacity-20 p-2 -mt-2"
-                  onClick={(e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    onRequestClose();
-                  }}
-                >
-                  <XIcon className="w-6 h-6 text-white" />
-                </button>
-              </div>
-              {bookmark && (
-                <div className="">
-                  <dl>
-                    <div className="py-5 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-0">
-                      <dt className="text-sm font-medium text-white">
-                        {t("Created")}
-                      </dt>
-                      <dd className="mt-1 text-sm text-white sm:col-span-2 sm:mt-0">
-                        {new Date(bookmark.createdAt).toLocaleString()}
-                      </dd>
-                    </div>
-                    {bookmark.imageId && (
-                      <div className="py-5 sm:grid sm:grid-cols-3 sm:gap-4 ">
-                        <dt className="text-sm font-medium text-white">
-                          {t("Dimensions")}
-                        </dt>
-                        <dd className="mt-1 text-sm text-white sm:col-span-2 sm:mt-0">
-                          {bookmark?.mapDimensions[0]}
-                          {
-                            // eslint-disable-next-line i18next/no-literal-string
-                            " x "
-                          }
-                          {bookmark?.mapDimensions[1]}
-                        </dd>
-                      </div>
-                    )}
-                    <div className="  py-5 sm:grid sm:grid-cols-3 sm:gap-4 ">
-                      <dt className="text-sm font-medium text-white">
-                        {t("Zoom Level")}
-                      </dt>
-                      <dd className="mt-1 text-sm text-white sm:col-span-2 sm:mt-0">
-                        {Math.round(bookmark?.cameraOptions.zoom * 10) / 10}
-                      </dd>
-                    </div>{" "}
-                    <div className="  py-5 sm:grid sm:grid-cols-3 sm:gap-4 ">
-                      <dt className="text-sm font-medium text-white">
-                        {t("Center")}
-                      </dt>
-                      <dd className="mt-1 text-sm text-white sm:col-span-2 sm:mt-0">
-                        {coordinateFormatter.format(
-                          bookmark?.cameraOptions.center[0]
-                        )}
-                        ,{" "}
-                        {coordinateFormatter.format(
-                          bookmark?.cameraOptions.center[1]
-                        )}
-                      </dd>
-                    </div>
-                    {bookmark.imageId && (
-                      <div className=" py-5 sm:grid sm:grid-cols-3 sm:gap-4 ">
-                        <dt className="text-sm font-medium text-white">
-                          {t("Downloads")}
-                        </dt>
-                        <dd className="mt-1 text-sm text-white sm:col-span-2 sm:mt-0">
-                          <ul className="divide-y divide-gray-600 rounded-md border border-gray-600">
-                            <li className="flex items-center justify-between py-3 pl-3 pr-4 text-sm">
-                              <div className="flex w-0 flex-1 items-center">
-                                <span className="ml-2 w-0 flex-1 truncate">
-                                  {
-                                    // eslint-disable-next-line i18next/no-literal-string
-                                    "fullsize.png"
-                                  }
-                                </span>
-                              </div>
-                              <div className="ml-4 flex-shrink-0">
-                                <button
-                                  onClick={() => {
-                                    downloadImage(
-                                      `${process.env.REACT_APP_CLOUDFLARE_IMAGES_ENDPOINT}${data?.bookmarkById?.imageId}/public`,
-                                      "fullsize.png"
-                                    );
-                                  }}
-                                  className="font-medium text-indigo-300 hover:text-indigo-400"
-                                >
-                                  {t("Download")}
-                                </button>
-                              </div>
-                            </li>
-                            <li className="flex items-center justify-between py-3 pl-3 pr-4 text-sm">
-                              <div className="flex w-0 flex-1 items-center">
-                                <span className="ml-2 w-0 flex-1 truncate">
-                                  {
-                                    // eslint-disable-next-line i18next/no-literal-string
-                                    "thumbnail.png"
-                                  }
-                                </span>
-                              </div>
-                              <div className="ml-4 flex-shrink-0">
-                                <button
-                                  onClick={() => {
-                                    downloadImage(
-                                      `${process.env.REACT_APP_CLOUDFLARE_IMAGES_ENDPOINT}${data?.bookmarkById?.imageId}/thumbnail`,
-                                      "thumbnail.png"
-                                    );
-                                  }}
-                                  className="font-medium text-indigo-300 hover:text-indigo-400"
-                                >
-                                  {t("Download")}
-                                </button>
-                              </div>
-                            </li>
-                          </ul>
-                        </dd>
-                      </div>
-                    )}
-                    {hasErrors && (
-                      <Warning level="error">
-                        <Trans ns="mapBookmarks">
-                          Some map data referenced in this bookmark is no longer
-                          available.
-                        </Trans>{" "}
-                        {bookmark.imageId && (
-                          <Trans ns="mapBookmarks">
-                            The screenshot shown represents how the map appeared
-                            when the bookmark was created.
-                          </Trans>
-                        )}
-                      </Warning>
-                    )}
-                    <div className="  py-5 sm:grid sm:grid-cols-3 sm:gap-4 ">
-                      <dt className="text-sm font-medium text-white">
-                        {t("Basemap")}
-                      </dt>
-                      <dd className="mt-1 text-sm text-white sm:col-span-2 sm:mt-0">
-                        {bookmark.basemapName ||
-                          "Basemap:" + bookmark.selectedBasemap}
-                      </dd>
-                    </div>
-                    {Boolean(bookmark.visibleDataLayers.length) && (
-                      <div className=" py-5 sm:grid sm:grid-cols-3 sm:gap-4 ">
-                        <dt className="text-sm font-medium text-white">
-                          {t("Visible Layers")}
-                        </dt>
-                        <dd className="mt-1 text-sm text-white sm:col-span-2 sm:mt-0">
-                          <ul className="divide-y divide-gray-600 rounded-md border border-gray-600">
-                            {bookmark.visibleDataLayers.map((lyr) => {
-                              const name =
-                                lyr &&
-                                bookmark.layerNames &&
-                                bookmark.layerNames[lyr]
-                                  ? bookmark.layerNames[lyr]
-                                  : lyr;
-                              return (
-                                <li className="flex items-center justify-between py-3 pl-3 pr-4 text-sm">
-                                  <div className="flex w-0 flex-1 items-center">
-                                    <span className="ml-2 w-0 flex-1 truncate">
-                                      {name}
-                                    </span>
-                                    {lyr &&
-                                      errors &&
-                                      errors.missingLayers.indexOf(lyr) !==
-                                        -1 && (
-                                        <div className="flex-none text-red-500 font-thin">
-                                          <XCircleIcon className="w-5 h-5  inline mr-1" />
-                                          {t("missing")}
-                                        </div>
-                                      )}
-                                  </div>
-                                </li>
-                              );
-                            })}
-                          </ul>
-                        </dd>
-                      </div>
-                    )}
-                    {bookmark.visibleSketches &&
-                      bookmark.visibleSketches.length > 0 && (
-                        <div className=" py-5 sm:grid sm:grid-cols-3 sm:gap-4 ">
-                          <dt className="text-sm font-medium text-white">
-                            {t("Visible Sketches")}
-                          </dt>
-                          <dd className="mt-1 text-sm text-white sm:col-span-2 sm:mt-0">
-                            <ul className="divide-y divide-gray-600 rounded-md border border-gray-600">
-                              {bookmark.visibleSketches.map((id) => {
-                                const name =
-                                  id &&
-                                  bookmark.sketchNames &&
-                                  bookmark.sketchNames[id]
-                                    ? bookmark.sketchNames[id]
-                                    : id;
-                                return (
-                                  <li className="flex items-center justify-between py-3 pl-3 pr-4 text-sm">
-                                    <div className="flex w-0 flex-1 items-center">
-                                      <span className="ml-2 w-0 flex-1 truncate">
-                                        {name}
-                                      </span>
-                                      {id &&
-                                        errors &&
-                                        errors.missingSketches.indexOf(id) !==
-                                          -1 && (
-                                          <div className="flex-none text-red-500 font-thin">
-                                            <XCircleIcon className="w-5 h-5  inline mr-1" />
-                                            {t("missing")}
-                                          </div>
-                                        )}
-                                    </div>
-                                  </li>
-                                );
-                              })}
-                            </ul>
-                          </dd>
-                        </div>
-                      )}
-                  </dl>
-                </div>
-              )}
-            </div>
-          </div>
-        </>
+      {layers.length > 0 && (
+        <CountedList
+          label={t("Layers")}
+          rows={layers.map((id) => ({
+            id,
+            name: bookmarkName(bookmark?.layerNames, id) || id,
+            missing: missingLayers.indexOf(id) !== -1,
+          }))}
+        />
       )}
-    </div>,
-    document.body
+      {sketches.length > 0 && (
+        <CountedList
+          label={t("Sketches")}
+          rows={sketches.map((id) => ({
+            id: String(id),
+            name: bookmarkName(bookmark?.sketchNames, String(id)) || String(id),
+            missing: missingSketches.indexOf(id) !== -1,
+          }))}
+        />
+      )}
+      {(camera || dimensions) && (
+        <MapFacts camera={camera} dimensions={dimensions} />
+      )}
+    </BookmarkCard>
+  );
+}
+
+function CountedList({
+  label,
+  rows,
+}: {
+  label: string;
+  rows: { id: string; name: string; missing: boolean }[];
+}) {
+  const { t } = useTranslation("mapBookmarks");
+  const [open, setOpen] = useState(false);
+  const missing = rows.some((row) => row.missing);
+  return (
+    <div className="mt-4 border-t border-slate-100 pt-3">
+      <button
+        type="button"
+        className="flex w-full items-center gap-2 text-left text-sm font-medium text-slate-700"
+        aria-expanded={open}
+        onClick={() => setOpen((current) => !current)}
+      >
+        <span>{label}</span>
+        <span
+          className={`rounded-full px-1.5 py-0.5 text-xs font-semibold tabular-nums ${
+            missing ? "bg-amber-100 text-amber-800" : "bg-slate-100 text-slate-600"
+          }`}
+        >
+          {rows.length}
+        </span>
+        <ChevronDownIcon
+          className={`ml-auto h-4 w-4 text-slate-400 transition ${open ? "rotate-180" : ""}`}
+        />
+      </button>
+      {open && (
+        <ul className="mt-2 space-y-1">
+          {rows.map((row) => (
+            <li
+              key={row.id}
+              className="flex items-baseline justify-between gap-3 text-sm"
+            >
+              <span className="min-w-0 truncate text-slate-800">{row.name}</span>
+              {row.missing && (
+                <span className="shrink-0 text-xs text-amber-700">
+                  {t("missing")}
+                </span>
+              )}
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+}
+
+function MapFacts({
+  camera,
+  dimensions,
+}: {
+  camera: { zoom: number; center: [number, number] } | null;
+  dimensions: [number, number] | null;
+}) {
+  const { t } = useTranslation("mapBookmarks");
+  const [open, setOpen] = useState(false);
+  return (
+    <div className="mt-4 border-t border-slate-100 pt-3">
+      <button
+        type="button"
+        className="flex w-full items-center justify-between text-sm font-medium text-slate-700"
+        aria-expanded={open}
+        onClick={() => setOpen((current) => !current)}
+      >
+        <Trans ns="mapBookmarks">Details</Trans>
+        <ChevronDownIcon
+          className={`h-4 w-4 text-slate-400 transition ${open ? "rotate-180" : ""}`}
+        />
+      </button>
+      {open && (
+        <dl className="mt-3 grid grid-cols-2 gap-x-6 gap-y-3 text-sm">
+          {camera && (
+            <>
+              <div>
+                <dt className="text-slate-500">{t("Zoom Level")}</dt>
+                <dd className="text-slate-900">
+                  {Math.round(camera.zoom * 10) / 10}
+                </dd>
+              </div>
+              <div>
+                <dt className="text-slate-500">{t("Center")}</dt>
+                <dd className="text-slate-900">
+                  {coordinateFormatter.format(camera.center[0])}
+                  {", "}
+                  {coordinateFormatter.format(camera.center[1])}
+                </dd>
+              </div>
+            </>
+          )}
+          {dimensions && (
+            <div>
+              <dt className="text-slate-500">{t("Dimensions")}</dt>
+              <dd className="text-slate-900">
+                {dimensions[0]}
+                {
+                  // eslint-disable-next-line i18next/no-literal-string
+                  " × "
+                }
+                {dimensions[1]}
+              </dd>
+            </div>
+          )}
+        </dl>
+      )}
+    </div>
   );
 }
 
 function downloadImage(url: string, filename: string) {
-  var link = document.createElement("a");
+  const link = document.createElement("a");
   link.href = url;
   link.download = filename;
   link.target = "_blank";

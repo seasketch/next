@@ -247,6 +247,9 @@ fragment MapBookmarkDetails on MapBookmark {
   sketchNames
   clientGeneratedThumbnail
   dataTableStates
+  kind
+  subjectStableId
+  subjectIsDraft
 }
 
 query GetBookmark($id: UUID!) {

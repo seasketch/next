@@ -11,6 +11,13 @@
  * - known static extensions → ASSETS (real 404 + no-store on miss)
  */
 
+import {
+  injectPreview,
+  loadSharePreview,
+  previewImageUrl,
+  shareTarget,
+} from "./sharePreview.js";
+
 /** Extensions that are never SPA routes when present on the last path segment. */
 const STATIC_FILE_EXTENSIONS = new Set([
   "js",
@@ -74,7 +81,41 @@ export default {
     }
 
     if (shouldSpaFallback(url.pathname)) {
-      return env.ASSETS.fetch(new URL("/index.html", url.origin));
+      const indexUrl = new URL("/index.html", url.origin);
+      const target = shareTarget(url.pathname);
+      if (request.method === "GET" && target) {
+        try {
+          const preview = await loadSharePreview(env.GRAPHQL_ENDPOINT, target);
+          if (preview) {
+            const index = await env.ASSETS.fetch(indexUrl);
+            if (index.ok) {
+              const pageUrl = `${url.origin}${url.pathname.replace(/\/$/, "")}`;
+              const html = injectPreview(
+                await index.text(),
+                preview,
+                pageUrl,
+                previewImageUrl(env.CLOUDFLARE_IMAGES_ENDPOINT, preview.imageId)
+              );
+              return new Response(html, {
+                status: 200,
+                headers: {
+                  "Content-Type": "text/html; charset=utf-8",
+                  "Cache-Control": "no-cache, no-store, max-age=0, must-revalidate",
+                },
+              });
+            }
+          }
+        } catch (error) {
+          console.log(
+            JSON.stringify({
+              event: "share_preview_failed",
+              path: url.pathname,
+              message: error instanceof Error ? error.message : "unknown",
+            })
+          );
+        }
+      }
+      return env.ASSETS.fetch(indexUrl);
     }
 
     const assetResponse = await env.ASSETS.fetch(request);

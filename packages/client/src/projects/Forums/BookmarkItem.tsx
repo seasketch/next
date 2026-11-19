@@ -9,7 +9,7 @@ import {
   WorkerJobStatus,
 } from "../../generated/graphql";
 import { useState, useCallback } from "react";
-import { Trans } from "react-i18next";
+import { Trans, useTranslation } from "react-i18next";
 import WorkerJobDetails from "../../components/WorkerJobDetails";
 import { InformationCircleIcon } from "@heroicons/react/outline";
 import MapBookmarkDetailsOverlay from "../../components/MapBookmarkDetailsOverlay";
@@ -55,6 +55,7 @@ export default function BookmarkItem({
       bookmark.screenshotJobStatus === WorkerJobStatus.Failed,
   });
 
+  const { t } = useTranslation("mapBookmarks");
   const [jobDetailsOpen, setJobDetailsOpen] = useState(false);
 
   const job = data?.bookmarkById?.job || bookmark.job;
@@ -150,14 +151,16 @@ export default function BookmarkItem({
         />
       )}
       <button
-        className="absolute right-1 bottom-1 bg-white bg-opacity-20 rounded-full group hover:bg-blue-700"
+        type="button"
+        aria-label={t("Map bookmark")}
+        className="absolute bottom-1 right-1 flex h-5 w-5 items-center justify-center rounded-full bg-white text-slate-700 shadow ring-1 ring-black/10 hover:text-slate-900"
         onClick={(e) => {
           e.preventDefault();
           e.stopPropagation();
           setShowBookmarkOverlayId(bookmark.id);
         }}
       >
-        <InformationCircleIcon className="w-4 h-4 text-white" />
+        <InformationCircleIcon className="h-3.5 w-3.5" />
       </button>
       {showBookmarkOverlayId && (
         <MapBookmarkDetailsOverlay

@@ -3,6 +3,7 @@ import { sign } from "../src/auth/jwks";
 import {
   captureBookmarkScreenshot,
   ScreenshotClip,
+  screenshotPageOrigin,
 } from "../src/screenshotterClient";
 import { withTimeout } from "../src/withTimeout";
 import * as Sentry from "@sentry/node";
@@ -121,9 +122,7 @@ async function createBookmarkScreenshot(
       ISSUER[0]
     );
 
-    const url = `${
-      /localhost/.test(process.env.CLIENT_DOMAIN) ? "http" : "https"
-    }://${process.env.CLIENT_DOMAIN}/screenshot.html?mt=${
+    const url = `${screenshotPageOrigin()}/screenshot.html?mt=${
       process.env.MAPBOX_ACCESS_TOKEN
     }&auth=${token}&mapAccess=${encodeURIComponent(mapAccessToken)}`;
 

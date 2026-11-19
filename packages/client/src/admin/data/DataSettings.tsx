@@ -24,6 +24,7 @@ import { DataDownloadModalProvider } from "../../dataLayers/DataDownloadModal";
 import { useCallback, useContext, useState } from "react";
 import useDataTableActivationFeedback from "../../dataLayers/useDataTableActivationFeedback";
 import { ToastViewport } from "../../components/Toast";
+import LayerLinkProvider from "../../dataLayers/LayerLinkProvider";
 
 /**
  * Reads legend state from context so it stays in sync with the manager.
@@ -109,30 +110,32 @@ export default function DataSettings() {
             enableTemporal
           >
             <MapUIProvider preferencesKey={`${slug}-data-settings-ui`}>
-              <TableOfContentsMetadataModalProvider>
-                <LayerEditingContextProvider>
-                  <DataDownloadModalProvider>
-                    <Switch>
-                      <Route path={`${path}`}>
-                        <DataUploadDropzone
-                          slug={slug}
-                          className="flex flex-row h-screen"
-                        >
-                          <div className="h-full w-128">
-                            <LayerAdminSidebar />
-                          </div>
-                          <div className="flex-1 h-full">
-                            <DataSettingsLegend />
-                            {data?.projectBySlug && (
-                              <MapboxMap bounds={bounds} className="h-full" />
-                            )}
-                          </div>
-                        </DataUploadDropzone>
-                      </Route>
-                    </Switch>
-                  </DataDownloadModalProvider>
-                </LayerEditingContextProvider>
-              </TableOfContentsMetadataModalProvider>
+              <LayerLinkProvider place="admin">
+                <TableOfContentsMetadataModalProvider>
+                  <LayerEditingContextProvider>
+                    <DataDownloadModalProvider>
+                      <Switch>
+                        <Route path={`${path}`}>
+                          <DataUploadDropzone
+                            slug={slug}
+                            className="flex flex-row h-screen"
+                          >
+                            <div className="h-full w-128">
+                              <LayerAdminSidebar />
+                            </div>
+                            <div className="flex-1 h-full">
+                              <DataSettingsLegend />
+                              {data?.projectBySlug && (
+                                <MapboxMap bounds={bounds} className="h-full" />
+                              )}
+                            </div>
+                          </DataUploadDropzone>
+                        </Route>
+                      </Switch>
+                    </DataDownloadModalProvider>
+                  </LayerEditingContextProvider>
+                </TableOfContentsMetadataModalProvider>
+              </LayerLinkProvider>
             </MapUIProvider>
           </MapManagerContextProvider>
         </MapOverlayContext.Provider>
