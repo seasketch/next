@@ -35,12 +35,15 @@ test.describe("demo-samoa map bookmarks @enduser @forums", () => {
     await expect(postedThumb).toBeVisible();
     await expect(postedThumb).toHaveAttribute("src", /^data:image\//);
 
-    await postedThumb.locator("xpath=ancestor::button[1]").locator("button").click();
+    await posted.locator("button[aria-label='Map bookmark']").click();
 
     await expect(
       page.getByRole("heading", { name: "Map bookmark" })
     ).toBeVisible();
-    const full = page.locator("#overlay-body img");
+    // The card shows the client thumbnail immediately, as a data URL, while
+    // the screenshot job is still running. The finished capture is the image
+    // served from bookmark storage.
+    const full = page.locator("#overlay-body img[src*='bookmark-images/']");
     await expect(full).toBeVisible({ timeout: 90_000 });
     await expect(full).toHaveAttribute(
       "src",
@@ -55,10 +58,7 @@ test.describe("demo-samoa map bookmarks @enduser @forums", () => {
         { timeout: 30_000 }
       )
       .toBe(true);
-    await expect(
-      page.getByText(
-        "An unknown error prevented this map from being captured when the bookmark was created."
-      )
-    ).toHaveCount(0);
+    await expect(page.getByText("The preview could not be created.")).toHaveCount(0);
+    await expect(page.getByText("Rendering map image…")).toHaveCount(0);
   });
 });
