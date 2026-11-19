@@ -105,6 +105,17 @@ export default function MapBookmarkDetailsOverlay({
       pending={waiting}
       failed={failed}
       onClose={onRequestClose}
+      label={t("Map bookmark")}
+      summary={
+        <div className="min-w-0">
+          <div className="truncate text-sm font-medium text-slate-900">
+            <Trans ns="mapBookmarks">Map bookmark</Trans>
+          </div>
+          {savedAt && (
+            <div className="truncate text-xs text-slate-500">{savedAt}</div>
+          )}
+        </div>
+      }
       footer={
         <button
           type="button"
@@ -145,8 +156,8 @@ export default function MapBookmarkDetailsOverlay({
         </div>
       )}
       {layers.length > 0 && (
-        <NameList
-          label={t("Visible Layers")}
+        <CountedList
+          label={t("Layers")}
           rows={layers.map((id) => ({
             id,
             name: bookmarkName(bookmark?.layerNames, id) || id,
@@ -155,8 +166,8 @@ export default function MapBookmarkDetailsOverlay({
         />
       )}
       {sketches.length > 0 && (
-        <NameList
-          label={t("Visible Sketches")}
+        <CountedList
+          label={t("Sketches")}
           rows={sketches.map((id) => ({
             id: String(id),
             name: bookmarkName(bookmark?.sketchNames, String(id)) || String(id),
@@ -175,7 +186,7 @@ export default function MapBookmarkDetailsOverlay({
   );
 }
 
-function NameList({
+function CountedList({
   label,
   rows,
 }: {
@@ -183,24 +194,45 @@ function NameList({
   rows: { id: string; name: string; missing: boolean }[];
 }) {
   const { t } = useTranslation("mapBookmarks");
+  const [open, setOpen] = useState(false);
+  const missing = rows.some((row) => row.missing);
   return (
-    <div className="mt-4">
-      <h3 className="text-sm text-slate-500">{label}</h3>
-      <ul className="mt-1.5 space-y-1">
-        {rows.map((row) => (
-          <li
-            key={row.id}
-            className="flex items-baseline justify-between gap-3 text-sm"
-          >
-            <span className="min-w-0 truncate text-slate-800">{row.name}</span>
-            {row.missing && (
-              <span className="shrink-0 text-xs text-amber-700">
-                {t("missing")}
-              </span>
-            )}
-          </li>
-        ))}
-      </ul>
+    <div className="mt-4 border-t border-slate-100 pt-3">
+      <button
+        type="button"
+        className="flex w-full items-center gap-2 text-left text-sm font-medium text-slate-700"
+        aria-expanded={open}
+        onClick={() => setOpen((current) => !current)}
+      >
+        <span>{label}</span>
+        <span
+          className={`rounded-full px-1.5 py-0.5 text-xs font-semibold tabular-nums ${
+            missing ? "bg-amber-100 text-amber-800" : "bg-slate-100 text-slate-600"
+          }`}
+        >
+          {rows.length}
+        </span>
+        <ChevronDownIcon
+          className={`ml-auto h-4 w-4 text-slate-400 transition ${open ? "rotate-180" : ""}`}
+        />
+      </button>
+      {open && (
+        <ul className="mt-2 space-y-1">
+          {rows.map((row) => (
+            <li
+              key={row.id}
+              className="flex items-baseline justify-between gap-3 text-sm"
+            >
+              <span className="min-w-0 truncate text-slate-800">{row.name}</span>
+              {row.missing && (
+                <span className="shrink-0 text-xs text-amber-700">
+                  {t("missing")}
+                </span>
+              )}
+            </li>
+          ))}
+        </ul>
+      )}
     </div>
   );
 }

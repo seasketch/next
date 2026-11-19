@@ -2,6 +2,7 @@ import {
   bookmarkCamera,
   bookmarkDimensions,
   bookmarkName,
+  fitImageSize,
 } from "./bookmarkCardFacts";
 
 describe("bookmarkCamera", () => {
@@ -33,6 +34,27 @@ describe("bookmarkName", () => {
 
   it("reads a string name", () => {
     expect(bookmarkName({ land: "Land" }, "land")).toBe("Land");
+  });
+});
+
+describe("fitImageSize", () => {
+  it("keeps an image that already fits", () => {
+    expect(
+      fitImageSize({ width: 800, height: 500 }, { width: 1400, height: 900 })
+    ).toEqual({ width: 800, height: 500 });
+  });
+
+  it("scales down to the window edge that is reached first", () => {
+    expect(
+      fitImageSize({ width: 2000, height: 1000 }, { width: 1000, height: 900 })
+    ).toEqual({ width: 1000, height: 500 });
+    expect(
+      fitImageSize({ width: 1000, height: 2000 }, { width: 900, height: 800 })
+    ).toEqual({ width: 400, height: 800 });
+  });
+
+  it("rejects empty sizes", () => {
+    expect(fitImageSize({ width: 0, height: 100 }, { width: 10, height: 10 })).toBeNull();
   });
 });
 

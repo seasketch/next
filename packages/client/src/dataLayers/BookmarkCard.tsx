@@ -1,9 +1,22 @@
-import { XIcon } from "@heroicons/react/outline";
+import { ArrowsExpandIcon, ChevronUpIcon, XIcon } from "@heroicons/react/outline";
 import { motion } from "framer-motion";
 import { ReactNode, useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import { Trans, useTranslation } from "react-i18next";
 import Spinner from "../components/Spinner";
+import { fitImageSize } from "../components/bookmarkCardFacts";
+
+const FULL_SIZE_BAR = 64;
+
+function imageSrc(imageId?: string | null) {
+  if (!imageId) {
+    return null;
+  }
+  return (
+    // eslint-disable-next-line i18next/no-literal-string
+    `${process.env.REACT_APP_CLOUDFLARE_IMAGES_ENDPOINT || ""}${imageId}/public`
+  );
+}
 
 function PreviewThumbnail({
   imageId,
@@ -24,11 +37,9 @@ function PreviewThumbnail({
     setLoaded(false);
     setBroken(false);
   }, [imageId]);
-  const src = imageId
-    ? // eslint-disable-next-line i18next/no-literal-string
-      `${process.env.REACT_APP_CLOUDFLARE_IMAGES_ENDPOINT || ""}${imageId}/public`
-    : null;
-  const showSheen = !standIn && !broken && (pending || (Boolean(src) && !loaded)) && !failed;
+  const src = imageSrc(imageId);
+  const showSheen =
+    !standIn && !broken && (pending || (Boolean(src) && !loaded)) && !failed;
   const showUnavailable = (failed && !src) || (broken && !standIn);
   return (
     <div className="relative aspect-[3/2] w-full overflow-hidden bg-primary-700">
@@ -90,6 +101,8 @@ export default function BookmarkCard({
   children,
   pinned,
   footer,
+  summary,
+  label,
 }: {
   labelledBy: string;
   imageId?: string | null;
@@ -101,8 +114,122 @@ export default function BookmarkCard({
   children: ReactNode;
   pinned?: ReactNode;
   footer?: ReactNode;
+  summary?: ReactNode;
+  label?: string;
 }) {
   const { t } = useTranslation("mapBookmarks");
+  const [expanded, setExpanded] = useState(false);
+  const [natural, setNatural] = useState<{ width: number; height: number } | null>(
+    null
+  );
+  const [bounds, setBounds] = useState({
+    width: typeof window === "undefined" ? 1280 : window.innerWidth,
+    height: typeof window === "undefined" ? 800 : window.innerHeight,
+  });
+  const src = imageSrc(imageId);
+  const canExpand = Boolean(src || standIn);
+
+  useEffect(() => {
+    setNatural(null);
+  }, [src, standIn]);
+
+  useEffect(() => {
+    if (!expanded) {
+      return;
+    }
+    const update = () => {
+      setBounds({ width: window.innerWidth, height: window.innerHeight });
+    };
+    update();
+    window.addEventListener("resize", update);
+    return () => window.removeEventListener("resize", update);
+  }, [expanded]);
+
+  useEffect(() => {
+    if (!expanded) {
+      return;
+    }
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key !== "Escape") {
+        return;
+      }
+      event.stopImmediatePropagation();
+      event.preventDefault();
+      setExpanded(false);
+    };
+    document.addEventListener("keydown", onKey, true);
+    return () => document.removeEventListener("keydown", onKey, true);
+  }, [expanded]);
+
+  const fitted = natural
+    ? fitImageSize(natural, {
+        width: bounds.width,
+        height: Math.max(bounds.height - FULL_SIZE_BAR, 1),
+      })
+    : null;
+
+  const fullImage = (
+    <img
+      alt=""
+      src={src || standIn || undefined}
+      style={
+        fitted
+          ? { width: fitted.width, height: fitted.height }
+          : undefined
+      }
+      className={fitted ? "block" : "max-h-full max-w-full object-contain"}
+      onLoad={(event) => {
+        const img = event.currentTarget;
+        if (img.naturalWidth > 0 && img.naturalHeight > 0) {
+          setNatural({ width: img.naturalWidth, height: img.naturalHeight });
+        }
+      }}
+    />
+  );
+
+  if (expanded && canExpand) {
+    return createPortal(
+      <div
+        id="overlay-body"
+        role="dialog"
+        aria-modal="true"
+        aria-label={label}
+        className="fixed inset-0 z-[70] flex flex-col bg-slate-950"
+      >
+        <div
+          className="flex min-h-0 flex-1 items-center justify-center"
+          onMouseDown={(event) => {
+            if (event.target === event.currentTarget) {
+              setExpanded(false);
+            }
+          }}
+        >
+          {fullImage}
+        </div>
+        <button
+          type="button"
+          className="absolute right-3 top-3 flex h-8 w-8 items-center justify-center rounded-full bg-white text-slate-700 shadow-md ring-1 ring-black/10 hover:text-slate-900"
+          onClick={onClose}
+          aria-label={t("Close")}
+        >
+          <XIcon className="h-4 w-4" />
+        </button>
+        <button
+          type="button"
+          className="flex h-16 w-full flex-none items-center gap-4 border-t border-white/10 bg-white px-5 text-left hover:bg-slate-50"
+          onClick={() => setExpanded(false)}
+        >
+          <div className="min-w-0 flex-1">{summary}</div>
+          <span className="inline-flex shrink-0 items-center gap-1.5 rounded-full bg-slate-100 px-3 py-1.5 text-sm font-medium text-slate-700">
+            <ChevronUpIcon className="h-4 w-4" />
+            <Trans ns="mapBookmarks">Show card</Trans>
+          </span>
+        </button>
+      </div>,
+      document.body
+    );
+  }
+
   return createPortal(
     <div
       className="fixed inset-0 z-[70] flex items-center justify-center bg-slate-950/45 p-4"
@@ -130,6 +257,19 @@ export default function BookmarkCard({
             failed={failed}
             unavailable={unavailable}
           />
+          {canExpand && (
+            <button
+              type="button"
+              className="absolute bottom-3 left-3 inline-flex h-8 items-center gap-1.5 rounded-full bg-white/95 px-2.5 text-slate-800 shadow-md ring-1 ring-black/10 hover:bg-white"
+              onClick={() => setExpanded(true)}
+              aria-label={t("View full size")}
+            >
+              <ArrowsExpandIcon className="h-4 w-4" />
+              <span className="pr-0.5 text-xs font-medium">
+                <Trans ns="mapBookmarks">Full size</Trans>
+              </span>
+            </button>
+          )}
           <button
             type="button"
             className="absolute right-3 top-3 flex h-8 w-8 items-center justify-center rounded-full bg-white text-slate-700 shadow-md ring-1 ring-black/10 hover:text-slate-900"

@@ -36,6 +36,33 @@ export function bookmarkName(record: unknown, key: string): string | null {
   return typeof value === "string" && value.length > 0 ? value : null;
 }
 
+export function fitImageSize(
+  natural: { width: number; height: number },
+  bounds: { width: number; height: number }
+): { width: number; height: number } | null {
+  if (
+    !Number.isFinite(natural.width) ||
+    !Number.isFinite(natural.height) ||
+    !Number.isFinite(bounds.width) ||
+    !Number.isFinite(bounds.height) ||
+    natural.width <= 0 ||
+    natural.height <= 0 ||
+    bounds.width <= 0 ||
+    bounds.height <= 0
+  ) {
+    return null;
+  }
+  const scale = Math.min(
+    bounds.width / natural.width,
+    bounds.height / natural.height,
+    1
+  );
+  return {
+    width: Math.round(natural.width * scale),
+    height: Math.round(natural.height * scale),
+  };
+}
+
 export function bookmarkDimensions(value: unknown): [number, number] | null {
   if (!Array.isArray(value) || value.length < 2) {
     return null;

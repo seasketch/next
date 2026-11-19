@@ -639,6 +639,12 @@ export default function LayerLinkModal({
         </Trans>
       }
       onClose={onClose}
+      label={title}
+      summary={
+        <span className="block truncate text-sm font-medium text-slate-900">
+          {title}
+        </span>
+      }
       pinned={
         <ToastViewport className="pointer-events-none absolute bottom-4 right-4 z-10" />
       }
