@@ -12134,6 +12134,8 @@ export type Query = Node & {
   basemapsConnection?: Maybe<BasemapsConnection>;
   /** Fetch one map bookmark. Draft layer links are returned only to project administrators. */
   bookmarkById?: Maybe<MapBookmark>;
+  /** Title, description, and screenshot id for a shareable map link. Draft layer links are omitted. */
+  bookmarkLinkPreview?: Maybe<Scalars['JSON']>;
   /**
    * GraphQL server software build identifier. During a deployment, if changes are not detected in software modules some may be skipped. So, client and server version could differ.
    *
@@ -12566,6 +12568,13 @@ export type QueryBasemapsConnectionArgs = {
 /** The root query type which gives access points into the data universe. */
 export type QueryBookmarkByIdArgs = {
   id?: Maybe<Scalars['UUID']>;
+};
+
+
+/** The root query type which gives access points into the data universe. */
+export type QueryBookmarkLinkPreviewArgs = {
+  id?: Maybe<Scalars['UUID']>;
+  slug?: Maybe<Scalars['String']>;
 };
 
 

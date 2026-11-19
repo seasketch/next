@@ -14017,6 +14017,11 @@ type Query implements Node {
   bookmarkById(id: UUID): MapBookmark
 
   """
+  Title, description, and screenshot id for a shareable map link. Draft layer links are omitted.
+  """
+  bookmarkLinkPreview(id: UUID, slug: String): JSON
+
+  """
   GraphQL server software build identifier. During a deployment, if changes are not detected in software modules some may be skipped. So, client and server version could differ.
   
   We return "dev" if build cannot be determined from deployment environment.
