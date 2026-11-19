@@ -16415,10 +16415,6 @@ input[type="checkbox"][indeterminate="true"]:checked {
     margin-top:4rem
   }
 
-  .sm\:mt-2{
-    margin-top:0.5rem
-  }
-
   .sm\:mt-4{
     margin-top:1rem
   }
@@ -16628,6 +16624,10 @@ input[type="checkbox"][indeterminate="true"]:checked {
 
   .sm\:flex-col{
     flex-direction:column
+  }
+
+  .sm\:flex-wrap{
+    flex-wrap:wrap
   }
 
   .sm\:items-start{
@@ -17235,10 +17235,6 @@ input[type="checkbox"][indeterminate="true"]:checked {
 
   .md\:w-auto{
     width:auto
-  }
-
-  .md\:w-full{
-    width:100%
   }
 
   .md\:min-w-lg{

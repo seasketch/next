@@ -22,6 +22,12 @@ import useCurrentProjectMetadata from "../useCurrentProjectMetadata";
 import useDialog from "../components/useDialog";
 import UserProfileForm, { useUserProfileState } from "./UserProfileForm";
 
+// The action row is a wrapping flex line. Buttons keep their label on one
+// line and move to the next line as a whole control, instead of shrinking
+// until "Sign in" breaks in half.
+const gateActionClass = "w-full shrink-0 sm:w-auto";
+const gateActionButtonClass = "w-full justify-center whitespace-nowrap sm:w-auto";
+
 interface ProfileFormValues {
   fullname: string;
   nickname: string;
@@ -72,6 +78,8 @@ export const ProjectAccessGate: React.FunctionComponent<{ admin?: boolean }> = (
       // innerRef={initialFocusRef}
       mailTo={`support@seasketch.org`}
       label={<Trans ns="projectLanding">Contact support</Trans>}
+      className={gateActionClass}
+      buttonClassName={gateActionButtonClass}
     />
   );
   let status: ProjectAccessStatus | null =
@@ -133,6 +141,8 @@ export const ProjectAccessGate: React.FunctionComponent<{ admin?: boolean }> = (
                   "support@seasketch.org"}
               </Trans>
             }
+            className={gateActionClass}
+            buttonClassName={gateActionButtonClass}
           />
         );
       } else {
@@ -151,7 +161,8 @@ export const ProjectAccessGate: React.FunctionComponent<{ admin?: boolean }> = (
               }
               primary
               label={<Trans ns="projectLanding">Sign in</Trans>}
-              buttonClassName="md:w-full"
+              className={gateActionClass}
+              buttonClassName={gateActionButtonClass}
               disabled={
                 resendVerificationState.loading ||
                 resendVerificationState.data?.resendVerificationEmail.success
@@ -210,6 +221,8 @@ export const ProjectAccessGate: React.FunctionComponent<{ admin?: boolean }> = (
                   "support@seasketch.org"}
               </Trans>
             }
+            className={gateActionClass}
+            buttonClassName={gateActionButtonClass}
           />
         );
 
@@ -238,6 +251,8 @@ export const ProjectAccessGate: React.FunctionComponent<{ admin?: boolean }> = (
                 Contact {data.projectPublicDetails.supportEmail!}
               </Trans>
             }
+            className={gateActionClass}
+            buttonClassName={gateActionButtonClass}
           />
         );
         break;
@@ -274,6 +289,8 @@ export const ProjectAccessGate: React.FunctionComponent<{ admin?: boolean }> = (
               })
             }
             label={<Trans ns="projectLanding">Resend verification email</Trans>}
+            className={gateActionClass}
+            buttonClassName={gateActionButtonClass}
             disabled={
               resendVerificationState.loading ||
               resendVerificationState.data?.resendVerificationEmail.success
@@ -304,7 +321,8 @@ export const ProjectAccessGate: React.FunctionComponent<{ admin?: boolean }> = (
                   Share Profile and Request Access
                 </Trans>
               }
-              buttonClassName="md:w-full"
+              className={gateActionClass}
+              buttonClassName={gateActionButtonClass}
               disabled={
                 resendVerificationState.loading ||
                 resendVerificationState.data?.resendVerificationEmail.success
@@ -321,6 +339,8 @@ export const ProjectAccessGate: React.FunctionComponent<{ admin?: boolean }> = (
                     "support@seasketch.org"}
                 </Trans>
               }
+              className={gateActionClass}
+              buttonClassName={gateActionButtonClass}
             />
           </>
         );
@@ -362,7 +382,8 @@ export const ProjectAccessGate: React.FunctionComponent<{ admin?: boolean }> = (
               }
               primary
               label={<Trans ns="projectLanding">Sign in</Trans>}
-              buttonClassName="md:w-full"
+              className={gateActionClass}
+              buttonClassName={gateActionButtonClass}
               disabled={
                 resendVerificationState.loading ||
                 resendVerificationState.data?.resendVerificationEmail.success
@@ -382,7 +403,8 @@ export const ProjectAccessGate: React.FunctionComponent<{ admin?: boolean }> = (
                   })
                 }
                 label={<Trans ns="projectLanding">Create an account</Trans>}
-                buttonClassName="md:w-full"
+                className={gateActionClass}
+                buttonClassName={gateActionButtonClass}
                 disabled={
                   resendVerificationState.loading ||
                   resendVerificationState.data?.resendVerificationEmail.success
@@ -403,6 +425,8 @@ export const ProjectAccessGate: React.FunctionComponent<{ admin?: boolean }> = (
                       "support@seasketch.org"}
                   </Trans>
                 }
+                className={gateActionClass}
+                buttonClassName={gateActionButtonClass}
               />
             )}
           </>
@@ -493,7 +517,7 @@ export const ProjectAccessGate: React.FunctionComponent<{ admin?: boolean }> = (
                     </div>
                   </div>
                 </div>
-                <div className="mt-5 sm:mt-4 flex w-full justify-center sm:justify-end sm:space-x-1">
+                <div className="mt-5 sm:mt-4 flex w-full flex-col gap-2 sm:flex-row sm:flex-wrap sm:justify-end">
                   {buttons}
                 </div>
               </DialogContainer>
@@ -524,7 +548,7 @@ const DialogContainer: React.FunctionComponent<{
       }
       animate={{ x: "-50%", y: "-33.333%", opacity: 1 }}
       exit={{ x: props.exitToLeft ? -500 : 500, opacity: 0, y: "-33.333%" }}
-      className=" bg-white block sm:align-middle absolute sm:max-w-lg sm:rounded-lg px-4 text-left overflow-y-auto pb-6 sm:overflow-hidden shadow-xl sm:p-6 flex-nowrap left-1/2 top-1/3 w-screen h-screen sm:w-max sm:h-auto max-h-full"
+      className=" bg-white block sm:align-middle absolute sm:max-w-lg sm:rounded-lg px-4 text-left overflow-y-auto pb-6 sm:overflow-hidden shadow-xl sm:p-6 flex-nowrap left-1/2 top-1/3 w-screen h-screen sm:w-full sm:h-auto max-h-full"
     >
       {props.children}
     </motion.div>
@@ -640,14 +664,21 @@ export const ProfileForm = ({
           </div>
         </div>
       </div>
-      <div className="mt-5 sm:mt-2 flex w-full justify-center sm:justify-end space-x-4 sm:space-x-1">
-        <Button label={t("Cancel")} onClick={onRequestClose} />
+      <div className="mt-5 sm:mt-4 flex w-full flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+        <Button
+          label={t("Cancel")}
+          onClick={onRequestClose}
+          className={gateActionClass}
+          buttonClassName={gateActionButtonClass}
+        />
         <Button
           loading={profile.mutationState.loading}
           disabled={profile.mutationState.loading}
           type="submit"
           label={t("Send Request")}
           primary
+          className={gateActionClass}
+          buttonClassName={gateActionButtonClass}
           onClick={async () => {
             try {
               await profile.submit();
