@@ -147,7 +147,15 @@ export async function deleteE2EUser(sub: string) {
   await client.connect();
   try {
     await client.query("BEGIN");
-    const found = await client.query("SELECT id FROM users WHERE sub = $1", [sub]);
+    // Lock the user before deleting posts. A reply the page has already
+    // shown can still be committing, and that insert holds a key share
+    // lock on this row. Waiting for it means the post is visible to the
+    // delete that follows, instead of landing between the two statements
+    // and blocking the user delete.
+    const found = await client.query(
+      "SELECT id FROM users WHERE sub = $1 FOR UPDATE",
+      [sub]
+    );
     if (found.rowCount === 0) {
       await client.query("ROLLBACK");
       return;
