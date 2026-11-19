@@ -10,6 +10,7 @@ import {
   clearSession,
   createProject,
   createSession,
+  createUser,
   projectTransaction,
 } from "./helpers";
 // @ts-ignore
@@ -47,6 +48,7 @@ async function asPostgres<T>(
 }
 
 type Template = {
+  ownerId: number;
   templateProjectId: number;
   templateId: string;
   sourceId: number;
@@ -56,15 +58,15 @@ type Template = {
 };
 
 /**
- * Creates a data library template: a project holding a draft TOC item with
- * data_library_template_id set, whose data_source is stamped with the same id.
- * Mirrors the state created by createDataLibraryLayers.ts.
+ * Creates a data library template owned by someone other than the project
+ * under test. The library project is private. The caller reads it as a
+ * normal project admin, the same way a partner does.
  */
 async function createTemplate(
-  conn: DatabaseTransactionConnectionType,
-  adminId: number
+  conn: DatabaseTransactionConnectionType
 ): Promise<Template> {
-  const templateProjectId = await createProject(conn, adminId, "public");
+  const ownerId = await createUser(conn);
+  const templateProjectId = await createProject(conn, ownerId, "admins_only");
   const templateId = `TEMPLATE_${id()}`;
   const stableId = id();
   return asPostgres(conn, async () => {
@@ -84,6 +86,7 @@ async function createTemplate(
       sql`update data_sources set data_library_template_id = ${templateId} where id = ${sourceId}`
     );
     return {
+      ownerId,
       templateProjectId,
       templateId,
       sourceId,
@@ -235,7 +238,7 @@ async function changeLogCount(
 describe("Live data library updates", () => {
   test("publish_table_of_contents shares library sources instead of cloning, and tags published items", async () => {
     await projectTransaction(pool, "public", async (conn, projectId, adminId) => {
-      const template = await createTemplate(conn, adminId);
+      const template = await createTemplate(conn);
       const copy = await createLibraryCopy(conn, projectId, template);
 
       await publish(conn, projectId, adminId);
@@ -263,7 +266,7 @@ describe("Live data library updates", () => {
       expect(Number(sourceCount)).toBe(1);
 
       // publishing the template's own project also shares the source
-      await publish(conn, template.templateProjectId, adminId);
+      await publish(conn, template.templateProjectId, template.ownerId);
       const pubTemplateLayerId = await publishedLayerId(
         conn,
         template.templateProjectId,
@@ -277,7 +280,7 @@ describe("Live data library updates", () => {
 
   test("republishing does not delete shared library sources", async () => {
     await projectTransaction(pool, "public", async (conn, projectId, adminId) => {
-      const template = await createTemplate(conn, adminId);
+      const template = await createTemplate(conn);
       const copy = await createLibraryCopy(conn, projectId, template);
 
       await publish(conn, projectId, adminId);
@@ -301,10 +304,10 @@ describe("Live data library updates", () => {
       pool,
       "public",
       async (conn, projectId, adminId, [userA]) => {
-        const template = await createTemplate(conn, adminId);
+        const template = await createTemplate(conn);
         await createLibraryCopy(conn, projectId, template);
         await publish(conn, projectId, adminId);
-        await publish(conn, template.templateProjectId, adminId);
+        await publish(conn, template.templateProjectId, template.ownerId);
         await resetProjectState(conn, [
           projectId,
           template.templateProjectId,
@@ -312,7 +315,7 @@ describe("Live data library updates", () => {
 
         await createSession(
           conn,
-          adminId,
+          template.ownerId,
           true,
           false,
           template.templateProjectId
@@ -353,7 +356,7 @@ describe("Live data library updates", () => {
 
   test("replace_data_source fans out to draft and published copies without publish or changelog side effects", async () => {
     await projectTransaction(pool, "public", async (conn, projectId, adminId) => {
-      const template = await createTemplate(conn, adminId);
+      const template = await createTemplate(conn);
       const copy = await createLibraryCopy(conn, projectId, template);
       await publish(conn, projectId, adminId);
       const pubLayerId = await publishedLayerId(conn, projectId, copy.stableId);
@@ -423,7 +426,7 @@ describe("Live data library updates", () => {
 
   test("copies stranded on an older library source version are updated by the next replace", async () => {
     await projectTransaction(pool, "public", async (conn, projectId, adminId) => {
-      const template = await createTemplate(conn, adminId);
+      const template = await createTemplate(conn);
       const copy = await createLibraryCopy(conn, projectId, template);
       const v1 = template.sourceId;
 
@@ -456,7 +459,7 @@ describe("Live data library updates", () => {
 
   test("layers with custom (non-library) sources are not touched by fan-out", async () => {
     await projectTransaction(pool, "public", async (conn, projectId, adminId) => {
-      const template = await createTemplate(conn, adminId);
+      const template = await createTemplate(conn);
       // a layer in the same project pointing at an unrelated source
       const customSourceId = await asPostgres(
         conn,
@@ -583,13 +586,14 @@ describe("Live data library updates", () => {
 
   test("reportingLayers lists a published library copy once, as its draft item", async () => {
     await projectTransaction(pool, "public", async (conn, projectId, adminId) => {
-      const template = await createTemplate(conn, adminId);
+      const template = await createTemplate(conn);
       const copy = await createLibraryCopy(conn, projectId, template);
       await asPostgres(conn, () =>
         conn.any(
           sql`insert into source_processing_jobs (data_source_id, project_id, state) values (${template.sourceId}, ${template.templateProjectId}, 'complete')`
         )
       );
+      await publish(conn, template.templateProjectId, template.ownerId);
       await publish(conn, projectId, adminId);
 
       // slonik's token constant lives under dist/, whose layout moved
@@ -599,16 +603,130 @@ describe("Live data library updates", () => {
         sql: reportingLayersSql(false),
         values: [projectId],
       };
-      const rows = await asPostgres(conn, () => conn.any(query));
+      await createSession(conn, adminId, true, false, projectId);
+      const rows = await conn.any(query);
+      await clearSession(conn);
       expect(
         rows.map((r) => [r.table_of_contents_item_id, r.stable_id])
       ).toEqual([[copy.itemId, copy.stableId]]);
     });
   });
 
+  test("a project admin can read a library layer its owner has published more than once", async () => {
+    await projectTransaction(pool, "public", async (conn, projectId, adminId) => {
+      const template = await createTemplate(conn);
+      const copy = await createLibraryCopy(conn, projectId, template);
+      const geostats = {
+        layers: [
+          {
+            layer: "layer",
+            count: 4,
+            geometry: "Polygon",
+            hasZ: false,
+            attributeCount: 0,
+            attributes: [],
+          },
+        ],
+      };
+      await asPostgres(conn, async () => {
+        await conn.any(
+          sql`update data_sources set geostats = ${sql.json(geostats)} where id = ${template.sourceId}`
+        );
+        await conn.any(sql`
+          insert into data_upload_outputs (
+            data_source_id, project_id, type, url, remote, is_original, size, filename
+          ) values (
+            ${template.sourceId},
+            ${template.templateProjectId},
+            'FlatGeobuf',
+            ${"https://uploads.example.com/" + id() + ".fgb"},
+            ${"r2://test-bucket/" + id() + ".fgb"},
+            true,
+            1234,
+            'library.fgb'
+          )
+        `);
+        await conn.any(
+          sql`insert into source_processing_jobs (data_source_id, project_id, state) values (${template.sourceId}, ${template.templateProjectId}, 'complete')`
+        );
+        await conn.any(
+          sql`insert into ai_data_analyst_notes (data_source_id, project_id, notes, best_label_column) values (${template.sourceId}, ${template.templateProjectId}, 'notes', 'NAME')`
+        );
+      });
+
+      await publish(conn, template.templateProjectId, template.ownerId);
+      await createSession(
+        conn,
+        template.ownerId,
+        true,
+        false,
+        template.templateProjectId
+      );
+      await conn.any(
+        sql`update table_of_contents_items set title = 'Library Template (revision 2)' where id = ${template.itemId}`
+      );
+      await conn.any(
+        sql`update data_sources set attribution = 'NOAA (revision 2)' where id = ${template.sourceId}`
+      );
+      await clearSession(conn);
+      await publish(conn, template.templateProjectId, template.ownerId);
+      await createSession(
+        conn,
+        template.ownerId,
+        true,
+        false,
+        template.templateProjectId
+      );
+      await conn.any(
+        sql`update table_of_contents_items set title = 'Library Template' where id = ${template.itemId}`
+      );
+      await conn.any(
+        sql`update data_sources set attribution = null where id = ${template.sourceId}`
+      );
+      await clearSession(conn);
+      await publish(conn, template.templateProjectId, template.ownerId);
+      await publish(conn, projectId, adminId);
+
+      await createSession(conn, adminId, true, false, projectId);
+      const outputs = await conn.any(
+        sql`select id from data_upload_outputs where data_source_id = ${template.sourceId}`
+      );
+      expect(outputs.length).toBeGreaterThan(0);
+      const hasFgb = await conn.oneFirst(
+        sql`select has_fgb_output(ds) from data_sources ds where ds.id = ${template.sourceId}`
+      );
+      expect(hasFgb).toBe(true);
+      const overlays = await conn.any(sql`
+        select toc.title
+        from projects p,
+        lateral projects_polygon_overlays_for_geography(p) toc
+        where p.id = ${projectId}
+      `);
+      expect(overlays.map((row) => String(row.title))).toContain("Library Copy");
+      const query: SqlSqlTokenType<any> = {
+        type: "SLONIK_TOKEN_SQL",
+        sql: reportingLayersSql(false),
+        values: [projectId],
+      };
+      const rows = await conn.any(query);
+      expect(rows.map((row) => row.stable_id)).toEqual([copy.stableId]);
+      expect(rows[0].ai_best_label_column).toBe("NAME");
+      await clearSession(conn);
+
+      const stranger = await createUser(conn);
+      const otherProjectId = await createProject(conn, stranger, "admins_only");
+      await createSession(conn, stranger, true, false, otherProjectId);
+      const hidden = await conn.any(
+        sql`select id from ai_data_analyst_notes where data_source_id = ${template.sourceId}`
+      );
+      expect(hidden.length).toBe(0);
+      await clearSession(conn);
+    });
+  });
+
   test("cartography edits to library copies still flag draft changes", async () => {
     await projectTransaction(pool, "public", async (conn, projectId, adminId) => {
-      const template = await createTemplate(conn, adminId);
+      const template = await createTemplate(conn);
       const copy = await createLibraryCopy(conn, projectId, template);
       await resetProjectState(conn, [projectId]);
 
@@ -630,7 +748,7 @@ describe("Live data library updates", () => {
         pool,
         "public",
         async (conn, projectId, adminId) => {
-          const template = await createTemplate(conn, adminId);
+          const template = await createTemplate(conn);
           const copy = await createLibraryCopy(conn, projectId, template);
           // a second project with the same library copy plus real admin activity
           const projectBId = await createProject(conn, adminId, "public");
@@ -780,7 +898,7 @@ describe("Live data library updates", () => {
         pool,
         "public",
         async (conn, projectId, adminId) => {
-          const template = await createTemplate(conn, adminId);
+          const template = await createTemplate(conn);
           const copy = await createLibraryCopy(conn, projectId, template);
           await publish(conn, projectId, adminId);
           const pubLayerId = await publishedLayerId(
@@ -909,7 +1027,7 @@ describe("Live data library updates", () => {
         pool,
         "public",
         async (conn, projectId, adminId) => {
-          const template = await createTemplate(conn, adminId);
+          const template = await createTemplate(conn);
           const remote = await addUploadOutput(
             conn,
             template.sourceId,
@@ -978,7 +1096,7 @@ describe("Live data library updates", () => {
         pool,
         "public",
         async (conn, projectId, adminId) => {
-          const template = await createTemplate(conn, adminId);
+          const template = await createTemplate(conn);
           const remote = await addUploadOutput(
             conn,
             template.sourceId,
@@ -989,7 +1107,7 @@ describe("Live data library updates", () => {
           await deleteBranch(
             conn,
             template.templateProjectId,
-            adminId,
+            template.ownerId,
             template.itemId
           );
 
@@ -1012,7 +1130,7 @@ describe("Live data library updates", () => {
         pool,
         "public",
         async (conn, projectId, adminId) => {
-          const template = await createTemplate(conn, adminId);
+          const template = await createTemplate(conn);
           const remote = await addUploadOutput(
             conn,
             template.sourceId,
@@ -1034,7 +1152,7 @@ describe("Live data library updates", () => {
           await deleteBranch(
             conn,
             template.templateProjectId,
-            adminId,
+            template.ownerId,
             template.itemId
           );
           expect(await sourceExists(conn, template.sourceId)).toBe(false);

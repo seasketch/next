@@ -35,7 +35,7 @@ See the catalog's *Covered* notes. Specs:
 - `tests/overlays.spec.ts` — overlay browse, legend, metadata, search
 - `tests/basemaps.spec.ts` — Light / Satellite
 - `tests/language.spec.ts` — Samoan / English
-- `tests/admin.spec.ts` — seed lists on `demo-samoa` admin
+- `tests/admin.spec.ts` — seed lists on `demo-samoa` admin, and the custom geography layer picker
 - `tests/changelog.spec.ts` — changelog paging
 - `tests/uploads.spec.ts` — local spatial uploads
 - `tests/local-reports.spec.ts` — drawn sketch, local overlay workers, data-table parquet

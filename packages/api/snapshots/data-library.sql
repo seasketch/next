@@ -267,3 +267,67 @@ $popup$,
   end loop;
 end
 $$;
+
+-- e2e|library-editor is a throwaway superuser, not a project member. They publish
+-- the library, revise every template, publish again, then put the visible
+-- text back and publish a third time. demo-samoa and demo-maldives later
+-- publish their own copies of these same sources, so one source has more
+-- than one published layer. Titles and attribution end where they started.
+set role seasketch_superuser;
+select set_config(
+  'session.user_id',
+  (select id::text from users where sub = 'e2e|library-editor'),
+  false
+);
+select set_config('session.canonical_email', 'library-editor@example.test', false);
+select set_config('session.email_verified', 'true', false);
+select set_config(
+  'session.project_id',
+  (select id::text from projects where slug = 'superuser'),
+  false
+);
+
+do $$
+declare
+  pid int;
+begin
+  select id into pid from projects where slug = 'superuser';
+  if pid is null then
+    raise exception 'superuser project is missing';
+  end if;
+  if (select id from users where sub = 'e2e|library-editor') is null then
+    raise exception 'e2e|library-editor is missing';
+  end if;
+
+  perform publish_table_of_contents(pid);
+
+  update table_of_contents_items
+  set title = title || ' (revision 2)'
+  where project_id = pid
+    and is_draft
+    and data_library_template_id is not null;
+
+  update data_sources
+  set attribution = coalesce(attribution, '') || ' (revision 2)'
+  where data_library_template_id is not null;
+
+  perform publish_table_of_contents(pid);
+
+  update table_of_contents_items
+  set title = regexp_replace(title, ' \(revision 2\)$', '')
+  where project_id = pid
+    and is_draft
+    and data_library_template_id is not null;
+
+  update data_sources
+  set attribution = nullif(
+    regexp_replace(coalesce(attribution, ''), ' \(revision 2\)$', ''),
+    ''
+  )
+  where data_library_template_id is not null;
+
+  perform publish_table_of_contents(pid);
+end
+$$;
+
+reset role;
