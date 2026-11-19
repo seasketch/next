@@ -316,6 +316,9 @@ describe("temporal (when / when.step) consistency (synthetic fixture)", () => {
       temporalMetadata,
       `groupBy=site&op=mean,count&column=count&${WINDOW}&when.step=year`
     );
+    // The window covers every row, so stats mark the group saturated and the
+    // clock filter does not load `_when_*`. Step binning must still read them.
+    expect(agg.plan.spans.every((span) => span.whenSaturated)).toBe(true);
     expect(agg.result.groups!.length).toBe(expected.size);
     for (const group of agg.result.groups! as Row[]) {
       const acc = expected.get(`${group.step}|${group.site}`);

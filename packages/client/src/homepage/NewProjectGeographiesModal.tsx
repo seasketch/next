@@ -104,6 +104,41 @@ export default function NewProjectGeographiesModal({
               "Use the list below to select areas, or click polygons on the map."
             )}
           </div>
+          <div className="text-xs font-normal text-slate-300 mt-2 leading-relaxed">
+            <Trans ns="homepage">
+              Boundaries: Flanders Marine Institute (2020). Union of the ESRI
+              Country shapefile and the Exclusive Economic Zones (version 3),
+              based on Maritime Boundaries EEZ version 11.
+              <span className="block mt-1">
+                <a
+                  href="https://www.marineregions.org/"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="underline text-sky-200 hover:text-white"
+                >
+                  marineregions.org
+                </a>
+                {" · "}
+                <a
+                  href="https://doi.org/10.14284/403"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="underline text-sky-200 hover:text-white"
+                >
+                  doi:10.14284/403
+                </a>
+                {" · "}
+                <a
+                  href="https://creativecommons.org/licenses/by/4.0/"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="underline text-sky-200 hover:text-white"
+                >
+                  CC BY 4.0
+                </a>
+              </span>
+            </Trans>
+          </div>
         </div>
       }
       dark

@@ -40,6 +40,37 @@ function run(command, args, env, cwd = root) {
   });
 }
 
+// Playwright keeps one --grep. Repeated flags are one filter: a test has to
+// match every pattern. `npm run e2e:enduser -- --grep @access` stays @enduser.
+function combineGreps(args) {
+  const patterns = [];
+  const rest = [];
+  for (let index = 0; index < args.length; index += 1) {
+    const arg = args[index];
+    if (arg === "--grep" || arg === "-g") {
+      patterns.push(args[index + 1]);
+      index += 1;
+      continue;
+    }
+    const inline = /^(?:--grep|-g)=(.+)$/.exec(arg);
+    if (inline) {
+      patterns.push(inline[1]);
+      continue;
+    }
+    rest.push(arg);
+  }
+  if (patterns.length <= 1) {
+    return args;
+  }
+  const combined = patterns
+    .map((pattern) => {
+      const anchored = /^@[a-z0-9-]+$/.test(pattern) ? `${pattern}\\b` : pattern;
+      return `(?=.*${anchored})`;
+    })
+    .join("");
+  return ["--grep", combined, ...rest];
+}
+
 function applyCurrentSql() {
   const sqlPath = path.join(root, "packages/api/migrations/current.sql");
   return new Promise((resolve, reject) => {
@@ -94,7 +125,7 @@ try {
   // db:watch --once would also rewrite schema.sql, because it is not running
   // inside the API test suite.
   await applyCurrentSql();
-  const playwrightArgs = process.argv.slice(2);
+  const playwrightArgs = combineGreps(process.argv.slice(2));
   const npmArgs = ["test", "--workspace", "@seasketch/e2e"];
   if (playwrightArgs.length > 0) {
     npmArgs.push("--", ...playwrightArgs);

@@ -22,8 +22,9 @@ import { dataStack, invokePath } from "./dev.data.mjs";
 const dev = dataStack("dev");
 const e2e = dataStack("e2e");
 
-// Local object storage: wrangler dev serving the two local R2 buckets over
-// the S3 API. See design-docs/dev-environment/local-data-services.md.
+// Local object storage: Miniflare serving the local R2 buckets (tiles,
+// spatial uploads, and forum/survey file uploads) over the S3 API.
+// See design-docs/dev-environment/local-data-services.md.
 export const localR2Dev = {
   port: dev.ports.localR2,
   url: `http://127.0.0.1:${dev.ports.localR2}`,
@@ -196,8 +197,9 @@ export const services = [
     // processes opening the same SQLite files under .data/wrangler. Started
     // together they can collide on open (SQLITE_BUSY, often while one of
     // them is recovering a write-ahead log left by the last shutdown) and
-    // the loser exits. One at a time, each has finished opening before the
-    // next begins.
+    // the loser exits. One at a time, each accepts connections before the
+    // next begins. A session can still be opening SQLite after its port
+    // listens, so the pmtiles launcher retries SQLITE_BUSY.
     startAfter: ["local-r2"],
     profiles: ["data"],
   },

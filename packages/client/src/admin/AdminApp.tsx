@@ -18,6 +18,11 @@ import { useLocalStorage } from "beautiful-react-hooks";
 import { BookOpenIcon } from "@heroicons/react/outline";
 import { GlobeIcon } from "@radix-ui/react-icons";
 import AdminRouter from "./AdminRouter";
+import {
+  logoutReturnTo,
+  projectPathAfterSignOut,
+  rememberSignOutReturn,
+} from "../auth/signOutReturn";
 
 interface Section {
   breadcrumb: string;
@@ -370,6 +375,7 @@ function SidebarContents(props: {
 
   const showNewFlag = !newDismissed && new Date() < new Date("2024-05-28");
   const cache = useContext(GraphqlQueryCacheContext);
+  const { data } = useCurrentProjectMetadata();
   const { t } = useTranslation("admin");
   const { user, logout } = useAuth0();
   let social: string | false = false;
@@ -454,9 +460,18 @@ function SidebarContents(props: {
               <button
                 onClick={() => {
                   cache?.logout();
+                  rememberSignOutReturn(
+                    projectPathAfterSignOut({
+                      pathname: window.location.pathname,
+                      search: window.location.search,
+                      slug: props.slug,
+                      accessControl: data?.project?.accessControl,
+                      isListed: data?.project?.isListed,
+                    })
+                  );
                   logout({
                     logoutParams: {
-                      returnTo: window.location.origin,
+                      returnTo: logoutReturnTo(),
                     },
                   });
                 }}

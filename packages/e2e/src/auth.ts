@@ -122,6 +122,11 @@ export async function installSession(
     },
   ]);
   await context.addInitScript((items) => {
+    // Sign-out navigates to a new document. This script would otherwise
+    // plant the session again, so the test sets this flag first.
+    if (window.sessionStorage.getItem("e2e-signed-out") === "1") {
+      return;
+    }
     for (const [key, value] of items) {
       window.localStorage.setItem(key, value);
     }

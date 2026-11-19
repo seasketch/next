@@ -20,6 +20,63 @@ export function parseMetadataFormat(value: unknown): MetadataFormat | null {
   return null;
 }
 
+/** Spreadsheet excerpt length. Long enough for a full abstract, short of an unbounded cell. */
+export const METADATA_PLAIN_TEXT_LIMIT = 8000;
+
+/**
+ * Formatted metadata kept in one spreadsheet cell.
+ *
+ * Excel refuses a cell longer than 32,767 characters and can drop the columns
+ * that follow it. 32,000 stays under that ceiling so a long description still
+ * leaves the URL columns readable. Truncation keeps this many characters,
+ * including the trailing ellipsis.
+ */
+export const METADATA_HTML_LIMIT = 32000;
+
+const INLINE_PARENTS = new Set([
+  "paragraph",
+  "heading",
+  "code_block",
+  "table_cell",
+  "table_header",
+]);
+
+/**
+ * Plain text of a ProseMirror metadata document. Marks and structure are
+ * dropped. Link targets are kept in parentheses when they differ from the
+ * visible text. Text longer than `limit` is cut and ends with an ellipsis.
+ */
+export function metadataPlainText(
+  document: unknown,
+  limit = METADATA_PLAIN_TEXT_LIMIT
+): string {
+  const doc = asNode(document);
+  if (!doc || limit < 1) {
+    return "";
+  }
+  const parts: string[] = [];
+  collectPlain(doc, parts);
+  const text = parts.join("").replace(/\s+/g, " ").trim();
+  return truncateText(text, limit);
+}
+
+/**
+ * Body markup of a metadata document: headings, emphasis, and links stay in
+ * the HTML. The result is the cell value, so callers quote it for CSV. Text
+ * longer than `limit` is cut on a code-point boundary and ends with an ellipsis.
+ */
+export function metadataHtml(
+  document: unknown,
+  limit = METADATA_HTML_LIMIT
+): string {
+  const doc = asNode(document);
+  if (!doc || limit < 1 || !metadataPlainText(doc)) {
+    return "";
+  }
+  const html = renderHtml(doc).replace(/\s+$/u, "");
+  return truncateText(html, limit);
+}
+
 export function renderMetadata(document: unknown, format: MetadataFormat): string {
   const doc = asNode(document);
   if (format === "json") {
@@ -282,6 +339,47 @@ function headingLevel(node: PmNode): number {
 function stringAttr(node: PmNode, name: string): string {
   const value = node.attrs?.[name];
   return typeof value === "string" ? value : "";
+}
+
+function collectPlain(node: PmNode, parts: string[]): void {
+  if (node.type === "text") {
+    parts.push(textWithLink(node.text || "", node.marks || []));
+    return;
+  }
+  if (node.type === "hard_break") {
+    parts.push(" ");
+    return;
+  }
+  if (node.type === "image") {
+    const alt = stringAttr(node, "alt").trim();
+    const src = stringAttr(node, "src").trim();
+    if (alt && src && src !== alt) {
+      parts.push(`${alt} (${src})`);
+    } else if (alt || src) {
+      parts.push(alt || src);
+    }
+    return;
+  }
+  const children = node.content || [];
+  const separate = !INLINE_PARENTS.has(node.type || "");
+  children.forEach((child, index) => {
+    collectPlain(child, parts);
+    if (separate && index < children.length - 1) {
+      parts.push(" ");
+    }
+  });
+}
+
+function truncateText(text: string, limit: number): string {
+  const chars = Array.from(text);
+  if (chars.length <= limit) {
+    return text;
+  }
+  const sliced = chars
+    .slice(0, limit - 1)
+    .join("")
+    .trimEnd();
+  return sliced ? `${sliced}…` : "…";
 }
 
 function escapeHtml(value: string): string {

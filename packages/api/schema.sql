@@ -11784,10 +11784,15 @@ begin
       raise exception 'Sketch Class with id=% is not a template', template_sketch_class_id;
     end if;
 
-    -- Never enable clipping by default for non-polygon classes.
-    enable_geography_clipping = base.geometry_type = 'POLYGON'
-      and default_report_id is not null
-      and default_clipping_geography_id is not null;
+    enable_geography_clipping = case
+      when base.geometry_type = 'POLYGON' then
+        default_report_id is not null
+        and default_clipping_geography_id is not null
+      when base.geometry_type = 'COLLECTION' then
+        default_report_id is not null
+      else
+        false
+    end;
 
     -- TODO: add suffix to name if there are duplicates
     select count(*) into num_similarly_named
@@ -11811,7 +11816,8 @@ begin
       mapbox_gl_style,
       preprocessing_endpoint,
       preprocessing_project_url,
-      is_geography_clipping_enabled
+      is_geography_clipping_enabled,
+      preview_new_reports
     ) values (
       "projectId",
       new_name,
@@ -11823,7 +11829,8 @@ begin
       base.mapbox_gl_style,
       base.preprocessing_endpoint,
       base.preprocessing_project_url,
-      enable_geography_clipping
+      enable_geography_clipping,
+      false
     ) returning * into created;
 
     perform initialize_sketch_class_form_from_template(
@@ -11833,7 +11840,10 @@ begin
     if default_report_id is not null then
       perform set_primary_report_for_sketch_class(created.id, default_report_id);
     end if;
-    if default_clipping_geography_id is not null then
+    -- A geography row plus is_geography_clipping_enabled makes
+    -- sketch_classes_use_geography_clipping true. Collections do not clip.
+    if default_clipping_geography_id is not null
+      and base.geometry_type is distinct from 'COLLECTION' then
       insert into sketch_class_geographies (sketch_class_id, geography_id)
       values (created.id, default_clipping_geography_id);
     end if;
@@ -23391,6 +23401,51 @@ Send a list of project invites identified by their id.
 
 
 --
+-- Name: session_admin_uses_data_source(integer); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.session_admin_uses_data_source(p_source_id integer) RETURNS boolean
+    LANGUAGE plpgsql STABLE SECURITY DEFINER PARALLEL SAFE
+    SET search_path TO 'public', 'pg_temp'
+    AS $$
+declare
+  v_project_id integer;
+begin
+  -- One indexed probe when the request is scoped to a project. This is the
+  -- path admin UI requests take. Fall back to the caller's other admin
+  -- projects only when that probe misses, so a popular library source is not
+  -- scanned layer by layer.
+  v_project_id := nullif(current_setting('session.project_id', true), '')::integer;
+  if session_is_admin(v_project_id) and exists (
+    select 1
+    from data_layers dl
+    where dl.project_id = v_project_id
+      and dl.data_source_id = p_source_id
+  ) then
+    return true;
+  end if;
+
+  return exists (
+    select 1
+    from project_participants pp
+    join data_layers dl
+      on dl.project_id = pp.project_id
+     and dl.data_source_id = p_source_id
+    where pp.user_id = nullif(current_setting('session.user_id', true), '')::integer
+      and pp.is_admin
+  );
+end;
+$$;
+
+
+--
+-- Name: FUNCTION session_admin_uses_data_source(p_source_id integer); Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON FUNCTION public.session_admin_uses_data_source(p_source_id integer) IS '@omit';
+
+
+--
 -- Name: session_can_access_form(integer); Type: FUNCTION; Schema: public; Owner: -
 --
 
@@ -32189,6 +32244,13 @@ CREATE INDEX data_layers_interactivity_settings_id_idx ON public.data_layers USI
 
 
 --
+-- Name: data_layers_project_id_data_source_id_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX data_layers_project_id_data_source_id_idx ON public.data_layers USING btree (project_id, data_source_id);
+
+
+--
 -- Name: data_layers_project_id_idx; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -33012,6 +33074,13 @@ CREATE INDEX table_of_contents_items_is_draft_idx ON public.table_of_contents_it
 --
 
 CREATE INDEX table_of_contents_items_project_id_idx ON public.table_of_contents_items USING btree (project_id);
+
+
+--
+-- Name: table_of_contents_items_published_data_layer_id_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX table_of_contents_items_published_data_layer_id_idx ON public.table_of_contents_items USING btree (data_layer_id) WHERE ((is_draft = false) AND (data_layer_id IS NOT NULL));
 
 
 --
@@ -35417,18 +35486,18 @@ CREATE POLICY data_layers_insert ON public.data_layers FOR INSERT WITH CHECK (pu
 -- Name: data_layers data_layers_select; Type: POLICY; Schema: public; Owner: -
 --
 
-CREATE POLICY data_layers_select ON public.data_layers FOR SELECT USING ((public.session_is_admin(project_id) OR public._session_on_toc_item_acl(( SELECT table_of_contents_items.path
-   FROM public.table_of_contents_items
-  WHERE ((table_of_contents_items.is_draft = false) AND (table_of_contents_items.data_layer_id = data_layers.id))))));
+CREATE POLICY data_layers_select ON public.data_layers FOR SELECT USING ((public.session_is_admin(project_id) OR (EXISTS ( SELECT 1
+   FROM public.table_of_contents_items toc
+  WHERE ((toc.is_draft = false) AND (toc.data_layer_id = data_layers.id) AND public._session_on_toc_item_acl(toc.path))))));
 
 
 --
 -- Name: data_layers data_layers_update; Type: POLICY; Schema: public; Owner: -
 --
 
-CREATE POLICY data_layers_update ON public.data_layers FOR UPDATE USING ((public.session_is_admin(project_id) AND ( SELECT (( SELECT 1
-           FROM public.table_of_contents_items
-          WHERE ((table_of_contents_items.data_layer_id = data_layers.id) AND (table_of_contents_items.is_draft = false))) IS NULL)))) WITH CHECK (public.session_is_admin(project_id));
+CREATE POLICY data_layers_update ON public.data_layers FOR UPDATE USING ((public.session_is_admin(project_id) AND (NOT (EXISTS ( SELECT 1
+   FROM public.table_of_contents_items toc
+  WHERE ((toc.data_layer_id = data_layers.id) AND (toc.is_draft = false))))))) WITH CHECK (public.session_is_admin(project_id));
 
 
 --
@@ -35455,22 +35524,20 @@ CREATE POLICY data_sources_insert ON public.data_sources FOR INSERT WITH CHECK (
 -- Name: data_sources data_sources_select; Type: POLICY; Schema: public; Owner: -
 --
 
-CREATE POLICY data_sources_select ON public.data_sources FOR SELECT USING (((data_library_template_id IS NOT NULL) OR public.session_is_admin(project_id) OR public._session_on_toc_item_acl(( SELECT table_of_contents_items.path
-   FROM public.table_of_contents_items
-  WHERE ((table_of_contents_items.is_draft = false) AND (table_of_contents_items.data_layer_id = ( SELECT data_layers.id
-           FROM public.data_layers
-          WHERE (data_layers.data_source_id = data_sources.id))))))));
+CREATE POLICY data_sources_select ON public.data_sources FOR SELECT USING (((data_library_template_id IS NOT NULL) OR public.session_is_admin(project_id) OR public.session_admin_uses_data_source(id) OR (EXISTS ( SELECT 1
+   FROM (public.data_layers dl
+     JOIN public.table_of_contents_items toc ON (((toc.data_layer_id = dl.id) AND (toc.is_draft = false))))
+  WHERE ((dl.data_source_id = data_sources.id) AND public._session_on_toc_item_acl(toc.path))))));
 
 
 --
 -- Name: data_sources data_sources_update; Type: POLICY; Schema: public; Owner: -
 --
 
-CREATE POLICY data_sources_update ON public.data_sources FOR UPDATE USING ((public.session_is_admin(project_id) AND ((data_library_template_id IS NOT NULL) OR (( SELECT 1
-   FROM public.table_of_contents_items
-  WHERE ((table_of_contents_items.data_layer_id IN ( SELECT data_layers.id
-           FROM public.data_layers
-          WHERE (data_layers.data_source_id = data_sources.id))) AND (table_of_contents_items.is_draft = false))) IS NULL)))) WITH CHECK (public.session_is_admin(project_id));
+CREATE POLICY data_sources_update ON public.data_sources FOR UPDATE USING ((public.session_is_admin(project_id) AND ((data_library_template_id IS NOT NULL) OR (NOT (EXISTS ( SELECT 1
+   FROM (public.data_layers dl
+     JOIN public.table_of_contents_items toc ON (((toc.data_layer_id = dl.id) AND (toc.is_draft = false))))
+  WHERE (dl.data_source_id = data_sources.id))))))) WITH CHECK (public.session_is_admin(project_id));
 
 
 --
@@ -35483,11 +35550,10 @@ ALTER TABLE public.data_upload_outputs ENABLE ROW LEVEL SECURITY;
 -- Name: data_upload_outputs data_upload_outputs_select; Type: POLICY; Schema: public; Owner: -
 --
 
-CREATE POLICY data_upload_outputs_select ON public.data_upload_outputs FOR SELECT USING ((public.session_is_admin(project_id) OR (public.session_has_project_access(project_id) AND public._session_on_toc_item_acl(( SELECT table_of_contents_items.path
-   FROM public.table_of_contents_items
-  WHERE ((table_of_contents_items.is_draft = false) AND (table_of_contents_items.data_layer_id = ( SELECT data_layers.id
-           FROM public.data_layers
-          WHERE (data_layers.data_source_id = data_upload_outputs.data_source_id)))))))));
+CREATE POLICY data_upload_outputs_select ON public.data_upload_outputs FOR SELECT USING ((public.session_is_admin(project_id) OR public.session_admin_uses_data_source(data_source_id) OR (public.session_has_project_access(project_id) AND (EXISTS ( SELECT 1
+   FROM (public.data_layers dl
+     JOIN public.table_of_contents_items toc ON (((toc.data_layer_id = dl.id) AND (toc.is_draft = false))))
+  WHERE ((dl.data_source_id = data_upload_outputs.data_source_id) AND public._session_on_toc_item_acl(toc.path)))))));
 
 
 --
@@ -44687,6 +44753,14 @@ REVOKE ALL ON FUNCTION public.send_email_verification_for_new_user() FROM PUBLIC
 
 REVOKE ALL ON FUNCTION public.send_project_invites("inviteIds" integer[]) FROM PUBLIC;
 GRANT ALL ON FUNCTION public.send_project_invites("inviteIds" integer[]) TO seasketch_user;
+
+
+--
+-- Name: FUNCTION session_admin_uses_data_source(p_source_id integer); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.session_admin_uses_data_source(p_source_id integer) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.session_admin_uses_data_source(p_source_id integer) TO anon;
 
 
 --

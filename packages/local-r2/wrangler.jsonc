@@ -1,7 +1,7 @@
 {
   "$schema": "./node_modules/wrangler/config-schema.json",
   // Never deployed. bin/dev.mjs reads this and starts Miniflare so it serves
-  // the two local buckets over the S3 API at /cdn-cgi/local/r2/s3/<bucket>/.
+  // the local buckets over the S3 API at /cdn-cgi/local/r2/s3/<bucket>/.
   // The Worker itself only answers the contract test's binding read. Keeping
   // the wrangler config format means `wrangler dev` still works here and the
   // bucket definitions read the same as in the deployed Workers.
@@ -25,6 +25,16 @@
     {
       "binding": "SPATIAL_UPLOADS_BUCKET",
       "bucket_name": "ssn-spatial-uploads-tmp-local",
+      "local_dev": {
+        "experimental_s3_credentials": {
+          "accessKeyId": "local",
+          "secretAccessKey": "local-r2-secret"
+        }
+      }
+    },
+    {
+      "binding": "FILE_UPLOADS_BUCKET",
+      "bucket_name": "ssn-file-uploads-local",
       "local_dev": {
         "experimental_s3_credentials": {
           "accessKeyId": "local",

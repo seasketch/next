@@ -37,6 +37,11 @@ import * as Tooltip from "@radix-ui/react-tooltip";
 import clsx from "clsx";
 import { Helmet } from "react-helmet";
 import { useMediaQuery } from "beautiful-react-hooks";
+import {
+  logoutReturnTo,
+  projectPathAfterSignOut,
+  rememberSignOutReturn,
+} from "../auth/signOutReturn";
 
 export default function Toolbar({
   onExpand,
@@ -375,13 +380,18 @@ export default function Toolbar({
               }}
               onSignOut={() => {
                 cache?.logout();
+                rememberSignOutReturn(
+                  projectPathAfterSignOut({
+                    pathname: window.location.pathname,
+                    search: window.location.search,
+                    slug,
+                    accessControl: data?.project?.accessControl,
+                    isListed: data?.project?.isListed,
+                  })
+                );
                 logout({
                   logoutParams: {
-                    returnTo:
-                      window.location.protocol +
-                      "//" +
-                      window.location.host +
-                      "/",
+                    returnTo: logoutReturnTo(),
                   },
                 });
               }}
@@ -465,6 +475,7 @@ export default function Toolbar({
                 </nav>
                 <a
                   aria-label="View source code on GitHub (opens in new tab)"
+                  data-testid="client-build-id"
                   className="text-xs text-gray-500 focus:outline-0 focus-visible:ring-2 ring-blue-500 hidden tall:inline"
                   target="_blank"
                   rel="noreferrer"

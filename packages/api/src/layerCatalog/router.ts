@@ -185,7 +185,7 @@ function catalogLayers(
     geostats: item.geostats,
     attribution: item.attribution,
     enableDownload: item.enableDownload,
-    hasMetadata: item.hasMetadata,
+    metadata: item.metadata,
     uploadedSourceFilename: item.uploadedSourceFilename,
     outputs: item.outputs,
     styleUrl: layerResourceUrl(origin, slug, item.stableId, "style"),

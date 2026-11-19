@@ -3,30 +3,19 @@ import { makeWrapResolversPlugin } from "postgraphile";
 import { RateLimiterRedis } from "rate-limiter-flexible";
 import redis from "redis";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
-import {
-  S3Client,
-  GetObjectCommand,
-  PutObjectCommand,
-} from "@aws-sdk/client-s3";
+import { GetObjectCommand, PutObjectCommand } from "@aws-sdk/client-s3";
 import { getDirectCreatorUploadUrl } from "../cloudflareImages";
 import { redisClientOptions } from "../redisClient";
+import { storageClientV3 } from "../storage/client";
 import bytes from "bytes";
 
-const {
-  R2_ACCESS_KEY_ID,
-  R2_SECRET_ACCESS_KEY,
-  R2_ENDPOINT,
-  R2_FILE_UPLOADS_BUCKET,
-} = process.env;
-
-const r2 = new S3Client({
-  region: "auto",
-  endpoint: R2_ENDPOINT,
-  credentials: {
-    accessKeyId: R2_ACCESS_KEY_ID,
-    secretAccessKey: R2_SECRET_ACCESS_KEY,
-  },
-});
+function fileUploadsBucket() {
+  const bucket = process.env.R2_FILE_UPLOADS_BUCKET;
+  if (!bucket) {
+    throw new Error("R2_FILE_UPLOADS_BUCKET must be set");
+  }
+  return bucket;
+}
 
 /** 4 hours in seconds */
 const PRESIGNED_UPLOAD_TTL = 60 * 60 * 4;
@@ -207,9 +196,9 @@ const FileUploadPlugin = makeExtendSchemaPlugin((build) => {
           }
 
           return await getSignedUrl(
-            r2,
+            storageClientV3(),
             new PutObjectCommand({
-              Bucket: R2_FILE_UPLOADS_BUCKET,
+              Bucket: fileUploadsBucket(),
               Key: `${fileUpload.id}/${fileUpload.filename}`,
               ContentType: fileUpload.contentType,
               ContentLength: fileUpload.fileSizeBytes,
@@ -227,9 +216,9 @@ const FileUploadPlugin = makeExtendSchemaPlugin((build) => {
             return `https://imagedelivery.net/${process.env.CLOUDFLARE_IMAGES_ACCOUNT_HASH}/${cloudflareImagesId}/`;
           } else {
             return await getSignedUrl(
-              r2,
+              storageClientV3(),
               new GetObjectCommand({
-                Bucket: R2_FILE_UPLOADS_BUCKET,
+                Bucket: fileUploadsBucket(),
                 Key: `${id}/${filename}`,
               }),
               {

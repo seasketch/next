@@ -146,6 +146,24 @@ export default function Button(props: ButtonProps) {
     </div>
   );
 
+  // A contact address is a mailto link, not a button nested in a link.
+  // Callers pass mailTo on its own; href + mailTo still goes through the
+  // router branch above.
+  if (props.mailTo && !props.href) {
+    return (
+      <a
+        href={`mailto:${props.mailTo}`}
+        title={props.title}
+        className={`${buttonClassName} ${props.shadowSize || "shadow-sm"} ${
+          props.className || ""
+        } ${props.buttonClassName || ""}`}
+        data-cy={cyLabel}
+      >
+        {label}
+      </a>
+    );
+  }
+
   let style: CSSProperties = {};
   if (props.backgroundColor) {
     const bg = colord(props.backgroundColor);

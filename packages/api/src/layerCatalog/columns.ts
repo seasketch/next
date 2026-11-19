@@ -1,3 +1,5 @@
+import { metadataHtml, metadataPlainText } from "./metadataDocument";
+
 /**
  * Draft layer spreadsheet columns.
  *
@@ -16,7 +18,6 @@ export type CatalogOutput = {
   url: string;
   isOriginal: boolean;
   originalFilename: string | null;
-  epsg: number | null;
 };
 
 export type CatalogLayer = {
@@ -36,7 +37,7 @@ export type CatalogLayer = {
   geostats: unknown;
   attribution: string | null;
   enableDownload: boolean;
-  hasMetadata: boolean;
+  metadata: unknown;
   uploadedSourceFilename: string | null;
   outputs: CatalogOutput[];
   styleUrl: string;
@@ -61,6 +62,14 @@ const ARCGIS_TYPES = new Set([
   "arcgis-raster-tiles",
   "arcgis-dynamic-mapserver-vector-sublayer",
   "arcgis-dynamic-mapserver-raster-sublayer",
+]);
+
+// Matches table_of_contents_items_uses_dynamic_metadata: a null document on
+// one of these sources is read from the service, not stored in SeaSketch.
+const DYNAMIC_METADATA_SOURCE_TYPES = new Set([
+  "arcgis-dynamic-mapserver",
+  "arcgis-vector",
+  "arcgis-raster-tiles",
 ]);
 
 const RASTER_SOURCE_TYPES = new Set([
@@ -104,14 +113,11 @@ export const catalogColumns: CatalogColumn[] = [
   { header: "Spatial type", value: (layer) => spatialType(layer) },
   { header: "Feature count", value: (layer) => featureCount(layer) },
   { header: "Raster type", value: (layer) => rasterType(layer) },
-  { header: "Source CRS", value: (layer) => sourceCrs(layer) },
   { header: "Uploaded file type", value: (layer) => uploadedFileType(layer) },
   { header: "Uploaded file", value: (layer) => uploadedFileName(layer) },
   { header: "Normalized file", value: (layer) => normalizedFile(layer).label },
-  {
-    header: "Has metadata",
-    value: (layer) => (layer.hasMetadata ? "true" : "false"),
-  },
+  { header: "Metadata", value: (layer) => metadataValue(layer) },
+  { header: "Metadata HTML", value: (layer) => metadataHtmlValue(layer) },
   {
     header: "Downloadable",
     value: (layer) => (layer.enableDownload ? "Yes" : "No"),
@@ -338,12 +344,25 @@ function sublayerId(layer: CatalogLayer): string {
   return layer.sublayer;
 }
 
-function sourceCrs(layer: CatalogLayer): string {
-  const original = originalOutput(layer);
-  if (!original || original.epsg == null || !Number.isFinite(original.epsg) || original.epsg <= 0) {
+function metadataValue(layer: CatalogLayer): string {
+  if (layer.metadata == null) {
+    return dynamicMetadataEndpoint(layer);
+  }
+  return metadataPlainText(layer.metadata);
+}
+
+function metadataHtmlValue(layer: CatalogLayer): string {
+  if (layer.metadata == null) {
     return "";
   }
-  return `EPSG:${original.epsg}`;
+  return metadataHtml(layer.metadata);
+}
+
+function dynamicMetadataEndpoint(layer: CatalogLayer): string {
+  if (!layer.sourceType || !DYNAMIC_METADATA_SOURCE_TYPES.has(layer.sourceType)) {
+    return "";
+  }
+  return serviceUrl(layer);
 }
 
 function uploadedFileType(layer: CatalogLayer): string {
@@ -523,6 +542,12 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
+/**
+ * RFC 4180 cell. Markup is left intact: quotes, commas, and line breaks are
+ * quoted rather than stripped. A leading spreadsheet formula character is
+ * prefixed so Excel does not evaluate the cell. HTML from the metadata
+ * column starts with a tag, so that prefix does not apply to it.
+ */
 function csvCell(value: string): string {
   const safe = /^[=+\-@]/.test(value) ? `'${value}` : value;
   if (/[",\r\n]/.test(safe)) {

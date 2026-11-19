@@ -4,7 +4,7 @@ The product lists are the [end-user catalog](../../design-docs/dev-environment/j
 
 This file is the implementation note for tests that already landed under `packages/e2e/tests`. When a catalog item is implemented, mark it *Covered* in the catalog. Fixture setup, selectors, and teardown stay here or in the spec.
 
-The three `@smoke` journeys stay as they are: an anonymous visitor opens `demo-samoa` and sees the map, `e2e|member` opens `e2e-private` and sees only the Members Forum, and `e2e|admin` opens the `demo-samoa` admin page. They are the only `@smoke` tests, and they are not also `@enduser` or `@admin`. Every other spec's `describe` carries `@enduser` or `@admin`. `local-reports.spec.ts` keeps one `describe` and puts the suite tag on each test, because the sketch journey is end-user and the CSV data table is admin. `node packages/e2e/scripts/check-suite-tags.mjs` requires exactly one suite tag. CI runs `npm run e2e:smoke`, `npm run e2e:enduser`, and `npm run e2e:admin` as separate jobs in the Unit Tests workflow on every branch push. Those jobs are not part of Create Deployment.
+The three `@smoke` journeys stay as they are: an anonymous visitor opens `demo-samoa` and sees the map, `e2e|member` opens `e2e-private` and sees only the Members Forum, and `e2e|admin` opens the `demo-samoa` admin page. They are the only `@smoke` tests, and they are not also `@enduser` or `@admin`. Every other spec's `describe` carries `@enduser` or `@admin`. `local-reports.spec.ts` keeps one `describe` and puts the suite tag on each test, because the sketch journey is end-user and the CSV data table is admin. `node packages/e2e/scripts/check-suite-tags.mjs` requires exactly one suite tag, and exactly one theme tag on every `@enduser` test. CI runs `npm run e2e:smoke` in the Unit Tests workflow. Admin and the end-user themes run in the Integration Tests workflow: one admin job, and one job per theme named End User - Access and so on. `npm run e2e:enduser -- --grep @access` is that slice locally. Those jobs are not part of Create Deployment.
 
 Reads use `demo-samoa`. A signed-in user starts mutating journeys as a non-participant unless the spec says otherwise. Joining happens in the test. Each run starts from a restored `seasketch_e2e` snapshot.
 
@@ -27,8 +27,11 @@ See the catalog's *Covered* notes. Specs:
 - `tests/access.spec.ts` — public, admins-only, invite-only, invites, access requests
 - `tests/homepage.spec.ts` — homepage and project listing
 - `tests/forums.spec.ts` — anonymous read, join, reply
+- `tests/forum-attachments.spec.ts` — attach a file and download it from local R2
 - `tests/topic-title.spec.ts` — post a topic, length limits
 - `tests/map-bookmarks.spec.ts` — forum map bookmark screenshot
+- `tests/map-shell.spec.ts` — toolbar, map controls, legend, bookmark restore
+- `tests/session.spec.ts` — Sign In, the signed-in name, and sign-out
 - `tests/overlays.spec.ts` — overlay browse, legend, metadata, search
 - `tests/basemaps.spec.ts` — Light / Satellite
 - `tests/language.spec.ts` — Samoan / English

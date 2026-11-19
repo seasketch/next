@@ -883,7 +883,10 @@ export const MeasurementToolsOverlay = memo(function ({
           } absolute z-10 bg-white shadow rounded border w-72`}
         >
           <div className="flex mt-2">
-            <div className="text-xl font-semibold flex-1 truncate text-center mx-5">
+            <div
+              data-testid="measure-length"
+              className="text-xl font-semibold flex-1 truncate text-center mx-5"
+            >
               {formatter.format(selectedUnit.conversion(length || 0))}{" "}
               {selectedUnit.label}
             </div>
@@ -912,6 +915,8 @@ export const MeasurementToolsOverlay = memo(function ({
           </p>
           <div className="flex h-12 items-center gap-1 bg-gray-50 p-2 border-t">
             <select
+              // eslint-disable-next-line i18next/no-literal-string
+              aria-label="Distance units"
               onChange={(e) => {
                 setSelectedUnitValue(e.target.value || units[0].id);
               }}

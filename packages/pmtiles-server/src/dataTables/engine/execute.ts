@@ -430,11 +430,14 @@ export async function executeQuery(options: {
     rowsMatched += matched ? matched.length : spanRows;
     if (matched && matched.length === 0) continue;
 
-    const startCol = plan.when ? loaded.get(WHEN_START_COLUMN) : undefined;
-    const endCol = plan.when ? loaded.get(WHEN_END_COLUMN) : undefined;
-
     const otherColumns = new Set<string>([...query.groupBy]);
     if (aggColumn) otherColumns.add(aggColumn);
+    // Saturation skips the per-row clock test, so `_when_*` are absent from
+    // `loaded`. Year/month bins still need the row interval.
+    if (whenStep) {
+      otherColumns.add(WHEN_START_COLUMN);
+      otherColumns.add(WHEN_END_COLUMN);
+    }
     const columnData = new Map<string, unknown[]>(loaded);
     await Promise.all(
       [...otherColumns]
@@ -444,6 +447,10 @@ export async function executeQuery(options: {
         })
     );
 
+    const startCol = whenStep
+      ? columnData.get(WHEN_START_COLUMN)
+      : undefined;
+    const endCol = whenStep ? columnData.get(WHEN_END_COLUMN) : undefined;
     const groupByData = query.groupBy.map((col) => columnData.get(col)!);
     const aggData = aggColumn ? columnData.get(aggColumn)! : null;
     const indexCount = matched ? matched.length : spanRows;
@@ -452,10 +459,10 @@ export async function executeQuery(options: {
       const i = matched ? matched[k] : k;
       const groupValues = groupByData.map((data) => jsonValue(data[i]));
       const stepKeys =
-        whenStep && plan.when
+        whenStep && plan.when && startCol && endCol
           ? (() => {
-              const rowStart = normalizeValue(startCol![i], "number");
-              const rowEnd = normalizeValue(endCol![i], "number");
+              const rowStart = normalizeValue(startCol[i], "number");
+              const rowEnd = normalizeValue(endCol[i], "number");
               if (typeof rowStart !== "number" || typeof rowEnd !== "number") {
                 return [];
               }

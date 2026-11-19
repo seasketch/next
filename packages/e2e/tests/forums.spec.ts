@@ -70,6 +70,8 @@ test.describe("demo-samoa forums @enduser @forums", () => {
     await page.locator(".ProseMirror").click();
     await page.keyboard.type(reply);
     await page.getByRole("button", { name: "Post Reply" }).click();
-    await expect(page.getByText(reply)).toBeVisible();
+    // The composer can show the same sentence before the server has the
+    // post. The saved reply is the one with a post id.
+    await expect(page.locator("[id^='post-']").filter({ hasText: reply })).toBeVisible();
   });
 });

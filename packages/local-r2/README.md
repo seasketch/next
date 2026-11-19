@@ -1,6 +1,7 @@
 # local-r2
 
-Local stand-in for the two R2 buckets on the data path. There is no
+Local stand-in for the R2 buckets on the data path, including forum and
+survey attachments. There is no
 application code to speak of: `bin/dev.mjs` reads `wrangler.jsonc` and starts
 Miniflare, which serves each bucket over the S3 API at
 
@@ -32,6 +33,7 @@ what it writes. `LOCAL_R2_ALLOWED_HOSTS=a,b` adds more names.
 | --- | --- | --- |
 | `ssn-tiles-local` | `TILES_BUCKET` | `ssn-tiles` (published layers, parquet, ACL documents) |
 | `ssn-spatial-uploads-tmp-local` | `SPATIAL_UPLOADS_BUCKET` | `ssn-spatial-uploads-tmp` (raw uploads) |
+| `ssn-file-uploads-local` | `FILE_UPLOADS_BUCKET` | forum and survey attachments (`R2_FILE_UPLOADS_BUCKET`) |
 
 ## Running
 
@@ -50,6 +52,7 @@ R2_ACCESS_KEY_ID=local
 R2_SECRET_ACCESS_KEY=local-r2-secret
 R2_TILES_BUCKET=ssn-tiles-local
 SPATIAL_UPLOADS_BUCKET=ssn-spatial-uploads-tmp-local
+R2_FILE_UPLOADS_BUCKET=ssn-file-uploads-local
 ```
 
 Those credentials authorize nothing outside this machine. The launcher reads

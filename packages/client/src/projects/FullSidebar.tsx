@@ -23,6 +23,11 @@ import LanguageSelector from "../surveys/LanguageSelector";
 import Button from "../components/Button";
 import { useTranslatedProps } from "../components/TranslatedPropControl";
 import ContactChooser from "../components/ContactChooser";
+import {
+  logoutReturnTo,
+  projectPathAfterSignOut,
+  rememberSignOutReturn,
+} from "../auth/signOutReturn";
 
 export default function FullSidebar({
   open,
@@ -346,13 +351,18 @@ export default function FullSidebar({
               label={t("Sign Out")}
               onClick={() => {
                 cache?.logout();
+                rememberSignOutReturn(
+                  projectPathAfterSignOut({
+                    pathname: window.location.pathname,
+                    search: window.location.search,
+                    slug,
+                    accessControl: data?.project?.accessControl,
+                    isListed: data?.project?.isListed,
+                  })
+                );
                 logout({
                   logoutParams: {
-                    returnTo:
-                      window.location.protocol +
-                      "//" +
-                      window.location.host +
-                      "/",
+                    returnTo: logoutReturnTo(),
                   },
                 });
               }}

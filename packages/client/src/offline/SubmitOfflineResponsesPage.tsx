@@ -1,5 +1,9 @@
 /* eslint-disable i18next/no-literal-string */
 import { useAuth0 } from "@auth0/auth0-react";
+import {
+  logoutReturnTo,
+  rememberSignOutReturn,
+} from "../auth/signOutReturn";
 import { CheckIcon } from "@heroicons/react/outline";
 import { CheckCircleIcon } from "@heroicons/react/solid";
 import { useCallback, useContext, useMemo, useState } from "react";
@@ -175,17 +179,14 @@ export default function SubmitOfflineResponsesPage() {
                     listed below. If this is not correct, please{" "}
                     <button
                       className="underline"
-                      onClick={() =>
+                      onClick={() => {
+                        rememberSignOutReturn(null);
                         logout({
                           logoutParams: {
-                            returnTo:
-                              window.location.protocol +
-                              "//" +
-                              window.location.host +
-                              "/",
+                            returnTo: logoutReturnTo(),
                           },
-                        })
-                      }
+                        });
+                      }}
                     >
                       sign out
                     </button>{" "}

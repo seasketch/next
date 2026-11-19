@@ -16462,10 +16462,6 @@ input[type="checkbox"][indeterminate="true"]:checked {
     margin-top:4rem
   }
 
-  .sm\:mt-2{
-    margin-top:0.5rem
-  }
-
   .sm\:mt-4{
     margin-top:1rem
   }
@@ -16861,6 +16857,11 @@ input[type="checkbox"][indeterminate="true"]:checked {
   .sm\:px-8{
     padding-left:2rem;
     padding-right:2rem
+  }
+
+  .sm\:py-16{
+    padding-top:4rem;
+    padding-bottom:4rem
   }
 
   .sm\:py-2{
@@ -17282,10 +17283,6 @@ input[type="checkbox"][indeterminate="true"]:checked {
 
   .md\:w-auto{
     width:auto
-  }
-
-  .md\:w-full{
-    width:100%
   }
 
   .md\:min-w-lg{

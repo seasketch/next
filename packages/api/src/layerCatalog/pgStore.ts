@@ -55,7 +55,7 @@ export class PgLayerCatalogStore implements LayerCatalogStore {
         ds.geostats,
         ds.attribution,
         toc.enable_download as "enableDownload",
-        (toc.metadata is not null) as "hasMetadata",
+        toc.metadata,
         ds.uploaded_source_filename as "uploadedSourceFilename",
         (
           select coalesce(
@@ -64,8 +64,7 @@ export class PgLayerCatalogStore implements LayerCatalogStore {
                 'type', o.type,
                 'url', o.url,
                 'isOriginal', o.is_original,
-                'originalFilename', o.original_filename,
-                'epsg', o.epsg
+                'originalFilename', o.original_filename
               )
               order by o.id desc
             ),
@@ -200,7 +199,7 @@ function mapTocItem(row: QueryRow): RawTocItem {
     geostats: row.geostats ?? null,
     attribution: row.attribution == null ? null : stringValue(row.attribution),
     enableDownload: row.enableDownload === true,
-    hasMetadata: row.hasMetadata === true,
+    metadata: row.metadata ?? null,
     uploadedSourceFilename:
       row.uploadedSourceFilename == null
         ? null

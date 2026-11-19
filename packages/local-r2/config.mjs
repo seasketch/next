@@ -75,6 +75,9 @@ export const tilesBucket = buckets.find((b) => b.binding === "TILES_BUCKET").nam
 export const spatialUploadsBucket = buckets.find(
   (b) => b.binding === "SPATIAL_UPLOADS_BUCKET"
 ).name;
+export const fileUploadsBucket = buckets.find(
+  (b) => b.binding === "FILE_UPLOADS_BUCKET"
+).name;
 
 export function endpoint(port = defaultPort, host = "localhost") {
   return `http://${host}:${port}${s3Path}`;
@@ -89,5 +92,6 @@ export function envValues(port = defaultPort) {
     R2_SECRET_ACCESS_KEY: credentials.secretAccessKey,
     R2_TILES_BUCKET: tilesBucket,
     SPATIAL_UPLOADS_BUCKET: spatialUploadsBucket,
+    R2_FILE_UPLOADS_BUCKET: fileUploadsBucket,
   };
 }
