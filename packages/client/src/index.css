@@ -9415,11 +9415,6 @@ select{
   border-color:rgb(249 250 251 / var(--tw-divide-opacity, 1))
 }
 
-.divide-gray-600 > :not([hidden]) ~ :not([hidden]){
-  --tw-divide-opacity:1;
-  border-color:rgb(75 85 99 / var(--tw-divide-opacity, 1))
-}
-
 .divide-slate-100 > :not([hidden]) ~ :not([hidden]){
   --tw-divide-opacity:1;
   border-color:rgb(241 245 249 / var(--tw-divide-opacity, 1))
@@ -17851,10 +17846,6 @@ input[type="checkbox"][indeterminate="true"]:checked {
 
   .lg\:max-w-\[min\(24rem\2c 48\%\)\]{
     max-width:min(24rem,48%)
-  }
-
-  .lg\:max-w-xl{
-    max-width:36rem
   }
 
   .lg\:flex-none{

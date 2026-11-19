@@ -38,7 +38,7 @@ test.describe("demo-samoa map bookmarks @enduser @forums", () => {
     await postedThumb.locator("xpath=ancestor::button[1]").locator("button").click();
 
     await expect(
-      page.getByRole("heading", { name: "Map Bookmark Details" })
+      page.getByRole("heading", { name: "Map bookmark" })
     ).toBeVisible();
     const full = page.locator("#overlay-body img");
     await expect(full).toBeVisible({ timeout: 90_000 });

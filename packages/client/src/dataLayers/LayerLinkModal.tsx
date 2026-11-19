@@ -2,14 +2,12 @@ import {
   ChevronDownIcon,
   ClipboardCopyIcon,
   LockClosedIcon,
-  XIcon,
 } from "@heroicons/react/outline";
 import {
   ApolloClient,
   NormalizedCacheObject,
   useApolloClient,
 } from "@apollo/client";
-import { motion } from "framer-motion";
 import {
   ReactNode,
   useContext,
@@ -17,7 +15,6 @@ import {
   useMemo,
   useState,
 } from "react";
-import { createPortal } from "react-dom";
 import { useHistory } from "react-router-dom";
 import { Trans, useTranslation } from "react-i18next";
 import { useAuth0 } from "@auth0/auth0-react";
@@ -53,6 +50,7 @@ import {
   LayerLinkNotice,
   LayerLinkSharing,
 } from "./layerLinkAccess";
+import BookmarkCard from "./BookmarkCard";
 
 function folderTitlesFromToc(
   items: { stableId: string; parentStableId?: string | null; title: string }[],
@@ -165,65 +163,6 @@ function NoticeCopy({
           </p>
         );
       })}
-    </div>
-  );
-}
-
-function PreviewThumbnail({
-  imageId,
-  pending,
-  failed,
-}: {
-  imageId?: string | null;
-  pending: boolean;
-  failed: boolean;
-}) {
-  const [loaded, setLoaded] = useState(false);
-  useEffect(() => {
-    setLoaded(false);
-  }, [imageId]);
-  const src = imageId
-    ? // eslint-disable-next-line i18next/no-literal-string
-      `${process.env.REACT_APP_CLOUDFLARE_IMAGES_ENDPOINT || ""}${imageId}/public`
-    : null;
-  return (
-    <div className="relative aspect-[3/2] w-full overflow-hidden bg-primary-700">
-      <div className="absolute inset-0 bg-gradient-to-br from-primary-700 via-primary-500 to-sky-300" />
-      {(pending || (src && !loaded)) && !failed && (
-        <>
-          <motion.div
-            className="absolute inset-y-0 w-1/2 bg-gradient-to-r from-transparent via-white/30 to-transparent"
-            initial={{ x: "-130%" }}
-            animate={{ x: "240%" }}
-            transition={{ duration: 1.8, repeat: Infinity, ease: "easeInOut" }}
-          />
-          <div className="relative flex h-full flex-col items-center justify-center gap-3 text-white">
-            <Spinner color="white" large />
-            <span className="text-sm font-medium tracking-wide text-white/90">
-              <Trans ns="mapBookmarks">Rendering preview…</Trans>
-            </span>
-          </div>
-        </>
-      )}
-      {src && (
-        <motion.img
-          alt=""
-          src={src}
-          className="absolute inset-x-0 top-0 h-[107%] w-full object-cover object-top"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: loaded ? 1 : 0 }}
-          transition={{ duration: 0.35 }}
-          onLoad={() => setLoaded(true)}
-        />
-      )}
-      {failed && !src && (
-        <div className="relative flex h-full items-center justify-center px-8 text-center text-sm leading-relaxed text-white/90">
-          <Trans ns="mapBookmarks">
-            The preview image could not be created. The link still opens this
-            layer.
-          </Trans>
-        </div>
-      )}
     </div>
   );
 }
@@ -687,40 +626,23 @@ export default function LayerLinkModal({
   const showView =
     mode === "view" && bookmark && (isLayerLink ? canSeeLayer : true);
 
-  return createPortal(
-    <div
-      className="fixed inset-0 z-[70] flex items-center justify-center bg-slate-950/45 p-4"
-      onMouseDown={(event) => {
-        if (event.target === event.currentTarget) {
-          onClose();
-        }
-      }}
+  return (
+    <BookmarkCard
+      labelledBy="layer-link-title"
+      imageId={bookmark?.imageId}
+      pending={creating || waitingForImage || (!bookmark && !createError)}
+      failed={failed}
+      unavailable={
+        <Trans ns="mapBookmarks">
+          The preview image could not be created. The link still opens this
+          layer.
+        </Trans>
+      }
+      onClose={onClose}
+      pinned={
+        <ToastViewport className="pointer-events-none absolute bottom-4 right-4 z-10" />
+      }
     >
-      <motion.div
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="layer-link-title"
-        initial={{ opacity: 0, y: 10 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.18, ease: "easeOut" }}
-        className="relative flex max-h-[90vh] w-full max-w-xl flex-col overflow-hidden rounded-2xl bg-white text-slate-900 shadow-2xl ring-1 ring-black/5"
-      >
-        <div className="relative flex-none">
-          <PreviewThumbnail
-            imageId={bookmark?.imageId}
-            pending={creating || waitingForImage || (!bookmark && !createError)}
-            failed={failed}
-          />
-          <button
-            type="button"
-            className="absolute right-3 top-3 flex h-8 w-8 items-center justify-center rounded-full bg-white text-slate-700 shadow-md ring-1 ring-black/10 hover:text-slate-900"
-            onClick={onClose}
-            aria-label={t("Close")}
-          >
-            <XIcon className="h-4 w-4" />
-          </button>
-        </div>
-        <div className="overflow-y-auto px-6 pb-6 pt-5">
           {createError && (
             <p className="mb-3 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-800">
               {createError}
@@ -814,10 +736,6 @@ export default function LayerLinkModal({
               <Trans ns="mapBookmarks">View on the map</Trans>
             </button>
           )}
-        </div>
-        <ToastViewport className="pointer-events-none absolute bottom-4 right-4 z-10" />
-      </motion.div>
-    </div>,
-    document.body
+    </BookmarkCard>
   );
 }
