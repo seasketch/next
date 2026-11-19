@@ -45,6 +45,10 @@ describe("Ingress initial scenarios", () => {
   test("Invalid invitation", () => {
     render(<InvalidToken />);
     expect(screen.getByText(/could not parse/i)).toBeInTheDocument();
+    const support = screen.getByRole("link", { name: "support@seasketch.org" });
+    const href = decodeURIComponent(support.getAttribute("href") || "");
+    expect(href.startsWith("mailto:support@seasketch.org?")).toBe(true);
+    expect(href).toContain("Could not parse invite token");
   });
 
   test("Expired invitation", async () => {

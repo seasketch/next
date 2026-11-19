@@ -6,6 +6,10 @@ import Button from "../components/Button";
 import Spinner from "../components/Spinner";
 import { useProjectMetadataQuery } from "../generated/graphql";
 import ContactChooser from "../components/ContactChooser";
+import {
+  inviteSupportMailto,
+  SEASKETCH_SUPPORT_EMAIL,
+} from "../components/contactEmail";
 
 /**
  * Implements user ingress from a project invitation email as described here:
@@ -41,6 +45,22 @@ export default function ProjectInviteLanding() {
   const projectName = claims?.projectName;
   const problem =
     error instanceof Error ? error.message : error ? `${error}` : "";
+  const supportMailto = inviteSupportMailto({
+    to:
+      state === IngressState.Expired ? supportEmail || undefined : undefined,
+    error:
+      state === IngressState.Expired
+        ? // Written into the support message, which stays in English.
+          // eslint-disable-next-line i18next/no-literal-string
+          "This invitation has expired."
+        : problem,
+    projectName,
+    projectSlug: claims?.projectSlug,
+    recipientEmail: claims?.email,
+    inviteId: claims?.inviteId,
+    signedInEmail: auth0.user?.email,
+    pageUrl: typeof window === "undefined" ? undefined : window.location.href,
+  });
   const contactProject =
     supportEmail && (projectName || data?.projectPublicDetails?.name)
       ? {
@@ -110,24 +130,32 @@ export default function ProjectInviteLanding() {
                 Your invitation to this project has expired.
               </Trans>
             </div>
-            {supportEmail && (
-              <p className="text-center text-sm text-gray-600">
-                <Trans ns="invites">Contact </Trans>
-                <a
-                  className="text-primary-600 underline"
-                  href={`mailto:${supportEmail}`}
-                >
-                  {supportEmail}
-                </a>
+            <p className="text-center text-sm text-gray-600">
+              <Trans ns="invites">Contact </Trans>
+              <a className="text-primary-600 underline" href={supportMailto}>
+                {supportEmail || SEASKETCH_SUPPORT_EMAIL}
+              </a>
+              {supportEmail ? (
                 <Trans ns="invites"> to request a new invitation.</Trans>
-              </p>
-            )}
+              ) : (
+                <Trans ns="invites"> if you need help with this invitation.</Trans>
+              )}
+            </p>
           </div>
         );
       case IngressState.Error:
         return (
-          <div className="w-full rounded-md border border-red-200 bg-red-50 px-4 py-3 text-center text-sm text-red-900">
-            {problem}
+          <div className="flex w-full flex-col items-center gap-3">
+            <div className="w-full rounded-md border border-red-200 bg-red-50 px-4 py-3 text-center text-sm text-red-900">
+              {problem}
+            </div>
+            <p className="text-center text-sm text-gray-600">
+              <Trans ns="invites">Contact </Trans>
+              <a className="text-primary-600 underline" href={supportMailto}>
+                {SEASKETCH_SUPPORT_EMAIL}
+              </a>
+              <Trans ns="invites"> if you need help with this invitation.</Trans>
+            </p>
           </div>
         );
       case IngressState.Verifying:
