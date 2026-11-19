@@ -233,7 +233,7 @@ Intent: reading and posting in a project forum, including map bookmarks. Creatin
 4. **bundler-risk.** Share → Map Bookmark captures a client thumbnail. Posting shows it. The info button shows the large screenshot from the local screenshotter. *Covered: `tests/map-bookmarks.spec.ts`.*
 5. Post a topic: a normal title posts. Eighty emoji is allowed. Eighty-one characters show the limit and disable Post New Topic. Empty title and empty message each ask for content. *Covered: `tests/topic-title.spec.ts`.*
 6. A participant who is in the group a forum is limited to can see that forum. A participant who is not in the group cannot. *Group visibility on `e2e-private` is also part of smoke. This journey is the end-user check beyond smoke, arranged without the admin form.*
-7. Attach a file to a post. The attachment is downloadable.
+7. Attach a file to a post. The attachment is downloadable from the local file-uploads bucket. *Covered: `tests/forum-attachments.spec.ts`.*
 8. Share sketches into a forum post. A reader can copy them into their own sketch list.
 
 ---

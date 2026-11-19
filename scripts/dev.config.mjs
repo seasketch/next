@@ -22,8 +22,9 @@ import { dataStack, invokePath } from "./dev.data.mjs";
 const dev = dataStack("dev");
 const e2e = dataStack("e2e");
 
-// Local object storage: wrangler dev serving the two local R2 buckets over
-// the S3 API. See design-docs/dev-environment/local-data-services.md.
+// Local object storage: Miniflare serving the local R2 buckets (tiles,
+// spatial uploads, and forum/survey file uploads) over the S3 API.
+// See design-docs/dev-environment/local-data-services.md.
 export const localR2Dev = {
   port: dev.ports.localR2,
   url: `http://127.0.0.1:${dev.ports.localR2}`,

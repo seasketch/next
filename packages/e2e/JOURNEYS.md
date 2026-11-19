@@ -27,6 +27,7 @@ See the catalog's *Covered* notes. Specs:
 - `tests/access.spec.ts` — public, admins-only, invite-only, invites, access requests
 - `tests/homepage.spec.ts` — homepage and project listing
 - `tests/forums.spec.ts` — anonymous read, join, reply
+- `tests/forum-attachments.spec.ts` — attach a file and download it from local R2
 - `tests/topic-title.spec.ts` — post a topic, length limits
 - `tests/map-bookmarks.spec.ts` — forum map bookmark screenshot
 - `tests/map-shell.spec.ts` — toolbar, map controls, legend, bookmark restore
