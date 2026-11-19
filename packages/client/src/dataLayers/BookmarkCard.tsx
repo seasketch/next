@@ -260,14 +260,11 @@ export default function BookmarkCard({
           {canExpand && (
             <button
               type="button"
-              className="absolute bottom-3 left-3 inline-flex h-8 items-center gap-1.5 rounded-full bg-white/95 px-2.5 text-slate-800 shadow-md ring-1 ring-black/10 hover:bg-white"
+              className="absolute bottom-2.5 left-2.5 flex h-7 w-7 items-center justify-center rounded-md bg-slate-950/30 text-white/85 backdrop-blur-[2px] hover:bg-slate-950/50 hover:text-white"
               onClick={() => setExpanded(true)}
               aria-label={t("View full size")}
             >
               <ArrowsExpandIcon className="h-4 w-4" />
-              <span className="pr-0.5 text-xs font-medium">
-                <Trans ns="mapBookmarks">Full size</Trans>
-              </span>
             </button>
           )}
           <button
