@@ -1,6 +1,7 @@
 import {
   ChevronDownIcon,
   ClipboardCopyIcon,
+  FolderIcon,
   LockClosedIcon,
 } from "@heroicons/react/outline";
 import {
@@ -668,8 +669,17 @@ export default function LayerLinkModal({
             {title}
           </h2>
           {folderTitles.length > 0 && (
-            <p className="mt-1 truncate text-sm text-slate-500">
-              {folderTitles.join(" · ")}
+            <p className="mt-1 flex min-w-0 items-center gap-1.5 text-sm text-slate-500">
+              <FolderIcon
+                className="h-3.5 w-3.5 flex-none text-slate-400"
+                aria-hidden
+              />
+              <span className="truncate">
+                {
+                  // eslint-disable-next-line i18next/no-literal-string
+                  folderTitles.join(" · ")
+                }
+              </span>
             </p>
           )}
           {sourceAttribution && (
