@@ -22,11 +22,24 @@ import useCurrentProjectMetadata from "../useCurrentProjectMetadata";
 import useDialog from "../components/useDialog";
 import UserProfileForm, { useUserProfileState } from "./UserProfileForm";
 
-// The action row is a wrapping flex line. Buttons keep their label on one
-// line and move to the next line as a whole control, instead of shrinking
-// until "Sign in" breaks in half.
+// Desktop keeps every action on one line. Buttons size to their label.
+// On a phone the same buttons stack and fill the card.
 const gateActionClass = "w-full shrink-0 sm:w-auto";
 const gateActionButtonClass = "w-full justify-center whitespace-nowrap sm:w-auto";
+
+function SupportEmailLink({ email }: { email?: string | null }) {
+  const address = email || "support@seasketch.org";
+  return (
+    <span className="inline-flex items-center justify-center whitespace-nowrap text-sm text-gray-600">
+      <span>
+        <Trans ns="projectLanding">Contact </Trans>
+      </span>
+      <a href={`mailto:${address}`} className="ml-1 text-primary-500 underline">
+        {address}
+      </a>
+    </span>
+  );
+}
 
 interface ProfileFormValues {
   fullname: string;
@@ -328,20 +341,7 @@ export const ProjectAccessGate: React.FunctionComponent<{ admin?: boolean }> = (
                 resendVerificationState.data?.resendVerificationEmail.success
               }
             />
-            <Button
-              mailTo={
-                data.projectPublicDetails.supportEmail || "support@seasketch.org"
-              }
-              label={
-                <Trans ns="projectLanding">
-                  Contact{" "}
-                  {data.projectPublicDetails.supportEmail ||
-                    "support@seasketch.org"}
-                </Trans>
-              }
-              className={gateActionClass}
-              buttonClassName={gateActionButtonClass}
-            />
+            <SupportEmailLink email={data.projectPublicDetails.supportEmail} />
           </>
         );
         break;
@@ -413,21 +413,7 @@ export const ProjectAccessGate: React.FunctionComponent<{ admin?: boolean }> = (
             )}
             {data.projectPublicDetails.accessControl ===
               ProjectAccessControlSetting.InviteOnly && (
-              <Button
-                mailTo={
-                  data.projectPublicDetails.supportEmail ||
-                  "support@seasketch.org"
-                }
-                label={
-                  <Trans ns="projectLanding">
-                    Contact{" "}
-                    {data.projectPublicDetails.supportEmail ||
-                      "support@seasketch.org"}
-                  </Trans>
-                }
-                className={gateActionClass}
-                buttonClassName={gateActionButtonClass}
-              />
+              <SupportEmailLink email={data.projectPublicDetails.supportEmail} />
             )}
           </>
         );
@@ -517,7 +503,7 @@ export const ProjectAccessGate: React.FunctionComponent<{ admin?: boolean }> = (
                     </div>
                   </div>
                 </div>
-                <div className="mt-5 sm:mt-4 flex w-full flex-col gap-2 sm:flex-row sm:flex-wrap sm:justify-end">
+                <div className="mt-5 sm:mt-4 flex w-full flex-col flex-nowrap gap-3 sm:flex-row sm:items-center sm:justify-end">
                   {buttons}
                 </div>
               </DialogContainer>
@@ -548,7 +534,7 @@ const DialogContainer: React.FunctionComponent<{
       }
       animate={{ x: "-50%", y: "-33.333%", opacity: 1 }}
       exit={{ x: props.exitToLeft ? -500 : 500, opacity: 0, y: "-33.333%" }}
-      className=" bg-white block sm:align-middle absolute sm:max-w-lg sm:rounded-lg px-4 text-left overflow-y-auto pb-6 sm:overflow-hidden shadow-xl sm:p-6 flex-nowrap left-1/2 top-1/3 w-screen h-screen sm:w-full sm:h-auto max-h-full"
+      className=" bg-white block sm:align-middle absolute sm:max-w-xl sm:rounded-lg px-4 text-left overflow-y-auto pb-6 sm:overflow-hidden shadow-xl sm:p-6 flex-nowrap left-1/2 top-1/3 w-screen h-screen sm:w-full sm:h-auto max-h-full"
     >
       {props.children}
     </motion.div>

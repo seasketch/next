@@ -16626,10 +16626,6 @@ input[type="checkbox"][indeterminate="true"]:checked {
     flex-direction:column
   }
 
-  .sm\:flex-wrap{
-    flex-wrap:wrap
-  }
-
   .sm\:items-start{
     align-items:flex-start
   }
