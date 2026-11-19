@@ -63,8 +63,8 @@ function projectLink(page: Page, name: string) {
   return page.getByRole("link", { name, exact: true });
 }
 
-function contactButton(page: Page) {
-  return page.getByRole("button", { name: `Contact ${personas.admin.email}` });
+function contactLink(page: Page) {
+  return page.getByRole("link", { name: `Contact ${personas.admin.email}` });
 }
 
 async function person(label: string): Promise<DisposableUser> {
@@ -198,7 +198,7 @@ test.describe("inbound access @enduser @access", () => {
       await member.goto(`/${row.slug}`);
       const gate = member.getByRole("dialog");
       await expect(gate.getByRole("heading", { name: "Admins Only" })).toBeVisible();
-      await expect(contactButton(member)).toBeVisible();
+      await expect(contactLink(member)).toBeVisible();
       await expect(
         member.getByRole("button", { name: "Share Profile and Request Access" })
       ).toHaveCount(0);
@@ -566,7 +566,7 @@ test.describe("inbound access @enduser @access", () => {
     await signIn(page, request, member);
     await page.goto(`/${row.slug}`);
     await expect(page.getByRole("heading", { name: "Request Awaiting Approval" })).toBeVisible();
-    await expect(contactButton(page)).toBeVisible();
+    await expect(contactLink(page)).toBeVisible();
     await expect(
       page.getByRole("button", { name: "Share Profile and Request Access" })
     ).toHaveCount(0);
@@ -847,7 +847,7 @@ test.describe("inbound access @enduser @access", () => {
     await signIn(page, request, member);
     await page.goto(`/${row.slug}`);
     await expect(page.getByRole("heading", { name: "Request Awaiting Approval" })).toBeVisible();
-    await expect(contactButton(page)).toBeVisible();
+    await expect(contactLink(page)).toBeVisible();
     await expectMapHidden(page);
   });
 
@@ -948,7 +948,7 @@ test.describe("inbound access @enduser @access", () => {
       await pendingPage.goto(`/${row.slug}`);
       const gate = pendingPage.getByRole("dialog");
       await expect(gate.getByRole("heading", { name: "Admins Only" })).toBeVisible();
-      await expect(contactButton(pendingPage)).toBeVisible();
+      await expect(contactLink(pendingPage)).toBeVisible();
       await expect(
         pendingPage.getByRole("button", { name: "Share Profile and Request Access" })
       ).toHaveCount(0);
