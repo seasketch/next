@@ -16812,6 +16812,11 @@ input[type="checkbox"][indeterminate="true"]:checked {
     padding-right:2rem
   }
 
+  .sm\:py-16{
+    padding-top:4rem;
+    padding-bottom:4rem
+  }
+
   .sm\:py-2{
     padding-top:0.5rem;
     padding-bottom:0.5rem
