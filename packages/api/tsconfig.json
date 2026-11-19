@@ -30,7 +30,8 @@
     { "path": "../overlay-worker" },
     { "path": "../spatial-uploads-handler" },
     { "path": "../vector-data-source" },
-    { "path": "../ai-data-analyst" }
+    { "path": "../ai-data-analyst" },
+    { "path": "../s57" }
   ],
   "include": ["src/**/*", "tasks/**/*", "process-env.d.ts"],
   "exclude": ["node_modules", "**/*.spec.ts", "dist"]

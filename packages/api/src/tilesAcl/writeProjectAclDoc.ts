@@ -259,6 +259,7 @@ export async function buildProjectAclDoc(
     [projectId]
   );
 
+  let doc: ProjectAclDoc;
   if (rows.length === 0) {
     const slugRow = await client.query<{ slug: string }>(
       `select slug from projects where id = $1`,
@@ -267,16 +268,59 @@ export async function buildProjectAclDoc(
     if (slugRow.rows.length === 0) {
       throw new Error(`Project ${projectId} not found`);
     }
-    return {
+    doc = {
       v: Date.now(),
       slug: slugRow.rows[0].slug,
       public: [],
       rules: [],
       protected: {},
     };
+  } else {
+    doc = buildProjectAclDocFromRows(rows, rows[0].slug);
   }
+  return addPublicEncBasemaps(client, projectId, doc);
+}
 
-  return buildProjectAclDocFromRows(rows, rows[0].slug);
+/**
+ * Phase-1 ENC basemaps are public. pmtiles-server treats a hosted UUID that
+ * is missing from this document as admins-only once ACL enforcement is on,
+ * so every ENC tile UUID is listed under `public`. A missing `ENC` enum
+ * (databases that have not applied the migration) leaves the document as-is.
+ */
+async function addPublicEncBasemaps(
+  client: Pool | PoolClient,
+  projectId: number,
+  doc: ProjectAclDoc
+): Promise<ProjectAclDoc> {
+  const enumRow = await client.query<{ has_enc: boolean }>(
+    `select exists (
+       select 1
+       from pg_enum e
+       join pg_type t on t.oid = e.enumtypid
+       where t.typname = 'basemap_type' and e.enumlabel = 'ENC'
+     ) as has_enc`
+  );
+  if (!enumRow.rows[0]?.has_enc) return doc;
+  // A chart split by scale hosts one archive per scale, listed in its settings.
+  const enc = await client.query<{ url: string | null }>(
+    `select b.url from basemaps b where b.project_id = $1 and b.type = 'ENC' and b.url is not null
+     union
+     select source->>'url' from basemaps b
+       join enc_basemaps e on e.basemap_id = b.id
+       cross join lateral jsonb_array_elements(
+         case when jsonb_typeof(e.settings->'sources') = 'array' then e.settings->'sources' else '[]'::jsonb end
+       ) as source
+     where b.project_id = $1 and b.type = 'ENC'`,
+    [projectId]
+  );
+  const publicIds = new Set(doc.public);
+  for (const row of enc.rows) {
+    const uuid = extractHostedTilesUuid(row.url);
+    if (!uuid) continue;
+    publicIds.add(uuid);
+    delete doc.protected[uuid];
+  }
+  return { ...doc, public: Array.from(publicIds).sort() };
 }
 
 /**

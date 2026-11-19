@@ -19,6 +19,7 @@
     { "path": "packages/fragment-worker" },
     { "path": "packages/spatial-uploads-handler" },
     { "path": "packages/lambda-db-client" },
+    { "path": "packages/s57" },
     { "path": "packages/api" }
   ]
 }

@@ -68,6 +68,9 @@ module.exports = {
       config.resolve.alias = {
         ...(config.resolve.alias || {}),
         "polyclip-ts": cjsBuild("polyclip-ts"),
+        // Webpack 4 mishandles the package exports field. The client only
+        // needs the chart style, which is the package main.
+        "@seasketch/s57": path.resolve(__dirname, "../s57/dist/style.js"),
         // Shim for esm-env to work with Webpack 4 (no package exports conditions)
         "esm-env": path.resolve(__dirname, "src/shims/esm-env.ts"),
         // The ocean-bitmap search runs in the overlay worker. The browser
@@ -77,6 +80,13 @@ module.exports = {
           "../overlay-engine/dist/h3/waterPathNearest.js"
         )]: path.resolve(__dirname, "src/shims/waterPathNearest.ts"),
       };
+      // CRA refuses imports outside src/. The chart style is a sibling package.
+      const chartStyle = path.resolve(__dirname, "../s57/dist/style.js");
+      for (const plugin of config.resolve.plugins || []) {
+        if (plugin && plugin.allowedFiles && plugin.allowedFiles.add) {
+          plugin.allowedFiles.add(chartStyle);
+        }
+      }
 
       // Ensure .mjs is resolvable
       config.resolve.extensions = config.resolve.extensions || [

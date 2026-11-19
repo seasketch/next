@@ -1,0 +1,40 @@
+mutation CreateEncBasemapUpload(
+  $projectId: Int!
+  $name: String!
+  $filenames: [String!]!
+) {
+  createEncBasemapUpload(
+    projectId: $projectId
+    name: $name
+    filenames: $filenames
+  ) {
+    jobId
+    uploads {
+      filename
+      url
+      contentType
+    }
+  }
+}
+
+mutation SubmitEncBasemapUpload($jobId: UUID!) {
+  submitEncBasemapUpload(jobId: $jobId) {
+    jobId
+    state
+    progress
+    progressMessage
+    errorMessage
+    basemapId
+  }
+}
+
+query EncBasemapJob($jobId: UUID!) {
+  encBasemapJob(jobId: $jobId) {
+    jobId
+    state
+    progress
+    progressMessage
+    errorMessage
+    basemapId
+  }
+}

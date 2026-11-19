@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>S-57 chart demo</title>
+    <link href="/vendor/mapbox-gl.css" rel="stylesheet" />
+    <style>
+      html,
+      body,
+      #map {
+        margin: 0;
+        height: 100%;
+        background: #d4eaee;
+      }
+      .bar {
+        position: absolute;
+        z-index: 2;
+        top: 12px;
+        left: 12px;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+        max-width: min(720px, calc(100% - 70px));
+        padding: 8px;
+        background: rgba(244, 241, 228, 0.94);
+        border: 1px solid #525a5c;
+        font: 13px/1.3 "Segoe UI", sans-serif;
+        color: #070707;
+      }
+      button {
+        font: inherit;
+        padding: 4px 8px;
+        background: #fff;
+        border: 1px solid #525a5c;
+        cursor: pointer;
+      }
+      button:hover {
+        background: #d4eaee;
+      }
+      .note {
+        align-self: center;
+        color: #525a5c;
+      }
+      button.on {
+        background: #d4eaee;
+        font-weight: 600;
+      }
+      #regions,
+      #views {
+        display: contents;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="bar">
+      <strong>S-57</strong>
+      <span id="regions"></span>
+      <span id="views"></span>
+      <span class="note">Not for navigation</span>
+    </div>
+    <div id="map"></div>
+    <script src="/vendor/mapbox-gl.js"></script>
+    <script>
+      mapboxgl.accessToken = "local-demo";
+      const regionButtons = document.getElementById("regions");
+      const viewButtons = document.getElementById("views");
+      let map = null;
+      let regions = [];
+
+      function viewOf(view) {
+        return { center: [view.lon, view.lat], zoom: view.zoom };
+      }
+
+      function markActive(id) {
+        regionButtons.querySelectorAll("button").forEach((button) => {
+          button.classList.toggle("on", button.dataset.region === id);
+        });
+      }
+
+      function showViews(region) {
+        viewButtons.replaceChildren();
+        for (const view of region.views) {
+          const button = document.createElement("button");
+          button.type = "button";
+          button.textContent = view.name;
+          button.addEventListener("click", () => map && map.easeTo({ ...viewOf(view), duration: 600 }));
+          viewButtons.appendChild(button);
+        }
+      }
+
+      function openRegion(id, settle) {
+        const region = regions.find((candidate) => candidate.id === id) || regions[0];
+        markActive(region.id);
+        showViews(region);
+        const params = new URLSearchParams(location.search);
+        params.set("region", region.id);
+        history.replaceState(null, "", `?${params.toString()}${location.hash}`);
+        return Promise.all([
+          fetch(`/chart.json?region=${encodeURIComponent(region.id)}`).then((response) => response.json()),
+          fetch(`/style.json?region=${encodeURIComponent(region.id)}`).then((response) => response.json()),
+        ]).then(([chart, style]) => {
+          const opening = region.views[0] ? viewOf(region.views[0]) : { bounds: chart.bounds };
+          if (!map) {
+            map = new mapboxgl.Map({
+              container: "map",
+              style: style,
+              bounds: chart.bounds,
+              hash: true,
+              fadeDuration: 0,
+              attributionControl: true,
+            });
+            map.on("error", (event) => {
+              const message = event && event.error ? event.error.message : String(event);
+              window.__chartErrors = window.__chartErrors || [];
+              window.__chartErrors.push(message);
+              console.error(message);
+            });
+            map.addControl(new mapboxgl.NavigationControl(), "top-right");
+            map.addControl(new mapboxgl.ScaleControl({ maxWidth: 160, unit: "nautical" }), "bottom-left");
+            map.on("load", () => {
+              if (!location.hash && region.views[0]) map.jumpTo(viewOf(region.views[0]));
+            });
+            window.map = map;
+            return;
+          }
+          map.setStyle(style);
+          map.once("style.load", () => {
+            if (settle && region.views[0]) map.easeTo({ ...opening, duration: 500 });
+          });
+        });
+      }
+
+      fetch("/regions.json")
+        .then((response) => response.json())
+        .then((listed) => {
+          regions = listed;
+          const requested = new URLSearchParams(location.search).get("region");
+          for (const region of regions) {
+            const button = document.createElement("button");
+            button.type = "button";
+            button.dataset.region = region.id;
+            button.textContent = region.title;
+            button.title = region.note || region.title;
+            button.addEventListener("click", () => openRegion(region.id, true));
+            regionButtons.appendChild(button);
+          }
+          return openRegion(requested || (regions[0] && regions[0].id), false);
+        });
+    </script>
+  </body>
+</html>
