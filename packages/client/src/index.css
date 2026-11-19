@@ -6133,6 +6133,10 @@ select{
   bottom:0.5rem
 }
 
+.bottom-2\.5{
+  bottom:0.625rem
+}
+
 .bottom-3{
   bottom:0.75rem
 }
@@ -11099,6 +11103,10 @@ select{
   background-color:rgb(2 6 23 / var(--tw-bg-opacity, 1))
 }
 
+.bg-slate-950\/30{
+  background-color:rgb(2 6 23 / 0.3)
+}
+
 .bg-slate-950\/45{
   background-color:rgb(2 6 23 / 0.45)
 }
@@ -13154,6 +13162,10 @@ select{
   color:rgb(255 255 255 / 0.8)
 }
 
+.text-white\/85{
+  color:rgb(255 255 255 / 0.85)
+}
+
 .text-white\/90{
   color:rgb(255 255 255 / 0.9)
 }
@@ -13863,6 +13875,12 @@ select{
 
 .backdrop-blur-\[12px\]{
   --tw-backdrop-blur:blur(12px);
+  -webkit-backdrop-filter:var(--tw-backdrop-blur) var(--tw-backdrop-brightness) var(--tw-backdrop-contrast) var(--tw-backdrop-grayscale) var(--tw-backdrop-hue-rotate) var(--tw-backdrop-invert) var(--tw-backdrop-opacity) var(--tw-backdrop-saturate) var(--tw-backdrop-sepia);
+  backdrop-filter:var(--tw-backdrop-blur) var(--tw-backdrop-brightness) var(--tw-backdrop-contrast) var(--tw-backdrop-grayscale) var(--tw-backdrop-hue-rotate) var(--tw-backdrop-invert) var(--tw-backdrop-opacity) var(--tw-backdrop-saturate) var(--tw-backdrop-sepia)
+}
+
+.backdrop-blur-\[2px\]{
+  --tw-backdrop-blur:blur(2px);
   -webkit-backdrop-filter:var(--tw-backdrop-blur) var(--tw-backdrop-brightness) var(--tw-backdrop-contrast) var(--tw-backdrop-grayscale) var(--tw-backdrop-hue-rotate) var(--tw-backdrop-invert) var(--tw-backdrop-opacity) var(--tw-backdrop-saturate) var(--tw-backdrop-sepia);
   backdrop-filter:var(--tw-backdrop-blur) var(--tw-backdrop-brightness) var(--tw-backdrop-contrast) var(--tw-backdrop-grayscale) var(--tw-backdrop-hue-rotate) var(--tw-backdrop-invert) var(--tw-backdrop-opacity) var(--tw-backdrop-saturate) var(--tw-backdrop-sepia)
 }
@@ -15015,6 +15033,10 @@ input[type="checkbox"][indeterminate="true"]:checked {
 .hover\:bg-slate-800:hover{
   --tw-bg-opacity:1;
   background-color:rgb(30 41 59 / var(--tw-bg-opacity, 1))
+}
+
+.hover\:bg-slate-950\/50:hover{
+  background-color:rgb(2 6 23 / 0.5)
 }
 
 .hover\:bg-transparent:hover{
