@@ -64,7 +64,7 @@ function projectLink(page: Page, name: string) {
 }
 
 function contactLink(page: Page) {
-  return page.getByRole("link", { name: `Contact ${personas.admin.email}` });
+  return page.getByRole("link", { name: personas.admin.email, exact: true });
 }
 
 async function person(label: string): Promise<DisposableUser> {

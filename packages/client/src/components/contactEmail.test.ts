@@ -1,8 +1,10 @@
 import {
+  accessSupportReason,
   contactEmailProblem,
   inviteSupportMailto,
   mailtoHref,
   normalizeContactEmail,
+  projectSupportMailto,
   SEASKETCH_SUPPORT_EMAIL,
 } from "./contactEmail";
 
@@ -87,5 +89,32 @@ describe("contact email", () => {
     expect(href.length).toBeLessThanOrEqual(1800);
     expect(decodeURIComponent(href)).not.toContain("Page:");
     expect(decodeURIComponent(href)).toContain("Could not parse invite token");
+  });
+
+  test("writes an access request to the project address", () => {
+    const href = projectSupportMailto({
+      supportEmail: "planning@example.org",
+      projectName: "Coastal Plan",
+      projectSlug: "coastal-plan",
+      reason: accessSupportReason.adminsOnly,
+      visitorEmail: "ada@example.test",
+      pageUrl: "http://localhost/coastal-plan",
+    });
+    expect(href.startsWith("mailto:planning@example.org?")).toBe(true);
+    const decoded = decodeURIComponent(href);
+    expect(decoded).toContain("subject=SeaSketch access: Coastal Plan");
+    expect(decoded).toContain(accessSupportReason.adminsOnly);
+    expect(decoded).toContain("Signed in as: ada@example.test");
+    expect(decoded).toContain("Page: http://localhost/coastal-plan");
+  });
+
+  test("uses SeaSketch support when the project has no address", () => {
+    const href = projectSupportMailto({
+      supportEmail: "  ",
+      reason: accessSupportReason.notFound,
+    });
+    expect(href.startsWith(`mailto:${SEASKETCH_SUPPORT_EMAIL}?`)).toBe(true);
+    expect(decodeURIComponent(href)).toContain(accessSupportReason.notFound);
+    expect(decodeURIComponent(href)).not.toContain("Signed in as:");
   });
 });

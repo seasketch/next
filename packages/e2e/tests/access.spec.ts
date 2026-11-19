@@ -222,14 +222,14 @@ test.describe("access @enduser @access", () => {
     await page.getByRole("button", { name: "Send Request" }).click();
     await expect(page.getByRole("heading", { name: "Your Request Has Been Sent" })).toBeVisible();
     await expect(
-      page.getByRole("link", { name: `Contact ${personas.admin.email}` })
+      page.getByRole("link", { name: personas.admin.email, exact: true })
     ).toBeVisible();
     await expect(page.locator(".mapboxgl-map")).toHaveCount(0);
 
     await page.reload();
     await expect(page.getByRole("heading", { name: "Request Awaiting Approval" })).toBeVisible();
     await expect(
-      page.getByRole("link", { name: `Contact ${personas.admin.email}` })
+      page.getByRole("link", { name: personas.admin.email, exact: true })
     ).toBeVisible();
 
     await approveMember(request, project.id, await currentUserId(request, member.accessToken));
