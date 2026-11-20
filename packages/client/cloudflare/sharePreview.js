@@ -5,7 +5,8 @@
  * first HTML response. They do not run the React app, and they do not send
  * the URL hash. Bookmark, layer, forum, topic, and message links each call
  * GraphQL. Every other page under a project slug reuses that project's
- * name, description, and logo, cached for five minutes. A message link puts
+ * public name, description, and logo, cached for five minutes. A private
+ * or unknown project is not cached. A message link puts
  * the post id in the query string because the #post- fragment never arrives.
  */
 
@@ -168,7 +169,9 @@ export async function loadProjectPreview(endpoint, slug, fetchImpl, cache) {
       { type: "page", slug, kind: "project" },
       fetchImpl
     );
-    await cache.set(slug, preview);
+    if (preview) {
+      await cache.set(slug, preview);
+    }
     return preview;
   })().finally(() => {
     cache.inflight.delete(slug);

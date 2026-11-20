@@ -88,6 +88,9 @@ function edgeProjectCache(origin, ctx) {
       }
       const body = await cached.json();
       const preview = body && "preview" in body ? body.preview : null;
+      if (!preview) {
+        return undefined;
+      }
       await projectPreviewCache.set(slug, preview);
       return { preview };
     },

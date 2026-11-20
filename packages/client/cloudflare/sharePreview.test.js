@@ -325,7 +325,7 @@ test("project metadata is reused for five minutes", async () => {
   assert.equal(PROJECT_PREVIEW_TTL_MS, 5 * 60 * 1000);
 });
 
-test("a project with no public metadata stays cached", async () => {
+test("a private or unknown project is not cached", async () => {
   const cache = createPreviewCache();
   const graphql = projectFetch(null);
   assert.equal(
@@ -346,7 +346,7 @@ test("a project with no public metadata stays cached", async () => {
     ),
     null
   );
-  assert.equal(graphql.calls(), 1);
+  assert.equal(graphql.calls(), 2);
 });
 
 test("concurrent project lookups share one query", async () => {
