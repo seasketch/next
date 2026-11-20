@@ -109,15 +109,15 @@ Intent: the ProseMirror editor for the project about page. A visitor reading it 
 
 Intent: admins build, publish, invite, and export surveys. Taking a survey is end-user. Tag: `@surveys`.
 
-1. An admin creates a survey from the surveys admin list and opens the form editor.
-2. Adding Welcome, a Name field, a spatial question, and a Thank You, then publishing, makes the survey URL available.
-3. Logic rules hide or show a question based on a previous answer. The rule is saved on the form.
-4. QR and the public link match the published survey URL.
+1. An admin creates a survey from the surveys admin list and opens the form editor. *Covered: `tests/survey-authoring.spec.ts`.*
+2. The Basic Template starts with Welcome, Informed Consent, a blank short-text question, Save Screen, and Thank You. The admin writes a confidential-responses line on the welcome, sets the consent agree label, removes the blank question, then adds name, email, a two-choice region question, one follow-up for each region, a yes/no question, and a spatial question with two sectors. Publishing shows the public URL, and that URL opens the survey. *Covered: `tests/survey-authoring.spec.ts`.*
+3. Choosing a region skips to that region's follow-up. The other region's question stays hidden. *Covered: `tests/survey-authoring.spec.ts`.*
+4. The QR image for the published URL matches that same link.
 5. The response grid lists submitted responses. Export downloads CSV (or the documented format).
 6. Draft control unpublishes the survey.
 7. Sending a survey invite writes an email to `e2e-emails/`.
 8. Enabling an alternate language and entering a translated question stores that translation.
-9. Spatial-question settings (sectors, starting bounds, allowed drawing tools) save and match the editor's configuration.
+9. The spatial question's sector list is the two sectors named in the editor, and the published survey offers those sectors. *Covered: `tests/survey-authoring.spec.ts`.* Starting bounds and drawing tools remain for a later journey.
 
 ---
 

@@ -32,6 +32,13 @@ export async function hardDeleteProject(slug: string) {
     ]) {
       await client.query(`DELETE FROM ${table} WHERE project_id = $1`, [id]);
     }
+    // A spatial question's sketch class points at its form element. Project
+    // delete cascades to the sketch class first, and that delete is rejected
+    // while the form element still exists.
+    await client.query(
+      `UPDATE sketch_classes SET form_element_id = NULL WHERE project_id = $1`,
+      [id]
+    );
     await client.query("DELETE FROM projects WHERE id = $1", [id]);
     await client.query("COMMIT");
   } catch (error) {
