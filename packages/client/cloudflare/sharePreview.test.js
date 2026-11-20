@@ -1,11 +1,14 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import {
+  createPreviewCache,
   escapeHtml,
   injectPreview,
+  loadProjectPreview,
   loadSharePreview,
   previewImageUrl,
   previewPageUrl,
+  PROJECT_PREVIEW_TTL_MS,
   readPreview,
   shareTarget,
 } from "./sharePreview.js";
@@ -23,8 +26,16 @@ test("shareTarget reads layer and bookmark urls", () => {
     slug: "demo",
     id,
   });
-  assert.equal(shareTarget(`/demo/layers/${id}/extra`), null);
-  assert.equal(shareTarget("/demo/admin/data"), null);
+  assert.deepEqual(shareTarget(`/demo/layers/${id}/extra`), {
+    type: "page",
+    slug: "demo",
+    kind: "project",
+  });
+  assert.deepEqual(shareTarget("/demo/admin/data"), {
+    type: "page",
+    slug: "demo",
+    kind: "project",
+  });
 });
 
 test("shareTarget reads project, forum, topic, and message urls", () => {
@@ -41,7 +52,17 @@ test("shareTarget reads project, forum, topic, and message urls", () => {
   assert.deepEqual(shareTarget("/demo/app/forums"), {
     type: "page",
     slug: "demo",
-    kind: "forums",
+    kind: "project",
+  });
+  assert.deepEqual(shareTarget("/demo/app/sketches"), {
+    type: "page",
+    slug: "demo",
+    kind: "project",
+  });
+  assert.deepEqual(shareTarget("/demo/app/forums/12/new-post"), {
+    type: "page",
+    slug: "demo",
+    kind: "project",
   });
   assert.deepEqual(shareTarget("/demo/app/forums/12/"), {
     type: "page",
@@ -68,9 +89,10 @@ test("shareTarget reads project, forum, topic, and message urls", () => {
     }
   );
   assert.equal(shareTarget("/team"), null);
+  assert.equal(shareTarget("/team/app"), null);
   assert.equal(shareTarget("/case-studies"), null);
-  assert.equal(shareTarget("/demo/app/forums/12/new-post"), null);
-  assert.equal(shareTarget("/demo/app/sketches"), null);
+  assert.equal(shareTarget("/case-studies/azores"), null);
+  assert.equal(shareTarget("/uses/map-portal-hosting"), null);
   assert.deepEqual(shareTarget("/demo/app/forums/12/34", "?post=0"), {
     type: "page",
     slug: "demo",
@@ -240,6 +262,118 @@ test("loadSharePreview asks for a message preview", async () => {
   assert.equal(body.variables.kind, "post");
   assert.equal(body.variables.postId, 15);
   assert.match(body.query, /pageLinkPreview/);
+});
+
+function projectFetch(title) {
+  let calls = 0;
+  return {
+    calls: () => calls,
+    fetch: async () => {
+      calls += 1;
+      return {
+        ok: true,
+        json: async () => ({
+          data: {
+            pageLinkPreview: title
+              ? { title, description: "Maps of the coast." }
+              : null,
+          },
+        }),
+      };
+    },
+  };
+}
+
+test("project metadata is reused for five minutes", async () => {
+  let now = 0;
+  const cache = createPreviewCache(() => now);
+  const graphql = projectFetch("American Samoa");
+  const first = await loadProjectPreview(
+    "https://api.example/graphql",
+    "samoa",
+    graphql.fetch,
+    cache
+  );
+  const second = await loadProjectPreview(
+    "https://api.example/graphql",
+    "samoa",
+    graphql.fetch,
+    cache
+  );
+  assert.equal(first.title, "American Samoa");
+  assert.equal(second, first);
+  assert.equal(graphql.calls(), 1);
+
+  const other = projectFetch("Vanuatu");
+  await loadProjectPreview(
+    "https://api.example/graphql",
+    "vanuatu",
+    other.fetch,
+    cache
+  );
+  assert.equal(other.calls(), 1);
+  assert.equal(graphql.calls(), 1);
+
+  now = PROJECT_PREVIEW_TTL_MS;
+  await loadProjectPreview(
+    "https://api.example/graphql",
+    "samoa",
+    graphql.fetch,
+    cache
+  );
+  assert.equal(graphql.calls(), 2);
+  assert.equal(PROJECT_PREVIEW_TTL_MS, 5 * 60 * 1000);
+});
+
+test("a project with no public metadata stays cached", async () => {
+  const cache = createPreviewCache();
+  const graphql = projectFetch(null);
+  assert.equal(
+    await loadProjectPreview(
+      "https://api.example/graphql",
+      "secret",
+      graphql.fetch,
+      cache
+    ),
+    null
+  );
+  assert.equal(
+    await loadProjectPreview(
+      "https://api.example/graphql",
+      "secret",
+      graphql.fetch,
+      cache
+    ),
+    null
+  );
+  assert.equal(graphql.calls(), 1);
+});
+
+test("concurrent project lookups share one query", async () => {
+  const cache = createPreviewCache();
+  let calls = 0;
+  const fetchImpl = async () => {
+    calls += 1;
+    await new Promise((resolve) => setTimeout(resolve, 15));
+    return {
+      ok: true,
+      json: async () => ({
+        data: {
+          pageLinkPreview: {
+            title: "American Samoa",
+            description: "Maps of the coast.",
+          },
+        },
+      }),
+    };
+  };
+  const [first, second] = await Promise.all([
+    loadProjectPreview("https://api.example/graphql", "samoa", fetchImpl, cache),
+    loadProjectPreview("https://api.example/graphql", "samoa", fetchImpl, cache),
+  ]);
+  assert.equal(first.title, "American Samoa");
+  assert.equal(second.title, "American Samoa");
+  assert.equal(calls, 1);
 });
 
 test("escapeHtml escapes attribute text", () => {

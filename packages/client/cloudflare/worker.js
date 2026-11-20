@@ -12,7 +12,9 @@
  */
 
 import {
+  createPreviewCache,
   injectPreview,
+  loadProjectPreview,
   loadSharePreview,
   previewImageUrl,
   previewPageUrl,
@@ -58,8 +60,56 @@ const SPRITE_CORS_HEADERS = {
   "Access-Control-Max-Age": "600",
 };
 
+const projectPreviewCache = createPreviewCache();
+
+function projectCacheRequest(origin, slug) {
+  return new Request(
+    `${origin}/__project-preview/${encodeURIComponent(slug)}`,
+    { method: "GET" }
+  );
+}
+
+function edgeProjectCache(origin, ctx) {
+  return {
+    inflight: projectPreviewCache.inflight,
+    async get(slug) {
+      const local = await projectPreviewCache.get(slug);
+      if (local) {
+        return local;
+      }
+      let cached;
+      try {
+        cached = await caches.default.match(projectCacheRequest(origin, slug));
+      } catch {
+        return undefined;
+      }
+      if (!cached) {
+        return undefined;
+      }
+      const body = await cached.json();
+      const preview = body && "preview" in body ? body.preview : null;
+      await projectPreviewCache.set(slug, preview);
+      return { preview };
+    },
+    async set(slug, preview) {
+      await projectPreviewCache.set(slug, preview);
+      if (!ctx) {
+        return;
+      }
+      const stored = new Response(JSON.stringify({ preview }), {
+        headers: { "Cache-Control": "public, max-age=300" },
+      });
+      ctx.waitUntil(
+        caches.default
+          .put(projectCacheRequest(origin, slug), stored)
+          .catch(() => {})
+      );
+    },
+  };
+}
+
 export default {
-  async fetch(request, env) {
+  async fetch(request, env, ctx) {
     const url = new URL(request.url);
 
     if (url.pathname.startsWith("/sprites/")) {
@@ -86,7 +136,15 @@ export default {
       const target = shareTarget(url.pathname, url.search);
       if (request.method === "GET" && target) {
         try {
-          const preview = await loadSharePreview(env.GRAPHQL_ENDPOINT, target);
+          const preview =
+            target.type === "page" && target.kind === "project"
+              ? await loadProjectPreview(
+                  env.GRAPHQL_ENDPOINT,
+                  target.slug,
+                  fetch,
+                  edgeProjectCache(url.origin, ctx)
+                )
+              : await loadSharePreview(env.GRAPHQL_ENDPOINT, target);
           if (preview) {
             const index = await env.ASSETS.fetch(indexUrl);
             if (index.ok) {

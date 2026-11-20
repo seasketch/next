@@ -3,19 +3,19 @@
  *
  * Slack, Facebook, X, iMessage, and the rest read Open Graph tags from the
  * first HTML response. They do not run the React app, and they do not send
- * the URL hash. Bookmark and layer links use bookmarkLinkPreview. Project,
- * forum, topic, and message links use pageLinkPreview. A message link puts
+ * the URL hash. Bookmark, layer, forum, topic, and message links each call
+ * GraphQL. Every other page under a project slug reuses that project's
+ * name, description, and logo, cached for five minutes. A message link puts
  * the post id in the query string because the #post- fragment never arrives.
  */
 
 const SHARE_PATH =
   /^\/([^/]+)\/(layers|bookmarks)\/([0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12})\/?$/i;
 
-const PROJECT_APP_PATH = /^\/([^/]+)\/app\/?$/;
-const FORUM_LIST_PATH = /^\/([^/]+)\/app\/forums\/?$/;
 const FORUM_PATH = /^\/([^/]+)\/app\/forums\/(\d+)\/?$/;
 const TOPIC_PATH = /^\/([^/]+)\/app\/forums\/(\d+)\/(\d+)\/?$/;
-const PROJECT_ROOT_PATH = /^\/([^/]+)\/?$/;
+
+export const PROJECT_PREVIEW_TTL_MS = 5 * 60 * 1000;
 
 // These first path segments are site pages, not project slugs.
 const SITE_ROOTS = new Set([
@@ -68,32 +68,31 @@ function postIdFromSearch(search) {
   return positiveInt(raw);
 }
 
+function projectTarget(pathname) {
+  const segments = pathname.split("/").filter(Boolean);
+  if (segments.length === 0) {
+    return null;
+  }
+  const slug = segments[0];
+  if (SITE_ROOTS.has(slug.toLowerCase())) {
+    return null;
+  }
+  if (slug === "__project-preview") {
+    return null;
+  }
+  return { type: "page", slug, kind: "project" };
+}
+
 export function shareTarget(pathname, search = "") {
   const bookmark = SHARE_PATH.exec(pathname);
   if (bookmark) {
     return { type: "bookmark", slug: bookmark[1], id: bookmark[3] };
   }
 
-  let match = PROJECT_APP_PATH.exec(pathname);
-  if (match) {
-    return { type: "page", slug: match[1], kind: "project" };
-  }
-  match = FORUM_LIST_PATH.exec(pathname);
-  if (match) {
-    return { type: "page", slug: match[1], kind: "forums" };
-  }
-  match = FORUM_PATH.exec(pathname);
-  if (match) {
-    const forumId = positiveInt(match[2]);
-    if (!forumId) {
-      return null;
-    }
-    return { type: "page", slug: match[1], kind: "forum", forumId };
-  }
-  match = TOPIC_PATH.exec(pathname);
-  if (match) {
-    const forumId = positiveInt(match[2]);
-    const topicId = positiveInt(match[3]);
+  const topic = TOPIC_PATH.exec(pathname);
+  if (topic) {
+    const forumId = positiveInt(topic[2]);
+    const topicId = positiveInt(topic[3]);
     if (!forumId || !topicId) {
       return null;
     }
@@ -101,7 +100,7 @@ export function shareTarget(pathname, search = "") {
     if (postId) {
       return {
         type: "page",
-        slug: match[1],
+        slug: topic[1],
         kind: "post",
         forumId,
         topicId,
@@ -110,17 +109,72 @@ export function shareTarget(pathname, search = "") {
     }
     return {
       type: "page",
-      slug: match[1],
+      slug: topic[1],
       kind: "topic",
       forumId,
       topicId,
     };
   }
-  match = PROJECT_ROOT_PATH.exec(pathname);
-  if (match && !SITE_ROOTS.has(match[1].toLowerCase())) {
-    return { type: "page", slug: match[1], kind: "project" };
+
+  const forum = FORUM_PATH.exec(pathname);
+  if (forum) {
+    const forumId = positiveInt(forum[2]);
+    if (!forumId) {
+      return null;
+    }
+    return { type: "page", slug: forum[1], kind: "forum", forumId };
   }
-  return null;
+
+  return projectTarget(pathname);
+}
+
+export function createPreviewCache(now = () => Date.now()) {
+  const entries = new Map();
+  const inflight = new Map();
+  return {
+    async get(slug) {
+      const hit = entries.get(slug);
+      if (!hit) {
+        return undefined;
+      }
+      if (hit.expiresAt <= now()) {
+        entries.delete(slug);
+        return undefined;
+      }
+      return { preview: hit.preview };
+    },
+    async set(slug, preview) {
+      entries.set(slug, {
+        preview,
+        expiresAt: now() + PROJECT_PREVIEW_TTL_MS,
+      });
+    },
+    inflight,
+  };
+}
+
+export async function loadProjectPreview(endpoint, slug, fetchImpl, cache) {
+  const pending = cache.inflight.get(slug);
+  if (pending) {
+    return pending;
+  }
+  const request = (async () => {
+    const hit = await cache.get(slug);
+    if (hit) {
+      return hit.preview;
+    }
+    const preview = await loadSharePreview(
+      endpoint,
+      { type: "page", slug, kind: "project" },
+      fetchImpl
+    );
+    await cache.set(slug, preview);
+    return preview;
+  })().finally(() => {
+    cache.inflight.delete(slug);
+  });
+  cache.inflight.set(slug, request);
+  return request;
 }
 
 export function previewImageUrl(endpoint, imageId) {
