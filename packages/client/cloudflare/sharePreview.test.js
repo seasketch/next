@@ -36,6 +36,26 @@ test("shareTarget reads layer and bookmark urls", () => {
     slug: "demo",
     kind: "project",
   });
+  assert.deepEqual(
+    shareTarget("/mpatt/admin/data", `?layerLink=${id}&other=1`),
+    {
+      type: "bookmark",
+      slug: "mpatt",
+      id,
+      draft: true,
+    }
+  );
+  assert.deepEqual(shareTarget("/mpatt/admin/data/", `?layerLink=${id}`), {
+    type: "bookmark",
+    slug: "mpatt",
+    id,
+    draft: true,
+  });
+  assert.deepEqual(shareTarget("/mpatt/admin/data", "?layerLink=not-a-layer"), {
+    type: "page",
+    slug: "mpatt",
+    kind: "project",
+  });
 });
 
 test("shareTarget reads project, forum, topic, and message urls", () => {
@@ -197,6 +217,15 @@ test("previewPageUrl keeps the post query and drops the hash", () => {
       kind: "project",
     }),
     "https://www.seasketch.org/demo/app"
+  );
+  assert.equal(
+    previewPageUrl("https://www.seasketch.org", "/mpatt/admin/data", {
+      type: "bookmark",
+      slug: "mpatt",
+      id,
+      draft: true,
+    }),
+    `https://www.seasketch.org/mpatt/admin/data?layerLink=${id}`
   );
 });
 

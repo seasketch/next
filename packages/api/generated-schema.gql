@@ -14094,7 +14094,7 @@ type Query implements Node {
   bookmarkById(id: UUID): MapBookmark
 
   """
-  Title, description, and screenshot id for a shareable map link. Draft layer links are omitted.
+  Title, description, and image for a shareable map link. A draft layer link uses the layer title, an authentication note, and the project logo.
   """
   bookmarkLinkPreview(id: UUID, slug: String): JSON
 

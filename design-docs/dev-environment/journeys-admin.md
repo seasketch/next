@@ -15,7 +15,7 @@ Every item is tagged `@admin` plus one theme tag. None of these are `@smoke`. A 
 Intent: the Settings page. The participant-visible result of a flag (a missing toolbar entry) is an end-user journey, arranged without this form. Tag: `@settings`.
 
 1. Name, logo, description, and URL slug can be changed. The new name appears in the project chrome.
-2. Access control can be switched among public, invite-only, and admins-only. Saving succeeds. The visitor-facing gates are end-user tests.
+2. Access control can be switched among public, invite-only, and admins-only. Saving succeeds. The visitor-facing gates are end-user tests, including every admin URL when the visitor is signed out or is not an administrator ([Admin-area link](journeys-end-user.md#getting-into-a-project)).
 3. Listed / unlisted changes whether the project is offered on `/projects`. Unlisting a public project is refused.
 4. Map extent drawn in settings is stored as the default bounds.
 5. Default scale bar and legend toggles save and match what a new visitor's map chrome is set to.

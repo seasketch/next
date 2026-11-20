@@ -6644,10 +6644,11 @@ COMMENT ON FUNCTION public.bookmark_data(id text) IS '@omit';
 CREATE FUNCTION public.bookmark_link_preview(slug text, id uuid) RETURNS jsonb
     LANGUAGE plpgsql STABLE SECURITY DEFINER
     SET search_path TO 'public', 'pg_temp'
-    AS $$
+    AS $_$
 declare
   bookmark public.map_bookmarks;
   project_name text;
+  logo text;
   names text[];
   title text;
   description text;
@@ -6667,11 +6668,13 @@ begin
     return null;
   end if;
 
-  if bookmark.kind = 'layer_link' and bookmark.subject_is_draft then
-    return null;
-  end if;
-
-  select projects.name into project_name
+  select projects.name,
+    case
+      when projects.logo_url ~* '^https?://[^[:space:]<>"'']+$'
+        then projects.logo_url
+      else null
+    end
+  into project_name, logo
   from projects
   where projects.id = bookmark.project_id;
 
@@ -6683,6 +6686,19 @@ begin
     into names
   from jsonb_each_text(coalesce(bookmark.layer_names, '{}'::jsonb))
   where length(trim(value)) > 0;
+
+  if bookmark.kind = 'layer_link' and bookmark.subject_is_draft then
+    title := nullif(trim(bookmark.layer_names ->> bookmark.subject_stable_id), '');
+    if title is null and array_length(names, 1) is not null then
+      title := names[1];
+    end if;
+    title := coalesce(title, 'Map layer');
+    return jsonb_build_object(
+      'title', title,
+      'description', 'Bookmark requires authentication to access',
+      'imageUrl', coalesce(logo, 'https://www.seasketch.org/logo512.png')
+    );
+  end if;
 
   if bookmark.kind = 'layer_link' then
     title := nullif(trim(bookmark.layer_names ->> bookmark.subject_stable_id), '');
@@ -6720,14 +6736,14 @@ begin
     'height', height
   ));
 end;
-$$;
+$_$;
 
 
 --
 -- Name: FUNCTION bookmark_link_preview(slug text, id uuid); Type: COMMENT; Schema: public; Owner: -
 --
 
-COMMENT ON FUNCTION public.bookmark_link_preview(slug text, id uuid) IS 'Title, description, and screenshot id for a shareable map link. Draft layer links are omitted.';
+COMMENT ON FUNCTION public.bookmark_link_preview(slug text, id uuid) IS 'Title, description, and image for a shareable map link. A draft layer link uses the layer title, an authentication note, and the project logo.';
 
 
 --

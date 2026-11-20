@@ -5,10 +5,12 @@ import getSlug from "../getSlug";
 import BookmarkCard from "../dataLayers/BookmarkCard";
 import { MapManagerContext } from "../dataLayers/MapContextManager";
 import {
+  MapBookmarkKind,
   useGetBookmarkQuery,
   useMapBookmarkSubscription,
   WorkerJobStatus,
 } from "../generated/graphql";
+import LayerLinkModal from "../dataLayers/LayerLinkModal";
 import MapViewBookmarkBody from "../dataLayers/MapViewBookmarkBody";
 import { useGlobalErrorHandler } from "./GlobalErrorHandler";
 import {
@@ -131,6 +133,17 @@ export default function MapBookmarkDetailsOverlay({
     name: bookmarkName(bookmark?.sketchNames, String(id)) || String(id),
     missing: missingSketches.indexOf(id) !== -1,
   }));
+
+  if (bookmark?.kind === MapBookmarkKind.LayerLink) {
+    return (
+      <LayerLinkModal
+        mode="view"
+        bookmarkId={bookmarkId}
+        replaceDraftRoute={false}
+        onClose={onRequestClose}
+      />
+    );
+  }
 
   const viewOnMap = async () => {
     if (!manager || !bookmark) {

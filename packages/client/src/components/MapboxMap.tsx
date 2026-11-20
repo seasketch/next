@@ -22,6 +22,8 @@ import {
   useHomepageFlyoutState,
 } from "../projects/HomepageFlyoutContext";
 import MapBookmarkDetailsOverlay from "./MapBookmarkDetailsOverlay";
+import LayerLinkModal from "../dataLayers/LayerLinkModal";
+import { MapBookmarkKind } from "../generated/graphql";
 import { CogIcon } from "@heroicons/react/outline";
 import { MeasurementToolsOverlay } from "../MeasureControl";
 import SidebarPopup from "../dataLayers/SidebarPopup";
@@ -69,9 +71,10 @@ export default React.memo(function MapboxMap(props: OverlayMapProps) {
   const [mapLoadError, setMapLoadError] = useState<
     "missing-token" | "unavailable" | null
   >(null);
-  const [showBookmarkOverlayId, setShowBookmarkOverlayId] = useState<
-    string | null
-  >(null);
+  const [bookmarkDetails, setBookmarkDetails] = useState<{
+    id: string;
+    kind?: MapBookmarkKind;
+  } | null>(null);
   const [hiddenInatCtas, setHiddenInatCtas] = useState<Set<string>>(
     () => new Set()
   );
@@ -483,11 +486,13 @@ export default React.memo(function MapboxMap(props: OverlayMapProps) {
                   <button
                     type="button"
                     className="rounded-full bg-slate-900 px-2.5 py-1 text-xs font-medium text-white hover:bg-slate-800"
-                    onClick={() =>
-                      setShowBookmarkOverlayId(
-                        uiState.displayedMapBookmark?.id || null
-                      )
-                    }
+                    onClick={() => {
+                      const shown = uiState.displayedMapBookmark;
+                      if (!shown?.id) {
+                        return;
+                      }
+                      setBookmarkDetails({ id: shown.id, kind: shown.kind });
+                    }}
                   >
                     <Trans ns="map">Details</Trans>
                   </button>
@@ -496,12 +501,19 @@ export default React.memo(function MapboxMap(props: OverlayMapProps) {
             ) : null}
           </AnimatePresence>
         </div>
-        {showBookmarkOverlayId && (
-          <MapBookmarkDetailsOverlay
-            bookmarkId={showBookmarkOverlayId}
-            onRequestClose={() => setShowBookmarkOverlayId(null)}
+        {bookmarkDetails?.kind === MapBookmarkKind.LayerLink ? (
+          <LayerLinkModal
+            mode="view"
+            bookmarkId={bookmarkDetails.id}
+            replaceDraftRoute={false}
+            onClose={() => setBookmarkDetails(null)}
           />
-        )}
+        ) : bookmarkDetails ? (
+          <MapBookmarkDetailsOverlay
+            bookmarkId={bookmarkDetails.id}
+            onRequestClose={() => setBookmarkDetails(null)}
+          />
+        ) : null}
         {styleError && !mapLoadError && (
           <div className="flex w-full absolute top-1 place-content-center z-10 text-center">
             <div className=" bg-red-900 text-white p-1 text-sm">

@@ -401,7 +401,7 @@ describe("layer links", () => {
     );
   });
 
-  test("link previews describe a published layer and hide the admin copy", async () => {
+  test("link previews describe a published layer and mark a draft link as private", async () => {
     await projectTransaction(pool, "public", async (conn, projectId, adminId) => {
       await createSession(conn, adminId, true, false, projectId);
       const slug = (await conn.oneFirst(
@@ -438,10 +438,38 @@ describe("layer links", () => {
         width: 1200,
         height: 800,
       });
+      await conn.any(sql`set role postgres`);
+      await conn.any(sql`
+        update projects
+        set logo_url = ${"https://cdn.example/logo.png"}
+        where id = ${projectId}`);
+      await conn.any(sql`
+        update map_bookmarks
+        set image_id = 'img_draft'
+        where id = ${draftLink.id}`);
+      await conn.any(sql`set role anon`);
+      const draftPreview = await conn.oneFirst(sql`
+        select bookmark_link_preview(${slug}, ${draftLink.id})`);
+      expect(draftPreview).toEqual({
+        title: "Rockfish",
+        description: "Bookmark requires authentication to access",
+        imageUrl: "https://cdn.example/logo.png",
+      });
+
+      await conn.any(sql`set role postgres`);
+      await conn.any(sql`
+        update projects
+        set logo_url = ${"javascript:alert(1)"}
+        where id = ${projectId}`);
+      await conn.any(sql`set role anon`);
       expect(
         await conn.oneFirst(sql`
           select bookmark_link_preview(${slug}, ${draftLink.id})`),
-      ).toBeNull();
+      ).toMatchObject({
+        title: "Rockfish",
+        description: "Bookmark requires authentication to access",
+        imageUrl: "https://www.seasketch.org/logo512.png",
+      });
       expect(
         await conn.oneFirst(sql`
           select bookmark_link_preview(${"other-project"}, ${published.id})`),

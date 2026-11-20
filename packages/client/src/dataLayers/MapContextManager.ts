@@ -34,6 +34,7 @@ import {
   DataSourceTypes,
   InteractivityType,
   MapBookmarkDetailsFragment,
+  MapBookmarkKind,
   OptionalBasemapLayersGroupType,
   OverlayFragment,
   SpriteDetailsFragment,
@@ -4334,7 +4335,7 @@ class MapContextManager extends EventEmitter {
       | "visibleDataLayers"
       | "selectedBasemap"
       | "dataTableStates"
-    > & { id?: string },
+    > & { id?: string; kind?: MapBookmarkKind },
     savePreviousState = true,
     client?: ApolloClient<NormalizedCacheObject>
   ) {
@@ -4376,6 +4377,7 @@ class MapContextManager extends EventEmitter {
       this.emit("uiUpdate", {
         displayedMapBookmark: {
           id: bookmark.id!,
+          kind: bookmark.kind,
           errors: this.getErrorsForBookmark(bookmark, client),
           supportsUndo: true,
         },
@@ -5256,6 +5258,7 @@ export interface MapUIStateContextState {
   };
   displayedMapBookmark?: {
     id: string;
+    kind?: MapBookmarkKind;
     errors: {
       missingLayers: string[];
       missingBasemap: boolean;
