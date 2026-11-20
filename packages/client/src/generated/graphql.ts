@@ -12205,7 +12205,7 @@ export type Query = Node & {
   basemapsConnection?: Maybe<BasemapsConnection>;
   /** Fetch one map bookmark. Draft layer links are returned only to project administrators. */
   bookmarkById?: Maybe<MapBookmark>;
-  /** Title, description, and screenshot id for a shareable map link. Draft layer links are omitted. */
+  /** Title, description, and image for a shareable map link. A draft layer link uses the layer title, an authentication note, and the project logo. */
   bookmarkLinkPreview?: Maybe<Scalars['JSON']>;
   /**
    * GraphQL server software build identifier. During a deployment, if changes are not detected in software modules some may be skipped. So, client and server version could differ.
