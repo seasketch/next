@@ -103,11 +103,16 @@ function AdminValueInput({
   return (
     <select
       className={`bg-transparent border-none text-center w-full ${adminValueInputCommonClassNames}`}
-      value={value === true ? "TRUE" : "FALSE"}
+      value={value === true ? "TRUE" : value === false ? "FALSE" : "NULL"}
       onChange={(e) => {
-        onChange(e.target.value === "TRUE" ? true : false);
+        onChange(
+          e.target.value === "NULL" ? null : e.target.value === "TRUE"
+        );
       }}
     >
+      {value !== true && value !== false && (
+        <option value="NULL"> </option>
+      )}
       <option value="TRUE">{t("Yes")}</option>
       <option value="FALSE">{t("No")}</option>
     </select>
