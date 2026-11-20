@@ -653,13 +653,6 @@ export default function LayerLinkModal({
         </span>
       }
     >
-          {mode === "create" && url && (
-            <p className="mb-4 text-sm leading-relaxed text-slate-600">
-              <Trans ns="mapBookmarks">
-                Share a link to this layer by using the URL below.
-              </Trans>
-            </p>
-          )}
           {createError && (
             <p className="mb-3 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-800">
               {createError}
@@ -730,6 +723,11 @@ export default function LayerLinkModal({
           )}
           {mode === "create" && url && (
             <div className="mt-5">
+              <p className="mb-3 text-sm leading-relaxed text-slate-600">
+                <Trans ns="mapBookmarks">
+                  Share a link to this layer by using the URL below.
+                </Trans>
+              </p>
               <CopyLinkField url={url} />
             </div>
           )}
