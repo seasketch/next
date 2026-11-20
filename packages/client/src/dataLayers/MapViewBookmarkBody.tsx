@@ -2,6 +2,7 @@ import { ChevronDownIcon } from "@heroicons/react/outline";
 import { ReactNode, useState } from "react";
 import { Trans, useTranslation } from "react-i18next";
 import { Link } from "react-router-dom";
+import ProfilePhoto from "../admin/users/ProfilePhoto";
 import {
   bookmarkExtent,
   formatExtent,
@@ -32,17 +33,13 @@ function initials(name: string) {
 function AuthorMark({ name, picture }: { name: string; picture?: string | null }) {
   if (picture) {
     return (
-      <img
-        src={picture}
-        alt=""
-        className="h-11 w-11 shrink-0 rounded-full object-cover ring-1 ring-slate-200"
-      />
+      <ProfilePhoto fullname={name} picture={picture} canonicalEmail="" />
     );
   }
   return (
     <span
       aria-hidden
-      className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-sky-100 text-sm font-semibold text-sky-800 ring-1 ring-sky-200"
+      className="flex h-full w-full items-center justify-center rounded-full bg-sky-100 text-[10px] font-semibold leading-none text-sky-800"
     >
       {initials(name)}
     </span>
@@ -119,26 +116,22 @@ export default function MapViewBookmarkBody({
 
   return (
     <div>
-      <div className="flex items-start gap-3">
-        <AuthorMark name={name} picture={picture} />
-        <div className="min-w-0 pt-0.5">
-          <h2 id={labelledBy} className="leading-snug">
-            <span className="block text-base font-medium text-slate-900">{name}</span>
-            <span className="mt-0.5 block text-sm font-normal text-slate-500">
-              <Trans ns="mapBookmarks">
-                created this map bookmark on {{ date }}
-              </Trans>
-            </span>
-          </h2>
-          {topic && (
-            <p className="mt-1 text-sm leading-snug text-slate-500">
-              {/* prettier-ignore */}
-              <Trans ns="mapBookmarks">
-                Included in the forum topic "<Link to={topic.to} onClick={onTopicClick} className="font-medium text-primary-600 underline decoration-primary-600/40 underline-offset-2">{{ title }}</Link>"
-              </Trans>
-            </p>
+      <div className="flex items-start gap-2">
+        <span className="h-6 w-6 shrink-0 overflow-hidden rounded-full ring-1 ring-slate-200">
+          <AuthorMark name={name} picture={picture} />
+        </span>
+        <h2
+          id={labelledBy}
+          className="min-w-0 flex-1 break-words text-sm font-normal leading-6 text-slate-600"
+        >
+          {topic ? (
+            // prettier-ignore
+            <Trans ns="mapBookmarks"><span className="font-medium text-slate-900">{{ name }}</span> <span className="inline-block max-w-full">posted this map bookmark to</span> <Link to={topic.to} onClick={onTopicClick} className="font-medium text-primary-600 underline decoration-primary-600/40 underline-offset-2">{{ title }}</Link> <span className="whitespace-nowrap">on {{ date }}</span></Trans>
+          ) : (
+            // prettier-ignore
+            <Trans ns="mapBookmarks"><span className="font-medium text-slate-900">{{ name }}</span> <span className="inline-block max-w-full">created this map bookmark <span className="whitespace-nowrap">on {{ date }}</span></span></Trans>
           )}
-        </div>
+        </h2>
       </div>
       {explainSharing && (
         <p className="mt-4 text-sm leading-relaxed text-slate-600">

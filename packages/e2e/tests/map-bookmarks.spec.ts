@@ -43,10 +43,7 @@ test.describe("demo-samoa map bookmarks @enduser @forums", () => {
 
     const card = page.getByRole("dialog");
     await expect(
-      card.getByRole("heading", { name: /created this map bookmark on/ })
-    ).toBeVisible();
-    await expect(
-      card.getByText(/Included in the forum topic/)
+      card.getByRole("heading", { name: /posted this map bookmark to/ })
     ).toBeVisible();
     await expect(
       card.getByRole("link", { name: "Welcome to the project" })
