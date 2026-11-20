@@ -1,6 +1,11 @@
 import { sql } from "slonik";
 import { createPool } from "./pool";
-import { createSession, createUser, projectTransaction } from "./helpers";
+import {
+  clearSession,
+  createSession,
+  createUser,
+  projectTransaction,
+} from "./helpers";
 
 const pool = createPool("test");
 
@@ -179,6 +184,111 @@ describe("map view bookmarks", () => {
           /permission denied/i,
         );
         await conn.any(sql`rollback to savepoint anon`);
+      },
+    );
+  });
+
+  test("a map view pasted into a post stays unattached, and a private topic title stays hidden", async () => {
+    await projectTransaction(
+      pool,
+      "invite_only",
+      async (conn, projectId, adminId, [member]) => {
+        await createSession(conn, adminId, true, false, projectId);
+        const slug = (await conn.oneFirst(
+          sql`select slug from projects where id = ${projectId}`,
+        )) as string;
+        const basemapId = await basemap(conn, projectId);
+        const mapView = await callCreate(conn, slug, basemapId);
+        const forum = await conn.one(sql`
+          select id
+          from create_map_bookmark(
+            ${slug},
+            false,
+            ${sql.json({})},
+            ${sql.array([], "text")},
+            ${basemapId},
+            ${sql.json({})},
+            ${sql.json(camera)},
+            ${sql.array([800, 600], "int4")},
+            ${sql.array([], "int4")},
+            null,
+            'Ocean',
+            ${sql.json({})},
+            ${sql.json({})},
+            'data:image/jpeg;base64,abc'
+          )`);
+
+        await clearSession(conn);
+        const forumId = await conn.oneFirst(
+          sql`insert into forums (project_id, name) values (${projectId}, 'Forum') returning id`,
+        );
+        await conn.any(
+          sql`update access_control_lists set type = 'admins_only' where forum_id_read = ${forumId}`,
+        );
+        await createSession(conn, adminId, true, false, projectId);
+        const topicTitle = "Private planning notes";
+        const topicId = await conn.oneFirst(
+          sql`select id from create_topic(${forumId}, ${topicTitle}, '{"type":"doc"}'::jsonb, '<p></p>')`,
+        );
+        let postId = await conn.maybeOneFirst(
+          sql`select id from posts where topic_id = ${topicId} order by id limit 1`,
+        );
+        if (postId == null) {
+          postId = await conn.oneFirst(
+            sql`select id from create_post('{"type":"doc"}'::jsonb, ${topicId}, '<p></p>')`,
+          );
+        }
+
+        await clearSession(conn);
+        const body = {
+          type: "doc",
+          content: [
+            {
+              type: "attachments",
+              content: [mapView.id, forum.id].map((id) => ({
+                type: "attachment",
+                attrs: { type: "MapBookmark", id },
+              })),
+            },
+          ],
+        };
+        await conn.any(sql`
+          select assign_post_id_to_attached_map_bookmarks(${sql.json(body)}, ${postId})
+        `);
+        const attached = await conn.any(sql`
+          select id::text, kind::text, post_id
+          from map_bookmarks
+          where id = any(${sql.array([mapView.id, forum.id], "uuid")})
+        `);
+        const byId = new Map(attached.map((row) => [row.id, row]));
+        expect(byId.get(mapView.id).post_id).toBeNull();
+        expect(byId.get(forum.id).post_id).toBe(postId);
+
+        await createSession(conn, adminId, true, false, projectId);
+        const adminTitle = await conn.oneFirst(sql`
+          select (map_bookmarks_forum_topic(bookmark_by_id(${forum.id}))).title
+        `);
+        expect(adminTitle).toBe(topicTitle);
+        const mapViewTitle = await conn.maybeOneFirst(sql`
+          select (map_bookmarks_forum_topic(bookmark_by_id(${mapView.id}))).title
+        `);
+        expect(mapViewTitle).toBeNull();
+
+        await createSession(conn, member, true, false, projectId);
+        const hidden = await conn.maybeOneFirst(sql`
+          select (map_bookmarks_forum_topic(bookmark_by_id(${forum.id}))).title
+        `);
+        expect(hidden).toBeNull();
+
+        await clearSession(conn);
+        await conn.any(
+          sql`update access_control_lists set type = 'public' where forum_id_read = ${forumId}`,
+        );
+        await createSession(conn, member, true, false, projectId);
+        const visible = await conn.oneFirst(sql`
+          select (map_bookmarks_forum_topic(bookmark_by_id(${forum.id}))).title
+        `);
+        expect(visible).toBe(topicTitle);
       },
     );
   });
