@@ -12368,6 +12368,8 @@ export type Query = Node & {
   overlayDataTableUploadsConnection?: Maybe<OverlayDataTableUploadsConnection>;
   /** Reads and enables pagination through a set of `OverlayDataTable`. */
   overlayDataTablesConnection?: Maybe<OverlayDataTablesConnection>;
+  /** Title, description, and logo for a public project, forum, topic, or post link. Private projects and forums are omitted. */
+  pageLinkPreview?: Maybe<Scalars['JSON']>;
   post?: Maybe<Post>;
   /** Reads a single `Post` using its globally unique `ID`. */
   postByNodeId?: Maybe<Post>;
@@ -13322,6 +13324,16 @@ export type QueryOverlayDataTablesConnectionArgs = {
   last?: Maybe<Scalars['Int']>;
   offset?: Maybe<Scalars['Int']>;
   orderBy?: Maybe<Array<OverlayDataTablesOrderBy>>;
+};
+
+
+/** The root query type which gives access points into the data universe. */
+export type QueryPageLinkPreviewArgs = {
+  forumId?: Maybe<Scalars['Int']>;
+  kind?: Maybe<Scalars['String']>;
+  postId?: Maybe<Scalars['Int']>;
+  slug?: Maybe<Scalars['String']>;
+  topicId?: Maybe<Scalars['Int']>;
 };
 
 
