@@ -1,6 +1,8 @@
 import { DndProvider } from "react-dnd";
 import { HTML5Backend } from "react-dnd-html5-backend";
 import bytes from "bytes";
+import { BookmarkIcon } from "@heroicons/react/outline";
+import * as Popover from "@radix-ui/react-popover";
 import React, {
   Suspense,
   useState,
@@ -50,6 +52,7 @@ import getSlug from "../getSlug";
 import ReportPublishedDataPrefetch from "./ReportPublishedDataPrefetch";
 import { HomepageFlyoutProvider } from "./HomepageFlyoutContext";
 import LayerLinkProvider from "../dataLayers/LayerLinkProvider";
+import MapViewBookmarkModal from "../dataLayers/MapViewBookmarkModal";
 import BookmarkLinkRoute from "./BookmarkLinkRoute";
 
 const LazyOverlays = React.lazy(
@@ -73,11 +76,26 @@ const LazyCacheSettingsPage = React.lazy(
  * Isolated so that map context state changes only re-render this subtree
  * rather than the entire ProjectApp.
  */
-function MapSettingsActions() {
+function MapSettingsActions({
+  onCreateBookmark,
+}: {
+  onCreateBookmark: () => void;
+}) {
   const { manager } = useContext(MapManagerContext);
+  const { t } = useTranslation("mapBookmarks");
   return (
     <>
       <ResetToProjectBounds mapContextManager={manager} />
+      <Popover.Close asChild>
+        <button
+          type="button"
+          className="flex w-full cursor-pointer items-center rounded px-3 py-2 text-left outline-0 hover:bg-gray-100 focus-visible:ring-2 dark:hover:bg-gray-700 dark:hover:bg-opacity-50"
+          onClick={onCreateBookmark}
+        >
+          <h4 className="flex-1">{t("Create Map Bookmark")}</h4>
+          <BookmarkIcon className="h-5 w-5" />
+        </button>
+      </Popover.Close>
       <ShowScaleBar />
       <ShowCoordinates />
       <Measure />
@@ -151,7 +169,13 @@ export default function ProjectApp() {
   }, [setExpandSidebar, history, routeSlug]);
 
   const dark = true;
-  const mapSettingsActions = useMemo(() => <MapSettingsActions />, []);
+  const [mapBookmarkOpen, setMapBookmarkOpen] = useState(false);
+  const mapSettingsActions = useMemo(
+    () => (
+      <MapSettingsActions onCreateBookmark={() => setMapBookmarkOpen(true)} />
+    ),
+    []
+  );
 
   const onRequestSidebarClose = useCallback(() => {
     setExpandSidebar(false);
@@ -383,6 +407,11 @@ export default function ProjectApp() {
                             onRequestSidebarClose={onRequestSidebarClose}
                             mapSettingsPopupActions={mapSettingsActions}
                           />
+                          {mapBookmarkOpen && (
+                            <MapViewBookmarkModal
+                              onClose={() => setMapBookmarkOpen(false)}
+                            />
+                          )}
                           <div
                             className="absolute flex items-center justify-center h-full pointer-events-none"
                             style={{ width: "calc(100vw - 3.5rem)" }}

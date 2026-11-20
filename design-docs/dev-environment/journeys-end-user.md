@@ -144,6 +144,7 @@ Intent: the toolbar, legend, and map chrome a participant uses. These journeys w
 6. The scale and coordinate choices are still in effect after a reload. *Covered.*
 7. A project set to show the scale bar by default shows it for a visitor who has no saved choice. A project whose default is off does not. *Covered.*
 8. Measure lets the visitor click a line on the map and shows the length in kilometers. Choosing miles updates the number. Closing Measure removes the line and the readout. *Covered.*
+9. Map settings includes Create Map Bookmark. *Covered: `tests/map-view-bookmarks.spec.ts`.*
 
 ### Legend
 
@@ -153,6 +154,7 @@ Intent: the toolbar, legend, and map chrome a participant uses. These journeys w
 ### Bookmark on the map
 
 1. Clicking a map bookmark that was posted in a forum moves the map to that center, zoom, and basemap, and a banner says the bookmark is shown. *Covered.* The screenshot itself stays in `tests/map-bookmarks.spec.ts`.
+2. Create Map Bookmark, in Map settings, saves the current basemap, layers, and camera. Sketches and unsaved drawings are left out of the preview and the saved image, and the card says so when any are on the map. The card offers a copyable link to `/:slug/bookmarks/:id`. *Covered: `tests/map-view-bookmarks.spec.ts`.*
 
 ---
 

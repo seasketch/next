@@ -2172,6 +2172,52 @@ type CreateMapBookmarkPayload {
   query: Query
 }
 
+"""All input for the `createMapViewBookmark` mutation."""
+input CreateMapViewBookmarkInput {
+  basemapName: String
+  basemapOptionalLayerStates: JSON
+  cameraOptions: JSON
+  clientGeneratedThumbnail: String
+
+  """
+  An arbitrary string value with no semantic meaning. Will be included in the
+  payload verbatim. May be used to track mutations by the client.
+  """
+  clientMutationId: String
+  dataTableStates: JSON
+  layerNames: JSON
+  mapDimensions: [Int]
+  selectedBasemap: Int
+  sidebarState: JSON
+  slug: String
+  style: JSON
+  visibleDataLayers: [String]
+}
+
+"""The output of our `createMapViewBookmark` mutation."""
+type CreateMapViewBookmarkPayload {
+  """Reads a single `Basemap` that is related to this `MapBookmark`."""
+  basemapBySelectedBasemap: Basemap
+
+  """
+  The exact same `clientMutationId` that was provided in the mutation input,
+  unchanged and unused. May be used by a client to track mutations.
+  """
+  clientMutationId: String
+  mapBookmark: MapBookmark
+
+  """An edge for our `MapBookmark`. May be used by Relay 1."""
+  mapBookmarkEdge(
+    """The method to use when ordering `MapBookmark`."""
+    orderBy: [MapBookmarksOrderBy!] = [NATURAL]
+  ): MapBookmarksEdge
+
+  """
+  Our root query field type. Allows us to run any query from our mutation payload.
+  """
+  query: Query
+}
+
 """All input for the create `OfflineTileSetting` mutation."""
 input CreateOfflineTileSettingInput {
   """
@@ -8733,7 +8779,7 @@ type MapBookmark {
   job: WorkerJob
 
   """
-  forum rows are map views attached to forum posts. layer_link rows are the shareable link for one overlay.
+  forum rows are map views attached to forum posts. layer_link rows are the shareable link for one overlay. map_view rows are shareable views of the whole map and are not attached to a post.
   """
   kind: MapBookmarkKind!
   layerNames: JSON
@@ -8779,6 +8825,7 @@ input MapBookmarkCondition {
 enum MapBookmarkKind {
   FORUM
   LAYER_LINK
+  MAP_VIEW
 }
 
 """A connection to a list of `MapBookmark` values."""
@@ -9247,6 +9294,16 @@ type Mutation {
     """
     input: CreateMapBookmarkInput!
   ): CreateMapBookmarkPayload
+
+  """
+  Create a shareable bookmark of the current map. Sketches and unsaved drawings are omitted. The row is not attached to a forum post.
+  """
+  createMapViewBookmark(
+    """
+    The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
+    """
+    input: CreateMapViewBookmarkInput!
+  ): CreateMapViewBookmarkPayload
 
   """Creates a single `OfflineTileSetting`."""
   createOfflineTileSetting(

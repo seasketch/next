@@ -21,6 +21,7 @@ import {
   LAYER_LINK_MAP_WIDTH,
 } from "./layerLinkBounds";
 import { stripEphemeralLayers } from "./stripBookmarkStyle";
+import { mapViewOmissions } from "./mapViewBookmark";
 import { Feature, Polygon } from "geojson";
 import {
   ArcgisFeatureLayerFetchStrategy,
@@ -3922,6 +3923,104 @@ class MapContextManager extends EventEmitter {
   }
 
   /**
+   * Shareable view of the map as it is now. Sketches and unsaved drawing
+   * markup are left out of the stored style and of the client thumbnail, so
+   * neither image includes them.
+   */
+  async getMapViewBookmarkData() {
+    if (!this.map) {
+      throw new Error("Map not ready to create bookmark data");
+    }
+    const captured = await this.getMapBookmarkData(true);
+    if (!captured.selectedBasemap) {
+      throw new Error("Choose a basemap before saving this map");
+    }
+    const liveStyle = this.map.getStyle();
+    const unsavedDrawing = (liveStyle.layers || []).some(
+      (layer) => layer.id.indexOf("gl-draw") === 0
+    );
+    const { sketchLayerIds } = await this.getComputedStyle();
+    const style = stripEphemeralLayers(
+      JSON.parse(JSON.stringify(liveStyle)),
+      sketchLayerIds
+    );
+    const sketches = this.sketchesOnTheMap();
+    const clientGeneratedThumbnail = (await this.getMapThumbnail(
+      captured.sidebarState,
+      style as Style
+    )) as string | undefined;
+    const layerNames: { [id: string]: string } = {};
+    for (const id of captured.visibleDataLayers) {
+      const label = this.tocItems[id]?.label;
+      if (label) {
+        layerNames[id] = label;
+      }
+    }
+    return {
+      cameraOptions: captured.cameraOptions,
+      basemapOptionalLayerStates: captured.basemapOptionalLayerStates,
+      visibleDataLayers: captured.visibleDataLayers,
+      selectedBasemap: captured.selectedBasemap,
+      style,
+      mapDimensions: captured.mapDimensions,
+      sidebarState: captured.sidebarState,
+      basemapName: captured.basemapName,
+      clientGeneratedThumbnail,
+      dataTableStates: captured.dataTableStates,
+      layerNames,
+      omissions: mapViewOmissions({ sketches, unsavedDrawing }),
+    };
+  }
+
+  /**
+   * Sketches the user currently has turned on. Rendered features carry
+   * sharedInForum. A sketch that is on but not yet painted still counts, and
+   * is treated as shared so the card does not claim it is private.
+   */
+  private sketchesOnTheMap(): { id: number; sharedInForum: boolean }[] {
+    const visible = this.sketchStates
+      .keys()
+      .filter((key) => this.sketchStates.getRaw(key)?.visible);
+    if (visible.length === 0 || !this.map) {
+      return [];
+    }
+    try {
+      const { layers } = this.computeSketchLayers();
+      const present = layers
+        .map((layer) => layer.id)
+        .filter(
+          (id): id is string => Boolean(id) && Boolean(this.map?.getLayer(id))
+        );
+      if (present.length > 0) {
+        const features = this.map.queryRenderedFeatures(undefined, {
+          layers: present,
+        });
+        const ids: { id: number; sharedInForum: boolean }[] = [];
+        for (const feature of features) {
+          if (feature.properties?.id) {
+            const id = parseInt(String(feature.properties.id), 10);
+            if (!Number.isNaN(id) && !ids.find((row) => row.id === id)) {
+              ids.push({
+                id,
+                sharedInForum: Boolean(feature.properties.sharedInForum),
+              });
+            }
+          }
+        }
+        if (ids.length > 0) {
+          return ids;
+        }
+      }
+    } catch (e) {
+      // Sketch layers are not queryable yet. The toggled sketches still count.
+    }
+    return visible.map((key) => ({
+      id: parseInt(key, 10),
+      sharedInForum: true,
+    }));
+  }
+
+  /**
    * Bookmark payload for a shareable link to one layer: that layer only, the
    * current basemap, and a camera fitted to the layer's full extent. The
    * caller's map is left as it was.
@@ -4128,11 +4227,14 @@ class MapContextManager extends EventEmitter {
 
   getMapThumbnail = withTimeout(
     15000,
-    async (sidebarState: {
-      isSmall: boolean;
-      open: boolean;
-      width: number;
-    }) => {
+    async (
+      sidebarState: {
+        isSmall: boolean;
+        open: boolean;
+        width: number;
+      },
+      styleOverride?: Style
+    ) => {
       return new Promise(async (resolve, reject) => {
         try {
           if (!this.map) {
@@ -4140,7 +4242,9 @@ class MapContextManager extends EventEmitter {
           }
           await this.waitForDataTableQueriesIdle();
           const { sprites } = await this.getComputedStyle();
-          const style = this.map.getStyle();
+          const style = styleOverride
+            ? (JSON.parse(JSON.stringify(styleOverride)) as Style)
+            : this.map.getStyle();
           const div = document.createElement("div");
           div.style.setProperty("position", "absolute");
           const width = this.map.getContainer().clientWidth;

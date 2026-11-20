@@ -1877,6 +1877,50 @@ export type CreateMapBookmarkPayloadMapBookmarkEdgeArgs = {
   orderBy?: Maybe<Array<MapBookmarksOrderBy>>;
 };
 
+/** All input for the `createMapViewBookmark` mutation. */
+export type CreateMapViewBookmarkInput = {
+  basemapName?: Maybe<Scalars['String']>;
+  basemapOptionalLayerStates?: Maybe<Scalars['JSON']>;
+  cameraOptions?: Maybe<Scalars['JSON']>;
+  clientGeneratedThumbnail?: Maybe<Scalars['String']>;
+  /**
+   * An arbitrary string value with no semantic meaning. Will be included in the
+   * payload verbatim. May be used to track mutations by the client.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  dataTableStates?: Maybe<Scalars['JSON']>;
+  layerNames?: Maybe<Scalars['JSON']>;
+  mapDimensions?: Maybe<Array<Maybe<Scalars['Int']>>>;
+  selectedBasemap?: Maybe<Scalars['Int']>;
+  sidebarState?: Maybe<Scalars['JSON']>;
+  slug?: Maybe<Scalars['String']>;
+  style?: Maybe<Scalars['JSON']>;
+  visibleDataLayers?: Maybe<Array<Maybe<Scalars['String']>>>;
+};
+
+/** The output of our `createMapViewBookmark` mutation. */
+export type CreateMapViewBookmarkPayload = {
+  __typename?: 'CreateMapViewBookmarkPayload';
+  /** Reads a single `Basemap` that is related to this `MapBookmark`. */
+  basemapBySelectedBasemap?: Maybe<Basemap>;
+  /**
+   * The exact same `clientMutationId` that was provided in the mutation input,
+   * unchanged and unused. May be used by a client to track mutations.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  mapBookmark?: Maybe<MapBookmark>;
+  /** An edge for our `MapBookmark`. May be used by Relay 1. */
+  mapBookmarkEdge?: Maybe<MapBookmarksEdge>;
+  /** Our root query field type. Allows us to run any query from our mutation payload. */
+  query?: Maybe<Query>;
+};
+
+
+/** The output of our `createMapViewBookmark` mutation. */
+export type CreateMapViewBookmarkPayloadMapBookmarkEdgeArgs = {
+  orderBy?: Maybe<Array<MapBookmarksOrderBy>>;
+};
+
 /** All input for the create `OfflineTileSetting` mutation. */
 export type CreateOfflineTileSettingInput = {
   /**
@@ -7332,7 +7376,7 @@ export type MapBookmark = {
   imageId?: Maybe<Scalars['String']>;
   isPublic: Scalars['Boolean'];
   job?: Maybe<WorkerJob>;
-  /** forum rows are map views attached to forum posts. layer_link rows are the shareable link for one overlay. */
+  /** forum rows are map views attached to forum posts. layer_link rows are the shareable link for one overlay. map_view rows are shareable views of the whole map and are not attached to a post. */
   kind: MapBookmarkKind;
   layerNames?: Maybe<Scalars['JSON']>;
   mapDimensions: Array<Maybe<Scalars['Int']>>;
@@ -7368,7 +7412,8 @@ export type MapBookmarkCondition = {
 
 export enum MapBookmarkKind {
   Forum = 'FORUM',
-  LayerLink = 'LAYER_LINK'
+  LayerLink = 'LAYER_LINK',
+  MapView = 'MAP_VIEW'
 }
 
 /** A connection to a list of `MapBookmark` values. */
@@ -7618,6 +7663,8 @@ export type Mutation = {
   /** Creates a single `InteractivitySetting`. */
   createInteractivitySetting?: Maybe<CreateInteractivitySettingPayload>;
   createMapBookmark?: Maybe<CreateMapBookmarkPayload>;
+  /** Create a shareable bookmark of the current map. Sketches and unsaved drawings are omitted. The row is not attached to a forum post. */
+  createMapViewBookmark?: Maybe<CreateMapViewBookmarkPayload>;
   /** Creates a single `OfflineTileSetting`. */
   createOfflineTileSetting?: Maybe<CreateOfflineTileSettingPayload>;
   /** Creates a single `OptionalBasemapLayer`. */
@@ -8396,6 +8443,12 @@ export type MutationCreateInteractivitySettingArgs = {
 /** The root mutation type which contains root level fields which mutate data. */
 export type MutationCreateMapBookmarkArgs = {
   input: CreateMapBookmarkInput;
+};
+
+
+/** The root mutation type which contains root level fields which mutate data. */
+export type MutationCreateMapViewBookmarkArgs = {
+  input: CreateMapViewBookmarkInput;
 };
 
 
@@ -22907,6 +22960,33 @@ export type GetBasemapsAndRegionQuery = (
   )> }
 );
 
+export type CreateMapViewBookmarkMutationVariables = Exact<{
+  slug: Scalars['String'];
+  style: Scalars['JSON'];
+  visibleDataLayers: Array<Scalars['String']> | Scalars['String'];
+  selectedBasemap: Scalars['Int'];
+  basemapOptionalLayerStates?: Maybe<Scalars['JSON']>;
+  cameraOptions: Scalars['JSON'];
+  mapDimensions: Array<Scalars['Int']> | Scalars['Int'];
+  sidebarState?: Maybe<Scalars['JSON']>;
+  basemapName: Scalars['String'];
+  layerNames: Scalars['JSON'];
+  clientGeneratedThumbnail?: Maybe<Scalars['String']>;
+  dataTableStates?: Maybe<Scalars['JSON']>;
+}>;
+
+
+export type CreateMapViewBookmarkMutation = (
+  { __typename?: 'Mutation' }
+  & { createMapViewBookmark?: Maybe<(
+    { __typename?: 'CreateMapViewBookmarkPayload' }
+    & { mapBookmark?: Maybe<(
+      { __typename?: 'MapBookmark' }
+      & MapBookmarkDetailsFragment
+    )> }
+  )> }
+);
+
 export type OfflineSurveysQueryVariables = Exact<{
   slug: Scalars['String'];
 }>;
@@ -32134,6 +32214,17 @@ export const GetBasemapsAndRegionDocument = /*#__PURE__*/ gql`
   }
 }
     ${MapEssentialsFragmentDoc}`;
+export const CreateMapViewBookmarkDocument = /*#__PURE__*/ gql`
+    mutation CreateMapViewBookmark($slug: String!, $style: JSON!, $visibleDataLayers: [String!]!, $selectedBasemap: Int!, $basemapOptionalLayerStates: JSON, $cameraOptions: JSON!, $mapDimensions: [Int!]!, $sidebarState: JSON, $basemapName: String!, $layerNames: JSON!, $clientGeneratedThumbnail: String, $dataTableStates: JSON) {
+  createMapViewBookmark(
+    input: {slug: $slug, style: $style, visibleDataLayers: $visibleDataLayers, selectedBasemap: $selectedBasemap, basemapOptionalLayerStates: $basemapOptionalLayerStates, cameraOptions: $cameraOptions, mapDimensions: $mapDimensions, sidebarState: $sidebarState, basemapName: $basemapName, layerNames: $layerNames, clientGeneratedThumbnail: $clientGeneratedThumbnail, dataTableStates: $dataTableStates}
+  ) {
+    mapBookmark {
+      ...MapBookmarkDetails
+    }
+  }
+}
+    ${MapBookmarkDetailsFragmentDoc}`;
 export const OfflineSurveysDocument = /*#__PURE__*/ gql`
     query OfflineSurveys($slug: String!) {
   projectBySlug(slug: $slug) {
@@ -35252,6 +35343,7 @@ export const namedOperations = {
     GenerateMissingFragmentsForProject: 'GenerateMissingFragmentsForProject',
     JoinProject: 'JoinProject',
     EnsureLayerLink: 'EnsureLayerLink',
+    CreateMapViewBookmark: 'CreateMapViewBookmark',
     UpdateBasemapOfflineTileSettings: 'UpdateBasemapOfflineTileSettings',
     generateOfflineTilePackage: 'generateOfflineTilePackage',
     deleteTilePackage: 'deleteTilePackage',

@@ -53,6 +53,7 @@ function limitBookmarkMutation(
 const MapBookmarkRateLimiterPlugin = makeWrapResolversPlugin({
   Mutation: {
     createMapBookmark: limitBookmarkMutation,
+    createMapViewBookmark: limitBookmarkMutation,
     ensureLayerLink: limitBookmarkMutation,
   },
 });
