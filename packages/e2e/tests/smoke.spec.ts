@@ -11,7 +11,9 @@ test.describe("smoke @smoke", () => {
     await expect(page.getByRole("link", { name: "Admin" })).toHaveCount(0);
 
     await page.goto("/demo-samoa/admin");
-    await expect(page).not.toHaveURL(/\/admin/);
+    await expect(page).toHaveURL(/\/demo-samoa\/admin$/);
+    await expect(page.getByRole("heading", { name: "Admins Only" })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Sign in", exact: true })).toBeVisible();
     await expect(page.getByText("Users & Groups")).toHaveCount(0);
   });
 
@@ -44,7 +46,9 @@ test.describe("smoke @smoke", () => {
     await expect(page.getByRole("heading", { name: "Admins Forum" })).toHaveCount(0);
 
     await page.goto("/e2e-private/admin");
-    await expect(page).not.toHaveURL(/\/admin/);
+    await expect(page).toHaveURL(/\/e2e-private\/admin$/);
+    await expect(page.getByRole("heading", { name: "Admins Only" })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Sign in", exact: true })).toHaveCount(0);
     await expect(page.getByText("Users & Groups")).toHaveCount(0);
   });
 

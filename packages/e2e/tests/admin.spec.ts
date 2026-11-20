@@ -71,4 +71,35 @@ test.describe("demo-samoa project admin @admin", () => {
       page.getByText("Land (MultiPolygon)", { exact: true })
     ).toBeVisible();
   });
+
+  test("an admin opens admin urls directly, including a draft layer link", async ({
+    page,
+    request,
+  }) => {
+    test.setTimeout(90_000);
+    await signIn(page, request, personas.admin);
+    for (const path of [
+      "/demo-samoa/admin",
+      "/demo-samoa/admin/users",
+      "/demo-samoa/admin/surveys",
+      "/demo-samoa/admin/forums",
+      "/demo-samoa/survey-editor/1",
+      "/demo-samoa/edit-basemap/1",
+    ]) {
+      await test.step(path, async () => {
+        await page.goto(path);
+        await expect(page).toHaveURL(path);
+        await expect(page.getByRole("heading", { name: "Admins Only" })).toHaveCount(0);
+        await expect(page.getByRole("heading", { name: "Private Project" })).toHaveCount(0);
+      });
+    }
+
+    await page.goto(
+      "/demo-samoa/admin/data?layerLink=a08be40c-ee04-45c8-9288-8c7e3a55a7e3"
+    );
+    await expect(page).toHaveURL(/layerLink=a08be40c-ee04-45c8-9288-8c7e3a55a7e3/);
+    await expect(visibleNavLink(page, "Data Layers")).toBeVisible();
+    await expect(page.getByText("This link is no longer available.")).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Admins Only" })).toHaveCount(0);
+  });
 });

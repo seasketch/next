@@ -25,6 +25,7 @@ See the catalog's *Covered* notes. Specs:
 
 - `tests/smoke.spec.ts` — three `@smoke` journeys
 - `tests/access.spec.ts` — public, admins-only, invite-only, invites, access requests
+- `tests/admin-access.spec.ts` — admin URLs stay put for anonymous visitors, signed-in non-admins, private and invite-only projects, a cleared session, and the sign-in return path
 - `tests/homepage.spec.ts` — homepage and project listing
 - `tests/forums.spec.ts` — anonymous read, join, reply
 - `tests/forum-attachments.spec.ts` — attach a file and download it from local R2
@@ -35,7 +36,7 @@ See the catalog's *Covered* notes. Specs:
 - `tests/overlays.spec.ts` — overlay browse, legend, metadata, search
 - `tests/basemaps.spec.ts` — Light / Satellite
 - `tests/language.spec.ts` — Samoan / English
-- `tests/admin.spec.ts` — seed lists on `demo-samoa` admin, and the custom geography layer picker
+- `tests/admin.spec.ts` — seed lists on `demo-samoa` admin, the custom geography layer picker, and direct admin URLs for an administrator
 - `tests/changelog.spec.ts` — changelog paging
 - `tests/uploads.spec.ts` — local spatial uploads
 - `tests/local-reports.spec.ts` — drawn sketch, local overlay workers, data-table parquet
