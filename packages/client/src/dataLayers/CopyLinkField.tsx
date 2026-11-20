@@ -42,7 +42,7 @@ export default function CopyLinkField({ url }: { url: string }) {
       <span className="absolute inset-y-1 right-1 flex items-center">
         <button
           type="button"
-          className="inline-flex h-full items-center gap-1 rounded-md px-2 text-xs font-medium text-slate-700 hover:bg-white hover:text-slate-900"
+          className="relative inline-flex h-full items-center gap-1 rounded-md px-2 text-xs font-medium text-slate-700 hover:bg-white hover:text-slate-900"
           onClick={(event) => {
             event.stopPropagation();
             void copy();
@@ -50,25 +50,25 @@ export default function CopyLinkField({ url }: { url: string }) {
         >
           <ClipboardCopyIcon className="h-3.5 w-3.5" />
           {t("Copy")}
+          <AnimatePresence>
+            {copied && (
+              <motion.span
+                role="status"
+                initial={{ opacity: 0, x: "-50%", y: 6, scale: 0.96 }}
+                animate={{ opacity: 1, x: "-50%", y: 0, scale: 1 }}
+                exit={{ opacity: 0, x: "-50%", y: 4, scale: 0.98 }}
+                transition={{ duration: 0.16, ease: "easeOut" }}
+                className="pointer-events-none absolute bottom-full left-1/2 z-20 mb-2.5 whitespace-nowrap rounded-md bg-slate-950 px-2.5 py-1 text-xs font-medium text-white shadow-lg"
+              >
+                {t("Copied")}
+                <span
+                  aria-hidden
+                  className="absolute left-1/2 top-full -mt-px -translate-x-1/2 border-4 border-transparent border-t-slate-950"
+                />
+              </motion.span>
+            )}
+          </AnimatePresence>
         </button>
-        <AnimatePresence>
-          {copied && (
-            <motion.div
-              role="status"
-              initial={{ opacity: 0, y: 6, scale: 0.96 }}
-              animate={{ opacity: 1, y: 0, scale: 1 }}
-              exit={{ opacity: 0, y: 4, scale: 0.98 }}
-              transition={{ duration: 0.16, ease: "easeOut" }}
-              className="pointer-events-none absolute bottom-full left-1/2 z-20 mb-3 -translate-x-1/2 whitespace-nowrap rounded-md bg-slate-950 px-2.5 py-1 text-xs font-medium text-white shadow-lg"
-            >
-              {t("Copied")}
-              <span
-                aria-hidden
-                className="absolute left-1/2 top-full -mt-px -translate-x-1/2 border-4 border-transparent border-t-slate-950"
-              />
-            </motion.div>
-          )}
-        </AnimatePresence>
       </span>
     </div>
   );

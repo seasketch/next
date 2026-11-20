@@ -131,16 +131,10 @@ export default function MapViewBookmarkBody({
             </span>
           </h2>
           {topic && (
-            <p className="mt-1 truncate text-sm text-slate-500">
+            <p className="mt-1 text-sm leading-snug text-slate-500">
+              {/* prettier-ignore */}
               <Trans ns="mapBookmarks">
-                Included in{" "}
-                <Link
-                  to={topic.to}
-                  onClick={onTopicClick}
-                  className="font-medium text-primary-600 underline decoration-primary-600/40 underline-offset-2"
-                >
-                  {{ title }}
-                </Link>
+                Included in the forum topic "<Link to={topic.to} onClick={onTopicClick} className="font-medium text-primary-600 underline decoration-primary-600/40 underline-offset-2">{{ title }}</Link>"
               </Trans>
             </p>
           )}
