@@ -1,6 +1,7 @@
 import { ChevronDownIcon } from "@heroicons/react/outline";
 import { ReactNode, useState } from "react";
 import { Trans, useTranslation } from "react-i18next";
+import { Link } from "react-router-dom";
 import {
   bookmarkExtent,
   formatExtent,
@@ -77,6 +78,9 @@ export default function MapViewBookmarkBody({
   createdAt,
   explainSharing,
   layers,
+  sketches,
+  topic,
+  onTopicClick,
   basemapName,
   camera,
   dimensions,
@@ -90,6 +94,9 @@ export default function MapViewBookmarkBody({
   createdAt: string;
   explainSharing: boolean;
   layers: MapViewLayerRow[];
+  sketches?: MapViewLayerRow[];
+  topic?: { title: string; to: string } | null;
+  onTopicClick?: () => void;
   basemapName?: string | null;
   camera: MapViewCamera | null;
   dimensions: [number, number] | null;
@@ -103,6 +110,8 @@ export default function MapViewBookmarkBody({
     day: "numeric",
     year: "numeric",
   });
+  const sketchRows = sketches || [];
+  const title = topic?.title || "";
   const extent = camera && dimensions ? bookmarkExtent(camera, dimensions) : null;
   const zoomLabel = camera ? (Math.round(camera.zoom * 10) / 10).toString() : "";
   const showBearing = Boolean(camera && Math.abs(camera.bearing) >= 0.5);
@@ -112,14 +121,30 @@ export default function MapViewBookmarkBody({
     <div>
       <div className="flex items-start gap-3">
         <AuthorMark name={name} picture={picture} />
-        <h2 id={labelledBy} className="min-w-0 pt-0.5 leading-snug">
-          <span className="block text-base font-medium text-slate-900">{name}</span>
-          <span className="mt-0.5 block text-sm font-normal text-slate-500">
-            <Trans ns="mapBookmarks">
-              created this map bookmark on {{ date }}
-            </Trans>
-          </span>
-        </h2>
+        <div className="min-w-0 pt-0.5">
+          <h2 id={labelledBy} className="leading-snug">
+            <span className="block text-base font-medium text-slate-900">{name}</span>
+            <span className="mt-0.5 block text-sm font-normal text-slate-500">
+              <Trans ns="mapBookmarks">
+                created this map bookmark on {{ date }}
+              </Trans>
+            </span>
+          </h2>
+          {topic && (
+            <p className="mt-1 truncate text-sm text-slate-500">
+              <Trans ns="mapBookmarks">
+                Included in{" "}
+                <Link
+                  to={topic.to}
+                  onClick={onTopicClick}
+                  className="font-medium text-primary-600 underline decoration-primary-600/40 underline-offset-2"
+                >
+                  {{ title }}
+                </Link>
+              </Trans>
+            </p>
+          )}
+        </div>
       </div>
       {explainSharing && (
         <p className="mt-4 text-sm leading-relaxed text-slate-600">
@@ -151,6 +176,20 @@ export default function MapViewBookmarkBody({
                 <li key={layer.id} className="flex items-baseline gap-2 text-sm text-slate-700">
                   <span className="min-w-0 truncate">{layer.name}</span>
                   {layer.missing && (
+                    <span className="shrink-0 text-xs text-amber-700">{t("missing")}</span>
+                  )}
+                </li>
+              ))}
+            </ul>
+          </Disclosure>
+        )}
+        {sketchRows.length > 0 && (
+          <Disclosure title={t("Sketches ({{count}})", { count: sketchRows.length })}>
+            <ul className="space-y-1.5">
+              {sketchRows.map((sketch) => (
+                <li key={sketch.id} className="flex items-baseline gap-2 text-sm text-slate-700">
+                  <span className="min-w-0 truncate">{sketch.name}</span>
+                  {sketch.missing && (
                     <span className="shrink-0 text-xs text-amber-700">{t("missing")}</span>
                   )}
                 </li>

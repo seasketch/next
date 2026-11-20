@@ -36,9 +36,9 @@ import {
   MapBookmarkDetailsFragment,
   OptionalBasemapLayersGroupType,
   OverlayFragment,
-  SketchPresentFragmentDoc,
   SpriteDetailsFragment,
 } from "../generated/graphql";
+import { missingBookmarkLayerIds } from "./bookmarkLayerIds";
 import {
   extractTilesUuidFromUrl,
   hostedStyleUrl,
@@ -4390,27 +4390,23 @@ class MapContextManager extends EventEmitter {
       "selectedBasemap" | "visibleSketches" | "visibleDataLayers"
     >,
     client?: ApolloClient<NormalizedCacheObject>
-  ) {
-    const missingSketches: number[] = [];
-    for (const id of bookmark.visibleSketches || []) {
-      if (
-        id &&
-        client &&
-        !client.readFragment({
-          fragment: SketchPresentFragmentDoc,
-          // eslint-disable-next-line i18next/no-literal-string
-          id: `Sketch:${id}`,
-        })
-      ) {
-        missingSketches.push(id);
-      }
-    }
+  ): {
+    missingLayers: string[];
+    missingBasemap: boolean;
+    missingSketches: number[];
+  } {
+    // A sketch that is not in the Apollo cache has not been loaded. That is
+    // not evidence it was deleted, and forum bookmarks are opened before the
+    // sketch list is cached. Don't report those as missing.
+    void client;
     return {
       missingLayers: this.getMissingLayers(
         (bookmark.visibleDataLayers || []) as string[]
       ),
-      missingBasemap: this.basemaps[bookmark.selectedBasemap] ? false : true,
-      missingSketches,
+      missingBasemap:
+        Object.keys(this.basemaps).length > 0 &&
+        !this.basemaps[String(bookmark.selectedBasemap)],
+      missingSketches: [] as number[],
     };
   }
 
@@ -4460,21 +4456,30 @@ class MapContextManager extends EventEmitter {
   }
 
   getMissingLayers(layerIds: string[]) {
-    const missing: string[] = [];
-    const knownIds = Object.keys(this.layers);
-    const knownStaticIds = Object.keys(this.layers).reduce((prev, key) => {
-      const staticId = this.layers[key].staticId;
-      if (staticId) {
-        prev.push(staticId);
+    const stableIds = Object.keys(this.layers);
+    const aliases: string[] = [];
+    for (const stableId of stableIds) {
+      const layer = this.layers[stableId];
+      if (layer.staticId) {
+        aliases.push(layer.staticId);
       }
-      return prev;
-    }, [] as string[]);
-    for (const id of layerIds) {
-      if (knownIds.indexOf(id) === -1 && knownStaticIds.indexOf(id) === -1) {
-        missing.push(id);
+      if (layer.id != null) {
+        aliases.push(String(layer.id));
+      }
+      const itemId = this.tocItems[stableId]?.id;
+      if (itemId != null) {
+        aliases.push(String(itemId));
       }
     }
-    return missing;
+    for (const referenceId of Object.keys(this.geoprocessingReferenceIds)) {
+      aliases.push(referenceId);
+    }
+    const tocLoaded = Object.keys(this.tocItems).length > 0;
+    return missingBookmarkLayerIds(layerIds, {
+      loaded: tocLoaded || stableIds.length > 0,
+      stableIds,
+      aliases,
+    });
   }
 
   getMissingSketches() {}

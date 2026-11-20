@@ -1,6 +1,5 @@
 import {
   ChevronDownIcon,
-  ClipboardCopyIcon,
   FolderIcon,
   LockClosedIcon,
 } from "@heroicons/react/outline";
@@ -19,7 +18,6 @@ import {
 import { useHistory } from "react-router-dom";
 import { Trans, useTranslation } from "react-i18next";
 import { useAuth0 } from "@auth0/auth0-react";
-import { useToast, ToastViewport } from "../components/Toast";
 import Spinner from "../components/Spinner";
 import {
   MapBookmarkKind,
@@ -37,7 +35,7 @@ import MetadataDocumentView from "./MetadataDocumentView";
 import { esriRestUrlFromMetadataItem } from "./esriRestUrl";
 import EsriRestUrlFooter from "./EsriRestUrlFooter";
 import getSlug from "../getSlug";
-import { copyTextToClipboard } from "../projects/Forums/InlineAuthorDetails";
+import CopyLinkField from "./CopyLinkField";
 import {
   MapManagerContext,
   MapOverlayContext,
@@ -107,7 +105,7 @@ function NoticeCopy({
           return (
             <p key={index}>
               {t(
-                "Anyone with this link can open it without signing in. The map stays as they left it until they choose View on the map."
+                "Anyone with this link can open it without signing in. The map stays as they left it until they choose Display on the map."
               )}
             </p>
           );
@@ -308,7 +306,6 @@ export default function LayerLinkModal({
   onClose: () => void;
 }) {
   const { t } = useTranslation("mapBookmarks");
-  const { toast } = useToast();
   const history = useHistory();
   const auth0 = useAuth0();
   const slug = getSlug();
@@ -520,18 +517,6 @@ export default function LayerLinkModal({
     metadata.data?.projectPublicDetails?.supportEmail ||
     null;
 
-  const copy = async () => {
-    if (!url) {
-      return;
-    }
-    try {
-      await navigator.clipboard.writeText(url);
-    } catch (error) {
-      copyTextToClipboard(url);
-    }
-    toast(t("Link copied"));
-  };
-
   const viewOnMap = async () => {
     if (!manager || !bookmark) {
       return;
@@ -641,13 +626,18 @@ export default function LayerLinkModal({
       }
       onClose={onClose}
       label={title}
+      onDisplay={
+        showView
+          ? () => {
+              void viewOnMap();
+            }
+          : undefined
+      }
+      displayDisabled={!manager || !ready}
       summary={
         <span className="block truncate text-sm font-medium text-slate-900">
           {title}
         </span>
-      }
-      pinned={
-        <ToastViewport className="pointer-events-none absolute bottom-4 right-4 z-10" />
       }
     >
           {createError && (
@@ -719,38 +709,9 @@ export default function LayerLinkModal({
             />
           )}
           {mode === "create" && url && (
-            <div className="mt-5 flex items-center gap-2">
-              <input
-                id="layer-link-url"
-                readOnly
-                value={url}
-                aria-label={t("Link")}
-                onFocus={(event) => event.currentTarget.select()}
-                className="min-w-0 flex-1 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 font-mono text-xs text-slate-600 shadow-none focus:border-slate-300 focus:ring-0"
-              />
-              <button
-                type="button"
-                className="inline-flex shrink-0 items-center gap-1.5 rounded-lg bg-slate-900 px-3 py-2 text-sm font-medium text-white hover:bg-slate-800"
-                onClick={() => {
-                  void copy();
-                }}
-              >
-                <ClipboardCopyIcon className="h-4 w-4" />
-                <Trans ns="mapBookmarks">Copy</Trans>
-              </button>
+            <div className="mt-5">
+              <CopyLinkField url={url} />
             </div>
-          )}
-          {showView && (
-            <button
-              type="button"
-              className="mt-5 rounded-lg bg-primary-500 px-4 py-2 text-sm font-medium text-white hover:bg-primary-600 disabled:opacity-60"
-              disabled={!manager || !ready}
-              onClick={() => {
-                void viewOnMap();
-              }}
-            >
-              <Trans ns="mapBookmarks">View on the map</Trans>
-            </button>
           )}
     </BookmarkCard>
   );

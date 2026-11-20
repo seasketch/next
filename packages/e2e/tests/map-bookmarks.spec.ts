@@ -19,7 +19,11 @@ test.describe("demo-samoa map bookmarks @enduser @forums", () => {
     await page.getByRole("menuitem", { name: "Map Bookmark" }).click();
 
     // The thumbnail is drawn under the reply text, outside the ProseMirror node.
-    const draft = page.getByRole("img", { name: "Bookmark preview thumbnail" });
+    // Scope it to the composer so older replies on the topic are not included.
+    const composer = page.locator("div.p-4.mb-20").filter({
+      has: page.getByRole("button", { name: "Post Reply" }),
+    });
+    const draft = composer.getByRole("img", { name: "Bookmark preview thumbnail" });
     await expect(draft).toBeVisible({ timeout: 30_000 });
     await expect(draft).toHaveAttribute("src", /^data:image\//);
 
@@ -37,8 +41,15 @@ test.describe("demo-samoa map bookmarks @enduser @forums", () => {
 
     await posted.locator("button[aria-label='Map bookmark']").click();
 
+    const card = page.getByRole("dialog");
     await expect(
-      page.getByRole("heading", { name: "Map bookmark" })
+      card.getByRole("heading", { name: /created this map bookmark on/ })
+    ).toBeVisible();
+    await expect(
+      card.getByRole("link", { name: "Welcome to the project" })
+    ).toBeVisible();
+    await expect(
+      card.getByRole("button", { name: "Display on the map" })
     ).toBeVisible();
     // The card shows the client thumbnail immediately, as a data URL, while
     // the screenshot job is still running. The finished capture is the image

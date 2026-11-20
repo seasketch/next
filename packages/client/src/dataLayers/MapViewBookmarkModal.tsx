@@ -1,8 +1,6 @@
-import { ClipboardCopyIcon } from "@heroicons/react/outline";
 import { useContext, useEffect, useRef, useState } from "react";
 import { Trans, useTranslation } from "react-i18next";
 import { useAuth0 } from "@auth0/auth0-react";
-import { ToastViewport, useToast } from "../components/Toast";
 import {
   useCreateMapViewBookmarkMutation,
   useGetBookmarkQuery,
@@ -11,9 +9,9 @@ import {
   WorkerJobStatus,
 } from "../generated/graphql";
 import getSlug from "../getSlug";
-import { copyTextToClipboard } from "../projects/Forums/InlineAuthorDetails";
 import { MapManagerContext } from "./MapContextManager";
 import BookmarkCard from "./BookmarkCard";
+import CopyLinkField from "./CopyLinkField";
 import MapViewBookmarkBody from "./MapViewBookmarkBody";
 import {
   MapViewOmissions,
@@ -40,7 +38,6 @@ export default function MapViewBookmarkModal({
   onClose: () => void;
 }) {
   const { t } = useTranslation("mapBookmarks");
-  const { toast } = useToast();
   const auth0 = useAuth0();
   const slug = getSlug();
   const { manager, ready } = useContext(MapManagerContext);
@@ -214,18 +211,6 @@ export default function MapViewBookmarkModal({
       : null,
   ].filter((note): note is string => Boolean(note));
 
-  const copy = async () => {
-    if (!url) {
-      return;
-    }
-    try {
-      await navigator.clipboard.writeText(url);
-    } catch (error) {
-      copyTextToClipboard(url);
-    }
-    toast(t("Link copied"));
-  };
-
   return (
     <BookmarkCard
       labelledBy="map-view-bookmark-title"
@@ -246,33 +231,7 @@ export default function MapViewBookmarkModal({
           {authorName}
         </span>
       }
-      footer={
-        url ? (
-          <div className="flex items-center gap-2">
-            <input
-              id="map-view-bookmark-url"
-              readOnly
-              value={url}
-              aria-label={t("Link")}
-              onFocus={(event) => event.currentTarget.select()}
-              className="min-w-0 flex-1 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 font-mono text-xs text-slate-600 shadow-none focus:border-slate-300 focus:ring-0"
-            />
-            <button
-              type="button"
-              className="inline-flex shrink-0 items-center gap-1.5 rounded-lg bg-slate-900 px-3 py-2 text-sm font-medium text-white hover:bg-slate-800"
-              onClick={() => {
-                void copy();
-              }}
-            >
-              <ClipboardCopyIcon className="h-4 w-4" />
-              <Trans ns="mapBookmarks">Copy</Trans>
-            </button>
-          </div>
-        ) : undefined
-      }
-      pinned={
-        <ToastViewport className="pointer-events-none absolute left-1/2 top-16 z-10 -translate-x-1/2" />
-      }
+      footer={url ? <CopyLinkField url={url} /> : undefined}
     >
       {createError && (
         <p className="mb-3 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-800">

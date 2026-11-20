@@ -8776,6 +8776,11 @@ type MapBookmark {
   JSON map of TOC stableId -> { stableId, column?, op?, filters? } for activated overlay data tables.
   """
   dataTableStates: JSON!
+
+  """
+  Forum topic this bookmark was posted in, when the current user can read that topic.
+  """
+  forumTopic: MapBookmarkForumTopic
   id: UUID!
   imageId: String
   isPublic: Boolean!
@@ -8829,6 +8834,12 @@ type MapBookmarkCreator {
   fullname: String
   nickname: String
   picture: String
+}
+
+type MapBookmarkForumTopic {
+  forumId: Int
+  title: String
+  topicId: Int
 }
 
 enum MapBookmarkKind {

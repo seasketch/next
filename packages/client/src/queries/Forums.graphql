@@ -255,6 +255,11 @@ fragment MapBookmarkDetails on MapBookmark {
     nickname
     picture
   }
+  forumTopic {
+    topicId
+    forumId
+    title
+  }
 }
 
 query GetBookmark($id: UUID!) {

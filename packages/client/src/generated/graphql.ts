@@ -7376,6 +7376,8 @@ export type MapBookmark = {
   creator?: Maybe<MapBookmarkCreator>;
   /** JSON map of TOC stableId -> { stableId, column?, op?, filters? } for activated overlay data tables. */
   dataTableStates: Scalars['JSON'];
+  /** Forum topic this bookmark was posted in, when the current user can read that topic. */
+  forumTopic?: Maybe<MapBookmarkForumTopic>;
   id: Scalars['UUID'];
   imageId?: Maybe<Scalars['String']>;
   isPublic: Scalars['Boolean'];
@@ -7419,6 +7421,13 @@ export type MapBookmarkCreator = {
   fullname?: Maybe<Scalars['String']>;
   nickname?: Maybe<Scalars['String']>;
   picture?: Maybe<Scalars['String']>;
+};
+
+export type MapBookmarkForumTopic = {
+  __typename?: 'MapBookmarkForumTopic';
+  forumId?: Maybe<Scalars['Int']>;
+  title?: Maybe<Scalars['String']>;
+  topicId?: Maybe<Scalars['Int']>;
 };
 
 export enum MapBookmarkKind {
@@ -22428,6 +22437,9 @@ export type MapBookmarkDetailsFragment = (
   )>, creator?: Maybe<(
     { __typename?: 'MapBookmarkCreator' }
     & Pick<MapBookmarkCreator, 'fullname' | 'nickname' | 'picture'>
+  )>, forumTopic?: Maybe<(
+    { __typename?: 'MapBookmarkForumTopic' }
+    & Pick<MapBookmarkForumTopic, 'topicId' | 'forumId' | 'title'>
   )> }
 );
 
@@ -28489,6 +28501,11 @@ export const MapBookmarkDetailsFragmentDoc = gql`
     fullname
     nickname
     picture
+  }
+  forumTopic {
+    topicId
+    forumId
+    title
   }
 }
     ${JobFragmentDoc}`;

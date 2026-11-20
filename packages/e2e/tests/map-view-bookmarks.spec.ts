@@ -72,7 +72,7 @@ test.describe("map view bookmarks @enduser @map", () => {
     const bookmarkId = url.split("/").pop();
 
     await dialog.getByRole("button", { name: "Copy" }).click();
-    await expect(dialog.getByText("Link copied")).toBeVisible();
+    await expect(dialog.getByText("Copied")).toBeVisible();
 
     const saved = await graphql<{
       bookmarkById: {

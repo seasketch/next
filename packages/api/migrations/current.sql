@@ -231,3 +231,36 @@ comment on function public.map_bookmarks_creator(public.map_bookmarks) is
 
 revoke all on function public.map_bookmarks_creator(public.map_bookmarks) from public;
 grant execute on function public.map_bookmarks_creator(public.map_bookmarks) to seasketch_user, anon;
+
+-- Topic a forum bookmark was posted in. Runs as the caller so a private
+-- forum stays private: row security on posts and topics hides the title
+-- from someone who cannot read that topic.
+do $$
+begin
+  if not exists (
+    select 1 from pg_type where typname = 'map_bookmark_forum_topic'
+  ) then
+    create type public.map_bookmark_forum_topic as (
+      topic_id integer,
+      forum_id integer,
+      title text
+    );
+  end if;
+end $$;
+
+create or replace function public.map_bookmarks_forum_topic(bookmark public.map_bookmarks)
+returns public.map_bookmark_forum_topic
+language sql
+stable
+as $$
+  select t.id, t.forum_id, t.title
+  from public.posts p
+  join public.topics t on t.id = p.topic_id
+  where p.id = bookmark.post_id;
+$$;
+
+comment on function public.map_bookmarks_forum_topic(public.map_bookmarks) is
+  'Forum topic this bookmark was posted in, when the current user can read that topic.';
+
+revoke all on function public.map_bookmarks_forum_topic(public.map_bookmarks) from public;
+grant execute on function public.map_bookmarks_forum_topic(public.map_bookmarks) to seasketch_user, anon;
