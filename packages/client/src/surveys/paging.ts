@@ -294,7 +294,7 @@ function evaluateRule(
   for (const condition of rule.conditions || []) {
     const answer = answers[condition.subjectId];
     if (
-      isUnsetYesNoEquality(condition, formElements)
+      isYesNoEqualsNo(condition, formElements)
         ? answer !== true
         : evaluateCondition(condition.operator, condition.value, answer)
     ) {
@@ -315,17 +315,18 @@ function evaluateRule(
 }
 
 /**
- * The logic editor displays a yes/no condition with no stored value as "No".
- * Published surveys rely on those conditions matching every answer other than
- * Yes, including an unanswered question.
+ * A yes/no "= No" condition matches every answer other than Yes, including an
+ * unanswered question. The logic editor only offers Yes and No, and displays a
+ * condition with no stored value as No, so null and false both mean No.
+ * Published surveys rely on null conditions matching unanswered questions.
  */
-function isUnsetYesNoEquality(
+function isYesNoEqualsNo(
   condition: { subjectId: number; operator: FieldRuleOperator; value?: any },
   formElements: Pick<SurveyAppFormElementFragment, "id" | "typeId">[]
 ) {
   return (
     condition.operator === FieldRuleOperator.Equal &&
-    (condition.value === null || condition.value === undefined) &&
+    condition.value !== true &&
     formElements.find((el) => el.id === condition.subjectId)?.typeId ===
       "YesNo"
   );

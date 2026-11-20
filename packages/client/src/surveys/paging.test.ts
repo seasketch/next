@@ -38,10 +38,10 @@ function path(value: boolean | null, answers: { [id: number]: any }) {
   ).map((el) => el.id);
 }
 
-test("a No rule skips when the answer is No", () => {
+test("a No rule skips unless the answer is Yes", () => {
   expect(path(false, { 2: false })).toEqual([2, 4]);
+  expect(path(false, {})).toEqual([2, 4]);
   expect(path(false, { 2: true })).toEqual([2, 3, 4]);
-  expect(path(false, {})).toEqual([2, 3, 4]);
 });
 
 test("a Yes rule skips only when the answer is Yes", () => {
