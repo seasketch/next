@@ -4,14 +4,24 @@
  * Slack, Facebook, X, iMessage, and the rest read Open Graph tags from the
  * first HTML response. They do not run the React app, and they do not send
  * the URL hash. Bookmark, layer, forum, topic, and message links each call
- * GraphQL. Every other page under a project slug reuses that project's
+ * GraphQL. An admin layer link (`?layerLink=`) is one of those bookmarks.
+ * Every other page under a project slug reuses that project's
  * public name, description, and logo, cached for five minutes. A private
  * or unknown project is not cached. A message link puts
  * the post id in the query string because the #post- fragment never arrives.
  */
 
-const SHARE_PATH =
-  /^\/([^/]+)\/(layers|bookmarks)\/([0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12})\/?$/i;
+const UUID =
+  "[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}";
+
+const SHARE_PATH = new RegExp(
+  `^\\/([^/]+)\\/(layers|bookmarks)\\/(${UUID})\\/?$`,
+  "i"
+);
+
+const ADMIN_LAYER_PATH = /^\/([^/]+)\/admin\/data\/?$/i;
+
+const LAYER_LINK_ID = new RegExp(`^${UUID}$`, "i");
 
 const FORUM_PATH = /^\/([^/]+)\/app\/forums\/(\d+)\/?$/;
 const TOPIC_PATH = /^\/([^/]+)\/app\/forums\/(\d+)\/(\d+)\/?$/;
@@ -58,6 +68,17 @@ function positiveInt(value) {
   return parsed;
 }
 
+function layerLinkFromSearch(search) {
+  const params = new URLSearchParams(
+    typeof search === "string" ? search : ""
+  );
+  const raw = params.get("layerLink");
+  if (raw == null || !LAYER_LINK_ID.test(raw)) {
+    return null;
+  }
+  return raw;
+}
+
 function postIdFromSearch(search) {
   const params = new URLSearchParams(
     typeof search === "string" ? search : ""
@@ -88,6 +109,17 @@ export function shareTarget(pathname, search = "") {
   const bookmark = SHARE_PATH.exec(pathname);
   if (bookmark) {
     return { type: "bookmark", slug: bookmark[1], id: bookmark[3] };
+  }
+
+  const adminLayer = ADMIN_LAYER_PATH.exec(pathname);
+  const layerLink = adminLayer ? layerLinkFromSearch(search) : null;
+  if (adminLayer && layerLink) {
+    return {
+      type: "bookmark",
+      slug: adminLayer[1],
+      id: layerLink,
+      draft: true,
+    };
   }
 
   const topic = TOPIC_PATH.exec(pathname);
@@ -276,6 +308,9 @@ export function previewPageUrl(origin, pathname, target) {
   const path = `${origin}${pathname.replace(/\/$/, "")}`;
   if (target && target.type === "page" && target.kind === "post" && target.postId) {
     return `${path}?post=${target.postId}`;
+  }
+  if (target && target.type === "bookmark" && target.draft) {
+    return `${path}?layerLink=${target.id}`;
   }
   return path;
 }
