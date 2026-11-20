@@ -44,10 +44,11 @@ function PreviewThumbnail({
     setBroken(false);
   }, [imageId]);
   const src = imageSrc(imageId);
-  // A client thumbnail is a stand-in, not the finished screenshot. Keep the
-  // same rendering sheen layer links use until the full image is on screen.
-  const showSheen =
-    !failed && !broken && (pending || (Boolean(src) && !loaded));
+  // `pending` means the screenshot service has not produced an image yet.
+  // Once that image exists, the card is only waiting for the browser to
+  // download it, which is a spinner and not another render.
+  const rendering = !failed && !broken && pending && !src;
+  const fetching = !failed && !broken && Boolean(src) && !loaded;
   const showUnavailable = (failed && !src) || (broken && !standIn);
   return (
     <div className="relative aspect-[3/2] w-full overflow-hidden bg-primary-700">
@@ -57,13 +58,13 @@ function PreviewThumbnail({
           alt=""
           src={standIn}
           className={
-            showSheen
+            rendering
               ? "absolute inset-x-0 top-0 h-[116%] w-full origin-center scale-105 object-cover object-top blur-xl transition-[filter,transform] duration-700"
               : "absolute inset-x-0 top-0 h-[107%] w-full object-cover object-top"
           }
         />
       )}
-      {showSheen && (
+      {rendering && (
         <>
           {standIn && <div className="absolute inset-0 bg-slate-950/45" />}
           <motion.div
@@ -79,6 +80,11 @@ function PreviewThumbnail({
             </span>
           </div>
         </>
+      )}
+      {fetching && (
+        <div className="relative flex h-full items-center justify-center">
+          <Spinner color="white" large />
+        </div>
       )}
       {src && !broken && (
         <motion.img
