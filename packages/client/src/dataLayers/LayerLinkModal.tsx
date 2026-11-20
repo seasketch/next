@@ -298,12 +298,16 @@ export default function LayerLinkModal({
   stableId,
   bookmarkId,
   onClose,
+  replaceDraftRoute = true,
 }: {
   mode: "create" | "view";
   place?: "admin" | "published";
   stableId?: string;
   bookmarkId?: string;
   onClose: () => void;
+  // Opening details from the map should keep the visitor on the map. The
+  // pasted-link route still sends an admin from a draft link to the admin copy.
+  replaceDraftRoute?: boolean;
 }) {
   const { t } = useTranslation("mapBookmarks");
   const history = useHistory();
@@ -504,6 +508,7 @@ export default function LayerLinkModal({
   const sessionIsAdmin = Boolean(metadata.data?.project?.sessionIsAdmin);
   useEffect(() => {
     if (
+      replaceDraftRoute &&
       place === "published" &&
       bookmark?.subjectIsDraft &&
       sessionIsAdmin &&
@@ -511,7 +516,15 @@ export default function LayerLinkModal({
     ) {
       history.replace(layerLinkPath(slug, bookmark.id, true));
     }
-  }, [place, bookmark?.subjectIsDraft, bookmark?.id, sessionIsAdmin, history, slug]);
+  }, [
+    replaceDraftRoute,
+    place,
+    bookmark?.subjectIsDraft,
+    bookmark?.id,
+    sessionIsAdmin,
+    history,
+    slug,
+  ]);
   const supportEmail =
     metadata.data?.project?.supportEmail ||
     metadata.data?.projectPublicDetails?.supportEmail ||
@@ -640,6 +653,13 @@ export default function LayerLinkModal({
         </span>
       }
     >
+          {mode === "create" && url && (
+            <p className="mb-4 text-sm leading-relaxed text-slate-600">
+              <Trans ns="mapBookmarks">
+                Share a link to this layer by using the URL below.
+              </Trans>
+            </p>
+          )}
           {createError && (
             <p className="mb-3 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-800">
               {createError}
