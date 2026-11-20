@@ -665,9 +665,10 @@ test.describe("survey authoring @admin @surveys", () => {
     await selectNode(page, interviewQuestion);
     await addRule(page, "Add conditions");
     const declineRule = ruleCard(page, 0);
-    // A new yes/no condition has no answer until the admin picks one (#726, #756).
+    // Picking No stores false. Respondents who answer No must follow it (#726, #756).
     const declineValue = declineRule.getByRole("combobox").nth(1);
-    await expect(declineValue).toHaveValue("NULL");
+    await expect(declineValue).toHaveValue("FALSE");
+    await chooseOption(declineValue, "Yes");
     await chooseOption(declineValue, "No");
     await chooseJump(declineRule.getByRole("combobox").nth(0), "Save Screen", "UpdateFormLogicRule");
 
