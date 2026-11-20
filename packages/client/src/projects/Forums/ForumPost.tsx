@@ -254,11 +254,13 @@ export default function ForumPost({
             profile={post.authorProfile}
             dateString={post.createdAt}
             firstPostInTopic={isFirstPostInTopic}
-            link={`${
-              window.location.origin
-            }/${getSlug()}/app/forums/${forumId}/${post.topicId}#post-${
-              post.id
-            }`}
+            link={
+              // The post id is in the query because link-preview crawlers
+              // never receive the #post- fragment. The hash still scrolls.
+              `${window.location.origin}/${getSlug()}/app/forums/${forumId}/${
+                post.topicId
+              }?post=${post.id}#post-${post.id}`
+            }
           />
         )}
       </div>

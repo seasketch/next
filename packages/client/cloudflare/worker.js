@@ -15,6 +15,7 @@ import {
   injectPreview,
   loadSharePreview,
   previewImageUrl,
+  previewPageUrl,
   shareTarget,
 } from "./sharePreview.js";
 
@@ -82,19 +83,23 @@ export default {
 
     if (shouldSpaFallback(url.pathname)) {
       const indexUrl = new URL("/index.html", url.origin);
-      const target = shareTarget(url.pathname);
+      const target = shareTarget(url.pathname, url.search);
       if (request.method === "GET" && target) {
         try {
           const preview = await loadSharePreview(env.GRAPHQL_ENDPOINT, target);
           if (preview) {
             const index = await env.ASSETS.fetch(indexUrl);
             if (index.ok) {
-              const pageUrl = `${url.origin}${url.pathname.replace(/\/$/, "")}`;
+              const pageUrl = previewPageUrl(url.origin, url.pathname, target);
               const html = injectPreview(
                 await index.text(),
                 preview,
                 pageUrl,
-                previewImageUrl(env.CLOUDFLARE_IMAGES_ENDPOINT, preview.imageId)
+                preview.imageUrl ||
+                  previewImageUrl(
+                    env.CLOUDFLARE_IMAGES_ENDPOINT,
+                    preview.imageId
+                  )
               );
               return new Response(html, {
                 status: 200,

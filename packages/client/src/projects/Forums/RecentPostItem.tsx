@@ -15,7 +15,7 @@ export default function RecentPostItem({ post }: { post: RecentPostFragment }) {
     <Link
       to={`/${getSlug()}/app/forums/${post.topic!.forum!.id}/${
         post.topicId
-      }#post-${post.id}`}
+      }?post=${post.id}#post-${post.id}`}
       className="flex items-start"
     >
       <div className="flex-none w-16 p-2 -ml-2 mr-1 h-16 text-sm flex-col items-center justify-center text-center">
