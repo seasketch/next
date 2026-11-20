@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useContext } from "react";
-import { useParams, NavLink, Redirect, useHistory, useLocation } from "react-router-dom";
+import { useParams, NavLink, useHistory } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { ProfileStatusButton } from "../header/ProfileStatusButton";
 import { Trans } from "react-i18next";
@@ -41,14 +41,14 @@ export default function AdminApp() {
   const { data, error } = useCurrentProjectMetadata();
   const { alert } = useDialog();
   const history = useHistory();
-  const location = useLocation();
   const { t } = useTranslation("admin");
-  const layerLinkId = new URLSearchParams(location.search).get("layerLink");
+  const { isAuthenticated, isLoading: authLoading } = useAuth0();
   const sessionIsAdmin = data?.project?.sessionIsAdmin === true;
 
   useEffect(() => {
-    // A draft layer link should show the access gate, not the dashboard alert.
-    if (layerLinkId && !sessionIsAdmin) {
+    // The access gate covers everyone who is not an administrator. The join
+    // prompt is only for an administrator who has not shared a profile.
+    if (authLoading || !isAuthenticated || !sessionIsAdmin) {
       return;
     }
     if (
@@ -67,7 +67,14 @@ export default function AdminApp() {
       });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [data?.project?.sessionParticipationStatus, alert, slug, layerLinkId, sessionIsAdmin]);
+  }, [
+    data?.project?.sessionParticipationStatus,
+    alert,
+    slug,
+    sessionIsAdmin,
+    isAuthenticated,
+    authLoading,
+  ]);
 
   const sections: Section[] = [
     {
@@ -318,22 +325,18 @@ export default function AdminApp() {
     [window.location.pathname]
   );
 
-  if (layerLinkId && !sessionIsAdmin) {
-    // Hold the admin pages until we know who this is. Mounting them first
-    // fires admin queries, shows an error, and the redirect below sends the
-    // visitor to the project homepage.
-    if (!data && !error) {
-      return (
-        <div className="flex h-screen w-full items-center justify-center">
-          <Spinner large />
-        </div>
-      );
-    }
-    return <ProjectAccessGate admin />;
+  // Hold every admin page until we know who this is. Mounting them first
+  // fires admin queries and shows an error. A signed-out or unpermitted
+  // visitor stays on this URL and sees the project access gate.
+  if (authLoading || (isAuthenticated && !data && !error)) {
+    return (
+      <div className="flex h-screen w-full items-center justify-center">
+        <Spinner large />
+      </div>
+    );
   }
-
-  if (data && data.project?.sessionIsAdmin === false) {
-    return <Redirect to={`/${slug}`} />;
+  if (!isAuthenticated || !sessionIsAdmin) {
+    return <ProjectAccessGate admin />;
   }
 
   return (

@@ -1,6 +1,6 @@
 /* eslint-disable i18next/no-literal-string */
 import { render, screen, waitFor } from "@testing-library/react";
-import { signInReturnTo } from "./ProjectAccessGate";
+import { adminAreaUnlocked, signInReturnTo } from "./ProjectAccessGate";
 import { useAuth0 } from "@auth0/auth0-react";
 import {
   AccessGranted,
@@ -36,6 +36,18 @@ test("sign-in returns to the same path and query", () => {
     })
   ).toBe(
     "/mpatt/admin/data?layerLink=a08be40c-ee04-45c8-9288-8c7e3a55a7e3"
+  );
+});
+
+test("a cached admin flag does not unlock the admin area after sign-out", () => {
+  expect(adminAreaUnlocked(true, true, { isAuthenticated: false })).toBe(false);
+  expect(
+    adminAreaUnlocked(true, true, { isLoading: true, isAuthenticated: false })
+  ).toBe(true);
+  expect(adminAreaUnlocked(true, true, { isAuthenticated: true })).toBe(true);
+  expect(adminAreaUnlocked(true, false, { isAuthenticated: true })).toBe(false);
+  expect(adminAreaUnlocked(undefined, false, { isAuthenticated: false })).toBe(
+    true
   );
 });
 

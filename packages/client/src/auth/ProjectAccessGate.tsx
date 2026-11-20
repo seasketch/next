@@ -32,9 +32,25 @@ import {
 const gateActionClass = "w-full shrink-0 sm:w-auto";
 const gateActionButtonClass = "w-full justify-center whitespace-nowrap sm:w-auto";
 
-/** Keep the query string so a layer-link visit survives sign-in. */
+/** Keep the query string so an admin URL survives sign-in. */
 export function signInReturnTo(location: { pathname: string; search: string }) {
   return `${location.pathname}${location.search}`;
+}
+
+/**
+ * An admin screen stays open only for a session that is still signed in and
+ * still an administrator. Cached `sessionIsAdmin` from before sign-out does
+ * not count. Public project screens do not use this check.
+ */
+export function adminAreaUnlocked(
+  admin: boolean | undefined,
+  sessionIsAdmin: boolean | null | undefined,
+  auth: { isLoading?: boolean; isAuthenticated?: boolean }
+) {
+  if (!admin) {
+    return true;
+  }
+  return Boolean(sessionIsAdmin && (auth.isLoading || auth.isAuthenticated));
 }
 
 function SupportEmailLink({
@@ -159,7 +175,9 @@ export const ProjectAccessGate: React.FunctionComponent<{ admin?: boolean }> = (
       </div>
     );
   } else if ((status as ProjectAccessStatus) === ProjectAccessStatus.Granted) {
-    if (!props.admin || data?.project?.sessionIsAdmin) {
+    if (
+      adminAreaUnlocked(props.admin, data?.project?.sessionIsAdmin, auth0)
+    ) {
       return <div>{props.children}</div>;
     } else {
       icon = lockedIcon;
