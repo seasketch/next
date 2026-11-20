@@ -35898,7 +35898,7 @@ CREATE POLICY ai_data_analyst_notes_admin ON public.ai_data_analyst_notes TO pos
 -- Name: ai_data_analyst_notes ai_data_analyst_notes_select; Type: POLICY; Schema: public; Owner: -
 --
 
-CREATE POLICY ai_data_analyst_notes_select ON public.ai_data_analyst_notes USING (public.session_is_admin(project_id));
+CREATE POLICY ai_data_analyst_notes_select ON public.ai_data_analyst_notes FOR SELECT USING ((public.session_is_admin(project_id) OR public.session_admin_uses_data_source(data_source_id)));
 
 
 --
