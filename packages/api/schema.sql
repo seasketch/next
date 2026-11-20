@@ -645,12 +645,35 @@ CREATE TYPE public.invite_stats AS (
 
 
 --
+-- Name: map_bookmark_creator; Type: TYPE; Schema: public; Owner: -
+--
+
+CREATE TYPE public.map_bookmark_creator AS (
+	fullname text,
+	nickname text,
+	picture text
+);
+
+
+--
+-- Name: map_bookmark_forum_topic; Type: TYPE; Schema: public; Owner: -
+--
+
+CREATE TYPE public.map_bookmark_forum_topic AS (
+	topic_id integer,
+	forum_id integer,
+	title text
+);
+
+
+--
 -- Name: map_bookmark_kind; Type: TYPE; Schema: public; Owner: -
 --
 
 CREATE TYPE public.map_bookmark_kind AS ENUM (
     'forum',
-    'layer_link'
+    'layer_link',
+    'map_view'
 );
 
 
@@ -5196,14 +5219,17 @@ CREATE FUNCTION public.assign_post_id_to_attached_file_uploads(body jsonb, post_
 CREATE FUNCTION public.assign_post_id_to_attached_map_bookmarks(body jsonb, post_id integer) RETURNS boolean
     LANGUAGE plpgsql SECURITY DEFINER
     AS $$
-    declare
-      map_bookmark_ids text[];
-    begin
-      select collect_map_bookmark_ids_from_prosemirror_body(body) into map_bookmark_ids;
-      update map_bookmarks set post_id = assign_post_id_to_attached_map_bookmarks.post_id where id::text = any(map_bookmark_ids);
-      return true;
-    end;
-  $$;
+declare
+  map_bookmark_ids text[];
+begin
+  select collect_map_bookmark_ids_from_prosemirror_body(body) into map_bookmark_ids;
+  update map_bookmarks
+  set post_id = assign_post_id_to_attached_map_bookmarks.post_id
+  where id::text = any(map_bookmark_ids)
+    and kind = 'forum';
+  return true;
+end;
+$$;
 
 
 --
@@ -6539,7 +6565,7 @@ COMMENT ON COLUMN public.map_bookmarks.data_table_states IS 'JSON map of TOC sta
 -- Name: COLUMN map_bookmarks.kind; Type: COMMENT; Schema: public; Owner: -
 --
 
-COMMENT ON COLUMN public.map_bookmarks.kind IS 'forum rows are map views attached to forum posts. layer_link rows are the shareable link for one overlay.';
+COMMENT ON COLUMN public.map_bookmarks.kind IS 'forum rows are map views attached to forum posts. layer_link rows are the shareable link for one overlay. map_view rows are shareable views of the whole map and are not attached to a post.';
 
 
 --
@@ -10629,6 +10655,78 @@ begin
   end if;
 end;
 $$;
+
+
+--
+-- Name: create_map_view_bookmark(text, jsonb, text[], integer, jsonb, jsonb, integer[], jsonb, text, jsonb, text, jsonb); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.create_map_view_bookmark(slug text, style jsonb, "visibleDataLayers" text[], "selectedBasemap" integer, "basemapOptionalLayerStates" jsonb, "cameraOptions" jsonb, "mapDimensions" integer[], "sidebarState" jsonb, "basemapName" text, "layerNames" jsonb, "clientGeneratedThumbnail" text DEFAULT NULL::text, "dataTableStates" jsonb DEFAULT '{}'::jsonb) RETURNS public.map_bookmarks
+    LANGUAGE plpgsql SECURITY DEFINER
+    SET search_path TO 'public', 'pg_temp'
+    AS $$
+declare
+  bookmark public.map_bookmarks;
+  pid int;
+  uid int;
+begin
+  select id into pid from projects where projects.slug = create_map_view_bookmark.slug;
+  uid := nullif(current_setting('session.user_id', true), '')::int;
+  if pid is null or uid is null or session_has_project_access(pid) is not true then
+    raise exception 'Permission denied';
+  end if;
+
+  insert into map_bookmarks (
+    project_id,
+    user_id,
+    is_public,
+    style,
+    visible_data_layers,
+    selected_basemap,
+    basemap_optional_layer_states,
+    camera_options,
+    map_dimensions,
+    visible_sketches,
+    sidebar_state,
+    basemap_name,
+    layer_names,
+    sketch_names,
+    client_generated_thumbnail,
+    data_table_states,
+    kind
+  ) values (
+    pid,
+    uid,
+    true,
+    strip_map_view_style(create_map_view_bookmark.style),
+    coalesce("visibleDataLayers", '{}'::text[]),
+    "selectedBasemap",
+    coalesce("basemapOptionalLayerStates", '{}'::jsonb),
+    "cameraOptions",
+    "mapDimensions",
+    '{}'::int[],
+    coalesce(
+      "sidebarState",
+      '{"open": false, "width": 0, "isSmall": false}'::jsonb
+    ),
+    "basemapName",
+    coalesce("layerNames", '{}'::jsonb),
+    '{}'::jsonb,
+    "clientGeneratedThumbnail",
+    coalesce("dataTableStates", '{}'::jsonb),
+    'map_view'::text::public.map_bookmark_kind
+  ) returning * into bookmark;
+
+  return bookmark;
+end;
+$$;
+
+
+--
+-- Name: FUNCTION create_map_view_bookmark(slug text, style jsonb, "visibleDataLayers" text[], "selectedBasemap" integer, "basemapOptionalLayerStates" jsonb, "cameraOptions" jsonb, "mapDimensions" integer[], "sidebarState" jsonb, "basemapName" text, "layerNames" jsonb, "clientGeneratedThumbnail" text, "dataTableStates" jsonb); Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON FUNCTION public.create_map_view_bookmark(slug text, style jsonb, "visibleDataLayers" text[], "selectedBasemap" integer, "basemapOptionalLayerStates" jsonb, "cameraOptions" jsonb, "mapDimensions" integer[], "sidebarState" jsonb, "basemapName" text, "layerNames" jsonb, "clientGeneratedThumbnail" text, "dataTableStates" jsonb) IS 'Create a shareable bookmark of the current map. Sketches and unsaved drawings are omitted. The row is not attached to a forum post.';
 
 
 --
@@ -17170,6 +17268,48 @@ CREATE FUNCTION public.make_url_source_metadata(title text, url text) RETURNS js
 --
 
 COMMENT ON FUNCTION public.make_url_source_metadata(title text, url text) IS '@omit';
+
+
+--
+-- Name: map_bookmarks_creator(public.map_bookmarks); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.map_bookmarks_creator(bookmark public.map_bookmarks) RETURNS public.map_bookmark_creator
+    LANGUAGE sql STABLE SECURITY DEFINER
+    SET search_path TO 'public', 'pg_temp'
+    AS $$
+  select p.fullname, p.nickname, p.picture
+  from user_profiles p
+  where p.user_id = bookmark.user_id;
+$$;
+
+
+--
+-- Name: FUNCTION map_bookmarks_creator(bookmark public.map_bookmarks); Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON FUNCTION public.map_bookmarks_creator(bookmark public.map_bookmarks) IS 'Name and picture of the person who saved this bookmark.';
+
+
+--
+-- Name: map_bookmarks_forum_topic(public.map_bookmarks); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.map_bookmarks_forum_topic(bookmark public.map_bookmarks) RETURNS public.map_bookmark_forum_topic
+    LANGUAGE sql STABLE
+    AS $$
+  select t.id, t.forum_id, t.title
+  from public.posts p
+  join public.topics t on t.id = p.topic_id
+  where p.id = bookmark.post_id;
+$$;
+
+
+--
+-- Name: FUNCTION map_bookmarks_forum_topic(bookmark public.map_bookmarks); Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON FUNCTION public.map_bookmarks_forum_topic(bookmark public.map_bookmarks) IS 'Forum topic this bookmark was posted in, when the current user can read that topic.';
 
 
 --
@@ -25698,6 +25838,84 @@ CREATE FUNCTION public.spatial_metric_to_json(sm public.spatial_metrics) RETURNS
     'dependencyHash', sm.dependency_hash
   );
 $$;
+
+
+--
+-- Name: strip_map_view_style(jsonb); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.strip_map_view_style(style jsonb) RETURNS jsonb
+    LANGUAGE plpgsql IMMUTABLE
+    AS $$
+declare
+  layers jsonb := '[]'::jsonb;
+  layer jsonb;
+  sources jsonb := '{}'::jsonb;
+  key text;
+  source_name text;
+  layer_id text;
+  keep_sources text[] := array[]::text[];
+  original_sources jsonb;
+begin
+  if style is null or jsonb_typeof(style) <> 'object' then
+    return '{}'::jsonb;
+  end if;
+
+  for layer in
+    select value
+    from jsonb_array_elements(coalesce(style->'layers', '[]'::jsonb))
+  loop
+    layer_id := coalesce(layer->>'id', '');
+    source_name := coalesce(layer->>'source', '');
+    if layer_id like 'gl-draw%'
+       or layer_id like 'filter-layer-%'
+       or layer_id like 'sketch-%'
+       or layer_id = 'all-cells'
+       or source_name like 'sketch-%'
+       or source_name like 'mapbox-gl-draw%'
+       or source_name = 'all-cells'
+    then
+      continue;
+    end if;
+    layers := layers || jsonb_build_array(layer);
+    if source_name <> '' then
+      keep_sources := array_append(keep_sources, source_name);
+    end if;
+  end loop;
+
+  if jsonb_typeof(style->'terrain') = 'object' then
+    source_name := coalesce(style->'terrain'->>'source', '');
+    if source_name <> '' then
+      keep_sources := array_append(keep_sources, source_name);
+    end if;
+  end if;
+
+  original_sources := coalesce(style->'sources', '{}'::jsonb);
+  if jsonb_typeof(original_sources) = 'object' then
+    for key in
+      select jsonb_object_keys(original_sources)
+    loop
+      if key like 'sketch-%'
+         or key like 'mapbox-gl-draw%'
+         or key = 'all-cells'
+         or not (key = any(keep_sources))
+      then
+        continue;
+      end if;
+      sources := sources || jsonb_build_object(key, original_sources->key);
+    end loop;
+  end if;
+
+  return style || jsonb_build_object('layers', layers, 'sources', sources);
+end;
+$$;
+
+
+--
+-- Name: FUNCTION strip_map_view_style(style jsonb); Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON FUNCTION public.strip_map_view_style(style jsonb) IS '@omit';
 
 
 --
@@ -40424,6 +40642,14 @@ GRANT ALL ON FUNCTION public.create_map_bookmark(slug text, "isPublic" boolean, 
 
 
 --
+-- Name: FUNCTION create_map_view_bookmark(slug text, style jsonb, "visibleDataLayers" text[], "selectedBasemap" integer, "basemapOptionalLayerStates" jsonb, "cameraOptions" jsonb, "mapDimensions" integer[], "sidebarState" jsonb, "basemapName" text, "layerNames" jsonb, "clientGeneratedThumbnail" text, "dataTableStates" jsonb); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.create_map_view_bookmark(slug text, style jsonb, "visibleDataLayers" text[], "selectedBasemap" integer, "basemapOptionalLayerStates" jsonb, "cameraOptions" jsonb, "mapDimensions" integer[], "sidebarState" jsonb, "basemapName" text, "layerNames" jsonb, "clientGeneratedThumbnail" text, "dataTableStates" jsonb) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.create_map_view_bookmark(slug text, style jsonb, "visibleDataLayers" text[], "selectedBasemap" integer, "basemapOptionalLayerStates" jsonb, "cameraOptions" jsonb, "mapDimensions" integer[], "sidebarState" jsonb, "basemapName" text, "layerNames" jsonb, "clientGeneratedThumbnail" text, "dataTableStates" jsonb) TO seasketch_user;
+
+
+--
 -- Name: TABLE data_upload_outputs; Type: ACL; Schema: public; Owner: -
 --
 
@@ -43253,6 +43479,24 @@ GRANT ALL ON FUNCTION public.make_survey(name text, project_id integer, template
 
 REVOKE ALL ON FUNCTION public.make_url_source_metadata(title text, url text) FROM PUBLIC;
 GRANT ALL ON FUNCTION public.make_url_source_metadata(title text, url text) TO anon;
+
+
+--
+-- Name: FUNCTION map_bookmarks_creator(bookmark public.map_bookmarks); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.map_bookmarks_creator(bookmark public.map_bookmarks) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.map_bookmarks_creator(bookmark public.map_bookmarks) TO seasketch_user;
+GRANT ALL ON FUNCTION public.map_bookmarks_creator(bookmark public.map_bookmarks) TO anon;
+
+
+--
+-- Name: FUNCTION map_bookmarks_forum_topic(bookmark public.map_bookmarks); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.map_bookmarks_forum_topic(bookmark public.map_bookmarks) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.map_bookmarks_forum_topic(bookmark public.map_bookmarks) TO seasketch_user;
+GRANT ALL ON FUNCTION public.map_bookmarks_forum_topic(bookmark public.map_bookmarks) TO anon;
 
 
 --
@@ -48533,6 +48777,13 @@ REVOKE ALL ON FUNCTION public.st_zmflag(public.geometry) FROM PUBLIC;
 --
 
 REVOKE ALL ON FUNCTION public.st_zmin(public.box3d) FROM PUBLIC;
+
+
+--
+-- Name: FUNCTION strip_map_view_style(style jsonb); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.strip_map_view_style(style jsonb) FROM PUBLIC;
 
 
 --

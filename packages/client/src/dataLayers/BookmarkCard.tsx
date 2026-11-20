@@ -2,6 +2,7 @@ import {
   ArrowsExpandIcon,
   ChevronUpIcon,
   DownloadIcon,
+  MapIcon,
   XIcon,
 } from "@heroicons/react/outline";
 import { motion } from "framer-motion";
@@ -116,6 +117,8 @@ export default function BookmarkCard({
   summary,
   label,
   onDownload,
+  onDisplay,
+  displayDisabled,
 }: {
   labelledBy: string;
   imageId?: string | null;
@@ -130,6 +133,8 @@ export default function BookmarkCard({
   summary?: ReactNode;
   label?: string;
   onDownload?: () => void;
+  onDisplay?: () => void;
+  displayDisabled?: boolean;
 }) {
   const { t } = useTranslation("mapBookmarks");
   const [expanded, setExpanded] = useState(false);
@@ -294,6 +299,17 @@ export default function BookmarkCard({
                 </button>
               )}
             </div>
+          )}
+          {onDisplay && (
+            <button
+              type="button"
+              disabled={displayDisabled}
+              className="absolute bottom-3 right-3 inline-flex items-center gap-2 rounded-full bg-white px-4 py-2.5 text-sm font-semibold text-slate-900 shadow-xl ring-1 ring-black/10 hover:bg-slate-50 disabled:opacity-60"
+              onClick={onDisplay}
+            >
+              <MapIcon className="h-4 w-4 text-primary-600" />
+              <Trans ns="mapBookmarks">Display on the map</Trans>
+            </button>
           )}
           <button
             type="button"

@@ -1,0 +1,35 @@
+mutation CreateMapViewBookmark(
+  $slug: String!
+  $style: JSON!
+  $visibleDataLayers: [String!]!
+  $selectedBasemap: Int!
+  $basemapOptionalLayerStates: JSON
+  $cameraOptions: JSON!
+  $mapDimensions: [Int!]!
+  $sidebarState: JSON
+  $basemapName: String!
+  $layerNames: JSON!
+  $clientGeneratedThumbnail: String
+  $dataTableStates: JSON
+) {
+  createMapViewBookmark(
+    input: {
+      slug: $slug
+      style: $style
+      visibleDataLayers: $visibleDataLayers
+      selectedBasemap: $selectedBasemap
+      basemapOptionalLayerStates: $basemapOptionalLayerStates
+      cameraOptions: $cameraOptions
+      mapDimensions: $mapDimensions
+      sidebarState: $sidebarState
+      basemapName: $basemapName
+      layerNames: $layerNames
+      clientGeneratedThumbnail: $clientGeneratedThumbnail
+      dataTableStates: $dataTableStates
+    }
+  ) {
+    mapBookmark {
+      ...MapBookmarkDetails
+    }
+  }
+}

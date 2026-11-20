@@ -250,6 +250,16 @@ fragment MapBookmarkDetails on MapBookmark {
   kind
   subjectStableId
   subjectIsDraft
+  creator {
+    fullname
+    nickname
+    picture
+  }
+  forumTopic {
+    topicId
+    forumId
+    title
+  }
 }
 
 query GetBookmark($id: UUID!) {
