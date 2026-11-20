@@ -262,7 +262,7 @@ function getNextFormElement<
 
     // Evaluate current rules to see if any pass and redirect the flow
     for (const rule of currentRules) {
-      if (evaluateRule(rule, answers)) {
+      if (evaluateRule(rule, answers, sortedFormElements)) {
         // If passes, find the form element specified that should be skipped to
         const next = sortedFormElements.find((el) => el.id === rule.jumpToId!);
         if (!next) {
@@ -288,11 +288,16 @@ function getNextFormElement<
 
 function evaluateRule(
   rule: Pick<SurveyAppRuleFragment, "conditions" | "booleanOperator">,
-  answers: { [formElementId: number]: any }
+  answers: { [formElementId: number]: any },
+  formElements: Pick<SurveyAppFormElementFragment, "id" | "typeId">[]
 ): boolean {
   for (const condition of rule.conditions || []) {
     const answer = answers[condition.subjectId];
-    if (evaluateCondition(condition.operator, condition.value, answer)) {
+    if (
+      isYesNoEqualsNo(condition, formElements)
+        ? answer !== true
+        : evaluateCondition(condition.operator, condition.value, answer)
+    ) {
       // if OR, early return true if passing.
       if (rule.booleanOperator === FormLogicOperator.Or) {
         return true;
@@ -307,6 +312,24 @@ function evaluateRule(
   // If AND, all have passed by here
   // If Or, all have failed
   return rule.booleanOperator === FormLogicOperator.And;
+}
+
+/**
+ * A yes/no "= No" condition matches every answer other than Yes, including an
+ * unanswered question. The logic editor only offers Yes and No, and displays a
+ * condition with no stored value as No, so null and false both mean No.
+ * Published surveys rely on null conditions matching unanswered questions.
+ */
+function isYesNoEqualsNo(
+  condition: { subjectId: number; operator: FieldRuleOperator; value?: any },
+  formElements: Pick<SurveyAppFormElementFragment, "id" | "typeId">[]
+) {
+  return (
+    condition.operator === FieldRuleOperator.Equal &&
+    condition.value !== true &&
+    formElements.find((el) => el.id === condition.subjectId)?.typeId ===
+      "YesNo"
+  );
 }
 
 function evaluateCondition(

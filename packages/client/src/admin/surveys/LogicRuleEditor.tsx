@@ -222,7 +222,7 @@ export default function LogicRuleEditor({
       <div>
         <p className="p-2 text-sm">
           <Trans ns="admin:surveys">
-            Survey advances from this questions to...
+            Survey advances from this question to...
           </Trans>
         </p>
         <div className="p-2 w-full">

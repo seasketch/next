@@ -196,7 +196,11 @@ function SurveyApp() {
             id !== "groupParticipantCount"
           ) {
             const n = parseInt(id);
-            if (!isNaN(n) && n in responseState && responseState[n].value) {
+            if (
+              !isNaN(n) &&
+              n in responseState &&
+              (responseState[n].value || responseState[n].value === false)
+            ) {
               answers[n] = responseState[n].value;
             }
           }
@@ -394,7 +398,11 @@ function SurveyApp() {
           id !== "groupParticipantCount"
         ) {
           const n = parseInt(id);
-          if (!isNaN(n) && n in responseState && responseState[n].value) {
+          if (
+            !isNaN(n) &&
+            n in responseState &&
+            (responseState[n].value || responseState[n].value === false)
+          ) {
             answers[n] = responseState[n].value;
           }
         }

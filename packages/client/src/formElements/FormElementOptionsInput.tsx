@@ -163,7 +163,7 @@ export default function FormElementOptionsInput({
   );
 }
 
-function toText(options: FormElementOption[]): string {
+export function toText(options: FormElementOption[]): string {
   return Papa.unparse(
     options.map((option) =>
       option.value
@@ -175,13 +175,8 @@ function toText(options: FormElementOption[]): string {
             ]
           : [option.label, option.value]
         : [option.label]
-    ),
-    {
-      // using the Mongolian vowel separator as a quote character, as it
-      // is unlikely to be used in user-generated content
-      quoteChar: "\u180E",
-    }
-  ).replace(/\u180E/g, "");
+    )
+  );
 }
 
 /** Curly double quotes (U+201C/U+201D) from Word, Google Docs, etc. — not valid CSV delimiters for PapaParse. */
@@ -199,7 +194,7 @@ function normalizeTypographyQuotesForCsv(input: string): {
   return { normalized, hadSmartDoubleQuotes: true };
 }
 
-function fromText(text: string, t: (key: string) => string) {
+export function fromText(text: string, t: (key: string) => string) {
   let options: FormElementOption[] = [];
   let errors: string[] = [];
   let warnings: string[] = [];
