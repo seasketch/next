@@ -404,6 +404,38 @@ describe("Sketch Classes tied to FormElements", () => {
       }
     );
   });
+  test("survey sketch classes can change geometry until a sketch is saved", async () => {
+    await createForm(
+      async (conn, formId, surveyId, projectId, adminId) => {
+        await createSession(conn, adminId, true, false, projectId);
+        const elementId = await conn.oneFirst<number>(
+          sql`insert into form_elements (form_id, type_id, body) values (${formId}, 'SpatialAccessPriorityInput', '{}'::jsonb) returning id`
+        );
+        const sketchClassId = await conn.oneFirst<number>(
+          sql`select id from sketch_classes where form_element_id = ${elementId}`
+        );
+        await conn.any(
+          sql`update sketch_classes set geometry_type = 'POINT' where id = ${sketchClassId}`
+        );
+        const geometryType = await conn.oneFirst<string>(
+          sql`select geometry_type from sketch_classes where id = ${sketchClassId}`
+        );
+        expect(geometryType).toBe("POINT");
+        const point = JSON.stringify({
+          type: "Point",
+          coordinates: [0, 0],
+        });
+        await conn.any(
+          sql`insert into sketches (user_id, sketch_class_id, name, user_geom, form_element_id) values (${adminId}, ${sketchClassId}, 'landing site', st_geomfromgeojson(${point}), ${elementId})`
+        );
+        await expect(
+          conn.any(
+            sql`update sketch_classes set geometry_type = 'POLYGON' where id = ${sketchClassId}`
+          )
+        ).rejects.toThrow(/sketches have been collected/i);
+      }
+    );
+  });
   test("survey sketch classes are deleted along with parent form element", async () => {
     await createForm(
       async (conn, formId, surveyId, projectId, adminId, userIds) => {

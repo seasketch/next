@@ -25963,6 +25963,7 @@ export type FormElementFullDetailsFragment = (
   { __typename?: 'FormElement' }
   & { sketchClass?: Maybe<(
     { __typename?: 'SketchClass' }
+    & Pick<SketchClass, 'sketchCount'>
     & SketchClassDetailsFragment
   )> }
   & FormElementDetailsFragment
@@ -29606,6 +29607,7 @@ export const FormElementFullDetailsFragmentDoc = /*#__PURE__*/ gql`
   ...FormElementDetails
   sketchClass {
     ...SketchClassDetails
+    sketchCount
   }
 }
     ${FormElementDetailsFragmentDoc}

@@ -9,6 +9,7 @@ import {
 } from "../FormElement";
 import { FormElementOption } from "../FormElementOptionsInput";
 import OptionPicker from "../OptionPicker";
+import { proseText } from "./sapCopy";
 import {
   SpatialAccessPriorityProps,
   STAGES,
@@ -33,6 +34,7 @@ export default function ChooseSectors(props: ChooseSectorsProps) {
   return (
     <div className="mb-5">
       <FormElementBody
+        key={proseText(props.body)}
         required={props.isRequired}
         formElementId={props.id}
         isInput={true}
