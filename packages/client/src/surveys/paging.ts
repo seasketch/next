@@ -262,7 +262,7 @@ function getNextFormElement<
 
     // Evaluate current rules to see if any pass and redirect the flow
     for (const rule of currentRules) {
-      if (evaluateRule(rule, answers)) {
+      if (evaluateRule(rule, answers, sortedFormElements)) {
         // If passes, find the form element specified that should be skipped to
         const next = sortedFormElements.find((el) => el.id === rule.jumpToId!);
         if (!next) {
@@ -288,11 +288,16 @@ function getNextFormElement<
 
 function evaluateRule(
   rule: Pick<SurveyAppRuleFragment, "conditions" | "booleanOperator">,
-  answers: { [formElementId: number]: any }
+  answers: { [formElementId: number]: any },
+  formElements: Pick<SurveyAppFormElementFragment, "id" | "typeId">[]
 ): boolean {
   for (const condition of rule.conditions || []) {
     const answer = answers[condition.subjectId];
-    if (evaluateCondition(condition.operator, condition.value, answer)) {
+    if (
+      isUnsetYesNoEquality(condition, formElements)
+        ? answer !== true
+        : evaluateCondition(condition.operator, condition.value, answer)
+    ) {
       // if OR, early return true if passing.
       if (rule.booleanOperator === FormLogicOperator.Or) {
         return true;
@@ -307,6 +312,23 @@ function evaluateRule(
   // If AND, all have passed by here
   // If Or, all have failed
   return rule.booleanOperator === FormLogicOperator.And;
+}
+
+/**
+ * The logic editor displays a yes/no condition with no stored value as "No".
+ * Published surveys rely on those conditions matching every answer other than
+ * Yes, including an unanswered question.
+ */
+function isUnsetYesNoEquality(
+  condition: { subjectId: number; operator: FieldRuleOperator; value?: any },
+  formElements: Pick<SurveyAppFormElementFragment, "id" | "typeId">[]
+) {
+  return (
+    condition.operator === FieldRuleOperator.Equal &&
+    (condition.value === null || condition.value === undefined) &&
+    formElements.find((el) => el.id === condition.subjectId)?.typeId ===
+      "YesNo"
+  );
 }
 
 function evaluateCondition(

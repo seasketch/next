@@ -199,8 +199,7 @@ function SurveyApp() {
             if (
               !isNaN(n) &&
               n in responseState &&
-              responseState[n].value !== undefined &&
-              responseState[n].value !== null
+              (responseState[n].value || responseState[n].value === false)
             ) {
               answers[n] = responseState[n].value;
             }
@@ -402,8 +401,7 @@ function SurveyApp() {
           if (
             !isNaN(n) &&
             n in responseState &&
-            responseState[n].value !== undefined &&
-            responseState[n].value !== null
+            (responseState[n].value || responseState[n].value === false)
           ) {
             answers[n] = responseState[n].value;
           }
