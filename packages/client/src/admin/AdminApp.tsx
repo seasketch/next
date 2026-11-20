@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useContext } from "react";
-import { useParams, NavLink, Redirect, useHistory } from "react-router-dom";
+import { useParams, NavLink, Redirect, useHistory, useLocation } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { ProfileStatusButton } from "../header/ProfileStatusButton";
 import { Trans } from "react-i18next";
@@ -11,6 +11,7 @@ import { useAuth0 } from "@auth0/auth0-react";
 import useCurrentProjectMetadata from "../useCurrentProjectMetadata";
 import { ParticipationStatus } from "../generated/graphql";
 import useDialog from "../components/useDialog";
+import Spinner from "../components/Spinner";
 import { GraphqlQueryCacheContext } from "../offline/GraphqlQueryCache/useGraphqlQueryCache";
 import LanguageSelector from "../surveys/LanguageSelector";
 import TranslateIcon from "@heroicons/react/outline/TranslateIcon";
@@ -23,6 +24,7 @@ import {
   projectPathAfterSignOut,
   rememberSignOutReturn,
 } from "../auth/signOutReturn";
+import { ProjectAccessGate } from "../auth/ProjectAccessGate";
 
 interface Section {
   breadcrumb: string;
@@ -36,12 +38,19 @@ const iconClassName =
 
 export default function AdminApp() {
   const { slug } = useParams<{ slug: string }>();
-  const { data } = useCurrentProjectMetadata();
+  const { data, error } = useCurrentProjectMetadata();
   const { alert } = useDialog();
   const history = useHistory();
+  const location = useLocation();
   const { t } = useTranslation("admin");
+  const layerLinkId = new URLSearchParams(location.search).get("layerLink");
+  const sessionIsAdmin = data?.project?.sessionIsAdmin === true;
 
   useEffect(() => {
+    // A draft layer link should show the access gate, not the dashboard alert.
+    if (layerLinkId && !sessionIsAdmin) {
+      return;
+    }
     if (
       data?.project?.sessionParticipationStatus &&
       data?.project?.sessionParticipationStatus !==
@@ -52,12 +61,13 @@ export default function AdminApp() {
           "You must join the project and share a profile to enable admin privileges."
         ),
       }).then(() => {
+        const returnPath = `${window.location.pathname}${window.location.search}`;
         // eslint-disable-next-line i18next/no-literal-string
-        history.push(`/${slug}/join?redirectUrl=${window.location.pathname}`);
+        history.push(`/${slug}/join?redirectUrl=${encodeURIComponent(returnPath)}`);
       });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [data?.project?.sessionParticipationStatus, alert, slug]);
+  }, [data?.project?.sessionParticipationStatus, alert, slug, layerLinkId, sessionIsAdmin]);
 
   const sections: Section[] = [
     {
@@ -307,6 +317,20 @@ export default function AdminApp() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [window.location.pathname]
   );
+
+  if (layerLinkId && !sessionIsAdmin) {
+    // Hold the admin pages until we know who this is. Mounting them first
+    // fires admin queries, shows an error, and the redirect below sends the
+    // visitor to the project homepage.
+    if (!data && !error) {
+      return (
+        <div className="flex h-screen w-full items-center justify-center">
+          <Spinner large />
+        </div>
+      );
+    }
+    return <ProjectAccessGate admin />;
+  }
 
   if (data && data.project?.sessionIsAdmin === false) {
     return <Redirect to={`/${slug}`} />;

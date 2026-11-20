@@ -32,6 +32,11 @@ import {
 const gateActionClass = "w-full shrink-0 sm:w-auto";
 const gateActionButtonClass = "w-full justify-center whitespace-nowrap sm:w-auto";
 
+/** Keep the query string so a layer-link visit survives sign-in. */
+export function signInReturnTo(location: { pathname: string; search: string }) {
+  return `${location.pathname}${location.search}`;
+}
+
 function SupportEmailLink({
   email,
   projectName,
@@ -173,7 +178,7 @@ export const ProjectAccessGate: React.FunctionComponent<{ admin?: boolean }> = (
               onClick={() =>
                 auth0.loginWithRedirect({
                   appState: {
-                    returnTo: window.location.pathname,
+                    returnTo: signInReturnTo(window.location),
                   },
                   authorizationParams: {
                     prompt: "login",
@@ -404,7 +409,7 @@ export const ProjectAccessGate: React.FunctionComponent<{ admin?: boolean }> = (
                     prompt: "login",
                   },
                   appState: {
-                    returnTo: window.location.pathname,
+                    returnTo: signInReturnTo(window.location),
                   },
                 })
               }
@@ -426,7 +431,7 @@ export const ProjectAccessGate: React.FunctionComponent<{ admin?: boolean }> = (
                       screen_hint: "signup",
                     },
                     appState: {
-                      returnTo: window.location.pathname,
+                      returnTo: signInReturnTo(window.location),
                     },
                   })
                 }
