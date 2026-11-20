@@ -5,6 +5,8 @@
 -- them later through E2E_TEST_MODE. e2e|member is not a participant of
 -- demo-samoa. The forum journey joins that project in the browser, then
 -- leaves its reply in place. The next run restores a fresh snapshot.
+-- e2e|library-editor is not a sign-in account. data-library.sql uses that
+-- user as a throwaway superuser to publish and revise the library templates.
 --
 -- Replica role skips the user-insert trigger that would queue a verification
 -- email. These accounts are not people, and the snapshot should not contain jobs.
@@ -13,7 +15,8 @@ set session_replication_role = replica;
 
 insert into users (sub, canonical_email) values
   ('e2e|member', 'member@example.test'),
-  ('e2e|admin', 'admin@example.test')
+  ('e2e|admin', 'admin@example.test'),
+  ('e2e|library-editor', 'library-editor@example.test')
 on conflict (sub) do nothing;
 
 set session_replication_role = default;
@@ -23,7 +26,7 @@ set session_replication_role = default;
 insert into user_profiles (user_id)
 select u.id
 from users u
-where u.sub in ('e2e|member', 'e2e|admin')
+where u.sub in ('e2e|member', 'e2e|admin', 'e2e|library-editor')
   and not exists (
     select 1 from user_profiles up where up.user_id = u.id
   );

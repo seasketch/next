@@ -19,13 +19,19 @@ test.describe("demo-samoa project admin @admin", () => {
     const folder = page.getByRole("treeitem", { name: "Geography layers" });
     await expect(folder).toBeVisible();
     await folder.getByRole("button", { name: "Expand" }).click();
-    await expect(page.getByRole("treeitem", { name: "Exclusive Economic Zone" })).toBeVisible();
+    await expect(
+      page.getByRole("treeitem", { name: "Exclusive Economic Zone" })
+    ).toBeVisible();
     await expect(page.getByRole("treeitem", { name: "Land" })).toBeVisible();
-    await expect(page.getByRole("treeitem", { name: "Territorial Seas" })).toBeVisible();
+    await expect(
+      page.getByRole("treeitem", { name: "Territorial Seas" })
+    ).toBeVisible();
 
     await visibleNavLink(page, "Geography").click();
     await expect(page).toHaveURL(/\/demo-samoa\/admin\/geography/);
-    await expect(page.getByText("Exclusive Economic Zone").first()).toBeVisible();
+    await expect(
+      page.getByText("Exclusive Economic Zone").first()
+    ).toBeVisible();
     await expect(page.getByText("Territorial Seas").first()).toBeVisible();
     await expect(page.getByText("Offshore").first()).toBeVisible();
 
@@ -36,5 +42,33 @@ test.describe("demo-samoa project admin @admin", () => {
     await visibleNavLink(page, "Reports").click();
     await expect(page).toHaveURL(/\/demo-samoa\/admin\/reports/);
     await expect(visibleNavLink(page, "Default report")).toBeVisible();
+  });
+
+  test("a normal admin can choose a data-library polygon for a custom geography", async ({
+    page,
+    request,
+  }) => {
+    test.setTimeout(90_000);
+    await signIn(page, request, personas.admin);
+    await page.goto("/demo-samoa/admin/geography");
+    await page.getByRole("button", { name: "Create a New Geography" }).click();
+    await page.getByRole("button", { name: /Use a Custom Layer/ }).click();
+    await expect(
+      page.getByRole("heading", { name: "Choose a Polygon Layer" })
+    ).toBeVisible();
+    await expect(page.getByText("No valid polygon layers found")).toHaveCount(
+      0
+    );
+    await expect(page.getByText("more than one row returned")).toHaveCount(0);
+    await page.locator(".react-select").click();
+    await expect(
+      page.getByText("Exclusive Economic Zone (MultiPolygon)", { exact: true })
+    ).toBeVisible();
+    await expect(
+      page.getByText("Territorial Seas (MultiPolygon)", { exact: true })
+    ).toBeVisible();
+    await expect(
+      page.getByText("Land (MultiPolygon)", { exact: true })
+    ).toBeVisible();
   });
 });

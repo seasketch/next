@@ -312,3 +312,7 @@ begin
   perform create_sketch_class_from_template(pid, template_id);
 end
 $$;
+
+-- Publishing queues recordProjectActivity. Those jobs are not part of the
+-- snapshot. setup.sh queues what a fresh install needs.
+delete from graphile_worker.jobs;

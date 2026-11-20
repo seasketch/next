@@ -71,7 +71,7 @@ Intent: admins define what participants may digitize, which geography clips it, 
 
 Intent: clipping boundaries used by sketch preprocessing and by report widgets. Tag: `@geography`.
 
-1. Geography lists Exclusive Economic Zone, Territorial Seas, and Offshore on `demo-samoa`. *Covered: `tests/admin.spec.ts`.*
+1. Geography lists Exclusive Economic Zone, Territorial Seas, and Offshore on `demo-samoa`. A normal admin opening Use a Custom Layer sees Exclusive Economic Zone in Choose a Polygon Layer. *Covered: `tests/admin.spec.ts`.*
 2. The geography wizard creates an EEZ-based geography from a data-library template (filter to a Marine Regions id), optionally subtracts land, and the new geography appears in the list.
 3. An admin can draw or edit a custom clipping layer and save it.
 4. Sketch fragment status shows preprocessing progress after a clipping layer changes.

@@ -111,9 +111,9 @@ if [[ "$clipping_layers" != "6" ]]; then
   exit 1
 fi
 unresolved_clipping="$(psql_exec -d "$SOURCE_DB" -tAc \
-  "SELECT count(*) FROM project_geography g JOIN projects p ON p.id = g.project_id, LATERAL clipping_layers_for_geography(g.id) cl WHERE p.slug = 'demo-samoa' AND cl.object_key IS NULL")"
+  "SELECT count(*) FROM project_geography g JOIN projects p ON p.id = g.project_id, LATERAL clipping_layers_for_geography(g.id) cl WHERE p.slug = 'demo-samoa' AND cl.fgb_url IS NULL")"
 if [[ "$unresolved_clipping" != "0" ]]; then
-  echo "${unresolved_clipping} demo-samoa clipping layer(s) have no FlatGeobuf object key. Geography size metrics would fail." >&2
+  echo "${unresolved_clipping} demo-samoa clipping layer(s) have no FlatGeobuf URL. Geography size metrics would fail." >&2
   exit 1
 fi
 published_layers="$(psql_exec -d "$SOURCE_DB" -tAc \
@@ -142,15 +142,35 @@ if [[ "$maldives_clipping" != "2" ]]; then
   exit 1
 fi
 maldives_unresolved="$(psql_exec -d "$SOURCE_DB" -tAc \
-  "SELECT count(*) FROM project_geography g JOIN projects p ON p.id = g.project_id, LATERAL clipping_layers_for_geography(g.id) cl WHERE p.slug = 'demo-maldives' AND cl.object_key IS NULL")"
+  "SELECT count(*) FROM project_geography g JOIN projects p ON p.id = g.project_id, LATERAL clipping_layers_for_geography(g.id) cl WHERE p.slug = 'demo-maldives' AND cl.fgb_url IS NULL")"
 if [[ "$maldives_unresolved" != "0" ]]; then
-  echo "${maldives_unresolved} demo-maldives clipping layer(s) have no FlatGeobuf object key." >&2
+  echo "${maldives_unresolved} demo-maldives clipping layer(s) have no FlatGeobuf URL." >&2
   exit 1
 fi
 maldives_layers="$(psql_exec -d "$SOURCE_DB" -tAc \
   "SELECT count(*) FROM table_of_contents_items t JOIN projects p ON p.id = t.project_id WHERE p.slug = 'demo-maldives' AND t.is_draft = false AND t.is_folder = false")"
 if [[ "$maldives_layers" != "2" ]]; then
   echo "demo-maldives should have 2 published overlay layers, found ${maldives_layers}." >&2
+  exit 1
+fi
+# The library editor publishes the templates, revises them, and publishes
+# again. Demo projects then publish copies of the same sources.
+library_published="$(psql_exec -d "$SOURCE_DB" -tAc \
+  "SELECT count(*) FROM table_of_contents_items t JOIN projects p ON p.id = t.project_id WHERE p.slug = 'superuser' AND t.is_draft = false AND t.is_folder = false AND t.data_library_template_id IS NULL")"
+if [[ "$library_published" != "6" ]]; then
+  echo "The superuser project should have 6 published library layers, found ${library_published}." >&2
+  exit 1
+fi
+library_titles="$(psql_exec -d "$SOURCE_DB" -tAc \
+  "SELECT count(*) FROM table_of_contents_items d JOIN table_of_contents_items pub ON pub.project_id = d.project_id AND pub.stable_id = d.stable_id AND pub.is_draft = false JOIN projects p ON p.id = d.project_id WHERE p.slug = 'superuser' AND d.is_draft AND d.data_library_template_id IS NOT NULL AND d.title = pub.title")"
+if [[ "$library_titles" != "6" ]]; then
+  echo "Published library titles should match the drafts after the revision is undone, found ${library_titles}." >&2
+  exit 1
+fi
+shared_sources="$(psql_exec -d "$SOURCE_DB" -tAc \
+  "SELECT count(*) FROM data_sources ds WHERE ds.data_library_template_id IS NOT NULL AND (SELECT count(*) FROM data_layers dl JOIN table_of_contents_items t ON t.data_layer_id = dl.id AND t.is_draft = false WHERE dl.data_source_id = ds.id) > 1")"
+if [[ "$shared_sources" != "3" ]]; then
+  echo "EEZ, coastline, and territorial sea should each have more than one published layer on the shared source, found ${shared_sources}." >&2
   exit 1
 fi
 maldives_xmin="$(psql_exec -d "$SOURCE_DB" -tAc \
@@ -172,7 +192,7 @@ echo "Seeding the Maldives ocean-use survey..."
   SOURCE_URL="$SOURCE_URL" node scripts/seed-maldives-survey.js
 )
 maldives_survey="$(psql_exec -d "$SOURCE_DB" -tAc \
-  "SELECT count(*) FROM surveys s JOIN projects p ON p.id = s.project_id WHERE p.slug = 'demo-maldives' AND s.name = 'Maldives Ocean Use Survey' AND s.is_disabled = false AND s.access_type = 'PUBLIC'")"
+  "SELECT count(*) FROM surveys s JOIN projects p ON p.id = s.project_id WHERE p.slug = 'demo-maldives' AND s.name = 'Maldives Ocean Use Survey' AND s.is_disabled = false")"
 if [[ "$maldives_survey" != "1" ]]; then
   echo "demo-maldives should have one public Maldives Ocean Use Survey. Found ${maldives_survey}." >&2
   exit 1
@@ -209,7 +229,7 @@ echo "Seeding the Palawan coral survey..."
   SOURCE_URL="$SOURCE_URL" node scripts/seed-palawan-survey.js
 )
 palawan_survey="$(psql_exec -d "$SOURCE_DB" -tAc \
-  "SELECT count(*) FROM surveys s JOIN projects p ON p.id = s.project_id WHERE p.slug = 'demo-palawan' AND s.name = 'Coral Restoration Survey' AND s.is_disabled = false AND s.access_type = 'PUBLIC'")"
+  "SELECT count(*) FROM surveys s JOIN projects p ON p.id = s.project_id WHERE p.slug = 'demo-palawan' AND s.name = 'Coral Restoration Survey' AND s.is_disabled = false")"
 if [[ "$palawan_survey" != "1" ]]; then
   echo "demo-palawan should have one public Coral Restoration Survey. Found ${palawan_survey}." >&2
   exit 1
