@@ -450,10 +450,7 @@ export default React.memo(function MapboxMap(props: OverlayMapProps) {
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
                 transition={{ duration: 0.5 }}
-                className="text-sm px-4 pointer-events-auto mt-2 p-2 rounded"
-                style={{
-                  backgroundColor: "rgba(255,255,255,0.5)",
-                }}
+                className="pointer-events-auto mt-3 flex max-w-lg items-center gap-3 rounded-full border border-slate-200/80 bg-white/95 px-3 py-1.5 text-sm text-slate-800 shadow-lg ring-1 ring-black/5 backdrop-blur"
                 onMouseEnter={() => {
                   manager?.cancelBookmarkBannerHiding();
                 }}
@@ -461,42 +458,40 @@ export default React.memo(function MapboxMap(props: OverlayMapProps) {
                   manager?.hideBookmarkBanner(1000);
                 }}
               >
-                {uiState.displayedMapBookmark.errors.missingBasemap ||
-                uiState.displayedMapBookmark.errors.missingLayers.length > 0 ||
-                uiState.displayedMapBookmark.errors.missingSketches.length >
-                  0 ? (
-                  <Trans
-                    ns="map"
-                    i18nKey="missingLayerCount"
-                    count={
-                      (uiState.displayedMapBookmark.errors.missingBasemap
-                        ? 1
-                        : 0) +
-                      uiState.displayedMapBookmark.errors.missingLayers.length +
-                      uiState.displayedMapBookmark.errors.missingSketches.length
+                <span className="min-w-0 pl-1.5 leading-snug">
+                  {uiState.displayedMapBookmark.errors.missingBasemap ||
+                  uiState.displayedMapBookmark.errors.missingLayers.length >
+                    0 ? (
+                    <Trans ns="map">
+                      Some layers in this bookmark are no longer in the
+                      project.
+                    </Trans>
+                  ) : (
+                    <Trans ns="map">Map bookmark shown</Trans>
+                  )}
+                </span>
+                <span className="flex shrink-0 items-center gap-1">
+                  <button
+                    type="button"
+                    className="rounded-full px-2.5 py-1 text-xs font-medium text-slate-600 hover:bg-slate-100"
+                    onClick={() => {
+                      manager?.undoMapBookmark();
+                    }}
+                  >
+                    <Trans ns="map">Undo</Trans>
+                  </button>
+                  <button
+                    type="button"
+                    className="rounded-full bg-slate-900 px-2.5 py-1 text-xs font-medium text-white hover:bg-slate-800"
+                    onClick={() =>
+                      setShowBookmarkOverlayId(
+                        uiState.displayedMapBookmark?.id || null
+                      )
                     }
-                  />
-                ) : (
-                  <Trans ns="map">Map bookmark shown</Trans>
-                )}
-                <button
-                  className="px-1 bg-gray-100 rounded-sm shadow ml-1"
-                  onClick={() => {
-                    manager?.undoMapBookmark();
-                  }}
-                >
-                  <Trans ns="map">undo</Trans>
-                </button>
-                <button
-                  className="px-1 bg-gray-100 rounded-sm shadow ml-1 -mr-1.5"
-                  onClick={() =>
-                    setShowBookmarkOverlayId(
-                      uiState.displayedMapBookmark?.id || null
-                    )
-                  }
-                >
-                  <Trans ns="map">view details</Trans>
-                </button>
+                  >
+                    <Trans ns="map">Details</Trans>
+                  </button>
+                </span>
               </motion.div>
             ) : null}
           </AnimatePresence>

@@ -144,6 +144,7 @@ Intent: the toolbar, legend, and map chrome a participant uses. These journeys w
 6. The scale and coordinate choices are still in effect after a reload. *Covered.*
 7. A project set to show the scale bar by default shows it for a visitor who has no saved choice. A project whose default is off does not. *Covered.*
 8. Measure lets the visitor click a line on the map and shows the length in kilometers. Choosing miles updates the number. Closing Measure removes the line and the readout. *Covered.*
+9. Map settings includes Create Map Bookmark. *Covered: `tests/map-view-bookmarks.spec.ts`.*
 
 ### Legend
 
@@ -153,6 +154,7 @@ Intent: the toolbar, legend, and map chrome a participant uses. These journeys w
 ### Bookmark on the map
 
 1. Clicking a map bookmark that was posted in a forum moves the map to that center, zoom, and basemap, and a banner says the bookmark is shown. *Covered.* The screenshot itself stays in `tests/map-bookmarks.spec.ts`.
+2. Create Map Bookmark, in Map settings, saves the current basemap, layers, and camera. The card names who saved it and the date, and says what sharing the link does. Layers and the view details (basemap, extent, zoom) sit in collapsed sections. Sketches and unsaved drawings are left out of the preview and the saved image. When sketches are on screen, the card says they are private to the account and are not included. The copyable link sits in a read-only field with the copy button inside it, and copying confirms with a note above that button. Opening that link shows the same card without the sharing sentence, and Display on the map sits on the preview. A forum bookmark uses that same author line and links to the topic it was posted in. *Covered: `tests/map-view-bookmarks.spec.ts` and `tests/map-bookmarks.spec.ts`.*
 
 ---
 
@@ -230,7 +232,7 @@ Intent: reading and posting in a project forum, including map bookmarks. Creatin
 1. An anonymous visitor can open Public Forum, read Welcome to the project, sees a sign-in prompt, and has no reply form. *Covered: `tests/forums.spec.ts`.*
 2. A signed-in non-participant is asked to join. After join they can reply. *Covered.*
 3. **bundler-risk.** Typing a reply in the ProseMirror editor, submitting, and seeing that reply in the thread. *Covered.*
-4. **bundler-risk.** Share → Map Bookmark captures a client thumbnail. Posting shows it. The info button shows the large screenshot from the local screenshotter. *Covered: `tests/map-bookmarks.spec.ts`.*
+4. **bundler-risk.** Share → Map Bookmark captures a client thumbnail. Posting shows it. The info button shows the large screenshot from the local screenshotter, names who saved it, and links to the topic. *Covered: `tests/map-bookmarks.spec.ts`.*
 5. Post a topic: a normal title posts. Eighty emoji is allowed. Eighty-one characters show the limit and disable Post New Topic. Empty title and empty message each ask for content. *Covered: `tests/topic-title.spec.ts`.*
 6. A participant who is in the group a forum is limited to can see that forum. A participant who is not in the group cannot. *Group visibility on `e2e-private` is also part of smoke. This journey is the end-user check beyond smoke, arranged without the admin form.*
 7. Attach a file to a post. The attachment is downloadable from the local file-uploads bucket. *Covered: `tests/forum-attachments.spec.ts`.*
