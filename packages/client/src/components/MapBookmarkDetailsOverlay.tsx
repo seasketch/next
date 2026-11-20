@@ -5,15 +5,19 @@ import { Trans, useTranslation } from "react-i18next";
 import BookmarkCard from "../dataLayers/BookmarkCard";
 import { MapManagerContext } from "../dataLayers/MapContextManager";
 import {
+  MapBookmarkKind,
   useGetBookmarkQuery,
   useMapBookmarkSubscription,
   WorkerJobStatus,
 } from "../generated/graphql";
+import MapViewBookmarkBody from "../dataLayers/MapViewBookmarkBody";
 import { useGlobalErrorHandler } from "./GlobalErrorHandler";
 import {
   bookmarkCamera,
   bookmarkDimensions,
   bookmarkName,
+  bookmarkView,
+  firstText,
 } from "./bookmarkCardFacts";
 
 const coordinateFormatter = Intl.NumberFormat(undefined, {
@@ -62,12 +66,47 @@ export default function MapBookmarkDetailsOverlay({
     return () => document.removeEventListener("keydown", onKey);
   }, [onRequestClose]);
 
+  // A cold visit opens this card before the table of contents arrives. An empty
+  // catalog would mark every saved layer as missing, so wait until it has rows.
+  const [catalogSize, setCatalogSize] = useState(0);
+  useEffect(() => {
+    if (!manager) {
+      return;
+    }
+    let stopped = false;
+    let tries = 0;
+    let timer = 0;
+    const look = () => {
+      if (stopped) {
+        return;
+      }
+      tries += 1;
+      const size = manager.overlayCatalogSize();
+      if (size > 0 || tries > 40) {
+        setCatalogSize(size > 0 ? size : -1);
+        return;
+      }
+      timer = window.setTimeout(look, 300);
+    };
+    look();
+    return () => {
+      stopped = true;
+      window.clearTimeout(timer);
+    };
+  }, [manager]);
+
   const errors = useMemo(() => {
-    if (!bookmark || !manager) {
+    if (!bookmark || !manager || !ready) {
+      return null;
+    }
+    const savedLayers = (bookmark.visibleDataLayers || []).filter(
+      (id) => typeof id === "string" && id.length > 0
+    );
+    if (savedLayers.length > 0 && catalogSize === 0) {
       return null;
     }
     return manager.getErrorsForBookmark(bookmark, client);
-  }, [bookmark, manager, client]);
+  }, [bookmark, manager, client, ready, catalogSize]);
   const missingLayers = errors?.missingLayers || [];
   const missingSketches = errors?.missingSketches || [];
   const hasErrors = Boolean(
@@ -75,7 +114,13 @@ export default function MapBookmarkDetailsOverlay({
   );
 
   const camera = bookmarkCamera(bookmark?.cameraOptions);
+  const view = bookmarkView(bookmark?.cameraOptions);
   const dimensions = bookmarkDimensions(bookmark?.mapDimensions);
+  const isMapView = bookmark?.kind === MapBookmarkKind.MapView;
+  const authorName = firstText(
+    [bookmark?.creator?.fullname, bookmark?.creator?.nickname],
+    t("Someone")
+  );
   const layers = (bookmark?.visibleDataLayers || []).filter(
     (id): id is string => typeof id === "string" && id.length > 0
   );
@@ -119,9 +164,13 @@ export default function MapBookmarkDetailsOverlay({
       summary={
         <div className="min-w-0">
           <div className="truncate text-sm font-medium text-slate-900">
-            <Trans ns="mapBookmarks">Map bookmark</Trans>
+            {isMapView ? (
+              authorName
+            ) : (
+              <Trans ns="mapBookmarks">Map bookmark</Trans>
+            )}
           </div>
-          {savedAt && (
+          {savedAt && !isMapView && (
             <div className="truncate text-xs text-slate-500">{savedAt}</div>
           )}
         </div>
@@ -139,6 +188,34 @@ export default function MapBookmarkDetailsOverlay({
         </button>
       }
     >
+      {isMapView && bookmark ? (
+        <MapViewBookmarkBody
+          labelledBy="map-bookmark-title"
+          name={authorName}
+          picture={bookmark.creator?.picture}
+          createdAt={bookmark.createdAt}
+          explainSharing={false}
+          layers={layers.map((id) => ({
+            id,
+            name: bookmarkName(bookmark.layerNames, id) || id,
+            missing: missingLayers.indexOf(id) !== -1,
+          }))}
+          basemapName={bookmark.basemapName}
+          camera={view}
+          dimensions={dimensions}
+          notice={
+            hasErrors ? (
+              <p className="mt-4 rounded-lg bg-amber-50 px-3 py-2 text-sm leading-snug text-amber-950">
+                <Trans ns="mapBookmarks">
+                  Some layers or sketches in this view are no longer in the
+                  project. The preview is the map as it was saved.
+                </Trans>
+              </p>
+            ) : null
+          }
+        />
+      ) : (
+        <>
       <h2
         id="map-bookmark-title"
         className="text-2xl font-semibold tracking-tight text-slate-900"
@@ -187,6 +264,8 @@ export default function MapBookmarkDetailsOverlay({
       )}
       {(camera || dimensions) && (
         <MapFacts camera={camera} dimensions={dimensions} />
+      )}
+        </>
       )}
     </BookmarkCard>
   );

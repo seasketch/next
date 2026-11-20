@@ -4455,6 +4455,10 @@ class MapContextManager extends EventEmitter {
   /**
    * Given a list of layer ids, return how many are unknown to MapContextManager
    */
+  overlayCatalogSize() {
+    return Object.keys(this.layers).length;
+  }
+
   getMissingLayers(layerIds: string[]) {
     const missing: string[] = [];
     const knownIds = Object.keys(this.layers);

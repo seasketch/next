@@ -198,3 +198,36 @@ begin
   return true;
 end;
 $$;
+
+-- Name and picture for the person who saved a bookmark. Email stays off this
+-- type so a public map link does not publish an address.
+do $$
+begin
+  if not exists (
+    select 1 from pg_type where typname = 'map_bookmark_creator'
+  ) then
+    create type public.map_bookmark_creator as (
+      fullname text,
+      nickname text,
+      picture text
+    );
+  end if;
+end $$;
+
+create or replace function public.map_bookmarks_creator(bookmark public.map_bookmarks)
+returns public.map_bookmark_creator
+language sql
+stable
+security definer
+set search_path to 'public', 'pg_temp'
+as $$
+  select p.fullname, p.nickname, p.picture
+  from user_profiles p
+  where p.user_id = bookmark.user_id;
+$$;
+
+comment on function public.map_bookmarks_creator(public.map_bookmarks) is
+  'Name and picture of the person who saved this bookmark.';
+
+revoke all on function public.map_bookmarks_creator(public.map_bookmarks) from public;
+grant execute on function public.map_bookmarks_creator(public.map_bookmarks) to seasketch_user, anon;

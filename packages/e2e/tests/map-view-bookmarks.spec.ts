@@ -1,7 +1,21 @@
+import { Client } from "pg";
 import { expect, test, type Page } from "@playwright/test";
-import { personas } from "../src/config";
+import { databaseURL, personas } from "../src/config";
 import { graphql } from "../src/graphql";
 import { openMap, signIn, visibleButton } from "../src/project";
+
+async function nameAdmin(fullname: string) {
+  const client = new Client({ connectionString: databaseURL });
+  await client.connect();
+  try {
+    await client.query(
+      `update user_profiles set fullname = $1 where user_id = (select id from users where sub = 'e2e|admin')`,
+      [fullname]
+    );
+  } finally {
+    await client.end();
+  }
+}
 
 // The first style document after the dev server boots can take longer than
 // the shared 30s wait. A second navigation uses the warm connection.
@@ -23,6 +37,7 @@ test.describe("map view bookmarks @enduser @map", () => {
     request,
   }) => {
     test.setTimeout(120_000);
+    await nameAdmin("Test Admin");
     const issued = await signIn(page, request, personas.admin);
     await openProjectMap(page);
 
@@ -39,8 +54,9 @@ test.describe("map view bookmarks @enduser @map", () => {
 
     const dialog = page.getByRole("dialog");
     await expect(
-      dialog.getByRole("heading", { name: "Map bookmark" })
+      dialog.getByRole("heading", { name: /Test Admin created this map bookmark on/ })
     ).toBeVisible();
+    await expect(dialog.getByText("Sharing this link")).toBeVisible();
     await expect(
       dialog.getByText("private to your account")
     ).toHaveCount(0);
@@ -48,6 +64,10 @@ test.describe("map view bookmarks @enduser @map", () => {
     const link = dialog.getByRole("textbox", { name: "Link" });
     await expect(link).toBeVisible({ timeout: 30_000 });
     await expect(link).toHaveValue(/\/demo-samoa\/bookmarks\/[0-9a-f-]{36}$/);
+    await dialog.getByRole("button", { name: /^Layers \(/ }).click();
+    await dialog.getByRole("button", { name: "Details" }).click();
+    await expect(dialog.getByText("Exclusive Economic Zone")).toBeVisible();
+    await expect(dialog.getByText("Basemap")).toBeVisible();
     const url = await link.inputValue();
     const bookmarkId = url.split("/").pop();
 
@@ -81,7 +101,17 @@ test.describe("map view bookmarks @enduser @map", () => {
     expect(saved.bookmarkById.postId).toBeNull();
     expect(saved.bookmarkById.visibleSketches ?? []).toEqual([]);
     expect(saved.bookmarkById.visibleDataLayers.length).toBeGreaterThan(0);
-    await expect(dialog.getByText("Exclusive Economic Zone")).toBeVisible();
+
+    await page.goto(url);
+    const viewing = page.getByRole("dialog");
+    await expect(
+      viewing.getByRole("heading", { name: /Test Admin created this map bookmark on/ })
+    ).toBeVisible();
+    await expect(viewing.getByText("Sharing this link")).toHaveCount(0);
+    await viewing.getByRole("button", { name: /^Layers \(/ }).click();
+    await expect(viewing.getByText("Exclusive Economic Zone")).toBeVisible();
+    await expect(viewing.getByText("missing")).toHaveCount(0);
+    await expect(viewing.getByText("no longer in the project")).toHaveCount(0);
   });
 
   test("sketches on the map are called out and left out of the saved style", async ({

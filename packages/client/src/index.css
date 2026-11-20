@@ -6369,6 +6369,10 @@ select{
   top:2.5rem
 }
 
+.top-16{
+  top:4rem
+}
+
 .top-2{
   top:0.5rem
 }
@@ -9001,6 +9005,10 @@ select{
 
 .grid-cols-\[3\.25rem_1fr\]{
   grid-template-columns:3.25rem 1fr
+}
+
+.grid-cols-\[5\.5rem_1fr\]{
+  grid-template-columns:5.5rem 1fr
 }
 
 .grid-cols-\[auto_1fr\]{

@@ -97,6 +97,10 @@ describe("map view bookmarks", () => {
       expect(created.visible_data_layers).toEqual(["eez"]);
       expect(created.screenshot_job_status).toBe("queued");
       expect(created.user_id).toBe(adminId);
+      const creator = await conn.one(sql`
+        select fullname from map_bookmarks_creator(bookmark_by_id(${created.id}))
+      `);
+      expect(creator.fullname).toBeNull();
       expect(JSON.stringify(created.style)).not.toContain(secret);
       expect(created.style.layers.map((layer: { id: string }) => layer.id)).toEqual([
         "basemap",

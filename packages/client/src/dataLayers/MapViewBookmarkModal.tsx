@@ -14,10 +14,16 @@ import getSlug from "../getSlug";
 import { copyTextToClipboard } from "../projects/Forums/InlineAuthorDetails";
 import { MapManagerContext } from "./MapContextManager";
 import BookmarkCard from "./BookmarkCard";
+import MapViewBookmarkBody from "./MapViewBookmarkBody";
 import {
   MapViewOmissions,
   mapBookmarkUrl,
 } from "./mapViewBookmark";
+import {
+  bookmarkDimensions,
+  bookmarkView,
+  firstText,
+} from "../components/bookmarkCardFacts";
 
 function namesFromLayerNames(names: unknown) {
   if (!names || typeof names !== "object" || Array.isArray(names)) {
@@ -50,6 +56,9 @@ export default function MapViewBookmarkModal({
   const [createError, setCreateError] = useState<string | null>(null);
   const [creating, setCreating] = useState(true);
   const [pollPreview, setPollPreview] = useState(true);
+  const [camera, setCamera] = useState<ReturnType<typeof bookmarkView>>(null);
+  const [dimensions, setDimensions] = useState<[number, number] | null>(null);
+  const [openedAt] = useState(() => new Date().toISOString());
   const started = useRef(false);
   const [createBookmark] = useCreateMapViewBookmarkMutation();
   const metadata = useProjectMetadataQuery({
@@ -120,6 +129,8 @@ export default function MapViewBookmarkModal({
         setBasemapName(draft.basemapName);
         setLayerNames(namesFromLayerNames(draft.layerNames));
         setOmissions(draft.omissions);
+        setCamera(bookmarkView(draft.cameraOptions));
+        setDimensions(bookmarkDimensions(draft.mapDimensions));
         const result = await createBookmark({
           variables: {
             slug,
@@ -172,6 +183,36 @@ export default function MapViewBookmarkModal({
   const savedLayers = namesFromLayerNames(bookmark?.layerNames);
   const shownLayers = savedLayers.length > 0 ? savedLayers : layerNames;
   const shownBasemap = bookmark?.basemapName || basemapName;
+  const profile = metadata.data?.me?.profile;
+  const authorName = firstText(
+    [
+      bookmark?.creator?.fullname,
+      bookmark?.creator?.nickname,
+      profile?.fullname,
+      profile?.nickname,
+    ],
+    t("Someone")
+  );
+  const authorPicture = bookmark?.creator?.picture || profile?.picture;
+  const shownCamera = bookmarkView(bookmark?.cameraOptions) || camera;
+  const shownDimensions =
+    bookmarkDimensions(bookmark?.mapDimensions) || dimensions;
+  const layerRows = shownLayers.map((layerName, index) => ({
+    id: `${index}-${layerName}`,
+    name: layerName,
+  }));
+  const notes = [
+    signedIn && omissions.sketches
+      ? t(
+          "Sketches currently on screen are private to your account, and so are not included in the bookmark."
+        )
+      : null,
+    signedIn && omissions.unsavedDrawing
+      ? t(
+          "Unsaved drawings on the map are not included. The preview and the saved image leave them out."
+        )
+      : null,
+  ].filter((note): note is string => Boolean(note));
 
   const copy = async () => {
     if (!url) {
@@ -202,11 +243,35 @@ export default function MapViewBookmarkModal({
       label={t("Map bookmark")}
       summary={
         <span className="block truncate text-sm font-medium text-slate-900">
-          <Trans ns="mapBookmarks">Map bookmark</Trans>
+          {authorName}
         </span>
       }
+      footer={
+        url ? (
+          <div className="flex items-center gap-2">
+            <input
+              id="map-view-bookmark-url"
+              readOnly
+              value={url}
+              aria-label={t("Link")}
+              onFocus={(event) => event.currentTarget.select()}
+              className="min-w-0 flex-1 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 font-mono text-xs text-slate-600 shadow-none focus:border-slate-300 focus:ring-0"
+            />
+            <button
+              type="button"
+              className="inline-flex shrink-0 items-center gap-1.5 rounded-lg bg-slate-900 px-3 py-2 text-sm font-medium text-white hover:bg-slate-800"
+              onClick={() => {
+                void copy();
+              }}
+            >
+              <ClipboardCopyIcon className="h-4 w-4" />
+              <Trans ns="mapBookmarks">Copy</Trans>
+            </button>
+          </div>
+        ) : undefined
+      }
       pinned={
-        <ToastViewport className="pointer-events-none absolute bottom-4 right-4 z-10" />
+        <ToastViewport className="pointer-events-none absolute left-1/2 top-16 z-10 -translate-x-1/2" />
       }
     >
       {createError && (
@@ -214,52 +279,28 @@ export default function MapViewBookmarkModal({
           {createError}
         </p>
       )}
-      <h2
-        id="map-view-bookmark-title"
-        className="text-2xl font-semibold tracking-tight text-slate-900"
-      >
-        <Trans ns="mapBookmarks">Map bookmark</Trans>
-      </h2>
-      <p className="mt-1 text-sm leading-relaxed text-slate-600">
-        <Trans ns="mapBookmarks">
-          A link to this map. It keeps the basemap, the visible layers, and
-          where the map is pointed.
-        </Trans>
-      </p>
-      {shownBasemap && (
-        <p className="mt-3 text-sm text-slate-500">
-          <span>{t("Basemap")}</span>
-          <span className="text-slate-900">
-            {" "}
-            {shownBasemap}
-          </span>
-        </p>
-      )}
-      {shownLayers.length > 0 && (
-        <p className="mt-1 line-clamp-3 text-sm text-slate-500">
-          <span>{t("Layers")}</span>
-          <span className="text-slate-700">
-            {" "}
-            {shownLayers.join(", ")}
-          </span>
-        </p>
-      )}
-      {signedIn && omissions.sketches && (
-        <p className="mt-3 rounded-lg bg-amber-50 px-3 py-2 text-sm leading-relaxed text-amber-950">
-          {t(
-            "Sketches currently on screen are private to your account, and so are not included in the bookmark."
-          )}
-        </p>
-      )}
-      {signedIn && omissions.unsavedDrawing && (
-        <p className="mt-3 rounded-lg bg-amber-50 px-3 py-2 text-sm leading-relaxed text-amber-950">
-          {t(
-            "Unsaved drawings on the map are not included. The preview and the saved image leave them out."
-          )}
-        </p>
+      {signedIn && (
+        <MapViewBookmarkBody
+          labelledBy="map-view-bookmark-title"
+          name={authorName}
+          picture={authorPicture}
+          createdAt={bookmark?.createdAt || openedAt}
+          explainSharing
+          layers={layerRows}
+          basemapName={shownBasemap}
+          camera={shownCamera}
+          dimensions={shownDimensions}
+          notes={notes}
+        />
       )}
       {!signedIn && !metadata.loading && (
         <div className="mt-4 space-y-3">
+          <h2
+            id="map-view-bookmark-title"
+            className="text-base font-medium text-slate-900"
+          >
+            <Trans ns="mapBookmarks">Map bookmark</Trans>
+          </h2>
           <p className="text-sm leading-relaxed text-slate-600">
             {t("Sign in to save a link to this map.")}
           </p>
@@ -273,28 +314,6 @@ export default function MapViewBookmarkModal({
             }
           >
             <Trans ns="mapBookmarks">Sign in</Trans>
-          </button>
-        </div>
-      )}
-      {url && (
-        <div className="mt-5 flex items-center gap-2">
-          <input
-            id="map-view-bookmark-url"
-            readOnly
-            value={url}
-            aria-label={t("Link")}
-            onFocus={(event) => event.currentTarget.select()}
-            className="min-w-0 flex-1 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 font-mono text-xs text-slate-600 shadow-none focus:border-slate-300 focus:ring-0"
-          />
-          <button
-            type="button"
-            className="inline-flex shrink-0 items-center gap-1.5 rounded-lg bg-slate-900 px-3 py-2 text-sm font-medium text-white hover:bg-slate-800"
-            onClick={() => {
-              void copy();
-            }}
-          >
-            <ClipboardCopyIcon className="h-4 w-4" />
-            <Trans ns="mapBookmarks">Copy</Trans>
           </button>
         </div>
       )}
