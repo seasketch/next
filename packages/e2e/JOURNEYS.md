@@ -40,6 +40,6 @@ See the catalog's *Covered* notes. Specs:
 - `tests/uploads.spec.ts` — local spatial uploads
 - `tests/local-reports.spec.ts` — drawn sketch, local overlay workers, data-table parquet
 - `tests/survey.spec.ts` — Maldives two-sector and Palawan single-sector respondent
-- `tests/survey-authoring.spec.ts` — admin builds a short ocean-use survey (consent, region skip, two sectors) and a visitor follows it
+- `tests/survey-authoring.spec.ts` — admin builds a short ocean-use survey (consent, region skip, two sectors) and a visitor follows it; admin builds a reef survey whose skip logic covers contains, blank, a numeric range, yes/no, and statement and Save Screen jumps, and visitors take and retake each branch
 - `tests/selective-publish.spec.ts` — selective overlay publish
 - `tests/report-overlay-versions.spec.ts` — overlay versions in reports

@@ -1,4 +1,11 @@
-import { expect, test, type Locator, type Page } from "@playwright/test";
+import {
+  expect,
+  test,
+  type APIRequestContext,
+  type Browser,
+  type Locator,
+  type Page,
+} from "@playwright/test";
 import { Client } from "pg";
 import { createShellProject } from "../src/shellProject";
 import { clientURL, databaseURL, personas } from "../src/config";
@@ -20,6 +27,13 @@ import { signIn } from "../src/project";
  * The consent upload mutation stores the PDF on the public S3 bucket.
  * After the agree label is set, the journey calls create_consent_document
  * so the agreement has a URL without that upload.
+ *
+ * The reef journey has no spatial step, so it can reload the logic editor.
+ * It covers the rule operators beyond equality: contains on a multi-select,
+ * blank on a text area, a two-condition numeric range, and yes/no. It also
+ * sets default jumps on an input and on a statement, and a jump to the save
+ * screen. Its visitors go back and change answers so each branch is taken
+ * again from the same response.
  */
 
 const surveyName = "Coastal Use Survey";
@@ -33,6 +47,15 @@ const agreeLabel = "I agree to share my answers";
 const northIsland = "Kudafari";
 const respondent = "E2E Survey Builder";
 const email = "e2e-survey-builder@example.test";
+
+const reefSurveyName = "Reef Activities Survey";
+const activitiesQuestion = "Which reef activities do you take part in?";
+const snorkelLabel = "Snorkeling, freediving";
+const sitesQuestion = "Which snorkel sites do you visit?";
+const daysQuestion = "How many days a year do you fish?";
+const statementHeading = "Almost done";
+const interviewQuestion = "Would you join a follow-up interview?";
+const phoneQuestion = "What phone number can we call?";
 
 const created: string[] = [];
 let slugSerial = 0;
@@ -69,7 +92,10 @@ function logicPanel(page: Page) {
 
 async function addElement(page: Page, label: string) {
   const added = waitForOperation(page, "AddFormElement");
-  await page.getByRole("button", { name: "Add", exact: true }).click();
+  await page
+    .getByRole("button", { name: "Add", exact: true })
+    .and(page.locator("button:not([title])"))
+    .click();
   const menu = page.locator(".max-h-128");
   await expect(menu.getByRole("heading", { name: "Add to survey..." })).toBeVisible();
   await menu
@@ -79,15 +105,27 @@ async function addElement(page: Page, label: string) {
   await added;
 }
 
-function requiredSwitch(page: Page) {
+function settingSwitch(page: Page, title: string) {
   return page
     .locator("div.w-64 div.flex")
-    .filter({ hasText: /^\s*Required\s*$/ })
+    .filter({ hasText: new RegExp(`^\\s*${title}\\s*$`) })
     .getByRole("switch");
 }
 
+async function toggleSetting(page: Page, title: string) {
+  const toggle = settingSwitch(page, title);
+  const saved = waitForOperation(page, "UpdateFormElement");
+  await toggle.click();
+  await saved;
+  await expect(toggle).toHaveAttribute("aria-checked", "true");
+}
+
 async function removeStarterQuestion(page: Page) {
-  const row = formList(page).locator(".h-11").filter({ hasText: /^\s*T\s*$/ });
+  await deleteElement(page, /^\s*T\s*$/);
+}
+
+async function deleteElement(page: Page, text: RegExp) {
+  const row = formList(page).locator(".h-11").filter({ hasText: text });
   await expect(row).toHaveCount(1);
   await row.click();
   await page.getByRole("button", { name: "Delete Element" }).click();
@@ -203,6 +241,103 @@ async function attachConsentDocument(slug: string) {
   }
 }
 
+async function createSurvey(
+  page: Page,
+  request: APIRequestContext,
+  slug: string,
+  projectName: string,
+  name: string
+) {
+  await createShellProject(request, { name: projectName, slug });
+  await signIn(page, request, personas.admin);
+  await page.goto(`/${slug}/admin/surveys`);
+  await page.getByRole("button", { name: "Create a New Survey" }).click();
+  const dialog = page.getByRole("dialog", { name: "Choose a name for your survey" });
+  await dialog.getByRole("textbox").fill(name);
+  const createdSurvey = waitForOperation(page, "CreateSurvey");
+  await dialog.getByRole("button", { name: "Submit" }).click();
+  await createdSurvey;
+  await page.getByRole("link", { name }).click();
+  await expect(page.getByRole("heading", { name })).toBeVisible();
+  await page.getByRole("link", { name: "Edit Form" }).click();
+  await expect(page).toHaveURL(new RegExp(`/${slug}/survey-editor/\\d+`));
+  await expect(
+    page.getByRole("heading", { name: "Welcome to the Survey", exact: true })
+  ).toBeVisible();
+}
+
+/**
+ * Leaving the editor for a blank page first keeps two copies of it out of
+ * memory at once. A direct reload of the editor has crashed Chrome locally.
+ */
+async function leaveEditorFor(page: Page, url: string) {
+  await page.goto("about:blank");
+  await page.goto(url);
+}
+
+async function publishSurvey(page: Page, slug: string, name: string) {
+  await leaveEditorFor(page, `/${slug}/admin/surveys`);
+  await page.getByRole("link", { name }).click();
+  const published = waitForOperation(page, "UpdateSurveyDraftStatus");
+  await page.getByText("Published", { exact: true }).click();
+  await published;
+  const publicLink = page.getByRole("link", {
+    name: new RegExp(`/${slug}/surveys/\\d+`),
+  });
+  await expect(publicLink).toBeVisible();
+  const surveyUrl = await publicLink.getAttribute("href");
+  if (!surveyUrl) {
+    throw new Error("Published survey has no public link");
+  }
+  return surveyUrl;
+}
+
+async function selectNode(page: Page, text: string) {
+  await page.locator(".react-flow__node").filter({ hasText: text }).click();
+}
+
+function conditionRow(rule: Locator, index: number) {
+  return rule.locator("div.bg-blue-100").nth(index);
+}
+
+async function chooseOperator(row: Locator, label: RegExp) {
+  const page = row.page();
+  await row.getByRole("button", { name: "Comparison" }).click();
+  const saved = waitForOperation(page, "UpdateLogicCondition");
+  await page.getByRole("menuitemradio", { name: label }).click();
+  await saved;
+}
+
+async function fillConditionNumber(row: Locator, value: string) {
+  const input = row.getByRole("spinbutton");
+  const saved = waitForOperation(row.page(), "UpdateLogicCondition");
+  await input.fill(value);
+  await saved;
+  await expect(input).toHaveValue(value);
+}
+
+async function addCondition(rule: Locator) {
+  const added = waitForOperation(rule.page(), "AddCondition");
+  await rule.getByRole("button", { name: "add condition" }).click();
+  await added;
+}
+
+async function openSurvey(browser: Browser, url: string) {
+  const context = await browser.newContext({
+    viewport: { width: 1440, height: 900 },
+  });
+  const page = await context.newPage();
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await page.goto(url);
+  await page.locator('[name="Begin Survey"]').click();
+  return { context, page };
+}
+
+async function goBack(page: Page, question: string) {
+  await page.getByTitle("Previous Question").click();
+  await expect(page.getByText(question)).toBeVisible();
+}
+
 async function answerText(page: Page, value: string) {
   const field = page.locator("input:visible").last();
   await field.click();
@@ -222,27 +357,7 @@ test.describe("survey authoring @admin @surveys", () => {
     test.setTimeout(300_000);
     const slug = projectSlug("srv");
     created.push(slug);
-    await createShellProject(request, {
-      name: "Coastal Use Builder",
-      slug,
-    });
-    await signIn(page, request, personas.admin);
-
-    await page.goto(`/${slug}/admin/surveys`);
-    await page.getByRole("button", { name: "Create a New Survey" }).click();
-    const dialog = page.getByRole("dialog", { name: "Choose a name for your survey" });
-    await dialog.getByRole("textbox").fill(surveyName);
-    const createdSurvey = waitForOperation(page, "CreateSurvey");
-    await dialog.getByRole("button", { name: "Submit" }).click();
-    await createdSurvey;
-
-    await page.getByRole("link", { name: surveyName }).click();
-    await expect(page.getByRole("heading", { name: surveyName })).toBeVisible();
-    await page.getByRole("link", { name: "Edit Form" }).click();
-    await expect(page).toHaveURL(new RegExp(`/${slug}/survey-editor/\\d+`));
-    await expect(
-      page.getByRole("heading", { name: "Welcome to the Survey", exact: true })
-    ).toBeVisible();
+    await createSurvey(page, request, slug, "Coastal Use Builder", surveyName);
     await expect(
       page.getByText("Please describe your survey to potential respondents here.")
     ).toBeVisible();
@@ -264,11 +379,7 @@ test.describe("survey authoring @admin @surveys", () => {
 
     await addElement(page, "Name");
     await expect(page.getByText("What is your name?").first()).toBeVisible();
-    const required = requiredSwitch(page);
-    const requiredSaved = waitForOperation(page, "UpdateFormElement");
-    await required.click();
-    await requiredSaved;
-    await expect(required).toHaveAttribute("aria-checked", "true");
+    await toggleSetting(page, "Required");
 
     await addElement(page, "Email");
     await expect(page.getByText("What is your email address?").first()).toBeVisible();
@@ -305,7 +416,7 @@ test.describe("survey authoring @admin @surveys", () => {
     await expect(sidebar.getByText(fishQuestion)).toBeVisible();
     await expect(sidebar.getByText(sectorQuestion)).toBeVisible();
 
-    await page.getByRole("link", { name: "Skip Logic" }).click();
+    await page.getByRole("link", { name: "Skip Logic", exact: true }).click();
     await expect(page).toHaveURL(/\/logic$/);
     await expect(
       page.getByText("Select an input element to skip ahead based on answers.")
@@ -348,24 +459,15 @@ test.describe("survey authoring @admin @surveys", () => {
     );
 
     await attachConsentDocument(slug);
-    await page.goto(`/${slug}/survey-editor/${page.url().match(/survey-editor\/(\d+)/)?.[1]}`);
+    await leaveEditorFor(
+      page,
+      `/${slug}/survey-editor/${page.url().match(/survey-editor\/(\d+)/)?.[1]}`
+    );
     await sidebar.getByText("Informed Consent").click();
     await expect(page.getByRole("link", { name: /Data Sharing Agreement/ })).toBeVisible();
     await expect(page.getByText(agreeLabel).first()).toBeVisible();
 
-    await page.goto(`/${slug}/admin/surveys`);
-    await page.getByRole("link", { name: surveyName }).click();
-    const published = waitForOperation(page, "UpdateSurveyDraftStatus");
-    await page.getByText("Published", { exact: true }).click();
-    await published;
-    const publicLink = page.getByRole("link", {
-      name: new RegExp(`/${slug}/surveys/\\d+`),
-    });
-    await expect(publicLink).toBeVisible();
-    const surveyUrl = await publicLink.getAttribute("href");
-    if (!surveyUrl) {
-      throw new Error("Published survey has no public link");
-    }
+    const surveyUrl = await publishSurvey(page, slug, surveyName);
 
     const guestContext = await browser.newContext({
       viewport: { width: 1440, height: 900 },
@@ -374,7 +476,7 @@ test.describe("survey authoring @admin @surveys", () => {
     try {
       await guest.emulateMedia({ reducedMotion: "reduce" });
       await guest.goto(surveyUrl);
-      await expect(guest.getByRole("progressbar")).toHaveCount(0);
+      await expect(guest.locator('[name="Begin Survey"]')).toBeVisible({ timeout: 20_000 });
       await expect(guest.getByRole("heading", { name: "Welcome to the Survey" })).toBeVisible();
       await expect(guest.getByText(confidential)).toBeVisible();
       await guest.locator('[name="Begin Survey"]').click();
@@ -422,7 +524,9 @@ test.describe("survey authoring @admin @surveys", () => {
     try {
       await southGuest.emulateMedia({ reducedMotion: "reduce" });
       await southGuest.goto(surveyUrl);
-      await expect(southGuest.getByRole("progressbar")).toHaveCount(0);
+      await expect(southGuest.locator('[name="Begin Survey"]')).toBeVisible({
+        timeout: 20_000,
+      });
       await expect(
         southGuest.getByRole("heading", { name: "Welcome to the Survey" })
       ).toBeVisible();
@@ -435,6 +539,207 @@ test.describe("survey authoring @admin @surveys", () => {
       await expect(southGuest.getByText(northQuestion)).toHaveCount(0);
     } finally {
       await southContext.close();
+    }
+  });
+
+  test("an admin branches a reef survey on choice, text, number, and yes/no answers", async ({
+    page,
+    request,
+    browser,
+  }) => {
+    test.setTimeout(300_000);
+    const slug = projectSlug("srl");
+    created.push(slug);
+    await createSurvey(page, request, slug, "Reef Logic Builder", reefSurveyName);
+    await removeStarterQuestion(page);
+    await deleteElement(page, /Informed Consent/);
+
+    await addElement(page, "Multiple Choice");
+    await replaceQuestion(page, activitiesQuestion);
+    await toggleSetting(page, "Multiple Select");
+    await expect(
+      page.getByRole("button", { name: "Edit Visibility Logic" })
+    ).toHaveCount(0);
+    const quotedOption = `"${snorkelLabel}",snorkel`;
+    await fillOptions(page, "Options", `${quotedOption}\nFishing,fishing`);
+    await expect(page.getByTitle(snorkelLabel, { exact: true })).toBeVisible();
+
+    // Reopening the question re-serializes its options (#972).
+    const sidebar = formList(page);
+    await sidebar.getByText("Welcome to the Survey").click();
+    await sidebar.getByText(activitiesQuestion).click();
+    const options = page
+      .locator("div.relative")
+      .filter({ has: page.getByRole("heading", { name: "Options", exact: true }) })
+      .locator("textarea");
+    await expect(options).toHaveValue(`${quotedOption}\nFishing,fishing`);
+    await options.click();
+    await options.press("Control+End");
+    const extended = waitForOperation(page, "UpdateFormElement");
+    await options.press("Enter");
+    await page.keyboard.insertText("Research,research");
+    await extended;
+    await expect(options).toHaveValue(
+      `${quotedOption}\nFishing,fishing\nResearch,research`
+    );
+    await expect(page.getByTitle(snorkelLabel, { exact: true })).toBeVisible();
+    await expect(page.getByTitle("Research", { exact: true })).toBeVisible();
+
+    await addElement(page, "Text Area");
+    await replaceQuestion(page, sitesQuestion);
+    await addElement(page, "Number");
+    await replaceQuestion(page, daysQuestion);
+
+    await addElement(page, "Statement");
+    const statement = page.locator(".ProseMirror").first();
+    await statement.getByText("Heading", { exact: true }).click();
+    await page.keyboard.press("Home");
+    await page.keyboard.press("Shift+End");
+    const headingSaved = waitForOperation(page, "UpdateFormElementBody");
+    await page.keyboard.insertText(statementHeading);
+    await headingSaved;
+    await expect(statement.getByRole("heading", { name: statementHeading })).toBeVisible();
+
+    await addElement(page, "Yes/No");
+    await replaceQuestion(page, interviewQuestion);
+    await addElement(page, "Short Text");
+    await replaceQuestion(page, phoneQuestion);
+
+    await page.getByRole("link", { name: "Skip Logic", exact: true }).click();
+    await expect(page).toHaveURL(/\/logic$/);
+
+    await selectNode(page, activitiesQuestion);
+    await addRule(page, "Add conditions");
+    const fishingRule = ruleCard(page, 0);
+    await chooseOperator(conditionRow(fishingRule, 0), /^Contains/);
+    await chooseOption(fishingRule.getByRole("combobox").nth(1), "Fishing");
+    await chooseJump(fishingRule.getByRole("combobox").nth(0), daysQuestion, "UpdateFormLogicRule");
+
+    await selectNode(page, sitesQuestion);
+    await addRule(page, "Add conditions");
+    const blankRule = ruleCard(page, 0);
+    await expect(
+      conditionRow(blankRule, 0).getByRole("button", { name: "Comparison" })
+    ).toHaveText("Blank");
+    await chooseJump(blankRule.getByRole("combobox").nth(0), interviewQuestion, "UpdateFormLogicRule");
+    await chooseJump(
+      logicPanel(page).getByRole("combobox").last(),
+      statementHeading,
+      "UpdateFormElement"
+    );
+
+    await selectNode(page, daysQuestion);
+    await addRule(page, "Add conditions");
+    const rangeRule = ruleCard(page, 0);
+    await chooseOperator(conditionRow(rangeRule, 0), /^>$/);
+    await fillConditionNumber(conditionRow(rangeRule, 0), "100");
+    await addCondition(rangeRule);
+    await chooseOperator(conditionRow(rangeRule, 1), /^<$/);
+    await fillConditionNumber(conditionRow(rangeRule, 1), "5");
+    await addCondition(rangeRule);
+    await expect(rangeRule.locator("div.bg-blue-100")).toHaveCount(3);
+    page.once("dialog", (dialog) => dialog.accept());
+    const conditionDeleted = waitForOperation(page, "DeleteLogicCondition");
+    await conditionRow(rangeRule, 2).locator("button").last().click();
+    await conditionDeleted;
+    await expect(rangeRule.locator("div.bg-blue-100")).toHaveCount(2);
+    await chooseJump(rangeRule.getByRole("combobox").nth(0), interviewQuestion, "UpdateFormLogicRule");
+
+    await addRule(page, "Add another rule");
+    await expect(logicPanel(page).locator("div.border.bg-gray-50")).toHaveCount(2);
+    await ruleCard(page, 1).locator("h4 button").click();
+    const ruleDialog = page.getByRole("dialog", {
+      name: "Are you sure you want to delete this rule?",
+    });
+    const ruleDeleted = waitForOperation(page, "DeleteLogicRule");
+    await ruleDialog.getByRole("button", { name: "Delete", exact: true }).click();
+    await ruleDeleted;
+    await expect(logicPanel(page).locator("div.border.bg-gray-50")).toHaveCount(1);
+
+    await selectNode(page, statementHeading);
+    await expect(
+      logicPanel(page).getByText("Survey advances from this question to...")
+    ).toBeVisible();
+    await chooseJump(logicPanel(page).getByRole("combobox"), phoneQuestion, "UpdateFormElement");
+
+    await selectNode(page, interviewQuestion);
+    await addRule(page, "Add conditions");
+    const declineRule = ruleCard(page, 0);
+    // A new yes/no condition has no answer until the admin picks one (#726, #756).
+    const declineValue = declineRule.getByRole("combobox").nth(1);
+    await expect(declineValue).toHaveValue("NULL");
+    await chooseOption(declineValue, "No");
+    await chooseJump(declineRule.getByRole("combobox").nth(0), "Save Screen", "UpdateFormLogicRule");
+
+    await leaveEditorFor(page, page.url());
+    await selectNode(page, daysQuestion);
+    const savedRange = ruleCard(page, 0);
+    await expect(savedRange.getByRole("button", { name: "Comparison" })).toHaveText([">", "<"]);
+    await expect(conditionRow(savedRange, 0).getByRole("spinbutton")).toHaveValue("100");
+    await expect(conditionRow(savedRange, 1).getByRole("spinbutton")).toHaveValue("5");
+    await selectNode(page, interviewQuestion);
+    await expect(ruleCard(page, 0).getByRole("combobox").nth(1)).toHaveValue("FALSE");
+
+    const surveyUrl = await publishSurvey(page, slug, reefSurveyName);
+
+    const snorkeler = await openSurvey(browser, surveyUrl);
+    try {
+      const visitor = snorkeler.page;
+      await expect(visitor.getByText(activitiesQuestion)).toBeVisible();
+      await visitor.getByTitle(snorkelLabel, { exact: true }).click();
+      await visitor.getByTitle("Research", { exact: true }).click();
+      await visitor.getByRole("button", { name: "Next", exact: true }).click();
+
+      await expect(visitor.getByText(sitesQuestion)).toBeVisible();
+      const sites = visitor.locator("textarea:visible");
+      await sites.fill("Coral Garden");
+      await visitor.getByRole("button", { name: "Next", exact: true }).click();
+      await expect(visitor.getByRole("heading", { name: statementHeading })).toBeVisible();
+      await expect(visitor.getByText(daysQuestion)).toHaveCount(0);
+      await visitor.getByRole("button", { name: "Next", exact: true }).click();
+      await expect(visitor.getByText(phoneQuestion)).toBeVisible();
+      await expect(visitor.getByText(interviewQuestion)).toHaveCount(0);
+
+      await goBack(visitor, statementHeading);
+      await goBack(visitor, sitesQuestion);
+      await visitor.locator("textarea:visible").fill("");
+      await visitor.getByRole("button", { name: "Skip Question", exact: true }).click();
+      await expect(visitor.getByText(interviewQuestion)).toBeVisible();
+      await visitor.getByTitle("No", { exact: true }).click();
+      await expect(
+        visitor.getByRole("heading", { name: "Thank You for Responding" })
+      ).toBeVisible();
+      await expect(visitor.getByText(phoneQuestion)).toHaveCount(0);
+    } finally {
+      await snorkeler.context.close();
+    }
+
+    const fisher = await openSurvey(browser, surveyUrl);
+    try {
+      const visitor = fisher.page;
+      await visitor.getByTitle("Fishing", { exact: true }).click();
+      await visitor.getByRole("button", { name: "Next", exact: true }).click();
+      await expect(visitor.getByText(daysQuestion)).toBeVisible();
+      await expect(visitor.getByText(sitesQuestion)).toHaveCount(0);
+
+      await answerText(visitor, "150");
+      await expect(visitor.getByText(interviewQuestion)).toBeVisible();
+      await visitor.getByTitle("Yes", { exact: true }).click();
+      await expect(visitor.getByText(phoneQuestion)).toBeVisible();
+
+      await goBack(visitor, interviewQuestion);
+      await goBack(visitor, daysQuestion);
+      await answerText(visitor, "2");
+      await expect(visitor.getByText(interviewQuestion)).toBeVisible();
+
+      await goBack(visitor, daysQuestion);
+      await answerText(visitor, "50");
+      await expect(visitor.getByRole("heading", { name: statementHeading })).toBeVisible();
+      await visitor.getByRole("button", { name: "Next", exact: true }).click();
+      await expect(visitor.getByText(phoneQuestion)).toBeVisible();
+      await expect(visitor.getByText(interviewQuestion)).toHaveCount(0);
+    } finally {
+      await fisher.context.close();
     }
   });
 });
