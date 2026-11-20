@@ -90,7 +90,9 @@ jobs:
           MAPBOX_ACCESS_TOKEN: ${{ secrets.MAPBOX_ACCESS_TOKEN }}
         run: |
           node tests/init_dockerdb.js
-          IN_TESTS=1 npm run db:migrate -- --shadow
+          # migrate applies committed files only. watch --once also runs
+          # current.sql, which is where in-progress schema changes live.
+          IN_TESTS=1 npx graphile-migrate watch --once --shadow
           node dist/src/createCleanGraphqlSchema.js
       - name: Check for graphql schema drift
         working-directory: ./packages/api
