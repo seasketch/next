@@ -14747,6 +14747,11 @@ type Query implements Node {
     """The method to use when ordering `OverlayDataTable`."""
     orderBy: [OverlayDataTablesOrderBy!] = [PRIMARY_KEY_ASC]
   ): OverlayDataTablesConnection
+
+  """
+  Title, description, and logo for a public project, forum, topic, or post link. Private projects and forums are omitted.
+  """
+  pageLinkPreview(forumId: Int, kind: String, postId: Int, slug: String, topicId: Int): JSON
   post(id: Int!): Post
 
   """Reads a single `Post` using its globally unique `ID`."""
