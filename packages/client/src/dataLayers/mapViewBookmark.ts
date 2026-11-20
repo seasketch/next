@@ -6,8 +6,8 @@ export type MapViewOmissions = {
 
 /**
  * What the create-bookmark card should say was left out of the saved view.
- * Sketches are never stored. Unshared sketches get a more specific note.
- * Unsaved drawing markup is unshared user content and is left out as well.
+ * Any sketch on screen is called out as private to the account. Unsaved
+ * drawing markup is left out as well.
  */
 export function mapViewOmissions(input: {
   sketches: { sharedInForum: boolean }[];

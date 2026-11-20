@@ -244,17 +244,10 @@ export default function MapViewBookmarkModal({
           </span>
         </p>
       )}
-      {signedIn && omissions.unsharedSketches && (
+      {signedIn && omissions.sketches && (
         <p className="mt-3 rounded-lg bg-amber-50 px-3 py-2 text-sm leading-relaxed text-amber-950">
           {t(
-            "Sketches on the map are not included, including sketches that have not been shared. The preview and the saved image leave them out."
-          )}
-        </p>
-      )}
-      {signedIn && omissions.sketches && !omissions.unsharedSketches && (
-        <p className="mt-3 rounded-lg bg-amber-50 px-3 py-2 text-sm leading-relaxed text-amber-950">
-          {t(
-            "Sketches on the map are not included. The preview and the saved image leave them out."
+            "Sketches currently on screen are private to your account, and so are not included in the bookmark."
           )}
         </p>
       )}

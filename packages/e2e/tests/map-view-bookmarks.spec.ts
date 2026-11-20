@@ -42,7 +42,7 @@ test.describe("map view bookmarks @enduser @map", () => {
       dialog.getByRole("heading", { name: "Map bookmark" })
     ).toBeVisible();
     await expect(
-      dialog.getByText("Sketches on the map are not included")
+      dialog.getByText("private to your account")
     ).toHaveCount(0);
 
     const link = dialog.getByRole("textbox", { name: "Link" });
@@ -111,7 +111,7 @@ test.describe("map view bookmarks @enduser @map", () => {
     const dialog = page.getByRole("dialog");
     await expect(
       dialog.getByText(
-        "Sketches on the map are not included. The preview and the saved image leave them out."
+        "Sketches currently on screen are private to your account, and so are not included in the bookmark."
       )
     ).toBeVisible();
 

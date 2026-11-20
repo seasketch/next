@@ -154,7 +154,7 @@ Intent: the toolbar, legend, and map chrome a participant uses. These journeys w
 ### Bookmark on the map
 
 1. Clicking a map bookmark that was posted in a forum moves the map to that center, zoom, and basemap, and a banner says the bookmark is shown. *Covered.* The screenshot itself stays in `tests/map-bookmarks.spec.ts`.
-2. Create Map Bookmark, in Map settings, saves the current basemap, layers, and camera. Sketches and unsaved drawings are left out of the preview and the saved image, and the card says so when any are on the map. The card offers a copyable link to `/:slug/bookmarks/:id`. *Covered: `tests/map-view-bookmarks.spec.ts`.*
+2. Create Map Bookmark, in Map settings, saves the current basemap, layers, and camera. Sketches and unsaved drawings are left out of the preview and the saved image. When sketches are on screen, the card says they are private to the account and are not included. The card offers a copyable link to `/:slug/bookmarks/:id`. *Covered: `tests/map-view-bookmarks.spec.ts`.*
 
 ---
 
