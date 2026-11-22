@@ -41,7 +41,7 @@ export default function FullScreenOfflineNavigation() {
     return null;
   }
   return (
-    <div className="w-full h-screen bg-gray-100 top-0 overflow-y-auto z-50 fixed">
+    <div className="w-full h-screen bg-gray-100 text-gray-900 top-0 overflow-y-auto z-50 fixed">
       <CenteredCardListLayout>
         <Card>
           <div className="flex-shrink-0 flex items-center text-lg text-black ml-auto mr-auto justify-center">
@@ -68,7 +68,7 @@ export default function FullScreenOfflineNavigation() {
           <div className="space-y-3 mt-3">
             {projects.map((project) => (
               <div key={project.name}>
-                <h2 className="py-2 font-medium">{project.name}</h2>
+                <h2 className="py-2 font-medium text-gray-900">{project.name}</h2>
                 {project.description && project.description.length > 0 && (
                   <p className="text-sm text-gray-500">
                     {getTranslatedProp("description", project)}
@@ -81,7 +81,7 @@ export default function FullScreenOfflineNavigation() {
                       <li key={survey.id}>
                         <Link
                           to={`/${project.slug}/surveys/${survey.id}`}
-                          className="bg-gray-100 p-4 rounded-sm my-2 block hover:bg-cool-gray-200 active:bg-blue-200"
+                          className="bg-gray-100 text-gray-900 p-4 rounded-sm my-2 block hover:bg-cool-gray-200 active:bg-blue-200"
                         >
                           {survey.name}
                         </Link>

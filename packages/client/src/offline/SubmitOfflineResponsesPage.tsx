@@ -234,7 +234,7 @@ export default function SubmitOfflineResponsesPage() {
                           },
                         });
                       }}
-                      className="w-lg border p-2 rounded shadow-sm"
+                      className="w-lg border p-2 rounded shadow-sm text-gray-900"
                     />
                   )}
                   {!data?.me && (
@@ -264,12 +264,16 @@ export default function SubmitOfflineResponsesPage() {
             {responsesByProject.length > 0 &&
               responsesByProject.map((project) => (
                 <div key={project.id}>
-                  <h3 className="text-base font-semibold">{project.name}</h3>
+                  <h3 className="text-base font-semibold text-gray-900">
+                    {project.name}
+                  </h3>
                   <ul className="space-y-1 my-2">
                     {project.surveys.map((s) => (
                       <li className="p-2 bg-gray-50 flex" key={s.id}>
-                        <div className="flex-1 truncate">{s.name}</div>
-                        <div className="px-4 rounded-full bg-primary-500 bg-opacity-10">
+                        <div className="flex-1 truncate text-gray-900">
+                          {s.name}
+                        </div>
+                        <div className="px-4 rounded-full bg-primary-500 bg-opacity-10 text-gray-900">
                           {s.responseCount}
                         </div>
                       </li>
@@ -313,7 +317,7 @@ export default function SubmitOfflineResponsesPage() {
             <div className="mt-2">
               {submissionDetails.projects.map((project) => (
                 <div key={project.id}>
-                  <h3 className="text-base font-semibold ">
+                  <h3 className="text-base font-semibold text-gray-900">
                     <Link to={`/${project.slug}`}>{project.name}</Link>
                   </h3>
                   <ul className="space-y-1 my-2">

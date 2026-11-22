@@ -21,7 +21,7 @@ export function Card({
 }) {
   return (
     <div
-      className={`bg-white border-b sm:border-b-0 sm:shadow sm:rounded sm:mx-auto p-4 max-w-full sm:max-w-2xl ${className}`}
+      className={`bg-white text-gray-900 border-b sm:border-b-0 sm:shadow sm:rounded sm:mx-auto p-4 max-w-full sm:max-w-2xl ${className}`}
     >
       {children}
     </div>
@@ -37,7 +37,7 @@ export function Header({
 }) {
   return (
     <h1
-      className={`max-w-full sm:max-w-2xl sm:mx-auto ${
+      className={`max-w-full sm:max-w-2xl sm:mx-auto text-gray-900 ${
         level === 2 ? "text-base" : "text-lg"
       }`}
     >
