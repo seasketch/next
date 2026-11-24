@@ -16,7 +16,7 @@ describe("gfwUpstream", () => {
       NOW
     );
     expect(upstream?.url).toBe(
-      `${GFW_API_ORIGIN}/v3/4wings/tile/heatmap/4/2/9?datasets=public-global-fishing-effort%3Av5.0&interval=YEAR&temporal-aggregation=false&date-range=${GFW_COVERAGE_START}%2C2026-11-06&format=MVT`
+      `${GFW_API_ORIGIN}/v3/4wings/tile/heatmap/4/2/9?datasets%5B0%5D=public-global-fishing-effort%3Av5.0&interval=YEAR&temporal-aggregation=false&date-range=${GFW_COVERAGE_START}%2C2026-11-06&format=MVT`
     );
     expect(upstream?.cacheKey).toBe(upstream?.url);
     expect(upstream?.cacheKey.includes("secret")).toBe(false);
@@ -92,7 +92,7 @@ describe("gfwUpstream", () => {
       NOW
     );
     expect(upstream?.url).toBe(
-      `${GFW_API_ORIGIN}/v3/4wings/bins/0?datasets=public-global-fishing-effort%3Av5.0&interval=YEAR`
+      `${GFW_API_ORIGIN}/v3/4wings/bins/0?datasets%5B0%5D=public-global-fishing-effort%3Av5.0&interval=YEAR`
     );
     expect(upstream?.cacheKey.includes("secret")).toBe(false);
     expect(upstream?.cacheTtlSeconds).toBe(24 * 60 * 60);

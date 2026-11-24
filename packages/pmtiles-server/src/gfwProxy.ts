@@ -30,7 +30,7 @@ export function gfwUpstream(url: URL, now: Date = new Date()): GfwUpstream | nul
   if (!allowedQuery(url)) return null;
   if (url.pathname === "/gfw/bins") {
     const upstream = new URL("/v3/4wings/bins/0", GFW_API_ORIGIN);
-    upstream.searchParams.set("datasets", datasetId());
+    setDataset(upstream);
     upstream.searchParams.set("interval", "YEAR");
     return {
       url: upstream.toString(),
@@ -53,7 +53,7 @@ export function gfwUpstream(url: URL, now: Date = new Date()): GfwUpstream | nul
     `/v3/4wings/tile/heatmap/${z}/${x}/${y}`,
     GFW_API_ORIGIN
   );
-  upstream.searchParams.set("datasets", datasetId());
+  setDataset(upstream);
   upstream.searchParams.set("interval", "YEAR");
   upstream.searchParams.set("temporal-aggregation", "false");
   upstream.searchParams.set("date-range", `${GFW_COVERAGE_START},${end}`);
@@ -72,6 +72,11 @@ export function isGfwPath(pathname: string): boolean {
 
 function datasetId(): string {
   return `${GFW_DATASET}:${GFW_DATASET_VERSION}`;
+}
+
+function setDataset(url: URL): void {
+  // 4Wings rejects a bare `datasets` parameter as missing. It requires datasets[0].
+  url.searchParams.set("datasets[0]", datasetId());
 }
 
 function allowedQuery(url: URL): boolean {

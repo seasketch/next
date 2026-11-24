@@ -10,3 +10,5 @@ AUTH_MISSING_ACL_PUBLIC=true
 # origin. bin/dev.mjs passes it explicitly, along with JWKS_URL and UPLOADS_HOST.
 # Required only for browser preview pages.
 MAPBOX_ACCESS_TOKEN=
+# Bearer token for the /gfw proxy. Never commit a real value.
+GFW_API_TOKEN=
