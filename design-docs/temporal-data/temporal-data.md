@@ -2,7 +2,7 @@
 
 As SeaSketch is used increasingly to support use cases in MPA Monitoring and Implementation, the visualization and analysis of the temporal component of data will be critical. Currently, simple solutions like having a list of layers representing annual mangrove cover are used, but this has important UX shortcomings and simply does not scale to deeply multidimensional monitoring data. We cannot represent 30 years of counts of 100 species as individual data layers. SeaSketch will need ways to encode and understand both the temporal coverage of spatial layers in their entirety, and the temporal component of individual features, bands, or other within-layer components of data.
 
-Related: [Timeslider UI References](timeslider-ui-references.md) · [MRT / raster-array](mrt-and-raster-array.md) · [Data Tables organism identity](../data-tables/organism-identity.md)
+Related: [Timeslider UI References](timeslider-ui-references.md) · [MRT / raster-array](mrt-and-raster-array.md) · [Data Tables organism identity](../data-tables/organism-identity.md) · [Global Fishing Watch integration](../global-fishing-watch/gfw-integration.md)
 
 There are two goals supported by having temporal information explicitly understood by SeaSketch. One is to improve the UX during map visualization. Activating layers with temporal coverage should open a time-slider, similar to Google Earth, which enables users to scrub through a time series of data, or show features and layers for a defined time-span. The second is to support analytical reports. Right now there are no time-series supporting report widgets because we do not have enough insight into the data sources to support them. While we could have an interface in the report-builder to assign particular overlay sources to particular years directly in that authoring environment, it would make much more sense to instead have the tools recognize sources with temporal coverage and automatically provide a means to represent stats in a time series.
 
@@ -299,7 +299,7 @@ GFW does not get `_when_*` columns or a stored cube. Its `TemporalInfo` is a cap
 }
 ```
 
-The map clock is translated into 4Wings request params. Report metrics (`gfw_report` and the like) take the same range and aggregation from widget config, defaulting to this descriptor. Do not persist `availability` here — slider stats are queried live.
+The map clock is translated into 4Wings tile params. Sketch reports do not call that API. They read a per-year COG built for the project's EEZ, described in [Global Fishing Watch integration](../global-fishing-watch/gfw-integration.md). Do not persist `availability` here — slider stats for the tile layer are queried live.
 
 ### Map clock (client state, not stored on the source)
 
@@ -502,10 +502,8 @@ Admin can set or correct `coverage`, precision, granularity, and the column/band
 - Data Tables
   - These aren't yet integrating into the reporting system, but it is likely that new metrics will be added to support them, and these will have analogous concerns as Vector and Raster sources with regards to requiring standardized temporal metadata/data, and filtering and aggregation support in the overlay engine and metric parameterization and output types
 - GFW
-  - GFW integration will likely end up directly pointing SeaSketch to the GFW API, instead of pulling data out of GFW and storing it directly in SeaSketch.
-  - The map will pull tiles directly from GFW
-  - The reporting system will likely be augmented with new metric types like `gfw_report`
-  - Report metric dependencies will be configured with appropriate temporal range and aggregation options that feed through to the GFW 4wings api.
+  - The map pulls MVT tiles from the 4Wings API. That layer is a table-of-contents source.
+  - Reports do not call the API per sketch. A global archive stores one single-band COG per EEZ per year, shared across projects with the same Marine Regions id, and fragment `raster_stats` runs on it. See [Global Fishing Watch integration](../global-fishing-watch/gfw-integration.md).
 
 ## Data Upload and Ingest
 
