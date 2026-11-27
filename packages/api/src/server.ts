@@ -28,6 +28,7 @@ import * as cache from "./cache";
 import { verifyEmailWithToken } from "./emailVerification";
 import { getRealUserVisits, getVisitorMetrics } from "./visitorMetrics";
 import layerApi from "./layerApi";
+import { ensureSigningKey } from "./apiKeys";
 import { throwIfProductionMisconfigured } from "./env";
 import { assertE2ETestModeConfiguration } from "./e2e/testMode";
 import { assertNonProductionProfile } from "./envProfile";
@@ -881,6 +882,9 @@ if (process.env.SSL_CRT_FILE && process.env.SSL_KEY_FILE) {
 
 (async function () {
   rotateKeys(pool);
+  ensureSigningKey(loadersPool).catch((error) => {
+    console.error("Failed to initialize API key signing key:", error);
+  });
 
   // Start the overlay engine worker message consumer if the SQS queue URL is configured
   if (process.env.OVERLAY_ENGINE_WORKER_SQS_QUEUE_URL) {

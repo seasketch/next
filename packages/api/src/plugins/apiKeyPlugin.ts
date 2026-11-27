@@ -27,7 +27,7 @@ const ApiKeyPlugin = makeExtendSchemaPlugin((build) => {
             projectId,
             context.user.id,
             context.adminPool,
-            ttlMs / 1000
+            ttlMs != null ? ttlMs / 1000 : undefined
           );
           return { token };
         },

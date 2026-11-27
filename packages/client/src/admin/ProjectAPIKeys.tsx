@@ -35,18 +35,25 @@ export default function ProjectAPIKeys({ projectId }: { projectId: number }) {
   const [token, setToken] = useState<{ token: string; label: string } | null>(
     null
   );
+  const [showRevoked, setShowRevoked] = useState(false);
+
+  const allKeys = apiKeysQuery.data?.project?.apiKeysConnection?.nodes || [];
+  const activeKeys = allKeys.filter((key) => !key.isRevoked);
+  const revokedKeys = allKeys.filter((key) => key.isRevoked);
+  const displayedKeys = [...(showRevoked ? allKeys : activeKeys)].sort(
+    (a, b) => {
+      // sort by isRevoked
+      if (a.isRevoked && !b.isRevoked) return 1;
+      if (b.isRevoked && !a.isRevoked) return -1;
+      // sort by created at descending
+      return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+    }
+  );
 
   return (
     <div>
       <div className="shadow sm:rounded-md sm:overflow-hidden">
-        <div
-          style={
-            apiKeysQuery?.data?.project?.apiKeysConnection.nodes.length === 0
-              ? { paddingBottom: 0 }
-              : {}
-          }
-          className={`py-5 px-4 bg-white sm:p-6 space-y-5`}
-        >
+        <div className="py-5 px-4 bg-white sm:p-6 space-y-5">
           <h3 className="text-lg font-medium leading-6 text-gray-900">
             {t("API Keys")}
           </h3>
@@ -58,18 +65,9 @@ export default function ProjectAPIKeys({ projectId }: { projectId: number }) {
           {apiKeysQuery.loading && !apiKeysQuery.data && <Spinner />}
           {apiKeysQuery.error && <div>{t("Error loading API keys")}</div>}
 
-          {apiKeysQuery.data && (
+          {apiKeysQuery.data && displayedKeys.length > 0 && (
             <div className="space-y-6 py-2 pb-4">
-              {[...(apiKeysQuery.data?.project?.apiKeysConnection?.nodes || [])]
-                .sort((a, b) => {
-                  // sort by isRevoked
-                  if (a.isRevoked && !b.isRevoked) return 1;
-                  if (b.isRevoked && !a.isRevoked) return -1;
-                  // sort by created at
-                  return b.createdAt - a.createdAt;
-                })
-                .slice(0, 8)
-                .map((key) => (
+              {displayedKeys.map((key) => (
                   <div
                     key={key.id}
                     className={`flex items-center w-full space-x-4 ${
@@ -155,43 +153,49 @@ export default function ProjectAPIKeys({ projectId }: { projectId: number }) {
                 ))}
             </div>
           )}
-          <Button
-            className={
-              apiKeysQuery.data?.project?.apiKeysConnection?.nodes?.length === 0
-                ? "-top-12"
-                : ""
-            }
-            onClick={() => {
-              prompt({
-                placeholder: "e.g. data-access-geoprocessing-prod",
-                message: t("Enter a label to describe your new API key"),
-                onSubmit: async (label) => {
-                  // create key
-                  const token = await createToken({
-                    variables: {
-                      projectId,
-                      label,
-                    },
-                  });
-                  if (!token.data?.createApiKey?.token) {
-                    onError(new Error("Failed to create API key"));
-                    return;
-                  } else {
-                    setToken({
-                      token: token.data.createApiKey.token,
-                      label,
+          <div className="flex items-center space-x-3">
+            <Button
+              onClick={() => {
+                prompt({
+                  placeholder: "e.g. data-access-geoprocessing-prod",
+                  message: t("Enter a label to describe your new API key"),
+                  onSubmit: async (label) => {
+                    // create key
+                    const token = await createToken({
+                      variables: {
+                        projectId,
+                        label,
+                      },
                     });
-                  }
-                },
-              });
-            }}
-            label={
-              apiKeysQuery.data &&
-              apiKeysQuery.data.project?.apiKeysConnection?.nodes?.length === 0
-                ? t("Create your first API Key")
-                : t("Create a new API Key")
-            }
-          />
+                    if (!token.data?.createApiKey?.token) {
+                      onError(new Error("Failed to create API key"));
+                      return;
+                    } else {
+                      setToken({
+                        token: token.data.createApiKey.token,
+                        label,
+                      });
+                    }
+                  },
+                });
+              }}
+              label={
+                apiKeysQuery.data && allKeys.length === 0
+                  ? t("Create your first API Key")
+                  : t("Create a new API Key")
+              }
+            />
+            {revokedKeys.length > 0 && (
+              <Button
+                onClick={() => setShowRevoked((prev) => !prev)}
+                label={
+                  showRevoked
+                    ? t("Hide revoked keys")
+                    : t("Show revoked keys")
+                }
+              />
+            )}
+          </div>
           {token && (
             <Modal
               title={t("API Key Created")}

@@ -30790,6 +30790,31 @@ ALTER TABLE public.ai_data_analyst_notes ALTER COLUMN id ADD GENERATED ALWAYS AS
 
 
 --
+-- Name: api_key_signing_keys; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.api_key_signing_keys (
+    kid uuid DEFAULT gen_random_uuid() NOT NULL,
+    public_pem text NOT NULL,
+    private_pem text,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    retired_at timestamp with time zone
+);
+
+
+--
+-- Name: TABLE api_key_signing_keys; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON TABLE public.api_key_signing_keys IS '
+@omit
+Dedicated RS256 signing keys for project API keys, separate from jwks.
+Keys do not expire or rotate on a schedule; rotating clears private_pem
+and retains public_pem so existing API keys continue to verify.
+';
+
+
+--
 -- Name: basemaps_id_seq; Type: SEQUENCE; Schema: public; Owner: -
 --
 
@@ -32145,6 +32170,14 @@ ALTER TABLE ONLY public.ai_data_analyst_notes
 
 
 --
+-- Name: api_key_signing_keys api_key_signing_keys_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.api_key_signing_keys
+    ADD CONSTRAINT api_key_signing_keys_pkey PRIMARY KEY (kid);
+
+
+--
 -- Name: api_keys api_keys_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -33036,6 +33069,13 @@ CREATE UNIQUE INDEX access_control_lists_sketch_class_id_idx ON public.access_co
 --
 
 CREATE UNIQUE INDEX access_control_lists_table_of_contents_item_id_idx ON public.access_control_lists USING btree (table_of_contents_item_id) WHERE (table_of_contents_item_id IS NOT NULL);
+
+
+--
+-- Name: api_key_signing_keys_active_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX api_key_signing_keys_active_idx ON public.api_key_signing_keys USING btree ((true)) WHERE (private_pem IS NOT NULL);
 
 
 --
@@ -44827,6 +44867,7 @@ GRANT ALL ON FUNCTION public.projects_downloadable_layers_count(p public.project
 --
 
 REVOKE ALL ON FUNCTION public.projects_draft_reports(p public.projects) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.projects_draft_reports(p public.projects) TO anon;
 GRANT ALL ON FUNCTION public.projects_draft_reports(p public.projects) TO seasketch_user;
 GRANT ALL ON FUNCTION public.projects_draft_reports(p public.projects) TO seasketch_superuser;
 
@@ -50333,6 +50374,13 @@ GRANT SELECT ON TABLE public.access_control_list_groups TO seasketch_user;
 --
 
 GRANT SELECT ON TABLE public.ai_data_analyst_notes TO anon;
+
+
+--
+-- Name: TABLE api_key_signing_keys; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT ALL ON TABLE public.api_key_signing_keys TO graphile;
 
 
 --

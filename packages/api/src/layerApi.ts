@@ -32,7 +32,7 @@ export default function layerApi(loadersPool: DBClient) {
       return;
     }
     const apiKey = bearerToken.replace("Bearer ", "");
-    const claims = await verify(apiKey, loadersPool, "1825 days");
+    const claims = await verify(apiKey, loadersPool);
     if (!claims) {
       res.status(401).send("Unauthorized");
       return;
