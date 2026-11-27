@@ -470,29 +470,25 @@ function PointInstructions({
   isMobile: boolean;
   multiFeature: boolean;
 }) {
-  switch (state) {
-    case DigitizingState.CREATE && !isMobile:
-      return (
-        <div>
-          <CursorClickIcon className="w-6 h-6 inline-block mr-2" />
-          <span>
-            <Trans ns="digitizing" i18nKey="StartPoint">
-              Click on the map to place a point
-            </Trans>
-          </span>
-        </div>
-      );
-    case DigitizingState.CREATE && isMobile:
-      return (
-        <div>
-          <CursorClickIcon className="w-6 h-6 inline-block mr-2" />
-          <span>
+  if (state === DigitizingState.CREATE) {
+    return (
+      <div>
+        <CursorClickIcon className="w-6 h-6 inline-block mr-2" />
+        <span>
+          {isMobile ? (
             <Trans ns="digitizing" i18nKey="StartPointTouch">
               Tap the map to place a point
             </Trans>
-          </span>
-        </div>
-      );
+          ) : (
+            <Trans ns="digitizing" i18nKey="StartPoint">
+              Click on the map to place a point
+            </Trans>
+          )}
+        </span>
+      </div>
+    );
+  }
+  switch (state) {
     case DigitizingState.STARTED:
       throw new Error(
         "Point can not be in state STARTED in desktop digitizing mode"
